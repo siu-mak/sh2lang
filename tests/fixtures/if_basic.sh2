@@ -1,0 +1,6 @@
+func main() {
+    print("start")
+    if registry {
+        print("configured")
+    }
+}

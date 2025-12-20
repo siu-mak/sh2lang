@@ -1,0 +1,8 @@
+main() {
+  echo start
+  if [ -n "$registry" ]; then
+    echo configured
+  fi
+}
+
+main "$@"

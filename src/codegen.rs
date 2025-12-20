@@ -18,6 +18,13 @@ pub fn emit(funcs: &[Function]) -> String {
                     out.push_str(s);
                     out.push('\n');
                 }
+                Cmd::IfNonEmpty { var, body } => {
+                    out.push_str(&format!("  if [ -n \"${}\" ]; then\n", var));
+                    for c in body {
+                        emit_cmd(c, &mut out, 4);
+                    }
+                    out.push_str("  fi\n");
+                }
             }
         }
 
@@ -26,4 +33,29 @@ pub fn emit(funcs: &[Function]) -> String {
 
     out.push_str("\nmain \"$@\"\n");
     out
+}
+
+fn emit_cmd(cmd: &Cmd, out: &mut String, indent: usize) {
+    let pad = " ".repeat(indent);
+
+    match cmd {
+        Cmd::Exec(args) => {
+            out.push_str(&pad);
+            out.push_str(&args.join(" "));
+            out.push('\n');
+        }
+        Cmd::Print(s) => {
+            out.push_str(&pad);
+            out.push_str("echo ");
+            out.push_str(s);
+            out.push('\n');
+        }
+        Cmd::IfNonEmpty { var, body } => {
+            out.push_str(&format!("{pad}if [ -n \"${var}\" ]; then\n"));
+            for c in body {
+                emit_cmd(c, out, indent + 2);
+            }
+            out.push_str(&format!("{pad}fi\n"));
+        }
+    }
 }

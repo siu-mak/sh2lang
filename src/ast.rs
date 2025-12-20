@@ -13,4 +13,8 @@ pub struct Function {
 pub enum Stmt {
     Run(Vec<String>),
     Print(String),
+    If {
+        var: String,
+        body: Vec<Stmt>,
+    },
 }

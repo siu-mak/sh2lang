@@ -58,6 +58,26 @@ pub fn parse(tokens: &[Token]) -> Program {
                 body.push(Stmt::Print(msg));
             }
 
+            Token::If => {
+                i += 1;
+
+                let var = match &tokens[i] {
+                    Token::Ident(s) => s.clone(),
+                    _ => panic!("Expected variable name after if"),
+                };
+                i += 1;
+
+                expect(tokens, &mut i, Token::LBrace);
+
+                let mut if_body = Vec::new();
+                while !matches!(tokens[i], Token::RBrace) {
+                    if_body.push(parse_stmt(tokens, &mut i));
+                }
+                expect(tokens, &mut i, Token::RBrace);
+
+                body.push(Stmt::If { var, body: if_body });
+
+            }            
             _ => panic!("Expected statement"),
         }
     }
@@ -69,6 +89,70 @@ pub fn parse(tokens: &[Token]) -> Program {
         functions: vec![
             Function { name, body }
         ],
+    }
+}
+
+fn parse_stmt(tokens: &[Token], i: &mut usize) -> Stmt {
+    match &tokens[*i] {
+        Token::Run => {
+            *i += 1;
+            expect(tokens, i, Token::LParen);
+
+            let mut args = Vec::new();
+            loop {
+                match &tokens[*i] {
+                    Token::String(s) => {
+                        args.push(s.clone());
+                        *i += 1;
+                        if matches!(tokens[*i], Token::Comma) {
+                            *i += 1;
+                        } else {
+                            break;
+                        }
+                    }
+                    _ => break,
+                }
+            }
+
+            expect(tokens, i, Token::RParen);
+            Stmt::Run(args)
+        }
+
+        Token::Print => {
+            *i += 1;
+            expect(tokens, i, Token::LParen);
+
+            let msg = match &tokens[*i] {
+                Token::String(s) => s.clone(),
+                _ => panic!("Expected string literal in print()"),
+            };
+            *i += 1;
+
+            expect(tokens, i, Token::RParen);
+            Stmt::Print(msg)
+        }
+
+        Token::If => {
+            *i += 1;
+
+            let var = match &tokens[*i] {
+                Token::Ident(s) => s.clone(),
+                _ => panic!("Expected variable name after if"),
+            };
+            *i += 1;
+
+            expect(tokens, i, Token::LBrace);
+
+            let mut body = Vec::new();
+            while !matches!(tokens[*i], Token::RBrace) {
+                body.push(parse_stmt(tokens, i));
+            }
+            expect(tokens, i, Token::RBrace);
+
+            Stmt::If { var, body }
+        }
+
+        _ => panic!("Expected statement"),
     }
 }
 
