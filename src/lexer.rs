@@ -39,7 +39,7 @@ pub fn lex(input: &str) -> Vec<Token> {
             _ if c.is_alphabetic() => {
                 let mut ident = String::new();
                 while let Some(&ch) = chars.peek() {
-                    if !ch.is_alphanumeric() { break; }
+                    if !ch.is_alphanumeric() && ch != '_' { break; }
                     ident.push(ch);
                     chars.next();
                 }

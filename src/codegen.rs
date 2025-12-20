@@ -5,29 +5,9 @@ pub fn emit(funcs: &[Function]) -> String {
 
     for f in funcs {
         out.push_str(&format!("{}() {{\n", f.name));
-
         for cmd in &f.commands {
-            match cmd {
-                Cmd::Exec(args) => {
-                    out.push_str("  ");
-                    out.push_str(&args.join(" "));
-                    out.push('\n');
-                }
-                Cmd::Print(s) => {
-                    out.push_str("  echo ");
-                    out.push_str(s);
-                    out.push('\n');
-                }
-                Cmd::IfNonEmpty { var, body } => {
-                    out.push_str(&format!("  if [ -n \"${}\" ]; then\n", var));
-                    for c in body {
-                        emit_cmd(c, &mut out, 4);
-                    }
-                    out.push_str("  fi\n");
-                }
-            }
+            emit_cmd(cmd, &mut out, 2);
         }
-
         out.push_str("}\n");
     }
 
