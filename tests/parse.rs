@@ -36,9 +36,14 @@ fn parses_if_statement() {
     assert_eq!(func.body.len(), 1);
 
     match &func.body[0] {
-        sh2c::ast::Stmt::If { var, body } => {
+        sh2c::ast::Stmt::If {
+            var,
+            then_body,
+            else_body,
+        } => {
             assert_eq!(var, "registry");
-            assert_eq!(body.len(), 1);
+            assert_eq!(then_body.len(), 1);
+            assert!(else_body.is_none());
         }
         _ => panic!("Expected if statement"),
     }
@@ -60,8 +65,9 @@ fn parses_nested_if() {
     let ast = parser::parse(&tokens);
 
     match &ast.functions[0].body[0] {
-        sh2c::ast::Stmt::If { body, .. } => {
-            matches!(body[0], sh2c::ast::Stmt::If { .. });
+        sh2c::ast::Stmt::If { then_body, .. } => {
+            assert_eq!(then_body.len(), 1);
+            matches!(then_body[0], sh2c::ast::Stmt::If { .. });
         }
         _ => panic!("Expected outer if"),
     }

@@ -1,0 +1,9 @@
+main() {
+  if [ -n "$registry" ]; then
+    echo yes
+  else
+    echo no
+  fi
+}
+
+main "$@"

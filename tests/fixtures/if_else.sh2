@@ -1,0 +1,7 @@
+func main() {
+    if registry {
+        print("yes")
+    } else {
+        print("no")
+    }
+}

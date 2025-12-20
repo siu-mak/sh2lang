@@ -4,6 +4,7 @@ pub enum Token {
     Run,
     Print,
     If,
+    Else,
     Ident(String),
     String(String),
     LParen,
@@ -48,6 +49,7 @@ pub fn lex(input: &str) -> Vec<Token> {
                     "run" => tokens.push(Token::Run),
                     "print" => tokens.push(Token::Print),
                     "if" => tokens.push(Token::If),
+                    "else" => tokens.push(Token::Else),
                     _ => tokens.push(Token::Ident(ident)),
                 }
             }

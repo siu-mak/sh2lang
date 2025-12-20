@@ -10,6 +10,7 @@ pub enum Cmd {
     Print(String),
     IfNonEmpty {
         var: String,
-        body: Vec<Cmd>,
+        then_body: Vec<Cmd>,
+        else_body: Vec<Cmd>,
     },    
 }

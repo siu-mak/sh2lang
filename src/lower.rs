@@ -34,16 +34,25 @@ fn lower_stmt(stmt: ast::Stmt, out: &mut Vec<ir::Cmd>) {
             out.push(ir::Cmd::Print(s));
         }
 
-        ast::Stmt::If { var, body } => {
-            let mut inner = Vec::new();
-            for s in body {
-                lower_stmt(s, &mut inner);
+        ast::Stmt::If { var, then_body, else_body } => {
+            let mut then_cmds = Vec::new();
+            for s in then_body {
+                lower_stmt(s, &mut then_cmds);
+            }
+
+            let mut else_cmds = Vec::new();
+            if let Some(body) = else_body {
+                for s in body {
+                    lower_stmt(s, &mut else_cmds);
+                }
             }
 
             out.push(ir::Cmd::IfNonEmpty {
                 var,
-                body: inner,
+                then_body: then_cmds,
+                else_body: else_cmds,
             });
         }
+
     }
 }
