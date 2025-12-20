@@ -3,4 +3,12 @@ name = "sh2c"
 version = "0.1.0"
 edition = "2024"
 
+[lib]
+name = "sh2c"
+path = "src/lib.rs"
+
+[[bin]]
+name = "sh2c"
+path = "src/main.rs"
+
 [dependencies]
