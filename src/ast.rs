@@ -12,4 +12,5 @@ pub struct Function {
 #[derive(Debug)]
 pub enum Stmt {
     Run(Vec<String>),
+    Print(String),
 }

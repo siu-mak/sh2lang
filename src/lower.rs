@@ -9,9 +9,8 @@ pub fn lower(p: ast::Program) -> Vec<ir::Function> {
 
             for stmt in f.body {
                 match stmt {
-                    ast::Stmt::Run(args) => {
-                        commands.push(args);
-                    }
+                    ast::Stmt::Run(args) => commands.push(ir::Cmd::Exec(args)),
+                    ast::Stmt::Print(s) => commands.push(ir::Cmd::Print(s)),
                 }
             }
 

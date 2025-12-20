@@ -2,6 +2,7 @@
 pub enum Token {
     Func,
     Run,
+    Print,
     Ident(String),
     String(String),
     LParen,
@@ -44,6 +45,7 @@ pub fn lex(input: &str) -> Vec<Token> {
                 match ident.as_str() {
                     "func" => tokens.push(Token::Func),
                     "run" => tokens.push(Token::Run),
+                    "print" => tokens.push(Token::Print),
                     _ => tokens.push(Token::Ident(ident)),
                 }
             }

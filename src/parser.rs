@@ -19,29 +19,49 @@ pub fn parse(tokens: &[Token]) -> Program {
     let mut body = Vec::new();
 
     while !matches!(tokens[i], Token::RBrace) {
-        expect(tokens, &mut i, Token::Run);
-        expect(tokens, &mut i, Token::LParen);
+        match &tokens[i] {
+            Token::Run => {
+                i += 1;
+                expect(tokens, &mut i, Token::LParen);
 
-        let mut args = Vec::new();
-        loop {
-            match &tokens[i] {
-                Token::String(s) => {
-                    args.push(s.clone());
-                    i += 1;
-                    if matches!(tokens[i], Token::Comma) {
-                        i += 1;
-                    } else {
-                        break;
+                let mut args = Vec::new();
+                loop {
+                    match &tokens[i] {
+                        Token::String(s) => {
+                            args.push(s.clone());
+                            i += 1;
+                            if matches!(tokens[i], Token::Comma) {
+                                i += 1;
+                            } else {
+                                break;
+                            }
+                        }
+                        _ => break,
                     }
                 }
-                _ => break,
+
+                expect(tokens, &mut i, Token::RParen);
+                body.push(Stmt::Run(args));
             }
+
+            Token::Print => {
+                i += 1;
+                expect(tokens, &mut i, Token::LParen);
+
+                let msg = match &tokens[i] {
+                    Token::String(s) => s.clone(),
+                    _ => panic!("Expected string literal in print()"),
+                };
+                i += 1;
+
+                expect(tokens, &mut i, Token::RParen);
+                body.push(Stmt::Print(msg));
+            }
+
+            _ => panic!("Expected statement"),
         }
-
-        expect(tokens, &mut i, Token::RParen);
-
-        body.push(Stmt::Run(args));
     }
+
 
     expect(tokens, &mut i, Token::RBrace);
 
