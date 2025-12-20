@@ -1,0 +1,4 @@
+func main() {
+    run("echo", "one")
+    run("echo", "two")
+}
