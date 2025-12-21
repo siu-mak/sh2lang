@@ -452,6 +452,22 @@ fn with_redirect_stdin_and_stdout_file_codegen_matches_snapshot() {
 }
 
 #[test]
+fn cmd_sub_pipe_codegen_matches_snapshot() {
+    assert_codegen_matches_snapshot(
+        "tests/fixtures/cmd_sub_pipe.sh2",
+        "tests/fixtures/cmd_sub_pipe.sh.expected",
+    );
+}
+
+#[test]
+fn capture_pipe_codegen_matches_snapshot() {
+    assert_codegen_matches_snapshot(
+        "tests/fixtures/capture_pipe.sh2",
+        "tests/fixtures/capture_pipe.sh.expected",
+    );
+}
+
+#[test]
 #[should_panic(expected = "Cyclic redirection")]
 fn with_redirect_cyclic_panics() {
     assert_codegen_matches_snapshot(

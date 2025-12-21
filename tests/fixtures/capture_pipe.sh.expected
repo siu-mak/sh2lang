@@ -1,0 +1,6 @@
+main() {
+  out=$( "printf" "hi\n" | "sed" "s/hi/ok/" )
+  echo "$out"
+}
+
+main "$@"

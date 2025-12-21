@@ -256,6 +256,12 @@ fn lower_expr(e: ast::Expr) -> ir::Val {
             let lowered_args = args.into_iter().map(lower_expr).collect();
             ir::Val::Command(lowered_args)
         }
+        ast::Expr::CommandPipe(segments) => {
+            let lowered_segments = segments.into_iter()
+                .map(|seg| seg.into_iter().map(lower_expr).collect())
+                .collect();
+            ir::Val::CommandPipe(lowered_segments)
+        }
         ast::Expr::List(exprs) => {
             let lowered_exprs = exprs.into_iter().map(lower_expr).collect();
             ir::Val::List(lowered_exprs)

@@ -618,40 +618,7 @@ fn parse_primary(tokens: &[Token], i: &mut usize) -> Expr {
         }
         Token::Dollar => {
             *i += 1;
-            expect(tokens, i, Token::LParen);
-
-            let mut args = Vec::new();
-
-            if matches!(tokens.get(*i), Some(Token::Run)) {
-                *i += 1;
-                expect(tokens, i, Token::LParen);
-                // Parse arguments for run(...) as before
-                loop {
-                    if matches!(tokens.get(*i), Some(Token::RParen)) { break; }
-                    args.push(parse_expr(tokens, i));
-                    if matches!(tokens.get(*i), Some(Token::Comma)) { *i += 1; } else { break; }
-                }
-                expect(tokens, i, Token::RParen);
-
-            } else if let Some(Token::Ident(name)) = tokens.get(*i).cloned() {
-                *i += 1;
-                // Treat function name as first arg (command name)
-                args.push(Expr::Literal(name));
-                
-                expect(tokens, i, Token::LParen);
-                loop {
-                    if matches!(tokens.get(*i), Some(Token::RParen)) { break; }
-                    args.push(parse_expr(tokens, i));
-                    if matches!(tokens.get(*i), Some(Token::Comma)) { *i += 1; } else { break; }
-                }
-                expect(tokens, i, Token::RParen);
-
-            } else {
-                panic!("Expected run(...) or function call inside $(...)");
-            }
-
-            expect(tokens, i, Token::RParen);
-            Expr::Command(args)
+            parse_command_substitution(tokens, i)
         }
         Token::LBracket => {
             *i += 1;
@@ -670,22 +637,68 @@ fn parse_primary(tokens: &[Token], i: &mut usize) -> Expr {
         }
         Token::Capture => {
             *i += 1;
+            parse_command_substitution(tokens, i)
+        }
+        _ => panic!("Expected string or variable, got {:?}", tokens.get(*i)),
+    }
+}
+fn parse_command_substitution(tokens: &[Token], i: &mut usize) -> Expr {
+    // Expect '(' after '$' or 'capture'
+    expect(tokens, i, Token::LParen);
+    let mut segments: Vec<Vec<Expr>> = Vec::new();
+    loop {
+        let mut args: Vec<Expr> = Vec::new();
+        // Parse a command segment: either run(...), a function call (ident), or a string literal command name
+        if matches!(tokens.get(*i), Some(Token::Run)) {
+            *i += 1;
             expect(tokens, i, Token::LParen);
-            let mut args = Vec::new();
+            // parse arguments inside run()
             loop {
                 if matches!(tokens.get(*i), Some(Token::RParen)) { break; }
                 args.push(parse_expr(tokens, i));
                 if matches!(tokens.get(*i), Some(Token::Comma)) { *i += 1; } else { break; }
             }
             expect(tokens, i, Token::RParen);
-            if args.is_empty() {
-                panic!("capture(...) expects at least one argument (command name)");
+        } else if let Some(Token::Ident(name)) = tokens.get(*i).cloned() {
+            *i += 1;
+            // function name becomes first argument (command name)
+            args.push(Expr::Literal(name));
+            expect(tokens, i, Token::LParen);
+            loop {
+                if matches!(tokens.get(*i), Some(Token::RParen)) { break; }
+                args.push(parse_expr(tokens, i));
+                if matches!(tokens.get(*i), Some(Token::Comma)) { *i += 1; } else { break; }
             }
-            Expr::Command(args)
+            expect(tokens, i, Token::RParen);
+        } else if let Some(Token::String(s)) = tokens.get(*i).cloned() {
+            // string literal command name (e.g., capture("printf", ...))
+            *i += 1;
+            args.push(Expr::Literal(s));
+            // parse remaining arguments until closing parenthesis, handling commas
+            loop {
+                if matches!(tokens.get(*i), Some(Token::RParen)) { break; }
+                if matches!(tokens.get(*i), Some(Token::Comma)) { *i += 1; }
+                args.push(parse_expr(tokens, i));
+            }
+        } else {
+            panic!("Expected run(...), function call, or string literal command name inside command substitution");
         }
-        _ => panic!("Expected string or variable, got {:?}", tokens.get(*i)),
+        segments.push(args);
+        // If there is a pipe, continue parsing next segment
+        if matches!(tokens.get(*i), Some(Token::Pipe)) {
+            *i += 1;
+        } else {
+            break;
+        }
+    }
+    expect(tokens, i, Token::RParen);
+    if segments.len() == 1 {
+        Expr::Command(segments.pop().unwrap())
+    } else {
+        Expr::CommandPipe(segments)
     }
 }
+
 
 fn parse_redirect_target(tokens: &[Token], i: &mut usize) -> crate::ast::RedirectTarget {
     if matches!(tokens.get(*i), Some(Token::File)) {

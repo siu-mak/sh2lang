@@ -1,0 +1,4 @@
+func main() {
+  let out = $(run("sh","-c","echo hi") | run("tr","a-z","A-Z"))
+  print(out)
+}

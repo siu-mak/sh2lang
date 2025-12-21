@@ -27,6 +27,13 @@ fn emit_val(v: &Val) -> String {
             let parts: Vec<String> = args.iter().map(emit_word).collect();
             format!("$( {} )", parts.join(" "))
         }
+        Val::CommandPipe(segments) => {
+             let seg_strs: Vec<String> = segments.iter().map(|seg| {
+                 let words: Vec<String> = seg.iter().map(emit_word).collect();
+                 words.join(" ")
+             }).collect();
+             format!("$( {} )", seg_strs.join(" | "))
+        }
         Val::Compare { .. } | Val::And(..) | Val::Or(..) | Val::Not(..) | Val::List(..) | Val::Args => panic!("Cannot emit boolean/list/args value as string"),
     }
 }
@@ -37,8 +44,15 @@ fn emit_word(v: &Val) -> String {
         Val::Var(s) => format!("\"${}\"", s),
         Val::Concat(l, r) => format!("{}{}", emit_word(l), emit_word(r)),
         Val::Command(args) => {
-             let parts: Vec<String> = args.iter().map(emit_word).collect();
-             format!("$( {} )", parts.join(" "))
+            let parts: Vec<String> = args.iter().map(emit_word).collect();
+            format!("$( {} )", parts.join(" "))
+        }
+        Val::CommandPipe(segments) => {
+             let seg_strs: Vec<String> = segments.iter().map(|seg| {
+                 let words: Vec<String> = seg.iter().map(emit_word).collect();
+                 words.join(" ")
+             }).collect();
+             format!("$( {} )", seg_strs.join(" | "))
         }
         Val::Args => "\"$@\"".into(),
         Val::Compare { .. } | Val::And(..) | Val::Or(..) | Val::Not(..) | Val::List(..) => panic!("Cannot emit boolean/list value as command word"),

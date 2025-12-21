@@ -20,6 +20,7 @@ pub enum Expr {
     Literal(String),
     Var(String),
     Command(Vec<Expr>),
+    CommandPipe(Vec<Vec<Expr>>),
     Concat(Box<Expr>, Box<Expr>),
     Compare { left: Box<Expr>, op: CompareOp, right: Box<Expr> },
     And(Box<Expr>, Box<Expr>),
