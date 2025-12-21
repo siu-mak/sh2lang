@@ -339,6 +339,17 @@ fn parse_stmt(tokens: &[Token], i: &mut usize) -> Stmt {
             }
         }
 
+        Token::Subshell => {
+            *i += 1;
+            expect(tokens, i, Token::LBrace);
+            let mut body = Vec::new();
+            while !matches!(tokens[*i], Token::RBrace) {
+                body.push(parse_stmt(tokens, i));
+            }
+            expect(tokens, i, Token::RBrace);
+            Stmt::Subshell { body }
+        }
+
         Token::Sh => {
             *i += 1;
             if matches!(tokens.get(*i), Some(Token::LParen)) {

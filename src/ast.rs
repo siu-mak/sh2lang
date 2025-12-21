@@ -70,6 +70,7 @@ pub enum Stmt {
     Sh(String),
     ShBlock(Vec<String>),
     Call { name: String, args: Vec<Expr> },
+    Subshell { body: Vec<Stmt> },
 }
 
 #[derive(Debug, Clone, PartialEq)]

@@ -250,6 +250,13 @@ fn emit_cmd(cmd: &Cmd, out: &mut String, indent: usize) {
             }
             out.push('\n');
         }
+        Cmd::Subshell { body } => {
+            out.push_str(&format!("{pad}(\n"));
+            for cmd in body {
+                emit_cmd(cmd, out, indent + 2);
+            }
+            out.push_str(&format!("{pad})\n"));
+        }
 
     }
 }

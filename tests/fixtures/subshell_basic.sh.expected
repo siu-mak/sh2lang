@@ -1,0 +1,9 @@
+main() {
+  (
+    x="hi"
+    echo "$x"
+  )
+  echo "after"
+}
+
+main "$@"

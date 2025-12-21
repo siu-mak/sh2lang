@@ -167,6 +167,13 @@ fn lower_stmt(stmt: ast::Stmt, out: &mut Vec<ir::Cmd>) {
             let args = args.iter().map(|e| lower_expr(e.clone())).collect();
             out.push(ir::Cmd::Call { name: name.clone(), args });
         }
+        ast::Stmt::Subshell { body } => {
+            let mut lowered = Vec::new();
+            for s in body {
+                lower_stmt(s, &mut lowered);
+            }
+            out.push(ir::Cmd::Subshell { body: lowered });
+        }
     }
 }
 
