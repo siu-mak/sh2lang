@@ -12,7 +12,7 @@ pub enum Val {
 
 #[derive(Debug)]
 pub enum Cmd {
-    Assign(String, String),
+    Assign(String, Val),
     Exec(Vec<Val>),
     Print(Val),
     PrintErr(Val),

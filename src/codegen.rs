@@ -30,7 +30,7 @@ fn emit_cmd(cmd: &Cmd, out: &mut String, indent: usize) {
             out.push_str(&pad);
             out.push_str(name);
             out.push('=');
-            out.push_str(&format!("\"{}\"", val));
+            out.push_str(&emit_val(val));
             out.push('\n');
         }
         Cmd::Exec(args) => {

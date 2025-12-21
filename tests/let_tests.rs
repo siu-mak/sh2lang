@@ -14,11 +14,11 @@ fn parses_let_statement() {
     let func = &program.functions[0];
     
     match &func.body[0] {
-        ast::Stmt::Let { name, value } => {
+        ast::Stmt::Let { name, value: ast::Expr::Literal(val) } => {
             assert_eq!(name, "x");
-            assert_eq!(value, "y");
+            assert_eq!(val, "y");
         }
-        _ => panic!("Expected Let stmt"),
+        _ => panic!("Expected Let stmt with literal"),
     }
 }
 
@@ -64,4 +64,24 @@ fn exec_let_variable() {
         
     let stdout = String::from_utf8_lossy(&out.stdout);
     assert_eq!(stdout.trim(), "works");
+}
+
+#[test]
+fn let_alias_variable() {
+    let src = r#"
+        func main() {
+            let a = "origin"
+            let b = a
+            print(b)
+        }
+    "#;
+    
+    let tokens = lexer::lex(src);
+    let ast = parser::parse(&tokens);
+    let ir = lower::lower(ast);
+    let out = codegen::emit(&ir);
+    
+    // b="origin" is implicit but specific line we want is b="$a" (or equivalent logic)
+    // Actually, b = a -> b="$a"
+    assert!(out.contains("b=\"$a\""));
 }

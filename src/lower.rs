@@ -27,7 +27,7 @@ fn lower_function(f: ast::Function) -> ir::Function {
 fn lower_stmt(stmt: ast::Stmt, out: &mut Vec<ir::Cmd>) {
     match stmt {
         ast::Stmt::Let { name, value } => {
-            out.push(ir::Cmd::Assign(name, value));
+            out.push(ir::Cmd::Assign(name, lower_expr(value)));
         }
 
         ast::Stmt::Run(args) => {

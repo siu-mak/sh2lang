@@ -46,8 +46,9 @@ fn parse_stmt(tokens: &[Token], i: &mut usize) -> Stmt {
             expect(tokens, i, Token::Equals);
 
             let value = match &tokens[*i] {
-                Token::String(s) => s.clone(),
-                _ => panic!("Expected string literal in let assignment"),
+                Token::String(s) => Expr::Literal(s.clone()),
+                Token::Ident(s) => Expr::Var(s.clone()),
+                _ => panic!("Expected string literal or variable in let assignment"),
             };
             *i += 1;
 

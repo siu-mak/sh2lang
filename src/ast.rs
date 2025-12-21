@@ -17,7 +17,7 @@ pub enum Expr {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Stmt {
-    Let { name: String, value: String },
+    Let { name: String, value: Expr },
     Run(Vec<Expr>),
     Print(Expr),
     PrintErr(Expr),

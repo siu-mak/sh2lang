@@ -1,0 +1,102 @@
+program         ::= (toplevel_stmt | function | comment)*
+
+function        ::= "func" identifier "(" params? ")" block
+
+params          ::= param ("," param)*
+param           ::= identifier (":" type)?
+type            ::= "Str" | "Int" | "Bool"
+
+block           ::= "{" statement* "}"
+
+statement       ::= assign_stmt
+                  | run_stmt
+                  | print_stmt
+                  | print_err_stmt
+                  | if_stmt
+                  | case_stmt
+                  | while_stmt
+                  | for_stmt
+                  | break_stmt
+                  | continue_stmt
+                  | return_stmt
+                  | exit_stmt
+                  | with_stmt
+                  | pipe_stmt
+                  | spawn_stmt
+                  | subshell_stmt
+                  | group_stmt
+                  | raw_stmt
+                  | sh_stmt
+                  | comment
+
+assign_stmt     ::= "let" identifier "=" expr
+                  | "set" lvalue "=" expr
+
+lvalue          ::= identifier
+                  | "env" "." identifier
+
+run_stmt        ::= "run" "(" string ("," string)* ")"
+
+print_stmt      ::= "print" "(" expr ")"
+print_err_stmt  ::= "print_err" "(" expr ")"
+
+if_stmt         ::= "if" expr block elif_clause* else_clause?
+
+elif_clause     ::= "elif" expr block
+else_clause     ::= "else" block
+
+case_stmt       ::= "case" expr "{" case_arm+ "}"
+case_arm        ::= pattern_list "=>" block
+pattern_list    ::= pattern ("|" pattern)*
+pattern         ::= string | "_"
+
+while_stmt      ::= "while" expr block
+
+for_stmt        ::= "for" identifier "in" iterable block
+iterable        ::= "args"
+                  | list_lit
+                  | "glob" "(" string ")"
+
+with_stmt       ::= "with" with_head block
+with_head       ::= "env" "{" env_bind ("," env_bind)* "}"
+                  | "cwd" string
+                  | "redirect" "{" redirect_bind ("," redirect_bind)* "}"
+                  | "options" "{" option_bind ("," option_bind)* "}"
+
+pipe_stmt       ::= pipe_stage ("|" pipe_stage)+
+pipe_stage      ::= run_stmt | block
+
+spawn_stmt      ::= "spawn" block
+subshell_stmt   ::= "subshell" block
+group_stmt      ::= "group" block
+
+raw_stmt        ::= "raw" "{" raw_text "}"
+sh_stmt         ::= "sh" "(" string ")"
+
+expr            ::= or_expr
+or_expr         ::= and_expr ("||" and_expr)*
+and_expr        ::= unary_expr ("&&" unary_expr)*
+unary_expr      ::= "!" unary_expr | primary
+
+primary         ::= literal
+                  | identifier
+                  | "env" "." identifier
+                  | "(" expr ")"
+
+literal         ::= string
+                  | interpolated_string
+                  | int_lit
+                  | bool_lit
+                  | list_lit
+
+list_lit        ::= "[" (expr ("," expr)*)? "]"
+
+string          ::= "\"" string_char* "\""
+interpolated_string ::= "$\"" interp_char* "\""
+
+int_lit         ::= digit+
+bool_lit        ::= "true" | "false"
+
+identifier      ::= (letter | "_") (letter | digit | "_")*
+
+comment         ::= "#" comment_char* newline
