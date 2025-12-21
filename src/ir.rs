@@ -79,6 +79,8 @@ pub enum Cmd {
         try_body: Vec<Cmd>,
         catch_body: Vec<Cmd>,
     },
+    AndThen { left: Vec<Cmd>, right: Vec<Cmd> },
+    OrElse { left: Vec<Cmd>, right: Vec<Cmd> },
 }
 
 #[derive(Debug, Clone, PartialEq)]

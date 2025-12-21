@@ -1,0 +1,4 @@
+func main() {
+  run("true") && print("ok")
+  run("false") || print("fallback")
+}

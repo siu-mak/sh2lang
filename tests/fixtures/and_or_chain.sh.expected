@@ -1,0 +1,14 @@
+main() {
+  {
+    "true"
+  } && {
+    echo "ok"
+  }
+  {
+    "false"
+  } || {
+    echo "fallback"
+  }
+}
+
+main "$@"

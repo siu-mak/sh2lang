@@ -33,6 +33,34 @@ pub fn parse(tokens: &[Token]) -> Program {
 }
 
 fn parse_stmt(tokens: &[Token], i: &mut usize) -> Stmt {
+    let mut left = parse_stmt_atom(tokens, i);
+
+    while let Some(token) = tokens.get(*i) {
+        match token {
+            Token::AndAnd => {
+                *i += 1;
+                let right = parse_stmt_atom(tokens, i);
+                left = Stmt::AndThen {
+                    left: Box::new(left),
+                    right: Box::new(right),
+                };
+            }
+            Token::OrOr => {
+                *i += 1;
+                let right = parse_stmt_atom(tokens, i);
+                left = Stmt::OrElse {
+                    left: Box::new(left),
+                    right: Box::new(right),
+                };
+            }
+            _ => break,
+        }
+    }
+
+    left
+}
+
+fn parse_stmt_atom(tokens: &[Token], i: &mut usize) -> Stmt {
     
     match &tokens[*i] {
         Token::Let => {

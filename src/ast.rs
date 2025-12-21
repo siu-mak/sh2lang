@@ -85,6 +85,8 @@ pub enum Stmt {
         try_body: Vec<Stmt>,
         catch_body: Vec<Stmt>,
     },
+    AndThen { left: Box<Stmt>, right: Box<Stmt> },
+    OrElse { left: Box<Stmt>, right: Box<Stmt> },
 }
 
 #[derive(Debug, Clone, PartialEq)]

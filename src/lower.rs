@@ -224,6 +224,20 @@ fn lower_stmt(stmt: ast::Stmt, out: &mut Vec<ir::Cmd>) {
             }
             out.push(ir::Cmd::TryCatch { try_body: lower_try, catch_body: lower_catch });
         }
+        ast::Stmt::AndThen { left, right } => {
+            let mut l_cmds = Vec::new();
+            lower_stmt(*left, &mut l_cmds);
+            let mut r_cmds = Vec::new();
+            lower_stmt(*right, &mut r_cmds);
+            out.push(ir::Cmd::AndThen { left: l_cmds, right: r_cmds });
+        }
+        ast::Stmt::OrElse { left, right } => {
+            let mut l_cmds = Vec::new();
+            lower_stmt(*left, &mut l_cmds);
+            let mut r_cmds = Vec::new();
+            lower_stmt(*right, &mut r_cmds);
+            out.push(ir::Cmd::OrElse { left: l_cmds, right: r_cmds });
+        }
     }
 }
 

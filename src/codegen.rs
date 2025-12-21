@@ -398,6 +398,27 @@ fn emit_cmd(cmd: &Cmd, out: &mut String, indent: usize) {
             }
             out.push_str(&format!("{pad}fi\n"));
         }
-
+        Cmd::AndThen { left, right } => {
+            out.push_str(&format!("{pad}{{\n"));
+            for cmd in left {
+                emit_cmd(cmd, out, indent + 2);
+            }
+            out.push_str(&format!("{pad}}} && {{\n"));
+            for cmd in right {
+                emit_cmd(cmd, out, indent + 2);
+            }
+            out.push_str(&format!("{pad}}}\n"));
+        }
+        Cmd::OrElse { left, right } => {
+            out.push_str(&format!("{pad}{{\n"));
+            for cmd in left {
+                emit_cmd(cmd, out, indent + 2);
+            }
+            out.push_str(&format!("{pad}}} || {{\n"));
+            for cmd in right {
+                emit_cmd(cmd, out, indent + 2);
+            }
+            out.push_str(&format!("{pad}}}\n"));
+        }
     }
 }
