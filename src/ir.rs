@@ -63,6 +63,7 @@ pub enum Cmd {
         body: Vec<Cmd>,
     },
     Raw(String),
+    Call { name: String, args: Vec<Val> },
 }
 
 #[derive(Debug, Clone, PartialEq)]

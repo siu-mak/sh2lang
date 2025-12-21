@@ -1,0 +1,9 @@
+show() {
+  echo arg=$1
+}
+
+main() {
+  show "hi"
+}
+
+main "$@"

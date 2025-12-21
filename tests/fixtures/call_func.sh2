@@ -1,0 +1,7 @@
+func show() {
+  sh("echo arg=$1")
+}
+
+func main() {
+  show("hi")
+}

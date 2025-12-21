@@ -377,6 +377,19 @@ fn parse_stmt(tokens: &[Token], i: &mut usize) -> Stmt {
             }
         }
 
+        Token::Ident(name) => {
+            *i += 1;
+            expect(tokens, i, Token::LParen);
+            let mut args = Vec::new();
+            loop {
+                if matches!(tokens.get(*i), Some(Token::RParen)) { break; }
+                args.push(parse_expr(tokens, i));
+                if matches!(tokens.get(*i), Some(Token::Comma)) { *i += 1; } else { break; }
+            }
+            expect(tokens, i, Token::RParen);
+            Stmt::Call { name: name.clone(), args }
+        }
+
         _ => panic!("Expected statement"),
     }
 }

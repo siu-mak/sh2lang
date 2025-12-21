@@ -3,7 +3,10 @@ use crate::ir::{Function, Cmd, Val};
 pub fn emit(funcs: &[Function]) -> String {
     let mut out = String::new();
 
-    for f in funcs {
+    for (i, f) in funcs.iter().enumerate() {
+        if i > 0 {
+            out.push('\n');
+        }
         out.push_str(&format!("{}() {{\n", f.name));
         for cmd in &f.commands {
             emit_cmd(cmd, &mut out, 2);
@@ -222,6 +225,15 @@ fn emit_cmd(cmd: &Cmd, out: &mut String, indent: usize) {
         Cmd::Raw(s) => {
             out.push_str(&pad);
             out.push_str(s);
+            out.push('\n');
+        }
+        Cmd::Call { name, args } => {
+            out.push_str(&pad);
+            out.push_str(name);
+            for arg in args {
+                out.push(' ');
+                out.push_str(&emit_val(arg));
+            }
             out.push('\n');
         }
 

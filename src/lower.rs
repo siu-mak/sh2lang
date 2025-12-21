@@ -163,6 +163,10 @@ fn lower_stmt(stmt: ast::Stmt, out: &mut Vec<ir::Cmd>) {
                 out.push(ir::Cmd::Raw(s));
             }
         }
+        ast::Stmt::Call { name, args } => {
+            let args = args.iter().map(|e| lower_expr(e.clone())).collect();
+            out.push(ir::Cmd::Call { name: name.clone(), args });
+        }
     }
 }
 
