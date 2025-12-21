@@ -37,11 +37,15 @@ fn parses_if_statement() {
 
     match &func.body[0] {
         sh2c::ast::Stmt::If {
-            var,
+            cond,
             then_body,
             else_body,
         } => {
-            assert_eq!(var, "registry");
+            if let sh2c::ast::Expr::Var(name) = cond {
+                assert_eq!(name, "registry");
+            } else {
+                panic!("Expected Var as condition");
+            }
             assert_eq!(then_body.len(), 1);
             assert!(else_body.is_none());
         }

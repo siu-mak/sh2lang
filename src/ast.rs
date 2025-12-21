@@ -10,10 +10,17 @@ pub struct Function {
 }
 
 #[derive(Debug, Clone, PartialEq)]
+pub enum CompareOp {
+    Eq,
+    NotEq,
+}
+
+#[derive(Debug, Clone, PartialEq)]
 pub enum Expr {
     Literal(String),
     Var(String),
     Concat(Box<Expr>, Box<Expr>),
+    Compare { left: Box<Expr>, op: CompareOp, right: Box<Expr> },
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -23,7 +30,7 @@ pub enum Stmt {
     Print(Expr),
     PrintErr(Expr),
     If {
-        var: String,
+        cond: Expr,
         then_body: Vec<Stmt>,
         else_body: Option<Vec<Stmt>>,
     },

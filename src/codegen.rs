@@ -20,6 +20,21 @@ fn emit_val(v: &Val) -> String {
         Val::Literal(s) => format!("\"{}\"", s),
         Val::Var(s) => format!("\"${}\"", s),
         Val::Concat(l, r) => format!("{}{}", emit_val(l), emit_val(r)),
+        Val::Compare { .. } => panic!("Cannot emit boolean value as string"), // Or handle appropriately if used in string context
+    }
+}
+
+fn emit_cond(v: &Val) -> String {
+    match v {
+        Val::Compare { left, op, right } => {
+            let op_str = match op {
+                crate::ir::CompareOp::Eq => "=",
+                crate::ir::CompareOp::NotEq => "!=",
+            };
+            format!("[ {} {} {} ]", emit_val(left), op_str, emit_val(right))
+        }
+        // Legacy "is set" behavior for direct values
+        v => format!("[ -n {} ]", emit_val(v)),
     }
 }
 
@@ -52,8 +67,9 @@ fn emit_cmd(cmd: &Cmd, out: &mut String, indent: usize) {
             out.push_str(&emit_val(val));
             out.push_str(" >&2\n");
         }
-        Cmd::IfNonEmpty { var, then_body, else_body } => {
-            out.push_str(&format!("{pad}if [ -n \"${var}\" ]; then\n"));
+        Cmd::If { cond, then_body, else_body } => {
+            let cond_str = emit_cond(cond);
+            out.push_str(&format!("{pad}if {cond_str}; then\n"));
             for c in then_body {
                 emit_cmd(c, out, indent + 2);
             }

@@ -9,6 +9,8 @@ pub enum Token {
     Let,
     Plus,
     Equals,
+    EqEq,
+    NotEq,
     Ident(String),
     String(String),
     LParen,
@@ -30,8 +32,25 @@ pub fn lex(input: &str) -> Vec<Token> {
             '{' => { tokens.push(Token::LBrace); chars.next(); }
             '}' => { tokens.push(Token::RBrace); chars.next(); }
             ',' => { tokens.push(Token::Comma); chars.next(); }
-            '=' => { tokens.push(Token::Equals); chars.next(); }
+            '=' => {
+                chars.next();
+                if chars.peek() == Some(&'=') {
+                     tokens.push(Token::EqEq);
+                     chars.next();
+                } else {
+                     tokens.push(Token::Equals);
+                }
+            }
             '+' => { tokens.push(Token::Plus); chars.next(); }
+            '!' => {
+                chars.next();
+                if chars.peek() == Some(&'=') {
+                    tokens.push(Token::NotEq);
+                    chars.next();
+                } else {
+                    panic!("Unexpected character '!'");
+                }
+            }
             '"' => {
                 chars.next();
                 let mut s = String::new();
