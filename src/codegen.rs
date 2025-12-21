@@ -149,6 +149,13 @@ fn emit_cmd(cmd: &Cmd, out: &mut String, indent: usize) {
                  out.push_str(&format!("{pad}return\n"));
              }
         }
+        Cmd::Exit(val) => {
+             if let Some(v) = val {
+                 out.push_str(&format!("{pad}exit {}\n", emit_val(v)));
+             } else {
+                 out.push_str(&format!("{pad}exit\n"));
+             }
+        }
 
     }
 }

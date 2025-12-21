@@ -47,6 +47,7 @@ pub enum Cmd {
     Break,
     Continue,
     Return(Option<Val>),
+    Exit(Option<Val>),
 }
 
 #[derive(Debug, Clone, PartialEq)]

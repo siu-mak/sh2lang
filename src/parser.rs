@@ -253,6 +253,16 @@ fn parse_stmt(tokens: &[Token], i: &mut usize) -> Stmt {
             Stmt::Return(expr)
         }
 
+        Token::Exit => {
+            *i += 1;
+            let expr = if matches!(tokens.get(*i), Some(Token::String(_) | Token::Ident(_) | Token::Dollar | Token::LParen)) {
+                Some(parse_expr(tokens, i))
+            } else {
+                None
+            };
+            Stmt::Exit(expr)
+        }
+
         _ => panic!("Expected statement"),
     }
 }

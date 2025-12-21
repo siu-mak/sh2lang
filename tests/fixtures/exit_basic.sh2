@@ -1,0 +1,5 @@
+func main() {
+    print("fatal")
+    exit "1"
+    print("never")
+}

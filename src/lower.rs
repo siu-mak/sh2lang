@@ -120,6 +120,9 @@ fn lower_stmt(stmt: ast::Stmt, out: &mut Vec<ir::Cmd>) {
         ast::Stmt::Return(e) => {
              out.push(ir::Cmd::Return(e.map(lower_expr)));
         }
+        ast::Stmt::Exit(e) => {
+             out.push(ir::Cmd::Exit(e.map(lower_expr)));
+        }
 
     }
 }
