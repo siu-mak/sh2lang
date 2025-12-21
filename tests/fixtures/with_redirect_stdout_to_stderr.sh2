@@ -1,0 +1,6 @@
+func main() {
+  with redirect { stdout: stderr } {
+    print("to-stdout")
+    print_err("to-stderr")
+  }
+}

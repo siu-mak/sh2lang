@@ -277,7 +277,12 @@ fn emit_cmd(cmd: &Cmd, out: &mut String, indent: usize) {
                         let op = if *append { ">>" } else { ">" };
                         out.push_str(&format!(" {} {}", op, emit_val(path)));
                     }
-                    _ => panic!("stdout redirected to something invalid for stdout (only file supported for now)"),
+                    RedirectTarget::Stderr => {
+                        out.push_str(" 1>&2");
+                    }
+                    RedirectTarget::Stdout => {
+                        // no-op
+                    }
                 }
             }
 

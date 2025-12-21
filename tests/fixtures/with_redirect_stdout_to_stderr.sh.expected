@@ -1,0 +1,8 @@
+main() {
+  {
+    echo "to-stdout"
+    echo "to-stderr" >&2
+  } 1>&2
+}
+
+main "$@"
