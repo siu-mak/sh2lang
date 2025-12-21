@@ -347,6 +347,30 @@ fn try_catch_success_codegen_matches_snapshot() {
     );
 }
 
+#[test]
+fn wait_all_codegen_matches_snapshot() {
+    assert_codegen_matches_snapshot(
+        "tests/fixtures/wait_all.sh2",
+        "tests/fixtures/wait_all.sh.expected",
+    );
+}
+
+#[test]
+fn wait_pid_literal_codegen_matches_snapshot() {
+    assert_codegen_matches_snapshot(
+        "tests/fixtures/wait_pid_literal.sh2",
+        "tests/fixtures/wait_pid_literal.sh.expected",
+    );
+}
+
+#[test]
+fn wait_pid_var_codegen_matches_snapshot() {
+    assert_codegen_matches_snapshot(
+        "tests/fixtures/wait_pid_var.sh2",
+        "tests/fixtures/wait_pid_var.sh.expected",
+    );
+}
+
 fn assert_codegen_matches_snapshot(sh2_path: &str, expected_path: &str) {
     let src = fs::read_to_string(sh2_path).unwrap();
     let expected = fs::read_to_string(expected_path).unwrap();

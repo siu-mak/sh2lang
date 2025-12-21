@@ -78,7 +78,7 @@ pub enum Stmt {
         body: Vec<Stmt>,
     },
     Spawn { stmt: Box<Stmt> },
-    Wait,
+    Wait(Option<Expr>),
     TryCatch {
         try_body: Vec<Stmt>,
         catch_body: Vec<Stmt>,

@@ -1,0 +1,6 @@
+main() {
+  pid="1234"
+  wait "$pid"
+}
+
+main "$@"

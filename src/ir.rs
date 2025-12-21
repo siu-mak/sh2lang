@@ -72,7 +72,7 @@ pub enum Cmd {
         body: Vec<Cmd>,
     },
     Spawn(Box<Cmd>),
-    Wait,
+    Wait(Option<Val>),
     TryCatch {
         try_body: Vec<Cmd>,
         catch_body: Vec<Cmd>,

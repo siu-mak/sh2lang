@@ -385,8 +385,23 @@ fn parse_stmt(tokens: &[Token], i: &mut usize) -> Stmt {
         Token::Wait => {
             *i += 1;
             expect(tokens, i, Token::LParen);
+            
+            let expr = if matches!(tokens.get(*i),
+                Some(Token::String(_)
+                  | Token::Ident(_)
+                  | Token::Dollar
+                  | Token::LParen
+                  | Token::LBracket
+                  | Token::Args
+                  | Token::Capture)
+            ) {
+              Some(parse_expr(tokens, i))
+            } else {
+              None
+            };
+
             expect(tokens, i, Token::RParen);
-            Stmt::Wait
+            Stmt::Wait(expr)
         }
 
         Token::Try => {

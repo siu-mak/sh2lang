@@ -1,0 +1,6 @@
+func main() {
+  spawn run("sleep", "1")
+  spawn run("sleep", "1")
+  wait()
+  print("done")
+}

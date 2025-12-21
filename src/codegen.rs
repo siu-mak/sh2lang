@@ -308,8 +308,11 @@ fn emit_cmd(cmd: &Cmd, out: &mut String, indent: usize) {
              out.push_str(&inner_out);
              out.push_str(" &\n");
         }
-        Cmd::Wait => {
-             out.push_str(&format!("{pad}wait\n"));
+        Cmd::Wait(opt) => {
+             match opt {
+                 Some(val) => out.push_str(&format!("{pad}wait {}\n", emit_val(val))),
+                 None => out.push_str(&format!("{pad}wait\n")),
+             }
         }
         Cmd::TryCatch { try_body, catch_body } => {
             out.push_str(&format!("{pad}if ! (\n"));

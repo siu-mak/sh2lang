@@ -209,8 +209,8 @@ fn lower_stmt(stmt: ast::Stmt, out: &mut Vec<ir::Cmd>) {
                  out.push(ir::Cmd::Spawn(Box::new(ir::Cmd::Group { body: lower_cmds })));
             }
         }
-        ast::Stmt::Wait => {
-            out.push(ir::Cmd::Wait);
+        ast::Stmt::Wait(expr) => {
+            out.push(ir::Cmd::Wait(expr.map(lower_expr)));
         }
         ast::Stmt::TryCatch { try_body, catch_body } => {
             let mut lower_try = Vec::new();
