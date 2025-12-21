@@ -494,25 +494,37 @@ fn parse_primary(tokens: &[Token], i: &mut usize) -> Expr {
         Token::Dollar => {
             *i += 1;
             expect(tokens, i, Token::LParen);
-            expect(tokens, i, Token::Run);
-            expect(tokens, i, Token::LParen);
-            
-            let mut args = Vec::new();
-            loop {
-                if matches!(tokens.get(*i), Some(Token::RParen)) {
-                   break; 
-                }
-                
-                args.push(parse_expr(tokens, i));
 
-                if matches!(tokens.get(*i), Some(Token::Comma)) {
-                    *i += 1;
-                } else {
-                    break;
+            let mut args = Vec::new();
+
+            if matches!(tokens.get(*i), Some(Token::Run)) {
+                *i += 1;
+                expect(tokens, i, Token::LParen);
+                // Parse arguments for run(...) as before
+                loop {
+                    if matches!(tokens.get(*i), Some(Token::RParen)) { break; }
+                    args.push(parse_expr(tokens, i));
+                    if matches!(tokens.get(*i), Some(Token::Comma)) { *i += 1; } else { break; }
                 }
+                expect(tokens, i, Token::RParen);
+
+            } else if let Some(Token::Ident(name)) = tokens.get(*i).cloned() {
+                *i += 1;
+                // Treat function name as first arg (command name)
+                args.push(Expr::Literal(name));
+                
+                expect(tokens, i, Token::LParen);
+                loop {
+                    if matches!(tokens.get(*i), Some(Token::RParen)) { break; }
+                    args.push(parse_expr(tokens, i));
+                    if matches!(tokens.get(*i), Some(Token::Comma)) { *i += 1; } else { break; }
+                }
+                expect(tokens, i, Token::RParen);
+
+            } else {
+                panic!("Expected run(...) or function call inside $(...)");
             }
 
-            expect(tokens, i, Token::RParen);
             expect(tokens, i, Token::RParen);
             Expr::Command(args)
         }

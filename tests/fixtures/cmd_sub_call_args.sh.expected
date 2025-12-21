@@ -1,0 +1,10 @@
+show() {
+  echo $@
+}
+
+main() {
+  out=$( "show" "$@" )
+  echo "$out"
+}
+
+main "$@"

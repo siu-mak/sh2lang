@@ -1,0 +1,8 @@
+func show() {
+  sh("echo ok")
+}
+
+func main() {
+  let out = $(show())
+  print(out)
+}
