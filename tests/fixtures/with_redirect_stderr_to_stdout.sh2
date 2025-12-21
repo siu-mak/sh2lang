@@ -1,0 +1,5 @@
+func main() {
+  with redirect { stderr: stdout } {
+    run("sh", "-c", "echo err 1>&2")
+  }
+}

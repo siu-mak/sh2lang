@@ -72,6 +72,18 @@ pub enum Stmt {
     Call { name: String, args: Vec<Expr> },
     Subshell { body: Vec<Stmt> },
     Group { body: Vec<Stmt> },
+    WithRedirect {
+        stdout: Option<RedirectTarget>,
+        stderr: Option<RedirectTarget>,
+        body: Vec<Stmt>,
+    },
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum RedirectTarget {
+    File { path: Expr, append: bool },
+    Stdout,
+    Stderr,
 }
 
 #[derive(Debug, Clone, PartialEq)]

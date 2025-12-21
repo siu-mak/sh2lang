@@ -275,6 +275,38 @@ fn group_basic_codegen_matches_snapshot() {
     );
 }
 
+#[test]
+fn with_redirect_stdout_codegen_matches_snapshot() {
+    assert_codegen_matches_snapshot(
+        "tests/fixtures/with_redirect_stdout.sh2",
+        "tests/fixtures/with_redirect_stdout.sh.expected",
+    );
+}
+
+#[test]
+fn with_redirect_stdout_append_codegen_matches_snapshot() {
+    assert_codegen_matches_snapshot(
+        "tests/fixtures/with_redirect_stdout_append.sh2",
+        "tests/fixtures/with_redirect_stdout_append.sh.expected",
+    );
+}
+
+#[test]
+fn with_redirect_stderr_to_stdout_codegen_matches_snapshot() {
+    assert_codegen_matches_snapshot(
+        "tests/fixtures/with_redirect_stderr_to_stdout.sh2",
+        "tests/fixtures/with_redirect_stderr_to_stdout.sh.expected",
+    );
+}
+
+#[test]
+fn with_redirect_combo_codegen_matches_snapshot() {
+    assert_codegen_matches_snapshot(
+        "tests/fixtures/with_redirect_combo.sh2",
+        "tests/fixtures/with_redirect_combo.sh.expected",
+    );
+}
+
 fn assert_codegen_matches_snapshot(sh2_path: &str, expected_path: &str) {
     let src = fs::read_to_string(sh2_path).unwrap();
     let expected = fs::read_to_string(expected_path).unwrap();

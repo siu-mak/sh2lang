@@ -35,6 +35,12 @@ pub enum Token {
     Capture,
     Subshell,
     Group,
+    Redirect,
+    Stdout,
+    Stderr,
+    File,
+    Append,
+    Colon,
     Ident(String),
     String(String),
     LParen,
@@ -60,6 +66,7 @@ pub fn lex(input: &str) -> Vec<Token> {
             '[' => { tokens.push(Token::LBracket); chars.next(); }
             ']' => { tokens.push(Token::RBracket); chars.next(); }
             ',' => { tokens.push(Token::Comma); chars.next(); }
+            ':' => { tokens.push(Token::Colon); chars.next(); }
             '=' => {
                 chars.next();
                 if chars.peek() == Some(&'=') {
@@ -145,6 +152,11 @@ pub fn lex(input: &str) -> Vec<Token> {
                     "capture" => tokens.push(Token::Capture),
                     "subshell" => tokens.push(Token::Subshell),
                     "group" => tokens.push(Token::Group),
+                    "redirect" => tokens.push(Token::Redirect),
+                    "stdout" => tokens.push(Token::Stdout),
+                    "stderr" => tokens.push(Token::Stderr),
+                    "file" => tokens.push(Token::File),
+                    "append" => tokens.push(Token::Append),
                     _ => tokens.push(Token::Ident(ident)),
                 }
             }

@@ -1,0 +1,5 @@
+func main() {
+  with redirect { stdout: file("out.log") } {
+    run("echo", "hi")
+  }
+}

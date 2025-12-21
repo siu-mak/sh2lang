@@ -334,8 +334,45 @@ fn parse_stmt(tokens: &[Token], i: &mut usize) -> Stmt {
                 
                 Stmt::WithCwd { path, body }
                 
+            } else if matches!(tokens.get(*i), Some(Token::Redirect)) {
+                *i += 1;
+                expect(tokens, i, Token::LBrace);
+                
+                let mut stdout = None;
+                let mut stderr = None;
+
+                while !matches!(tokens.get(*i), Some(Token::RBrace)) {
+                    if matches!(tokens.get(*i), Some(Token::Stdout)) {
+                        *i += 1;
+                        expect(tokens, i, Token::Colon);
+                        stdout = Some(parse_redirect_target(tokens, i));
+                    } else if matches!(tokens.get(*i), Some(Token::Stderr)) {
+                        *i += 1;
+                        expect(tokens, i, Token::Colon);
+                        stderr = Some(parse_redirect_target(tokens, i));
+                    } else {
+                         // consume commas if any
+                    }
+
+                    if matches!(tokens.get(*i), Some(Token::Comma)) {
+                        *i += 1;
+                    } else {
+                        break;
+                    }
+                }
+                expect(tokens, i, Token::RBrace);
+
+                expect(tokens, i, Token::LBrace);
+                let mut body = Vec::new();
+                while !matches!(tokens[*i], Token::RBrace) {
+                    body.push(parse_stmt(tokens, i));
+                }
+                expect(tokens, i, Token::RBrace);
+
+                Stmt::WithRedirect { stdout, stderr, body }
+
             } else {
-                panic!("Expected 'env' or 'cwd' after 'with'");
+                panic!("Expected 'env', 'cwd', or 'redirect' after 'with'");
             }
         }
 
@@ -581,5 +618,40 @@ fn parse_primary(tokens: &[Token], i: &mut usize) -> Expr {
             Expr::Command(args)
         }
         _ => panic!("Expected string or variable, got {:?}", tokens.get(*i)),
+    }
+}
+
+fn parse_redirect_target(tokens: &[Token], i: &mut usize) -> crate::ast::RedirectTarget {
+    if matches!(tokens.get(*i), Some(Token::File)) {
+        *i += 1;
+        expect(tokens, i, Token::LParen);
+        let path = parse_expr(tokens, i);
+        let mut append = false;
+        
+        if matches!(tokens.get(*i), Some(Token::Comma)) {
+            *i += 1;
+            if matches!(tokens.get(*i), Some(Token::Append)) {
+                *i += 1;
+                expect(tokens, i, Token::Equals);
+                 // primitive true/false parsing
+                 if let Some(Token::Ident(val)) = tokens.get(*i) {
+                     if val == "true" { append = true; }
+                     *i += 1;
+                 } else {
+                     panic!("Expected true/false for append");
+                 }
+            }
+        }
+
+        expect(tokens, i, Token::RParen);
+        crate::ast::RedirectTarget::File { path, append }
+    } else if matches!(tokens.get(*i), Some(Token::Stdout)) {
+        *i += 1;
+        crate::ast::RedirectTarget::Stdout
+    } else if matches!(tokens.get(*i), Some(Token::Stderr)) {
+        *i += 1;
+        crate::ast::RedirectTarget::Stderr
+    } else {
+        panic!("Expected file(...), stdout, or stderr as redirect target");
     }
 }

@@ -1,4 +1,4 @@
-use crate::ir::{Function, Cmd, Val};
+use crate::ir::{Function, Cmd, Val, RedirectTarget};
 
 pub fn emit(funcs: &[Function]) -> String {
     let mut out = String::new();
@@ -263,6 +263,37 @@ fn emit_cmd(cmd: &Cmd, out: &mut String, indent: usize) {
                 emit_cmd(cmd, out, indent + 2);
             }
             out.push_str(&format!("{pad}}}\n"));
+        }
+        Cmd::WithRedirect { stdout, stderr, body } => {
+            out.push_str(&format!("{pad}{{\n"));
+            for cmd in body {
+                 emit_cmd(cmd, out, indent + 2);
+            }
+            out.push_str(&format!("{pad}}}")); // No newline yet, redirections follow
+            
+            if let Some(target) = stdout {
+                match target {
+                    RedirectTarget::File { path, append } => {
+                        let op = if *append { ">>" } else { ">" };
+                        out.push_str(&format!(" {} {}", op, emit_val(path)));
+                    }
+                    _ => panic!("stdout redirected to something invalid for stdout (only file supported for now)"),
+                }
+            }
+
+            if let Some(target) = stderr {
+                match target {
+                    RedirectTarget::File { path, append } => {
+                         let op = if *append { ">>" } else { ">" };
+                         out.push_str(&format!(" 2{} {}", op, emit_val(path)));
+                    }
+                    RedirectTarget::Stdout => {
+                         out.push_str(" 2>&1");
+                    }
+                    _ => panic!("stderr redirected to something invalid"),
+                }
+            }
+            out.push('\n');
         }
 
     }

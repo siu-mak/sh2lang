@@ -4,7 +4,7 @@ pub struct Function {
     pub commands: Vec<Cmd>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Val {
     Literal(String),
     Var(String),
@@ -66,6 +66,18 @@ pub enum Cmd {
     Call { name: String, args: Vec<Val> },
     Subshell { body: Vec<Cmd> },
     Group { body: Vec<Cmd> },
+    WithRedirect {
+        stdout: Option<RedirectTarget>,
+        stderr: Option<RedirectTarget>,
+        body: Vec<Cmd>,
+    },
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum RedirectTarget {
+    File { path: Val, append: bool },
+    Stdout,
+    Stderr,
 }
 
 #[derive(Debug, Clone, PartialEq)]
