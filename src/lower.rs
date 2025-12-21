@@ -170,5 +170,6 @@ fn lower_expr(e: ast::Expr) -> ir::Val {
             let lowered_exprs = exprs.into_iter().map(lower_expr).collect();
             ir::Val::List(lowered_exprs)
         }
+        ast::Expr::Args => ir::Val::Args,
     }
 }

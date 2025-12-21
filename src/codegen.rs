@@ -20,7 +20,7 @@ fn emit_val(v: &Val) -> String {
         Val::Literal(s) => format!("\"{}\"", s),
         Val::Var(s) => format!("\"${}\"", s),
         Val::Concat(l, r) => format!("{}{}", emit_val(l), emit_val(r)),
-        Val::Compare { .. } | Val::And(..) | Val::Or(..) | Val::Not(..) | Val::List(..) => panic!("Cannot emit boolean/list value as string"),
+        Val::Compare { .. } | Val::And(..) | Val::Or(..) | Val::Not(..) | Val::List(..) | Val::Args => panic!("Cannot emit boolean/list/args value as string"),
         Val::Command(args) => {
             let parts: Vec<String> = args.iter().map(emit_val).collect();
             format!("$( {} )", parts.join(" "))
@@ -150,6 +150,9 @@ fn emit_cmd(cmd: &Cmd, out: &mut String, indent: usize) {
                             out.push(' ');
                             out.push_str(&emit_val(elem));
                         }
+                    }
+                    Val::Args => {
+                         out.push_str(" \"$@\"");
                     }
                     _ => {
                         out.push(' ');

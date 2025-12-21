@@ -415,6 +415,10 @@ fn parse_primary(tokens: &[Token], i: &mut usize) -> Expr {
             expect(tokens, i, Token::RBracket);
             Expr::List(exprs)
         }
+        Token::Args => {
+            *i += 1;
+            Expr::Args
+        }
         _ => panic!("Expected string or variable, got {:?}", tokens.get(*i)),
     }
 }

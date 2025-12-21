@@ -15,6 +15,7 @@ pub enum Val {
     Or(Box<Val>, Box<Val>),
     Not(Box<Val>),
     List(Vec<Val>),
+    Args,
 }
 
 #[derive(Debug, Clone, PartialEq)]

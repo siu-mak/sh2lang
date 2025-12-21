@@ -1,0 +1,7 @@
+main() {
+  for a in "$@"; do
+    echo "$a"
+  done
+}
+
+main "$@"
