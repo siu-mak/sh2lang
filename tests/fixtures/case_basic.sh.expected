@@ -1,0 +1,16 @@
+main() {
+  x="b"
+  case "$x" in
+    "a")
+      echo "A"
+    ;;
+    "b"|"c")
+      echo "B or C"
+    ;;
+    *)
+      echo "default"
+    ;;
+  esac
+}
+
+main "$@"

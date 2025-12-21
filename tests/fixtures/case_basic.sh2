@@ -1,0 +1,14 @@
+func main() {
+    let x = "b"
+    case x {
+        "a" => {
+            print("A")
+        }
+        "b" | "c" => {
+            print("B or C")
+        }
+        _ => {
+            print("default")
+        }
+    }
+}

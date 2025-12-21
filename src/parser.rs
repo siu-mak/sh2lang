@@ -144,6 +144,51 @@ fn parse_stmt(tokens: &[Token], i: &mut usize) -> Stmt {
 
         }
 
+        Token::Case => {
+            *i += 1;
+            let expr = parse_expr(tokens, i);
+            expect(tokens, i, Token::LBrace);
+            
+            let mut arms = Vec::new();
+            while !matches!(tokens[*i], Token::RBrace) {
+                // Parse patterns
+                let mut patterns = Vec::new();
+                loop {
+                    match &tokens[*i] {
+                        Token::String(s) => {
+                            patterns.push(Pattern::Literal(s.clone()));
+                            *i += 1;
+                        }
+                        Token::Underscore => {
+                            patterns.push(Pattern::Wildcard);
+                            *i += 1;
+                        }
+                        _ => panic!("Expected string or _ pattern"),
+                    }
+                    
+                    if matches!(tokens.get(*i), Some(Token::Pipe)) {
+                        *i += 1;
+                    } else {
+                        break;
+                    }
+                }
+                
+                expect(tokens, i, Token::Arrow);
+                expect(tokens, i, Token::LBrace);
+                
+                let mut body = Vec::new();
+                while !matches!(tokens[*i], Token::RBrace) {
+                    body.push(parse_stmt(tokens, i));
+                }
+                expect(tokens, i, Token::RBrace);
+                
+                arms.push(CaseArm { patterns, body });
+            }
+            expect(tokens, i, Token::RBrace);
+            
+            Stmt::Case { expr, arms }
+        }
+
         _ => panic!("Expected statement"),
     }
 }

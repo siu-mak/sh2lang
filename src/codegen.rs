@@ -96,6 +96,25 @@ fn emit_cmd(cmd: &Cmd, out: &mut String, indent: usize) {
              out.push_str(&cmds.join(" | "));
              out.push('\n');
         }
+        Cmd::Case { expr, arms } => {
+            out.push_str(&format!("{}case {} in\n", pad, emit_val(expr)));
+            for (patterns, body) in arms {
+                out.push_str(&pad);
+                out.push_str("  ");
+                let pat_strs: Vec<String> = patterns.iter().map(|p| match p {
+                    crate::ir::Pattern::Literal(s) => format!("\"{}\"", s),
+                    crate::ir::Pattern::Wildcard => "*".to_string(),
+                }).collect();
+                out.push_str(&pat_strs.join("|"));
+                out.push_str(")\n");
+                
+                for cmd in body {
+                    emit_cmd(cmd, out, indent + 4);
+                }
+                out.push_str(&format!("{}  ;;\n", pad));
+            }
+            out.push_str(&format!("{}esac\n", pad));
+        }
 
     }
 }

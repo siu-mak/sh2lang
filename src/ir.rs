@@ -31,4 +31,14 @@ pub enum Cmd {
         else_body: Vec<Cmd>,
     },
     Pipe(Vec<Vec<Val>>),
+    Case {
+        expr: Val,
+        arms: Vec<(Vec<Pattern>, Vec<Cmd>)>,
+    },
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum Pattern {
+    Literal(String),
+    Wildcard,
 }

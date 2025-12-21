@@ -36,5 +36,21 @@ pub enum Stmt {
         else_body: Option<Vec<Stmt>>,
     },
     Pipe(Vec<Vec<Expr>>),
+    Case {
+        expr: Expr,
+        arms: Vec<CaseArm>,
+    },
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct CaseArm {
+    pub patterns: Vec<Pattern>,
+    pub body: Vec<Stmt>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum Pattern {
+    Literal(String),
+    Wildcard,
 }
 

@@ -61,6 +61,26 @@ fn lower_stmt(stmt: ast::Stmt, out: &mut Vec<ir::Cmd>) {
                 else_body: e_cmds,
             });
         }
+        ast::Stmt::Case { expr, arms } => {
+            let mut lower_arms = Vec::new();
+            for arm in arms {
+                let mut body_cmds = Vec::new();
+                for s in arm.body {
+                    lower_stmt(s, &mut body_cmds);
+                }
+                
+                let patterns = arm.patterns.into_iter().map(|p| match p {
+                    ast::Pattern::Literal(s) => ir::Pattern::Literal(s),
+                    ast::Pattern::Wildcard => ir::Pattern::Wildcard,
+                }).collect();
+                
+                lower_arms.push((patterns, body_cmds));
+            }
+            out.push(ir::Cmd::Case {
+                expr: lower_expr(expr),
+                arms: lower_arms,
+            });
+        }
         ast::Stmt::Pipe(segments) => {
             let mut lowered_segments = Vec::new();
             for args in segments {
