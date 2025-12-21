@@ -315,7 +315,21 @@ fn emit_cmd(cmd: &Cmd, out: &mut String, indent: usize) {
         }
         Cmd::Wait(opt) => {
              match opt {
-                 Some(val) => out.push_str(&format!("{pad}wait {}\n", emit_val(val))),
+                 Some(val) => {
+                     match val {
+                         crate::ir::Val::List(elems) => {
+                             out.push_str(&format!("{pad}wait"));
+                             for elem in elems {
+                                 out.push(' ');
+                                 out.push_str(&emit_word(elem));
+                             }
+                             out.push('\n');
+                         }
+                         _ => {
+                             out.push_str(&format!("{pad}wait {}\n", emit_word(val)));
+                         }
+                     }
+                 }
                  None => out.push_str(&format!("{pad}wait\n")),
              }
         }

@@ -372,6 +372,30 @@ fn wait_complex_codegen_matches_snapshot() {
 }
 
 #[test]
+fn wait_list_literal_codegen_matches_snapshot() {
+    assert_codegen_matches_snapshot(
+        "tests/fixtures/wait_list_literal.sh2",
+        "tests/fixtures/wait_list_literal.sh.expected",
+    );
+}
+
+#[test]
+fn wait_list_var_codegen_matches_snapshot() {
+    assert_codegen_matches_snapshot(
+        "tests/fixtures/wait_list_var.sh2",
+        "tests/fixtures/wait_list_var.sh.expected",
+    );
+}
+
+#[test]
+fn wait_list_complex_codegen_matches_snapshot() {
+    assert_codegen_matches_snapshot(
+        "tests/fixtures/wait_list_complex.sh2",
+        "tests/fixtures/wait_list_complex.sh.expected",
+    );
+}
+
+#[test]
 fn wait_pid_literal_codegen_matches_snapshot() {
     assert_codegen_matches_snapshot(
         "tests/fixtures/wait_pid_literal.sh2",
