@@ -122,8 +122,15 @@ fn parse_stmt(tokens: &[Token], i: &mut usize) -> Stmt {
             expect(tokens, i, Token::RBrace);
 
             let mut elifs = Vec::new();
-            while matches!(tokens.get(*i), Some(Token::Elif)) {
-                *i += 1;
+            loop {
+                if matches!(tokens.get(*i), Some(Token::Elif)) {
+                    *i += 1;
+                } else if matches!(tokens.get(*i), Some(Token::Else)) && matches!(tokens.get(*i + 1), Some(Token::If)) {
+                    *i += 2;
+                } else {
+                    break;
+                }
+                
                 let cond = parse_expr(tokens, i);
                 expect(tokens, i, Token::LBrace);
                 let mut body = Vec::new();
