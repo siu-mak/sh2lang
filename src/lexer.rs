@@ -11,6 +11,7 @@ pub enum Token {
     Equals,
     EqEq,
     NotEq,
+    Dollar,
     Ident(String),
     String(String),
     LParen,
@@ -42,6 +43,7 @@ pub fn lex(input: &str) -> Vec<Token> {
                 }
             }
             '+' => { tokens.push(Token::Plus); chars.next(); }
+            '$' => { tokens.push(Token::Dollar); chars.next(); }
             '!' => {
                 chars.next();
                 if chars.peek() == Some(&'=') {

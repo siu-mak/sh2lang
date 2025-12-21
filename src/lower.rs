@@ -81,5 +81,9 @@ fn lower_expr(e: ast::Expr) -> ir::Val {
                 right: Box::new(lower_expr(*right)),
             }
         }
+        ast::Expr::Command(args) => {
+            let lowered_args = args.into_iter().map(lower_expr).collect();
+            ir::Val::Command(lowered_args)
+        }
     }
 }

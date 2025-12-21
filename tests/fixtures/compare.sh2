@@ -1,0 +1,10 @@
+func main() {
+    let user = "admin"
+    if user == "admin" {
+        print("welcome root")
+    }
+
+    if user != "guest" {
+        print("not guest")
+    }
+}

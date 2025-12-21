@@ -1,0 +1,10 @@
+main() {
+  user="admin"
+  if [ "$user" = "admin" ]; then
+    echo "welcome root"
+  fi
+  if [ "$user" != "guest" ]; then
+    echo "not guest"
+  fi
+}
+main

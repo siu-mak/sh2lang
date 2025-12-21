@@ -19,6 +19,7 @@ pub enum CompareOp {
 pub enum Expr {
     Literal(String),
     Var(String),
+    Command(Vec<Expr>),
     Concat(Box<Expr>, Box<Expr>),
     Compare { left: Box<Expr>, op: CompareOp, right: Box<Expr> },
 }

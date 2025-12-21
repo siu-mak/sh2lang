@@ -20,7 +20,11 @@ fn emit_val(v: &Val) -> String {
         Val::Literal(s) => format!("\"{}\"", s),
         Val::Var(s) => format!("\"${}\"", s),
         Val::Concat(l, r) => format!("{}{}", emit_val(l), emit_val(r)),
-        Val::Compare { .. } => panic!("Cannot emit boolean value as string"), // Or handle appropriately if used in string context
+        Val::Compare { .. } => panic!("Cannot emit boolean value as string"),
+        Val::Command(args) => {
+            let parts: Vec<String> = args.iter().map(emit_val).collect();
+            format!("$( {} )", parts.join(" "))
+        }
     }
 }
 

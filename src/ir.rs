@@ -8,6 +8,7 @@ pub struct Function {
 pub enum Val {
     Literal(String),
     Var(String),
+    Command(Vec<Val>),
     Concat(Box<Val>, Box<Val>),
     Compare { left: Box<Val>, op: CompareOp, right: Box<Val> },
 }

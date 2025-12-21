@@ -186,6 +186,31 @@ fn parse_primary(tokens: &[Token], i: &mut usize) -> Expr {
             *i += 1;
             Expr::Var(s.clone())
         }
-        _ => panic!("Expected string literal or variable, got {:?}", tokens.get(*i)),
+        Token::Dollar => {
+            *i += 1;
+            expect(tokens, i, Token::LParen);
+            expect(tokens, i, Token::Run);
+            expect(tokens, i, Token::LParen);
+            
+            let mut args = Vec::new();
+            loop {
+                if matches!(tokens.get(*i), Some(Token::RParen)) {
+                   break; 
+                }
+                
+                args.push(parse_expr(tokens, i));
+
+                if matches!(tokens.get(*i), Some(Token::Comma)) {
+                    *i += 1;
+                } else {
+                    break;
+                }
+            }
+
+            expect(tokens, i, Token::RParen);
+            expect(tokens, i, Token::RParen);
+            Expr::Command(args)
+        }
+        _ => panic!("Expected string or variable, got {:?}", tokens.get(*i)),
     }
 }

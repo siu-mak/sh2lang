@@ -1,0 +1,4 @@
+func main() {
+    let files = $(run("ls"))
+    print("Files: " + files)
+}
