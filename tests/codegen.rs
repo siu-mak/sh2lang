@@ -136,6 +136,13 @@ fn if_boolean_codegen_matches_snapshot() {
     assert_codegen_matches_snapshot(sh2_path, expected_path);
 }
 
+#[test]
+fn for_list_codegen_matches_snapshot() {
+    let sh2_path = "tests/fixtures/for_list.sh2";
+    let expected_path = "tests/fixtures/for_list.sh.expected";
+    assert_codegen_matches_snapshot(sh2_path, expected_path);
+}
+
 fn assert_codegen_matches_snapshot(sh2_path: &str, expected_path: &str) {
     let src = fs::read_to_string(sh2_path).unwrap();
     let expected = fs::read_to_string(expected_path).unwrap();

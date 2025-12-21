@@ -20,7 +20,7 @@ fn emit_val(v: &Val) -> String {
         Val::Literal(s) => format!("\"{}\"", s),
         Val::Var(s) => format!("\"${}\"", s),
         Val::Concat(l, r) => format!("{}{}", emit_val(l), emit_val(r)),
-        Val::Compare { .. } | Val::And(..) | Val::Or(..) | Val::Not(..) => panic!("Cannot emit boolean value as string"),
+        Val::Compare { .. } | Val::And(..) | Val::Or(..) | Val::Not(..) | Val::List(..) => panic!("Cannot emit boolean/list value as string"),
         Val::Command(args) => {
             let parts: Vec<String> = args.iter().map(emit_val).collect();
             format!("$( {} )", parts.join(" "))
@@ -144,8 +144,18 @@ fn emit_cmd(cmd: &Cmd, out: &mut String, indent: usize) {
         Cmd::For { var, items, body } => {
              out.push_str(&format!("{}for {} in", pad, var));
              for item in items {
-                out.push(' ');
-                out.push_str(&emit_val(item));
+                match item {
+                    Val::List(elems) => {
+                        for elem in elems {
+                            out.push(' ');
+                            out.push_str(&emit_val(elem));
+                        }
+                    }
+                    _ => {
+                        out.push(' ');
+                        out.push_str(&emit_val(item));
+                    }
+                }
              }
              out.push_str("; do\n");
              for c in body {

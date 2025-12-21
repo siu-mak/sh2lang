@@ -25,6 +25,7 @@ pub enum Expr {
     And(Box<Expr>, Box<Expr>),
     Or(Box<Expr>, Box<Expr>),
     Not(Box<Expr>),
+    List(Vec<Expr>),
 }
 
 #[derive(Debug, Clone, PartialEq)]

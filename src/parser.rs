@@ -226,15 +226,22 @@ fn parse_stmt(tokens: &[Token], i: &mut usize) -> Stmt {
             *i += 1;
             
             expect(tokens, i, Token::In);
-            expect(tokens, i, Token::LParen);
-            
-            let mut items = Vec::new();
-            loop {
-                if matches!(tokens.get(*i), Some(Token::RParen)) { break; }
-                items.push(parse_expr(tokens, i));
-                if matches!(tokens.get(*i), Some(Token::Comma)) { *i += 1; } else { break; }
-            }
-            expect(tokens, i, Token::RParen);
+
+            let items = if matches!(tokens.get(*i), Some(Token::LParen)) {
+                // Legacy: (e1, e2, ...)
+                *i += 1;
+                let mut items = Vec::new();
+                loop {
+                    if matches!(tokens.get(*i), Some(Token::RParen)) { break; }
+                    items.push(parse_expr(tokens, i));
+                    if matches!(tokens.get(*i), Some(Token::Comma)) { *i += 1; } else { break; }
+                }
+                expect(tokens, i, Token::RParen);
+                items
+            } else {
+                // New: single expression (e.g., list literal)
+                vec![parse_expr(tokens, i)]
+            };
 
             expect(tokens, i, Token::LBrace);
             
@@ -396,6 +403,17 @@ fn parse_primary(tokens: &[Token], i: &mut usize) -> Expr {
             expect(tokens, i, Token::RParen);
             expect(tokens, i, Token::RParen);
             Expr::Command(args)
+        }
+        Token::LBracket => {
+            *i += 1;
+            let mut exprs = Vec::new();
+            loop {
+                if matches!(tokens.get(*i), Some(Token::RBracket)) { break; }
+                exprs.push(parse_expr(tokens, i));
+                if matches!(tokens.get(*i), Some(Token::Comma)) { *i += 1; } else { break; }
+            }
+            expect(tokens, i, Token::RBracket);
+            Expr::List(exprs)
         }
         _ => panic!("Expected string or variable, got {:?}", tokens.get(*i)),
     }

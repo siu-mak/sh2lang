@@ -33,6 +33,8 @@ pub enum Token {
     RParen,
     LBrace,
     RBrace,
+    LBracket,
+    RBracket,
     Comma,
 }
 
@@ -47,6 +49,8 @@ pub fn lex(input: &str) -> Vec<Token> {
             ')' => { tokens.push(Token::RParen); chars.next(); }
             '{' => { tokens.push(Token::LBrace); chars.next(); }
             '}' => { tokens.push(Token::RBrace); chars.next(); }
+            '[' => { tokens.push(Token::LBracket); chars.next(); }
+            ']' => { tokens.push(Token::RBracket); chars.next(); }
             ',' => { tokens.push(Token::Comma); chars.next(); }
             '=' => {
                 chars.next();
