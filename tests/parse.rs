@@ -72,3 +72,26 @@ fn parses_nested_if() {
         _ => panic!("Expected outer if"),
     }
 }
+
+#[test]
+fn parses_print_err_statement() {
+    let src = r#"
+        func main() {
+            print_err("fail")
+        }
+    "#;
+
+    let tokens = sh2c::lexer::lex(src);
+    let program = sh2c::parser::parse(&tokens);
+
+    assert_eq!(program.functions.len(), 1);
+    let body = &program.functions[0].body;
+    assert_eq!(body.len(), 1);
+
+    match &body[0] {
+        sh2c::ast::Stmt::PrintErr(s) => {
+            assert_eq!(s, "fail");
+        }
+        _ => panic!("Expected PrintErr statement"),
+    }
+}

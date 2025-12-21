@@ -30,6 +30,12 @@ fn emit_cmd(cmd: &Cmd, out: &mut String, indent: usize) {
             out.push_str(s);
             out.push('\n');
         }
+        Cmd::PrintErr(s) => {
+            out.push_str(&pad);
+            out.push_str("echo ");
+            out.push_str(s);
+            out.push_str(" >&2\n");
+        }
         Cmd::IfNonEmpty { var, then_body, else_body } => {
             out.push_str(&format!("{pad}if [ -n \"${var}\" ]; then\n"));
             for c in then_body {

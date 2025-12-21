@@ -34,6 +34,9 @@ fn lower_stmt(stmt: ast::Stmt, out: &mut Vec<ir::Cmd>) {
             out.push(ir::Cmd::Print(s));
         }
 
+        ast::Stmt::PrintErr(s) => {
+            out.push(ir::Cmd::PrintErr(s));
+        }
         ast::Stmt::If { var, then_body, else_body } => {
             let mut then_cmds = Vec::new();
             for s in then_body {

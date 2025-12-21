@@ -8,6 +8,7 @@ pub struct Function {
 pub enum Cmd {
     Exec(Vec<String>),
     Print(String),
+    PrintErr(String),
     IfNonEmpty {
         var: String,
         then_body: Vec<Cmd>,

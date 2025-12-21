@@ -13,6 +13,7 @@ pub struct Function {
 pub enum Stmt {
     Run(Vec<String>),
     Print(String),
+    PrintErr(String),
     If {
         var: String,
         then_body: Vec<Stmt>,

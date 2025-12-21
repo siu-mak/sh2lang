@@ -29,6 +29,7 @@ fn multiple_run_codegen() {
 
     assert_eq!(output.trim(), expected.trim());
 }
+
 #[test]
 fn if_basic_codegen_matches_snapshot() {
     let src = fs::read_to_string("tests/fixtures/if_basic.sh2").unwrap();
@@ -37,4 +38,27 @@ fn if_basic_codegen_matches_snapshot() {
     let output = compile(&src);
 
     assert_eq!(output.trim(), expected.trim());
+}
+#[test]
+fn print_err_codegen() {
+    let src = r#"
+        func main() {
+            print_err("oops")
+        }
+    "#;
+
+    let expected = r#"
+main() {
+  echo oops >&2
+}
+
+main "$@"
+"#;
+
+    let tokens = sh2c::lexer::lex(src);
+    let ast = sh2c::parser::parse(&tokens);
+    let ir = sh2c::lower::lower(ast);
+    let out = sh2c::codegen::emit(&ir);
+
+    assert_eq!(out.trim(), expected.trim());
 }

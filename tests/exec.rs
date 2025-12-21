@@ -87,3 +87,29 @@ fn if_does_not_execute_when_var_is_empty() {
     let stdout = String::from_utf8_lossy(&output.stdout);
     assert_eq!(stdout.trim(), "");
 }
+
+#[test]
+fn print_err_writes_to_stderr() {
+    let src = r#"
+        func main() {
+            print_err("fail")
+        }
+    "#;
+
+    let bash = {
+        let t = sh2c::lexer::lex(src);
+        let a = sh2c::parser::parse(&t);
+        let i = sh2c::lower::lower(a);
+        sh2c::codegen::emit(&i)
+    };
+
+    std::fs::write("/tmp/sh2_err.sh", &bash).unwrap();
+
+    let out = std::process::Command::new("bash")
+        .arg("/tmp/sh2_err.sh")
+        .output()
+        .unwrap();
+
+    let stderr = String::from_utf8_lossy(&out.stderr);
+    assert!(stderr.contains("fail"));
+}

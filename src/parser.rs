@@ -71,6 +71,20 @@ fn parse_stmt(tokens: &[Token], i: &mut usize) -> Stmt {
             Stmt::Print(msg)
         }
 
+        Token::PrintErr => {
+            *i += 1;
+            expect(tokens, i, Token::LParen);
+
+            let msg = match &tokens[*i] {
+                Token::String(s) => s.clone(),
+                _ => panic!("Expected string literal in print_err()"),
+            };
+            *i += 1;
+
+            expect(tokens, i, Token::RParen);
+            Stmt::PrintErr(msg)
+        }
+
         Token::If => {
             *i += 1;
 
