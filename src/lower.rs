@@ -212,6 +212,17 @@ fn lower_stmt(stmt: ast::Stmt, out: &mut Vec<ir::Cmd>) {
         ast::Stmt::Wait => {
             out.push(ir::Cmd::Wait);
         }
+        ast::Stmt::TryCatch { try_body, catch_body } => {
+            let mut lower_try = Vec::new();
+            for s in try_body {
+                lower_stmt(s, &mut lower_try);
+            }
+            let mut lower_catch = Vec::new();
+            for s in catch_body {
+                lower_stmt(s, &mut lower_catch);
+            }
+            out.push(ir::Cmd::TryCatch { try_body: lower_try, catch_body: lower_catch });
+        }
     }
 }
 

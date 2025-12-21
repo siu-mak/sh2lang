@@ -43,6 +43,8 @@ pub enum Token {
     Colon,
     Spawn,
     Wait,
+    Try,
+    Catch,
     Ident(String),
     String(String),
     LParen,
@@ -161,6 +163,8 @@ pub fn lex(input: &str) -> Vec<Token> {
                     "append" => tokens.push(Token::Append),
                     "spawn" => tokens.push(Token::Spawn),
                     "wait" => tokens.push(Token::Wait),
+                    "try" => tokens.push(Token::Try),
+                    "catch" => tokens.push(Token::Catch),
                     _ => tokens.push(Token::Ident(ident)),
                 }
             }

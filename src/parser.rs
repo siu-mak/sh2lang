@@ -389,6 +389,26 @@ fn parse_stmt(tokens: &[Token], i: &mut usize) -> Stmt {
             Stmt::Wait
         }
 
+        Token::Try => {
+             *i += 1;
+             expect(tokens, i, Token::LBrace);
+             let mut try_body = Vec::new();
+             while !matches!(tokens[*i], Token::RBrace) {
+                 try_body.push(parse_stmt(tokens, i));
+             }
+             expect(tokens, i, Token::RBrace);
+             
+             expect(tokens, i, Token::Catch);
+             expect(tokens, i, Token::LBrace);
+             let mut catch_body = Vec::new();
+             while !matches!(tokens[*i], Token::RBrace) {
+                 catch_body.push(parse_stmt(tokens, i));
+             }
+             expect(tokens, i, Token::RBrace);
+             
+             Stmt::TryCatch { try_body, catch_body }
+        }
+
         Token::Subshell => {
             *i += 1;
             expect(tokens, i, Token::LBrace);

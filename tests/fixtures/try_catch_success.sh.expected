@@ -1,0 +1,9 @@
+main() {
+  if ! (
+    echo "ok"
+  ); then
+    echo "no" >&2
+  fi
+}
+
+main "$@"

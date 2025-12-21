@@ -1,0 +1,3 @@
+func main() {
+  try { print("ok") } catch { print_err("no") }
+}

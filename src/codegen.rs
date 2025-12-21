@@ -311,6 +311,17 @@ fn emit_cmd(cmd: &Cmd, out: &mut String, indent: usize) {
         Cmd::Wait => {
              out.push_str(&format!("{pad}wait\n"));
         }
+        Cmd::TryCatch { try_body, catch_body } => {
+            out.push_str(&format!("{pad}if ! (\n"));
+            for cmd in try_body {
+                emit_cmd(cmd, out, indent + 2);
+            }
+            out.push_str(&format!("{pad}); then\n"));
+            for cmd in catch_body {
+                emit_cmd(cmd, out, indent + 2);
+            }
+            out.push_str(&format!("{pad}fi\n"));
+        }
 
     }
 }

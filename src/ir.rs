@@ -73,6 +73,10 @@ pub enum Cmd {
     },
     Spawn(Box<Cmd>),
     Wait,
+    TryCatch {
+        try_body: Vec<Cmd>,
+        catch_body: Vec<Cmd>,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq)]

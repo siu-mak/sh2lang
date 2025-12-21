@@ -79,6 +79,10 @@ pub enum Stmt {
     },
     Spawn { stmt: Box<Stmt> },
     Wait,
+    TryCatch {
+        try_body: Vec<Stmt>,
+        catch_body: Vec<Stmt>,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq)]
