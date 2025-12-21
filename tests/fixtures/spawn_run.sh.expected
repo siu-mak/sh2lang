@@ -1,0 +1,7 @@
+main() {
+  "sleep" "1" &
+  echo "after"
+  wait
+}
+
+main "$@"

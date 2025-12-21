@@ -77,6 +77,8 @@ pub enum Stmt {
         stderr: Option<RedirectTarget>,
         body: Vec<Stmt>,
     },
+    Spawn { stmt: Box<Stmt> },
+    Wait,
 }
 
 #[derive(Debug, Clone, PartialEq)]

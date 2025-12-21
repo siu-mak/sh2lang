@@ -376,6 +376,19 @@ fn parse_stmt(tokens: &[Token], i: &mut usize) -> Stmt {
             }
         }
 
+        Token::Spawn => {
+            *i += 1;
+            let stmt = parse_stmt(tokens, i);
+            Stmt::Spawn { stmt: Box::new(stmt) }
+        }
+
+        Token::Wait => {
+            *i += 1;
+            expect(tokens, i, Token::LParen);
+            expect(tokens, i, Token::RParen);
+            Stmt::Wait
+        }
+
         Token::Subshell => {
             *i += 1;
             expect(tokens, i, Token::LBrace);

@@ -1,0 +1,9 @@
+main() {
+  {
+    echo one
+    echo two
+  } &
+  wait
+}
+
+main "$@"

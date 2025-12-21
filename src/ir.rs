@@ -71,6 +71,8 @@ pub enum Cmd {
         stderr: Option<RedirectTarget>,
         body: Vec<Cmd>,
     },
+    Spawn(Box<Cmd>),
+    Wait,
 }
 
 #[derive(Debug, Clone, PartialEq)]

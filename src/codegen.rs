@@ -295,6 +295,22 @@ fn emit_cmd(cmd: &Cmd, out: &mut String, indent: usize) {
             }
             out.push('\n');
         }
+        Cmd::Spawn(cmd) => {
+             // Emit inner command to a temp buffer to handle trailing newline
+             let mut inner_out = String::new();
+             emit_cmd(cmd, &mut inner_out, indent);
+             
+             // Trim trailing newline if present
+             if inner_out.ends_with('\n') {
+                 inner_out.pop();
+             }
+             
+             out.push_str(&inner_out);
+             out.push_str(" &\n");
+        }
+        Cmd::Wait => {
+             out.push_str(&format!("{pad}wait\n"));
+        }
 
     }
 }

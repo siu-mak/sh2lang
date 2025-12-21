@@ -41,6 +41,8 @@ pub enum Token {
     File,
     Append,
     Colon,
+    Spawn,
+    Wait,
     Ident(String),
     String(String),
     LParen,
@@ -157,6 +159,8 @@ pub fn lex(input: &str) -> Vec<Token> {
                     "stderr" => tokens.push(Token::Stderr),
                     "file" => tokens.push(Token::File),
                     "append" => tokens.push(Token::Append),
+                    "spawn" => tokens.push(Token::Spawn),
+                    "wait" => tokens.push(Token::Wait),
                     _ => tokens.push(Token::Ident(ident)),
                 }
             }

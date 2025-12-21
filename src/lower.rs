@@ -199,6 +199,19 @@ fn lower_stmt(stmt: ast::Stmt, out: &mut Vec<ir::Cmd>) {
                  body: lowered_body,
              });
         }
+        ast::Stmt::Spawn { stmt } => {
+            let mut lower_cmds = Vec::new();
+            lower_stmt(*stmt, &mut lower_cmds);
+            
+            if lower_cmds.len() == 1 {
+                 out.push(ir::Cmd::Spawn(Box::new(lower_cmds.remove(0))));
+            } else {
+                 out.push(ir::Cmd::Spawn(Box::new(ir::Cmd::Group { body: lower_cmds })));
+            }
+        }
+        ast::Stmt::Wait => {
+            out.push(ir::Cmd::Wait);
+        }
     }
 }
 

@@ -1,0 +1,4 @@
+func main() {
+  spawn sh { "echo one", "echo two" }
+  wait()
+}

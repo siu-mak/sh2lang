@@ -307,6 +307,30 @@ fn with_redirect_combo_codegen_matches_snapshot() {
     );
 }
 
+#[test]
+fn spawn_run_codegen_matches_snapshot() {
+    assert_codegen_matches_snapshot(
+        "tests/fixtures/spawn_run.sh2",
+        "tests/fixtures/spawn_run.sh.expected",
+    );
+}
+
+#[test]
+fn spawn_group_codegen_matches_snapshot() {
+    assert_codegen_matches_snapshot(
+        "tests/fixtures/spawn_group.sh2",
+        "tests/fixtures/spawn_group.sh.expected",
+    );
+}
+
+#[test]
+fn spawn_sh_block_codegen_matches_snapshot() {
+    assert_codegen_matches_snapshot(
+        "tests/fixtures/spawn_sh_block.sh2",
+        "tests/fixtures/spawn_sh_block.sh.expected",
+    );
+}
+
 fn assert_codegen_matches_snapshot(sh2_path: &str, expected_path: &str) {
     let src = fs::read_to_string(sh2_path).unwrap();
     let expected = fs::read_to_string(expected_path).unwrap();
