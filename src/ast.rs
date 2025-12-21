@@ -68,6 +68,7 @@ pub enum Stmt {
         body: Vec<Stmt>,
     },
     Sh(String),
+    ShBlock(Vec<String>),
 }
 
 #[derive(Debug, Clone, PartialEq)]

@@ -1,0 +1,4 @@
+func main() {
+    sh { "set -e", "trap 'echo bye' EXIT" }
+    run("echo", "ok")
+}

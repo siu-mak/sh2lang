@@ -334,13 +334,40 @@ fn parse_stmt(tokens: &[Token], i: &mut usize) -> Stmt {
 
         Token::Sh => {
             *i += 1;
-            expect(tokens, i, Token::LParen);
-            let s = match &tokens[*i] {
-                Token::String(s) => { *i += 1; s.clone() }
-                _ => panic!("Expected string literal in sh(...)"),
-            };
-            expect(tokens, i, Token::RParen);
-            Stmt::Sh(s)
+            if matches!(tokens.get(*i), Some(Token::LParen)) {
+                expect(tokens, i, Token::LParen);
+                let s = match &tokens[*i] {
+                    Token::String(s) => { *i += 1; s.clone() }
+                    _ => panic!("Expected string literal in sh(...)"),
+                };
+                expect(tokens, i, Token::RParen);
+                Stmt::Sh(s)
+            } else if matches!(tokens.get(*i), Some(Token::LBrace)) {
+                expect(tokens, i, Token::LBrace);
+                let mut lines = Vec::new();
+                loop {
+                    if matches!(tokens.get(*i), Some(Token::RBrace)) { break; }
+                    match &tokens[*i] {
+                        Token::String(s) => {
+                             lines.push(s.clone());
+                             *i += 1;
+                        },
+                        _ => panic!("Expected string literal in sh {{ ... }}"),
+                    }
+                    if matches!(tokens.get(*i), Some(Token::Comma)) {
+                        *i += 1;
+                    } else {
+                        // If no comma, expect end of block
+                        if !matches!(tokens.get(*i), Some(Token::RBrace)) {
+                            panic!("Expected comma or closing brace in sh {{ ... }}");
+                        }
+                    }
+                }
+                expect(tokens, i, Token::RBrace);
+                Stmt::ShBlock(lines)
+            } else {
+                panic!("Expected parenthesis or brace after 'sh'");
+            }
         }
 
         _ => panic!("Expected statement"),

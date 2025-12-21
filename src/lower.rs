@@ -158,6 +158,11 @@ fn lower_stmt(stmt: ast::Stmt, out: &mut Vec<ir::Cmd>) {
         ast::Stmt::Sh(s) => {
             out.push(ir::Cmd::Raw(s));
         }
+        ast::Stmt::ShBlock(lines) => {
+            for s in lines {
+                out.push(ir::Cmd::Raw(s));
+            }
+        }
     }
 }
 
