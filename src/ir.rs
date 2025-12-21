@@ -35,6 +35,11 @@ pub enum Cmd {
         expr: Val,
         arms: Vec<(Vec<Pattern>, Vec<Cmd>)>,
     },
+    For {
+        var: String,
+        items: Vec<Val>,
+        body: Vec<Cmd>,
+    },
     While {
         cond: Val,
         body: Vec<Cmd>,

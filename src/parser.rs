@@ -203,6 +203,36 @@ fn parse_stmt(tokens: &[Token], i: &mut usize) -> Stmt {
             Stmt::While { cond, body }
         }
 
+        Token::For => {
+            *i += 1;
+            let var = match &tokens[*i] {
+                Token::Ident(s) => s.clone(),
+                _ => panic!("Expected identifier for loop variable"),
+            };
+            *i += 1;
+            
+            expect(tokens, i, Token::In);
+            expect(tokens, i, Token::LParen);
+            
+            let mut items = Vec::new();
+            loop {
+                if matches!(tokens.get(*i), Some(Token::RParen)) { break; }
+                items.push(parse_expr(tokens, i));
+                if matches!(tokens.get(*i), Some(Token::Comma)) { *i += 1; } else { break; }
+            }
+            expect(tokens, i, Token::RParen);
+
+            expect(tokens, i, Token::LBrace);
+            
+            let mut body = Vec::new();
+            while !matches!(tokens[*i], Token::RBrace) {
+                body.push(parse_stmt(tokens, i));
+            }
+            expect(tokens, i, Token::RBrace);
+            
+            Stmt::For { var, items, body }
+        }
+
         Token::Break => {
             *i += 1;
             Stmt::Break

@@ -124,6 +124,18 @@ fn emit_cmd(cmd: &Cmd, out: &mut String, indent: usize) {
             }
             out.push_str(&format!("{pad}done\n"));
         }
+        Cmd::For { var, items, body } => {
+             out.push_str(&format!("{}for {} in", pad, var));
+             for item in items {
+                out.push(' ');
+                out.push_str(&emit_val(item));
+             }
+             out.push_str("; do\n");
+             for c in body {
+                 emit_cmd(c, out, indent + 2);
+             }
+             out.push_str(&format!("{}done\n", pad));
+        }
         Cmd::Break => {
             out.push_str(&format!("{pad}break\n"));
         }

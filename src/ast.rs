@@ -44,6 +44,11 @@ pub enum Stmt {
         cond: Expr,
         body: Vec<Stmt>,
     },
+    For {
+        var: String,
+        items: Vec<Expr>,
+        body: Vec<Stmt>,
+    },
     Break,
     Continue,
 }
