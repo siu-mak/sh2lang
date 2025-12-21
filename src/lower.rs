@@ -26,16 +26,21 @@ fn lower_function(f: ast::Function) -> ir::Function {
 /// Lower one AST statement into IR commands
 fn lower_stmt(stmt: ast::Stmt, out: &mut Vec<ir::Cmd>) {
     match stmt {
+        ast::Stmt::Let { name, value } => {
+            out.push(ir::Cmd::Assign(name, value));
+        }
+
         ast::Stmt::Run(args) => {
-            out.push(ir::Cmd::Exec(args));
+            let ir_args = args.into_iter().map(lower_expr).collect();
+            out.push(ir::Cmd::Exec(ir_args));
         }
 
-        ast::Stmt::Print(s) => {
-            out.push(ir::Cmd::Print(s));
+        ast::Stmt::Print(e) => {
+            out.push(ir::Cmd::Print(lower_expr(e)));
         }
 
-        ast::Stmt::PrintErr(s) => {
-            out.push(ir::Cmd::PrintErr(s));
+        ast::Stmt::PrintErr(e) => {
+            out.push(ir::Cmd::PrintErr(lower_expr(e)));
         }
         ast::Stmt::If { var, then_body, else_body } => {
             let mut then_cmds = Vec::new();
@@ -57,5 +62,12 @@ fn lower_stmt(stmt: ast::Stmt, out: &mut Vec<ir::Cmd>) {
             });
         }
 
+    }
+}
+
+fn lower_expr(e: ast::Expr) -> ir::Val {
+    match e {
+        ast::Expr::Literal(s) => ir::Val::Literal(s),
+        ast::Expr::Var(s) => ir::Val::Var(s),
     }
 }

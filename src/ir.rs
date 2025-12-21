@@ -5,13 +5,20 @@ pub struct Function {
 }
 
 #[derive(Debug)]
+pub enum Val {
+    Literal(String),
+    Var(String),
+}
+
+#[derive(Debug)]
 pub enum Cmd {
-    Exec(Vec<String>),
-    Print(String),
-    PrintErr(String),
+    Assign(String, String),
+    Exec(Vec<Val>),
+    Print(Val),
+    PrintErr(Val),
     IfNonEmpty {
         var: String,
         then_body: Vec<Cmd>,
         else_body: Vec<Cmd>,
-    },    
+    },
 }

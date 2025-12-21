@@ -49,7 +49,7 @@ fn print_err_codegen() {
 
     let expected = r#"
 main() {
-  echo oops >&2
+  echo "oops" >&2
 }
 
 main "$@"
@@ -61,4 +61,14 @@ main "$@"
     let out = sh2c::codegen::emit(&ir);
 
     assert_eq!(out.trim(), expected.trim());
+}
+
+#[test]
+fn let_codegen_matches_snapshot() {
+    let src = fs::read_to_string("tests/fixtures/let.sh2").unwrap();
+    let expected = fs::read_to_string("tests/fixtures/let.sh.expected").unwrap();
+
+    let output = compile(&src);
+
+    assert_eq!(output.trim(), expected.trim());
 }

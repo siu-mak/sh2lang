@@ -9,11 +9,18 @@ pub struct Function {
     pub body: Vec<Stmt>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq)]
+pub enum Expr {
+    Literal(String),
+    Var(String),
+}
+
+#[derive(Debug, Clone, PartialEq)]
 pub enum Stmt {
-    Run(Vec<String>),
-    Print(String),
-    PrintErr(String),
+    Let { name: String, value: String },
+    Run(Vec<Expr>),
+    Print(Expr),
+    PrintErr(Expr),
     If {
         var: String,
         then_body: Vec<Stmt>,

@@ -6,6 +6,8 @@ pub enum Token {
     PrintErr,
     If,
     Else,
+    Let,
+    Equals,
     Ident(String),
     String(String),
     LParen,
@@ -27,6 +29,7 @@ pub fn lex(input: &str) -> Vec<Token> {
             '{' => { tokens.push(Token::LBrace); chars.next(); }
             '}' => { tokens.push(Token::RBrace); chars.next(); }
             ',' => { tokens.push(Token::Comma); chars.next(); }
+            '=' => { tokens.push(Token::Equals); chars.next(); }
             '"' => {
                 chars.next();
                 let mut s = String::new();
@@ -52,6 +55,7 @@ pub fn lex(input: &str) -> Vec<Token> {
                     "print_err" => tokens.push(Token::PrintErr),
                     "if" => tokens.push(Token::If),
                     "else" => tokens.push(Token::Else),
+                    "let" => tokens.push(Token::Let),
                     _ => tokens.push(Token::Ident(ident)),
                 }
             }

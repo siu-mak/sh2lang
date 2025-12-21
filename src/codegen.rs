@@ -1,4 +1,4 @@
-use crate::ir::{Function, Cmd};
+use crate::ir::{Function, Cmd, Val};
 
 pub fn emit(funcs: &[Function]) -> String {
     let mut out = String::new();
@@ -15,25 +15,40 @@ pub fn emit(funcs: &[Function]) -> String {
     out
 }
 
+fn emit_val(v: &Val) -> String {
+    match v {
+        Val::Literal(s) => format!("\"{}\"", s),
+        Val::Var(s) => format!("\"${}\"", s),
+    }
+}
+
 fn emit_cmd(cmd: &Cmd, out: &mut String, indent: usize) {
     let pad = " ".repeat(indent);
 
     match cmd {
+        Cmd::Assign(name, val) => {
+            out.push_str(&pad);
+            out.push_str(name);
+            out.push('=');
+            out.push_str(&format!("\"{}\"", val));
+            out.push('\n');
+        }
         Cmd::Exec(args) => {
             out.push_str(&pad);
-            out.push_str(&args.join(" "));
+            let shell_args: Vec<String> = args.iter().map(emit_val).collect();
+            out.push_str(&shell_args.join(" "));
             out.push('\n');
         }
-        Cmd::Print(s) => {
+        Cmd::Print(val) => {
             out.push_str(&pad);
             out.push_str("echo ");
-            out.push_str(s);
+            out.push_str(&emit_val(val));
             out.push('\n');
         }
-        Cmd::PrintErr(s) => {
+        Cmd::PrintErr(val) => {
             out.push_str(&pad);
             out.push_str("echo ");
-            out.push_str(s);
+            out.push_str(&emit_val(val));
             out.push_str(" >&2\n");
         }
         Cmd::IfNonEmpty { var, then_body, else_body } => {

@@ -4,35 +4,56 @@ use crate::ast::*;
 pub fn parse(tokens: &[Token]) -> Program {
     let mut i = 0;
 
-    expect(tokens, &mut i, Token::Func);
+    let mut functions = Vec::new();
 
-    let name = match &tokens[i] {
-        Token::Ident(s) => s.clone(),
-        _ => panic!("Expected function name"),
-    };
-    i += 1;
+    while i < tokens.len() {
+        expect(tokens, &mut i, Token::Func);
 
-    expect(tokens, &mut i, Token::LParen);
-    expect(tokens, &mut i, Token::RParen);
-    expect(tokens, &mut i, Token::LBrace);
+        let name = match &tokens[i] {
+            Token::Ident(s) => s.clone(),
+            _ => panic!("Expected function name"),
+        };
+        i += 1;
 
-    let mut body = Vec::new();
-    while !matches!(tokens[i], Token::RBrace) {
-        body.push(parse_stmt(tokens, &mut i));
+        expect(tokens, &mut i, Token::LParen);
+        expect(tokens, &mut i, Token::RParen);
+        expect(tokens, &mut i, Token::LBrace);
+
+        let mut body = Vec::new();
+        while !matches!(tokens[i], Token::RBrace) {
+            body.push(parse_stmt(tokens, &mut i));
+        }
+
+        expect(tokens, &mut i, Token::RBrace);
+
+        functions.push(Function { name, body });
     }
 
-    expect(tokens, &mut i, Token::RBrace);
-
-    Program {
-        functions: vec![
-            Function { name, body }
-        ],
-    }
+    Program { functions }
 }
 
 fn parse_stmt(tokens: &[Token], i: &mut usize) -> Stmt {
     
     match &tokens[*i] {
+        Token::Let => {
+            *i += 1;
+            let name = match &tokens[*i] {
+                Token::Ident(s) => s.clone(),
+                _ => panic!("Expected variable name after let"),
+            };
+            *i += 1;
+            
+            expect(tokens, i, Token::Equals);
+
+            let value = match &tokens[*i] {
+                Token::String(s) => s.clone(),
+                _ => panic!("Expected string literal in let assignment"),
+            };
+            *i += 1;
+
+            Stmt::Let { name, value }
+        }
+
         Token::Run => {
             *i += 1;
             expect(tokens, i, Token::LParen);
@@ -41,7 +62,16 @@ fn parse_stmt(tokens: &[Token], i: &mut usize) -> Stmt {
             loop {
                 match &tokens[*i] {
                     Token::String(s) => {
-                        args.push(s.clone());
+                        args.push(Expr::Literal(s.clone()));
+                        *i += 1;
+                        if matches!(tokens[*i], Token::Comma) {
+                            *i += 1;
+                        } else {
+                            break;
+                        }
+                    }
+                    Token::Ident(s) => {
+                        args.push(Expr::Var(s.clone()));
                         *i += 1;
                         if matches!(tokens[*i], Token::Comma) {
                             *i += 1;
@@ -61,28 +91,30 @@ fn parse_stmt(tokens: &[Token], i: &mut usize) -> Stmt {
             *i += 1;
             expect(tokens, i, Token::LParen);
 
-            let msg = match &tokens[*i] {
-                Token::String(s) => s.clone(),
-                _ => panic!("Expected string literal in print()"),
+            let expr = match &tokens[*i] {
+                Token::String(s) => Expr::Literal(s.clone()),
+                Token::Ident(s) => Expr::Var(s.clone()),
+                _ => panic!("Expected string or variable in print()"),
             };
             *i += 1;
 
             expect(tokens, i, Token::RParen);
-            Stmt::Print(msg)
+            Stmt::Print(expr)
         }
 
         Token::PrintErr => {
             *i += 1;
             expect(tokens, i, Token::LParen);
 
-            let msg = match &tokens[*i] {
-                Token::String(s) => s.clone(),
-                _ => panic!("Expected string literal in print_err()"),
+            let expr = match &tokens[*i] {
+                Token::String(s) => Expr::Literal(s.clone()),
+                Token::Ident(s) => Expr::Var(s.clone()),
+                _ => panic!("Expected string or variable in print_err()"),
             };
             *i += 1;
 
             expect(tokens, i, Token::RParen);
-            Stmt::PrintErr(msg)
+            Stmt::PrintErr(expr)
         }
 
         Token::If => {

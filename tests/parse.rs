@@ -89,9 +89,9 @@ fn parses_print_err_statement() {
     assert_eq!(body.len(), 1);
 
     match &body[0] {
-        sh2c::ast::Stmt::PrintErr(s) => {
+        sh2c::ast::Stmt::PrintErr(sh2c::ast::Expr::Literal(s)) => {
             assert_eq!(s, "fail");
         }
-        _ => panic!("Expected PrintErr statement"),
+        _ => panic!("Expected PrintErr statement with literal"),
     }
 }
