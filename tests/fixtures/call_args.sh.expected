@@ -1,0 +1,9 @@
+show() {
+  echo $@
+}
+
+main() {
+  show "$@"
+}
+
+main "$@"

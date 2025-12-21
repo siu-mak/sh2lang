@@ -1,0 +1,7 @@
+func show() {
+  sh("echo $@")
+}
+
+func main() {
+  show(args)
+}

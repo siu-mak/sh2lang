@@ -1,0 +1,4 @@
+func main() {
+  let out = $(run("printf", "%s", args))
+  print(out)
+}

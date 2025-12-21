@@ -23,11 +23,25 @@ fn emit_val(v: &Val) -> String {
         Val::Literal(s) => format!("\"{}\"", s),
         Val::Var(s) => format!("\"${}\"", s),
         Val::Concat(l, r) => format!("{}{}", emit_val(l), emit_val(r)),
-        Val::Compare { .. } | Val::And(..) | Val::Or(..) | Val::Not(..) | Val::List(..) | Val::Args => panic!("Cannot emit boolean/list/args value as string"),
         Val::Command(args) => {
-            let parts: Vec<String> = args.iter().map(emit_val).collect();
+            let parts: Vec<String> = args.iter().map(emit_word).collect();
             format!("$( {} )", parts.join(" "))
         }
+        Val::Compare { .. } | Val::And(..) | Val::Or(..) | Val::Not(..) | Val::List(..) | Val::Args => panic!("Cannot emit boolean/list/args value as string"),
+    }
+}
+
+fn emit_word(v: &Val) -> String {
+    match v {
+        Val::Literal(s) => format!("\"{}\"", s),
+        Val::Var(s) => format!("\"${}\"", s),
+        Val::Concat(l, r) => format!("{}{}", emit_word(l), emit_word(r)),
+        Val::Command(args) => {
+             let parts: Vec<String> = args.iter().map(emit_word).collect();
+             format!("$( {} )", parts.join(" "))
+        }
+        Val::Args => "\"$@\"".into(),
+        Val::Compare { .. } | Val::And(..) | Val::Or(..) | Val::Not(..) | Val::List(..) => panic!("Cannot emit boolean/list value as command word"),
     }
 }
 
@@ -67,7 +81,7 @@ fn emit_cmd(cmd: &Cmd, out: &mut String, indent: usize) {
         }
         Cmd::Exec(args) => {
             out.push_str(&pad);
-            let shell_args: Vec<String> = args.iter().map(emit_val).collect();
+            let shell_args: Vec<String> = args.iter().map(emit_word).collect();
             out.push_str(&shell_args.join(" "));
             out.push('\n');
         }
@@ -110,7 +124,7 @@ fn emit_cmd(cmd: &Cmd, out: &mut String, indent: usize) {
         Cmd::Pipe(segments) => {
              out.push_str(&pad);
              let cmds: Vec<String> = segments.iter().map(|args| {
-                 let parts: Vec<String> = args.iter().map(emit_val).collect();
+                 let parts: Vec<String> = args.iter().map(emit_word).collect();
                  parts.join(" ")
              }).collect();
              out.push_str(&cmds.join(" | "));
@@ -197,7 +211,7 @@ fn emit_cmd(cmd: &Cmd, out: &mut String, indent: usize) {
                     for (k, v) in bindings {
                         out.push_str(&format!("{}={} ", k, emit_val(v)));
                     }
-                    let shell_args: Vec<String> = args.iter().map(emit_val).collect();
+                    let shell_args: Vec<String> = args.iter().map(emit_word).collect();
                     out.push_str(&shell_args.join(" "));
                     out.push('\n');
                     return;
@@ -232,7 +246,7 @@ fn emit_cmd(cmd: &Cmd, out: &mut String, indent: usize) {
             out.push_str(name);
             for arg in args {
                 out.push(' ');
-                out.push_str(&emit_val(arg));
+                out.push_str(&emit_word(arg));
             }
             out.push('\n');
         }
