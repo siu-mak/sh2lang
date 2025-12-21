@@ -1,0 +1,3 @@
+func main() {
+  wait($(run("sh", "-c", "echo 1234")))
+}
