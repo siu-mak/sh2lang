@@ -45,13 +45,7 @@ fn parse_stmt(tokens: &[Token], i: &mut usize) -> Stmt {
             
             expect(tokens, i, Token::Equals);
 
-            let value = match &tokens[*i] {
-                Token::String(s) => Expr::Literal(s.clone()),
-                Token::Ident(s) => Expr::Var(s.clone()),
-                _ => panic!("Expected string literal or variable in let assignment"),
-            };
-            *i += 1;
-
+            let value = parse_expr(tokens, i);
             Stmt::Let { name, value }
         }
 
@@ -61,26 +55,17 @@ fn parse_stmt(tokens: &[Token], i: &mut usize) -> Stmt {
 
             let mut args = Vec::new();
             loop {
-                match &tokens[*i] {
-                    Token::String(s) => {
-                        args.push(Expr::Literal(s.clone()));
-                        *i += 1;
-                        if matches!(tokens[*i], Token::Comma) {
-                            *i += 1;
-                        } else {
-                            break;
-                        }
-                    }
-                    Token::Ident(s) => {
-                        args.push(Expr::Var(s.clone()));
-                        *i += 1;
-                        if matches!(tokens[*i], Token::Comma) {
-                            *i += 1;
-                        } else {
-                            break;
-                        }
-                    }
-                    _ => break,
+                // Peek to see if next is RParen or Comma vs Start of Expr
+                if matches!(tokens.get(*i), Some(Token::RParen)) {
+                   break; 
+                }
+                
+                args.push(parse_expr(tokens, i));
+
+                if matches!(tokens.get(*i), Some(Token::Comma)) {
+                    *i += 1;
+                } else {
+                    break;
                 }
             }
 
@@ -92,12 +77,7 @@ fn parse_stmt(tokens: &[Token], i: &mut usize) -> Stmt {
             *i += 1;
             expect(tokens, i, Token::LParen);
 
-            let expr = match &tokens[*i] {
-                Token::String(s) => Expr::Literal(s.clone()),
-                Token::Ident(s) => Expr::Var(s.clone()),
-                _ => panic!("Expected string or variable in print()"),
-            };
-            *i += 1;
+            let expr = parse_expr(tokens, i);
 
             expect(tokens, i, Token::RParen);
             Stmt::Print(expr)
@@ -107,12 +87,7 @@ fn parse_stmt(tokens: &[Token], i: &mut usize) -> Stmt {
             *i += 1;
             expect(tokens, i, Token::LParen);
 
-            let expr = match &tokens[*i] {
-                Token::String(s) => Expr::Literal(s.clone()),
-                Token::Ident(s) => Expr::Var(s.clone()),
-                _ => panic!("Expected string or variable in print_err()"),
-            };
-            *i += 1;
+            let expr = parse_expr(tokens, i);
 
             expect(tokens, i, Token::RParen);
             Stmt::PrintErr(expr)
@@ -167,4 +142,30 @@ fn expect(tokens: &[Token], i: &mut usize, t: Token) {
         panic!("Expected {:?}, got {:?}", t, tokens.get(*i));
     }
     *i += 1;
+}
+
+fn parse_expr(tokens: &[Token], i: &mut usize) -> Expr {
+    let mut left = parse_primary(tokens, i);
+
+    while let Some(Token::Plus) = tokens.get(*i) {
+        *i += 1;
+        let right = parse_primary(tokens, i);
+        left = Expr::Concat(Box::new(left), Box::new(right));
+    }
+
+    left
+}
+
+fn parse_primary(tokens: &[Token], i: &mut usize) -> Expr {
+    match &tokens[*i] {
+        Token::String(s) => {
+            *i += 1;
+            Expr::Literal(s.clone())
+        }
+        Token::Ident(s) => {
+            *i += 1;
+            Expr::Var(s.clone())
+        }
+        _ => panic!("Expected string literal or variable, got {:?}", tokens.get(*i)),
+    }
 }

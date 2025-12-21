@@ -8,6 +8,7 @@ pub struct Function {
 pub enum Val {
     Literal(String),
     Var(String),
+    Concat(Box<Val>, Box<Val>),
 }
 
 #[derive(Debug)]

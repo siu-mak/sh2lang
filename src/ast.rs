@@ -13,6 +13,7 @@ pub struct Function {
 pub enum Expr {
     Literal(String),
     Var(String),
+    Concat(Box<Expr>, Box<Expr>),
 }
 
 #[derive(Debug, Clone, PartialEq)]

@@ -69,5 +69,6 @@ fn lower_expr(e: ast::Expr) -> ir::Val {
     match e {
         ast::Expr::Literal(s) => ir::Val::Literal(s),
         ast::Expr::Var(s) => ir::Val::Var(s),
+        ast::Expr::Concat(l, r) => ir::Val::Concat(Box::new(lower_expr(*l)), Box::new(lower_expr(*r))),
     }
 }

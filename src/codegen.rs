@@ -19,6 +19,7 @@ fn emit_val(v: &Val) -> String {
     match v {
         Val::Literal(s) => format!("\"{}\"", s),
         Val::Var(s) => format!("\"${}\"", s),
+        Val::Concat(l, r) => format!("{}{}", emit_val(l), emit_val(r)),
     }
 }
 

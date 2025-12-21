@@ -7,6 +7,7 @@ pub enum Token {
     If,
     Else,
     Let,
+    Plus,
     Equals,
     Ident(String),
     String(String),
@@ -30,6 +31,7 @@ pub fn lex(input: &str) -> Vec<Token> {
             '}' => { tokens.push(Token::RBrace); chars.next(); }
             ',' => { tokens.push(Token::Comma); chars.next(); }
             '=' => { tokens.push(Token::Equals); chars.next(); }
+            '+' => { tokens.push(Token::Plus); chars.next(); }
             '"' => {
                 chars.next();
                 let mut s = String::new();
