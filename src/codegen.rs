@@ -257,6 +257,13 @@ fn emit_cmd(cmd: &Cmd, out: &mut String, indent: usize) {
             }
             out.push_str(&format!("{pad})\n"));
         }
+        Cmd::Group { body } => {
+            out.push_str(&format!("{pad}{{\n"));
+            for cmd in body {
+                emit_cmd(cmd, out, indent + 2);
+            }
+            out.push_str(&format!("{pad}}}\n"));
+        }
 
     }
 }

@@ -65,6 +65,7 @@ pub enum Cmd {
     Raw(String),
     Call { name: String, args: Vec<Val> },
     Subshell { body: Vec<Cmd> },
+    Group { body: Vec<Cmd> },
 }
 
 #[derive(Debug, Clone, PartialEq)]

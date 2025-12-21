@@ -1,0 +1,7 @@
+func main() {
+  group {
+    let x = "hi"
+    print(x)
+  }
+  print(x)
+}

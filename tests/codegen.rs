@@ -267,6 +267,14 @@ fn subshell_basic_codegen_matches_snapshot() {
     );
 }
 
+#[test]
+fn group_basic_codegen_matches_snapshot() {
+    assert_codegen_matches_snapshot(
+        "tests/fixtures/group_basic.sh2",
+        "tests/fixtures/group_basic.sh.expected",
+    );
+}
+
 fn assert_codegen_matches_snapshot(sh2_path: &str, expected_path: &str) {
     let src = fs::read_to_string(sh2_path).unwrap();
     let expected = fs::read_to_string(expected_path).unwrap();

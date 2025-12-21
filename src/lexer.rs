@@ -34,6 +34,7 @@ pub enum Token {
     Exit,
     Capture,
     Subshell,
+    Group,
     Ident(String),
     String(String),
     LParen,
@@ -143,6 +144,7 @@ pub fn lex(input: &str) -> Vec<Token> {
                     "exit" => tokens.push(Token::Exit),
                     "capture" => tokens.push(Token::Capture),
                     "subshell" => tokens.push(Token::Subshell),
+                    "group" => tokens.push(Token::Group),
                     _ => tokens.push(Token::Ident(ident)),
                 }
             }

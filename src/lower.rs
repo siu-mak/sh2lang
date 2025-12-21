@@ -174,6 +174,13 @@ fn lower_stmt(stmt: ast::Stmt, out: &mut Vec<ir::Cmd>) {
             }
             out.push(ir::Cmd::Subshell { body: lowered });
         }
+        ast::Stmt::Group { body } => {
+            let mut lowered = Vec::new();
+            for s in body {
+                lower_stmt(s, &mut lowered);
+            }
+            out.push(ir::Cmd::Group { body: lowered });
+        }
     }
 }
 
