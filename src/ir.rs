@@ -30,4 +30,5 @@ pub enum Cmd {
         then_body: Vec<Cmd>,
         else_body: Vec<Cmd>,
     },
+    Pipe(Vec<Vec<Val>>),
 }

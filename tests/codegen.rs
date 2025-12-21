@@ -72,3 +72,24 @@ fn let_codegen_matches_snapshot() {
 
     assert_eq!(output.trim(), expected.trim());
 }
+
+#[test]
+fn cmd_sub_codegen_matches_snapshot() {
+    let sh2_path = "tests/fixtures/cmd_sub.sh2";
+    let expected_path = "tests/fixtures/cmd_sub.sh.expected";
+    assert_codegen_matches_snapshot(sh2_path, expected_path);
+}
+
+#[test]
+fn pipe_codegen_matches_snapshot() {
+    let sh2_path = "tests/fixtures/pipe.sh2";
+    let expected_path = "tests/fixtures/pipe.sh.expected";
+    assert_codegen_matches_snapshot(sh2_path, expected_path);
+}
+
+fn assert_codegen_matches_snapshot(sh2_path: &str, expected_path: &str) {
+    let src = fs::read_to_string(sh2_path).unwrap();
+    let expected = fs::read_to_string(expected_path).unwrap();
+    let output = compile(&src);
+    assert_eq!(output.trim(), expected.trim());
+}

@@ -2,4 +2,5 @@ main() {
   files=$( "ls" )
   echo "Files: ""$files"
 }
-main
+
+main "$@"

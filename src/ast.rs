@@ -35,5 +35,6 @@ pub enum Stmt {
         then_body: Vec<Stmt>,
         else_body: Option<Vec<Stmt>>,
     },
+    Pipe(Vec<Vec<Expr>>),
 }
 

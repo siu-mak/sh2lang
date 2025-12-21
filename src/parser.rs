@@ -50,27 +50,42 @@ fn parse_stmt(tokens: &[Token], i: &mut usize) -> Stmt {
         }
 
         Token::Run => {
+            let mut segments = Vec::new();
+            
+            // First run(...)
             *i += 1;
             expect(tokens, i, Token::LParen);
 
             let mut args = Vec::new();
             loop {
-                // Peek to see if next is RParen or Comma vs Start of Expr
-                if matches!(tokens.get(*i), Some(Token::RParen)) {
-                   break; 
-                }
-                
+                if matches!(tokens.get(*i), Some(Token::RParen)) { break; }
                 args.push(parse_expr(tokens, i));
+                if matches!(tokens.get(*i), Some(Token::Comma)) { *i += 1; } else { break; }
+            }
+            expect(tokens, i, Token::RParen);
+            segments.push(args);
 
-                if matches!(tokens.get(*i), Some(Token::Comma)) {
-                    *i += 1;
-                } else {
-                    break;
+            // Additional run(...) segments separated by `|`
+            while matches!(tokens.get(*i), Some(Token::Pipe)) {
+                *i += 1;
+                expect(tokens, i, Token::Run);
+                expect(tokens, i, Token::LParen);
+                
+                let mut next_args = Vec::new();
+                loop {
+                    if matches!(tokens.get(*i), Some(Token::RParen)) { break; }
+                    next_args.push(parse_expr(tokens, i));
+                    if matches!(tokens.get(*i), Some(Token::Comma)) { *i += 1; } else { break; }
                 }
+                expect(tokens, i, Token::RParen);
+                segments.push(next_args);
             }
 
-            expect(tokens, i, Token::RParen);
-            Stmt::Run(args)
+            if segments.len() == 1 {
+                Stmt::Run(segments.pop().unwrap())
+            } else {
+                Stmt::Pipe(segments)
+            }
         }
 
         Token::Print => {

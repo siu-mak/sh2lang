@@ -87,6 +87,15 @@ fn emit_cmd(cmd: &Cmd, out: &mut String, indent: usize) {
 
             out.push_str(&format!("{pad}fi\n"));
         }
+        Cmd::Pipe(segments) => {
+             out.push_str(&pad);
+             let cmds: Vec<String> = segments.iter().map(|args| {
+                 let parts: Vec<String> = args.iter().map(emit_val).collect();
+                 parts.join(" ")
+             }).collect();
+             out.push_str(&cmds.join(" | "));
+             out.push('\n');
+        }
 
     }
 }

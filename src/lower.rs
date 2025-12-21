@@ -61,6 +61,14 @@ fn lower_stmt(stmt: ast::Stmt, out: &mut Vec<ir::Cmd>) {
                 else_body: e_cmds,
             });
         }
+        ast::Stmt::Pipe(segments) => {
+            let mut lowered_segments = Vec::new();
+            for args in segments {
+                let lowered_args = args.into_iter().map(lower_expr).collect();
+                lowered_segments.push(lowered_args);
+            }
+            out.push(ir::Cmd::Pipe(lowered_segments));
+        }
 
     }
 }
