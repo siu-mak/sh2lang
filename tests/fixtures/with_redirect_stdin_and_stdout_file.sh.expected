@@ -1,0 +1,7 @@
+main() {
+  {
+    "cat"
+  } < "in.txt" > "out.txt"
+}
+
+main "$@"

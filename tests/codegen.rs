@@ -436,6 +436,22 @@ fn with_redirect_stdout_to_stderr_codegen_matches_snapshot() {
 }
 
 #[test]
+fn with_redirect_stdin_file_codegen_matches_snapshot() {
+    assert_codegen_matches_snapshot(
+        "tests/fixtures/with_redirect_stdin_file.sh2",
+        "tests/fixtures/with_redirect_stdin_file.sh.expected",
+    );
+}
+
+#[test]
+fn with_redirect_stdin_and_stdout_file_codegen_matches_snapshot() {
+    assert_codegen_matches_snapshot(
+        "tests/fixtures/with_redirect_stdin_and_stdout_file.sh2",
+        "tests/fixtures/with_redirect_stdin_and_stdout_file.sh.expected",
+    );
+}
+
+#[test]
 #[should_panic(expected = "Cyclic redirection")]
 fn with_redirect_cyclic_panics() {
     assert_codegen_matches_snapshot(

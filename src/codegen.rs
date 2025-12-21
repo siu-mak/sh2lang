@@ -264,13 +264,22 @@ fn emit_cmd(cmd: &Cmd, out: &mut String, indent: usize) {
             }
             out.push_str(&format!("{pad}}}\n"));
         }
-        Cmd::WithRedirect { stdout, stderr, body } => {
+        Cmd::WithRedirect { stdout, stderr, stdin, body } => {
             out.push_str(&format!("{pad}{{\n"));
             for cmd in body {
                  emit_cmd(cmd, out, indent + 2);
             }
             out.push_str(&format!("{pad}}}")); // No newline yet, redirections follow
             
+            if let Some(target) = stdin {
+                match target {
+                    RedirectTarget::File { path, .. } => {
+                        out.push_str(&format!(" < {}", emit_val(path)));
+                    }
+                    _ => panic!("stdin redirected to something invalid (only file supported)"),
+                }
+            }
+
             // Determine emission order: standard (stdout then stderr) or swapped
             let mut emit_stdout_first = true;
             if let Some(stdout_target) = &stdout {

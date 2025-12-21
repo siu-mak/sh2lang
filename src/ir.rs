@@ -69,6 +69,7 @@ pub enum Cmd {
     WithRedirect {
         stdout: Option<RedirectTarget>,
         stderr: Option<RedirectTarget>,
+        stdin: Option<RedirectTarget>,
         body: Vec<Cmd>,
     },
     Spawn(Box<Cmd>),

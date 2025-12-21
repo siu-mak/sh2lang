@@ -338,20 +338,37 @@ fn parse_stmt(tokens: &[Token], i: &mut usize) -> Stmt {
                 *i += 1;
                 expect(tokens, i, Token::LBrace);
                 
+                let mut stdin = None;
                 let mut stdout = None;
                 let mut stderr = None;
 
                 while !matches!(tokens.get(*i), Some(Token::RBrace)) {
-                    if matches!(tokens.get(*i), Some(Token::Stdout)) {
-                        *i += 1;
-                        expect(tokens, i, Token::Colon);
-                        stdout = Some(parse_redirect_target(tokens, i));
-                    } else if matches!(tokens.get(*i), Some(Token::Stderr)) {
-                        *i += 1;
-                        expect(tokens, i, Token::Colon);
-                        stderr = Some(parse_redirect_target(tokens, i));
-                    } else {
-                         // consume commas if any
+                    let next_tok = tokens.get(*i);
+                    *i += 1;
+
+                    match next_tok {
+                         Some(Token::Stdout) => {
+                             expect(tokens, i, Token::Colon);
+                             stdout = Some(parse_redirect_target(tokens, i));
+                         }
+                         Some(Token::Stderr) => {
+                             expect(tokens, i, Token::Colon);
+                             stderr = Some(parse_redirect_target(tokens, i));
+                         }
+                         Some(Token::Stdin) => {
+                             expect(tokens, i, Token::Colon);
+                             let target = parse_redirect_target(tokens, i);
+                                match target {
+                                    RedirectTarget::File { append, .. } => {
+                                        if append {
+                                            panic!("Cannot append to stdin (use 'file' without append for input)");
+                                        }
+                                    }
+                                    _ => panic!("stdin can only be redirected from a file currently"),
+                                }
+                             stdin = Some(target);
+                         }
+                         _ => panic!("Expected stdout, stderr, or stdin"),
                     }
 
                     if matches!(tokens.get(*i), Some(Token::Comma)) {
@@ -369,7 +386,7 @@ fn parse_stmt(tokens: &[Token], i: &mut usize) -> Stmt {
                 }
                 expect(tokens, i, Token::RBrace);
 
-                Stmt::WithRedirect { stdout, stderr, body }
+                Stmt::WithRedirect { stdout, stderr, stdin, body }
 
             } else {
                 panic!("Expected 'env', 'cwd', or 'redirect' after 'with'");

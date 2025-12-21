@@ -1,0 +1,5 @@
+func main() {
+  with redirect { stdin: file("in.txt") } {
+    run("cat")
+  }
+}

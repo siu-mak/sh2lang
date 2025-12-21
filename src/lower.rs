@@ -181,7 +181,7 @@ fn lower_stmt(stmt: ast::Stmt, out: &mut Vec<ir::Cmd>) {
             }
             out.push(ir::Cmd::Group { body: lowered });
         }
-        ast::Stmt::WithRedirect { stdout, stderr, body } => {
+        ast::Stmt::WithRedirect { stdout, stderr, stdin, body } => {
              let mut lowered_body = Vec::new();
              for s in body {
                  lower_stmt(s, &mut lowered_body);
@@ -194,8 +194,9 @@ fn lower_stmt(stmt: ast::Stmt, out: &mut Vec<ir::Cmd>) {
              };
              
              out.push(ir::Cmd::WithRedirect {
-                 stdout: stdout.map(lower_target),
+                  stdout: stdout.map(lower_target),
                  stderr: stderr.map(lower_target),
+                 stdin: stdin.map(lower_target),
                  body: lowered_body,
              });
         }

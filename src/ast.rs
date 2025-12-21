@@ -75,6 +75,7 @@ pub enum Stmt {
     WithRedirect {
         stdout: Option<RedirectTarget>,
         stderr: Option<RedirectTarget>,
+        stdin: Option<RedirectTarget>,
         body: Vec<Stmt>,
     },
     Spawn { stmt: Box<Stmt> },
