@@ -412,10 +412,35 @@ fn wait_pid_var_codegen_matches_snapshot() {
 }
 
 #[test]
+fn with_redirect_stdout_to_stderr_and_stderr_file_codegen_matches_snapshot() {
+    assert_codegen_matches_snapshot(
+        "tests/fixtures/with_redirect_stdout_to_stderr_and_stderr_file.sh2",
+        "tests/fixtures/with_redirect_stdout_to_stderr_and_stderr_file.sh.expected",
+    );
+}
+
+#[test]
+fn with_redirect_stderr_noop_codegen_matches_snapshot() {
+    assert_codegen_matches_snapshot(
+        "tests/fixtures/with_redirect_stderr_noop.sh2",
+        "tests/fixtures/with_redirect_stderr_noop.sh.expected",
+    );
+}
+
+#[test]
 fn with_redirect_stdout_to_stderr_codegen_matches_snapshot() {
     assert_codegen_matches_snapshot(
         "tests/fixtures/with_redirect_stdout_to_stderr.sh2",
         "tests/fixtures/with_redirect_stdout_to_stderr.sh.expected",
+    );
+}
+
+#[test]
+#[should_panic(expected = "Cyclic redirection")]
+fn with_redirect_cyclic_panics() {
+    assert_codegen_matches_snapshot(
+         "tests/fixtures/with_redirect_cyclic.sh2",
+         "tests/fixtures/nothing.sh.expected",
     );
 }
 

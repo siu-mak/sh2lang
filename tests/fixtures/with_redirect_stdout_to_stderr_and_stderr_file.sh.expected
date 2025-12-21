@@ -1,0 +1,7 @@
+main() {
+  {
+    echo "hi"
+  } 2> "err.log" 1>&2
+}
+
+main "$@"

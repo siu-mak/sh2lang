@@ -271,32 +271,63 @@ fn emit_cmd(cmd: &Cmd, out: &mut String, indent: usize) {
             }
             out.push_str(&format!("{pad}}}")); // No newline yet, redirections follow
             
-            if let Some(target) = stdout {
-                match target {
-                    RedirectTarget::File { path, append } => {
-                        let op = if *append { ">>" } else { ">" };
-                        out.push_str(&format!(" {} {}", op, emit_val(path)));
+            // Determine emission order: standard (stdout then stderr) or swapped
+            let mut emit_stdout_first = true;
+            if let Some(stdout_target) = &stdout {
+                if let Some(stderr_target) = &stderr {
+                    if matches!(stdout_target, RedirectTarget::Stderr)
+                        && matches!(stderr_target, RedirectTarget::File { .. })
+                    {
+                        emit_stdout_first = false;
                     }
-                    RedirectTarget::Stderr => {
-                        out.push_str(" 1>&2");
-                    }
-                    RedirectTarget::Stdout => {
-                        // no-op
+                    if matches!(stdout_target, RedirectTarget::Stderr)
+                        && matches!(stderr_target, RedirectTarget::Stdout)
+                    {
+                         panic!("Cyclic redirection: stdout to stderr AND stderr to stdout is not supported");
                     }
                 }
             }
 
-            if let Some(target) = stderr {
-                match target {
-                    RedirectTarget::File { path, append } => {
-                         let op = if *append { ">>" } else { ">" };
-                         out.push_str(&format!(" 2{} {}", op, emit_val(path)));
+            let emit_stdout = |out: &mut String| {
+                if let Some(target) = &stdout {
+                    match target {
+                        RedirectTarget::File { path, append } => {
+                            let op = if *append { ">>" } else { ">" };
+                            out.push_str(&format!(" {} {}", op, emit_val(path)));
+                        }
+                        RedirectTarget::Stderr => {
+                            out.push_str(" 1>&2");
+                        }
+                        RedirectTarget::Stdout => {
+                            // no-op
+                        }
                     }
-                    RedirectTarget::Stdout => {
-                         out.push_str(" 2>&1");
-                    }
-                    _ => panic!("stderr redirected to something invalid"),
                 }
+            };
+
+            let emit_stderr = |out: &mut String| {
+                if let Some(target) = &stderr {
+                    match target {
+                        RedirectTarget::File { path, append } => {
+                             let op = if *append { ">>" } else { ">" };
+                             out.push_str(&format!(" 2{} {}", op, emit_val(path)));
+                        }
+                        RedirectTarget::Stdout => {
+                             out.push_str(" 2>&1");
+                        }
+                        RedirectTarget::Stderr => {
+                            // no-op
+                        }
+                    }
+                }
+            };
+
+            if emit_stdout_first {
+                emit_stdout(out);
+                emit_stderr(out);
+            } else {
+                emit_stderr(out);
+                emit_stdout(out);
             }
             out.push('\n');
         }
