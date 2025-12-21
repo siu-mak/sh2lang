@@ -133,7 +133,17 @@ fn lower_stmt(stmt: ast::Stmt, out: &mut Vec<ir::Cmd>) {
         ast::Stmt::Exit(e) => {
              out.push(ir::Cmd::Exit(e.map(lower_expr)));
         }
-
+        ast::Stmt::WithEnv { bindings, body } => {
+            let lowered_bindings = bindings.into_iter().map(|(k, v)| (k, lower_expr(v))).collect();
+            let mut lower_body = Vec::new();
+            for s in body {
+                lower_stmt(s, &mut lower_body);
+            }
+            out.push(ir::Cmd::WithEnv {
+                bindings: lowered_bindings,
+                body: lower_body,
+            });
+        }
     }
 }
 

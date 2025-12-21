@@ -59,6 +59,10 @@ pub enum Stmt {
     Continue,
     Return(Option<Expr>),
     Exit(Option<Expr>),
+    WithEnv {
+        bindings: Vec<(String, Expr)>,
+        body: Vec<Stmt>,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq)]

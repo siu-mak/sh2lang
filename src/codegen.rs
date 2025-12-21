@@ -186,6 +186,31 @@ fn emit_cmd(cmd: &Cmd, out: &mut String, indent: usize) {
                  out.push_str(&format!("{pad}exit\n"));
              }
         }
+        Cmd::WithEnv { bindings, body } => {
+            // Check for single Exec optimization
+            if body.len() == 1 {
+                if let Cmd::Exec(args) = &body[0] {
+                    out.push_str(&pad);
+                    for (k, v) in bindings {
+                        out.push_str(&format!("{}={} ", k, emit_val(v)));
+                    }
+                    let shell_args: Vec<String> = args.iter().map(emit_val).collect();
+                    out.push_str(&shell_args.join(" "));
+                    out.push('\n');
+                    return;
+                }
+            }
+
+            // General case: Subshell
+            out.push_str(&format!("{pad}(\n"));
+            for (k, v) in bindings {
+                out.push_str(&format!("{}  {}={}\n", pad, k, emit_val(v)));
+            }
+            for cmd in body {
+                emit_cmd(cmd, out, indent + 2);
+            }
+            out.push_str(&format!("{pad})\n"));
+        }
 
     }
 }

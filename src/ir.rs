@@ -54,6 +54,10 @@ pub enum Cmd {
     Continue,
     Return(Option<Val>),
     Exit(Option<Val>),
+    WithEnv {
+        bindings: Vec<(String, Val)>,
+        body: Vec<Cmd>,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq)]

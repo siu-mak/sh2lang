@@ -1,0 +1,7 @@
+func main() {
+    with env {
+        FOO = "bar"
+    } {
+        print(FOO)
+    }
+}

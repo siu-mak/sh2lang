@@ -284,6 +284,38 @@ fn parse_stmt(tokens: &[Token], i: &mut usize) -> Stmt {
             Stmt::Exit(expr)
         }
 
+        Token::With => {
+            *i += 1;
+            expect(tokens, i, Token::Env);
+            
+            expect(tokens, i, Token::LBrace);
+            let mut bindings = Vec::new();
+            while !matches!(tokens[*i], Token::RBrace) {
+                 let name = match &tokens[*i] {
+                     Token::Ident(s) => s.clone(),
+                     _ => panic!("Expected identifier for env binding"),
+                 };
+                 *i += 1;
+                 expect(tokens, i, Token::Equals);
+                 let val = parse_expr(tokens, i);
+                 bindings.push((name, val));
+                 // Optional comma? User doesn't specify commas in example.
+                 // "name = expr" is usually distinct.
+                 // We will assume no separator required or optional semi/comma if we had them.
+                 // But in our simple parser, just loop.
+            }
+            expect(tokens, i, Token::RBrace);
+
+            expect(tokens, i, Token::LBrace);
+            let mut body = Vec::new();
+            while !matches!(tokens[*i], Token::RBrace) {
+                 body.push(parse_stmt(tokens, i));
+            }
+            expect(tokens, i, Token::RBrace);
+
+            Stmt::WithEnv { bindings, body }
+        }
+
         _ => panic!("Expected statement"),
     }
 }
