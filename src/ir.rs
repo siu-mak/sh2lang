@@ -39,6 +39,8 @@ pub enum Cmd {
         cond: Val,
         body: Vec<Cmd>,
     },
+    Break,
+    Continue,
 }
 
 #[derive(Debug, Clone, PartialEq)]

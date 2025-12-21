@@ -1,0 +1,9 @@
+main() {
+  while [ "x" = "x" ]; do
+    echo "once"
+    break
+    echo "never"
+  done
+}
+
+main "$@"

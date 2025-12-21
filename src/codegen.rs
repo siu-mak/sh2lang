@@ -124,6 +124,12 @@ fn emit_cmd(cmd: &Cmd, out: &mut String, indent: usize) {
             }
             out.push_str(&format!("{pad}done\n"));
         }
+        Cmd::Break => {
+            out.push_str(&format!("{pad}break\n"));
+        }
+        Cmd::Continue => {
+            out.push_str(&format!("{pad}continue\n"));
+        }
 
     }
 }

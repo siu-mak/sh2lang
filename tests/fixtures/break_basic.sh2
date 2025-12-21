@@ -1,0 +1,7 @@
+func main() {
+    while "x" == "x" {
+        print("once")
+        break
+        print("never")
+    }
+}

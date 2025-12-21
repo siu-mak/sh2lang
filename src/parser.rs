@@ -203,6 +203,16 @@ fn parse_stmt(tokens: &[Token], i: &mut usize) -> Stmt {
             Stmt::While { cond, body }
         }
 
+        Token::Break => {
+            *i += 1;
+            Stmt::Break
+        }
+
+        Token::Continue => {
+            *i += 1;
+            Stmt::Continue
+        }
+
         _ => panic!("Expected statement"),
     }
 }

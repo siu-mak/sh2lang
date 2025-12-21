@@ -99,6 +99,12 @@ fn lower_stmt(stmt: ast::Stmt, out: &mut Vec<ir::Cmd>) {
             }
             out.push(ir::Cmd::Pipe(lowered_segments));
         }
+        ast::Stmt::Break => {
+            out.push(ir::Cmd::Break);
+        }
+        ast::Stmt::Continue => {
+            out.push(ir::Cmd::Continue);
+        }
 
     }
 }

@@ -17,6 +17,8 @@ pub enum Token {
     Arrow,
     Underscore,
     While,
+    Break,
+    Continue,
     Ident(String),
     String(String),
     LParen,
@@ -91,6 +93,8 @@ pub fn lex(input: &str) -> Vec<Token> {
                     "let" => tokens.push(Token::Let),
                     "case" => tokens.push(Token::Case),
                     "while" => tokens.push(Token::While),
+                    "break" => tokens.push(Token::Break),
+                    "continue" => tokens.push(Token::Continue),
                     _ => tokens.push(Token::Ident(ident)),
                 }
             }

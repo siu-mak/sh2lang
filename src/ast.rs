@@ -44,6 +44,8 @@ pub enum Stmt {
         cond: Expr,
         body: Vec<Stmt>,
     },
+    Break,
+    Continue,
 }
 
 #[derive(Debug, Clone, PartialEq)]
