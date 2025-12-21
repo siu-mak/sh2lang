@@ -51,6 +51,7 @@ pub enum Stmt {
     },
     Break,
     Continue,
+    Return(Option<Expr>),
 }
 
 #[derive(Debug, Clone, PartialEq)]

@@ -117,6 +117,9 @@ fn lower_stmt(stmt: ast::Stmt, out: &mut Vec<ir::Cmd>) {
         ast::Stmt::Continue => {
             out.push(ir::Cmd::Continue);
         }
+        ast::Stmt::Return(e) => {
+             out.push(ir::Cmd::Return(e.map(lower_expr)));
+        }
 
     }
 }

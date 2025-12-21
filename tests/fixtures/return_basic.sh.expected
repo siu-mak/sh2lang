@@ -1,0 +1,7 @@
+main() {
+  echo "before"
+  return
+  echo "after"
+}
+
+main "$@"

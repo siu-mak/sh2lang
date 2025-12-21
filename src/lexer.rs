@@ -21,6 +21,7 @@ pub enum Token {
     In,
     Break,
     Continue,
+    Return,
     Ident(String),
     String(String),
     LParen,
@@ -99,6 +100,7 @@ pub fn lex(input: &str) -> Vec<Token> {
                     "in" => tokens.push(Token::In),
                     "break" => tokens.push(Token::Break),
                     "continue" => tokens.push(Token::Continue),
+                    "return" => tokens.push(Token::Return),
                     _ => tokens.push(Token::Ident(ident)),
                 }
             }
