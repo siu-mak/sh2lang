@@ -543,6 +543,21 @@ fn parse_primary(tokens: &[Token], i: &mut usize) -> Expr {
             *i += 1;
             Expr::Args
         }
+        Token::Capture => {
+            *i += 1;
+            expect(tokens, i, Token::LParen);
+            let mut args = Vec::new();
+            loop {
+                if matches!(tokens.get(*i), Some(Token::RParen)) { break; }
+                args.push(parse_expr(tokens, i));
+                if matches!(tokens.get(*i), Some(Token::Comma)) { *i += 1; } else { break; }
+            }
+            expect(tokens, i, Token::RParen);
+            if args.is_empty() {
+                panic!("capture(...) expects at least one argument (command name)");
+            }
+            Expr::Command(args)
+        }
         _ => panic!("Expected string or variable, got {:?}", tokens.get(*i)),
     }
 }

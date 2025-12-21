@@ -243,6 +243,22 @@ fn cmd_sub_call_args_codegen_matches_snapshot() {
     );
 }
 
+#[test]
+fn capture_basic_codegen_matches_snapshot() {
+    assert_codegen_matches_snapshot(
+        "tests/fixtures/capture_basic.sh2",
+        "tests/fixtures/capture_basic.sh.expected",
+    );
+}
+
+#[test]
+fn capture_args_codegen_matches_snapshot() {
+    assert_codegen_matches_snapshot(
+        "tests/fixtures/capture_args.sh2",
+        "tests/fixtures/capture_args.sh.expected",
+    );
+}
+
 fn assert_codegen_matches_snapshot(sh2_path: &str, expected_path: &str) {
     let src = fs::read_to_string(sh2_path).unwrap();
     let expected = fs::read_to_string(expected_path).unwrap();

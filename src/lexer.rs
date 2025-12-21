@@ -32,6 +32,7 @@ pub enum Token {
     Continue,
     Return,
     Exit,
+    Capture,
     Ident(String),
     String(String),
     LParen,
@@ -139,6 +140,7 @@ pub fn lex(input: &str) -> Vec<Token> {
                     "continue" => tokens.push(Token::Continue),
                     "return" => tokens.push(Token::Return),
                     "exit" => tokens.push(Token::Exit),
+                    "capture" => tokens.push(Token::Capture),
                     _ => tokens.push(Token::Ident(ident)),
                 }
             }
