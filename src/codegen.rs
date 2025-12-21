@@ -20,7 +20,7 @@ fn emit_val(v: &Val) -> String {
         Val::Literal(s) => format!("\"{}\"", s),
         Val::Var(s) => format!("\"${}\"", s),
         Val::Concat(l, r) => format!("{}{}", emit_val(l), emit_val(r)),
-        Val::Compare { .. } => panic!("Cannot emit boolean value as string"),
+        Val::Compare { .. } | Val::And(..) | Val::Or(..) | Val::Not(..) => panic!("Cannot emit boolean value as string"),
         Val::Command(args) => {
             let parts: Vec<String> = args.iter().map(emit_val).collect();
             format!("$( {} )", parts.join(" "))
@@ -36,6 +36,15 @@ fn emit_cond(v: &Val) -> String {
                 crate::ir::CompareOp::NotEq => "!=",
             };
             format!("[ {} {} {} ]", emit_val(left), op_str, emit_val(right))
+        }
+        Val::And(left, right) => {
+            format!("{} && {}", emit_cond(left), emit_cond(right))
+        }
+        Val::Or(left, right) => {
+            format!("{} || {}", emit_cond(left), emit_cond(right))
+        }
+        Val::Not(expr) => {
+            format!("! {}", emit_cond(expr))
         }
         // Legacy "is set" behavior for direct values
         v => format!("[ -n {} ]", emit_val(v)),

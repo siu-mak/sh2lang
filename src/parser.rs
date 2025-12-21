@@ -289,6 +289,34 @@ fn expect(tokens: &[Token], i: &mut usize, t: Token) {
 }
 
 fn parse_expr(tokens: &[Token], i: &mut usize) -> Expr {
+    parse_or(tokens, i)
+}
+
+fn parse_or(tokens: &[Token], i: &mut usize) -> Expr {
+    let mut left = parse_and(tokens, i);
+
+    while let Some(Token::OrOr) = tokens.get(*i) {
+        *i += 1;
+        let right = parse_and(tokens, i);
+        left = Expr::Or(Box::new(left), Box::new(right));
+    }
+
+    left
+}
+
+fn parse_and(tokens: &[Token], i: &mut usize) -> Expr {
+    let mut left = parse_comparison(tokens, i);
+
+    while let Some(Token::AndAnd) = tokens.get(*i) {
+        *i += 1;
+        let right = parse_comparison(tokens, i);
+        left = Expr::And(Box::new(left), Box::new(right));
+    }
+
+    left
+}
+
+fn parse_comparison(tokens: &[Token], i: &mut usize) -> Expr {
     let left = parse_concat(tokens, i);
 
     if let Some(token) = tokens.get(*i) {
@@ -313,15 +341,25 @@ fn parse_expr(tokens: &[Token], i: &mut usize) -> Expr {
 }
 
 fn parse_concat(tokens: &[Token], i: &mut usize) -> Expr {
-    let mut left = parse_primary(tokens, i);
+    let mut left = parse_unary(tokens, i);
 
     while let Some(Token::Plus) = tokens.get(*i) {
         *i += 1;
-        let right = parse_primary(tokens, i);
+        let right = parse_unary(tokens, i);
         left = Expr::Concat(Box::new(left), Box::new(right));
     }
 
     left
+}
+
+fn parse_unary(tokens: &[Token], i: &mut usize) -> Expr {
+    if let Some(Token::Bang) = tokens.get(*i) {
+        *i += 1;
+        let expr = parse_unary(tokens, i);
+        Expr::Not(Box::new(expr))
+    } else {
+        parse_primary(tokens, i)
+    }
 }
 
 fn parse_primary(tokens: &[Token], i: &mut usize) -> Expr {

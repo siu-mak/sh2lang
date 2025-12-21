@@ -14,6 +14,9 @@ pub enum Token {
     NotEq,
     Dollar,
     Pipe,
+    OrOr,
+    AndAnd,
+    Bang,
     Case,
     Arrow,
     Underscore,
@@ -59,7 +62,24 @@ pub fn lex(input: &str) -> Vec<Token> {
             }
             '_' => { tokens.push(Token::Underscore); chars.next(); }
             '+' => { tokens.push(Token::Plus); chars.next(); }
-            '|' => { tokens.push(Token::Pipe); chars.next(); }
+            '&' => {
+                 chars.next();
+                 if chars.peek() == Some(&'&') {
+                     tokens.push(Token::AndAnd);
+                     chars.next();
+                 } else {
+                     panic!("Unexpected character '&'");
+                 }
+            }
+            '|' => {
+                 chars.next();
+                 if chars.peek() == Some(&'|') {
+                     tokens.push(Token::OrOr);
+                     chars.next();
+                 } else {
+                     tokens.push(Token::Pipe);
+                 }
+            }
             '$' => { tokens.push(Token::Dollar); chars.next(); }
             '!' => {
                 chars.next();
@@ -67,7 +87,7 @@ pub fn lex(input: &str) -> Vec<Token> {
                     tokens.push(Token::NotEq);
                     chars.next();
                 } else {
-                    panic!("Unexpected character '!'");
+                    tokens.push(Token::Bang);
                 }
             }
             '"' => {

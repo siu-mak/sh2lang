@@ -1,0 +1,7 @@
+main() {
+  if [ "a" = "a" ] && [ "b" != "c" ]; then
+    echo "ok"
+  fi
+}
+
+main "$@"

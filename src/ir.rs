@@ -11,6 +11,9 @@ pub enum Val {
     Command(Vec<Val>),
     Concat(Box<Val>, Box<Val>),
     Compare { left: Box<Val>, op: CompareOp, right: Box<Val> },
+    And(Box<Val>, Box<Val>),
+    Or(Box<Val>, Box<Val>),
+    Not(Box<Val>),
 }
 
 #[derive(Debug, Clone, PartialEq)]

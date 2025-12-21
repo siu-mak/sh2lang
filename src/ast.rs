@@ -22,6 +22,9 @@ pub enum Expr {
     Command(Vec<Expr>),
     Concat(Box<Expr>, Box<Expr>),
     Compare { left: Box<Expr>, op: CompareOp, right: Box<Expr> },
+    And(Box<Expr>, Box<Expr>),
+    Or(Box<Expr>, Box<Expr>),
+    Not(Box<Expr>),
 }
 
 #[derive(Debug, Clone, PartialEq)]
