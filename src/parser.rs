@@ -464,6 +464,12 @@ fn parse_unary(tokens: &[Token], i: &mut usize) -> Expr {
 
 fn parse_primary(tokens: &[Token], i: &mut usize) -> Expr {
     match &tokens[*i] {
+        Token::LParen => {
+            *i += 1;
+            let e = parse_expr(tokens, i);
+            expect(tokens, i, Token::RParen);
+            e
+        }
         Token::String(s) => {
             *i += 1;
             Expr::Literal(s.clone())

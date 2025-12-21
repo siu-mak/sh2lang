@@ -1,0 +1,9 @@
+main() {
+  if [ "a" = "a" ]; then
+    echo "ok"
+  else
+    echo "no"
+  fi
+}
+
+main "$@"
