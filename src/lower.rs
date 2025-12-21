@@ -155,6 +155,9 @@ fn lower_stmt(stmt: ast::Stmt, out: &mut Vec<ir::Cmd>) {
                 body: lower_body,
             });
         }
+        ast::Stmt::Sh(s) => {
+            out.push(ir::Cmd::Raw(s));
+        }
     }
 }
 

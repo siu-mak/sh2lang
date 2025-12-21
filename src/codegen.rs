@@ -219,6 +219,11 @@ fn emit_cmd(cmd: &Cmd, out: &mut String, indent: usize) {
             }
             out.push_str(&format!("{pad})\n"));
         }
+        Cmd::Raw(s) => {
+            out.push_str(&pad);
+            out.push_str(s);
+            out.push('\n');
+        }
 
     }
 }

@@ -67,6 +67,7 @@ pub enum Stmt {
         path: Expr,
         body: Vec<Stmt>,
     },
+    Sh(String),
 }
 
 #[derive(Debug, Clone, PartialEq)]

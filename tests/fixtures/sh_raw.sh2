@@ -1,0 +1,4 @@
+func main() {
+    sh("set -euo pipefail")
+    run("echo", "hi")
+}

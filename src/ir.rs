@@ -62,6 +62,7 @@ pub enum Cmd {
         path: Val,
         body: Vec<Cmd>,
     },
+    Raw(String),
 }
 
 #[derive(Debug, Clone, PartialEq)]
