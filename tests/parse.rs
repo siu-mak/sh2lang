@@ -39,6 +39,7 @@ fn parses_if_statement() {
         sh2c::ast::Stmt::If {
             cond,
             then_body,
+            elifs: _,
             else_body,
         } => {
             if let sh2c::ast::Expr::Var(name) = cond {

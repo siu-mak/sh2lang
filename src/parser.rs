@@ -121,6 +121,19 @@ fn parse_stmt(tokens: &[Token], i: &mut usize) -> Stmt {
             }
             expect(tokens, i, Token::RBrace);
 
+            let mut elifs = Vec::new();
+            while matches!(tokens.get(*i), Some(Token::Elif)) {
+                *i += 1;
+                let cond = parse_expr(tokens, i);
+                expect(tokens, i, Token::LBrace);
+                let mut body = Vec::new();
+                while !matches!(tokens[*i], Token::RBrace) {
+                    body.push(parse_stmt(tokens, i));
+                }
+                expect(tokens, i, Token::RBrace);
+                elifs.push(Elif { cond, body });
+            }
+
             // optional else
             let else_body = if matches!(tokens.get(*i), Some(Token::Else)) {
                 *i += 1;
@@ -139,6 +152,7 @@ fn parse_stmt(tokens: &[Token], i: &mut usize) -> Stmt {
             Stmt::If {
                 cond,
                 then_body,
+                elifs,
                 else_body,
             }
 

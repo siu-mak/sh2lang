@@ -1,0 +1,9 @@
+func main() {
+    if "a" == "b" {
+        print("no")
+    } elif "a" == "a" {
+        print("yes")
+    } else {
+        print("never")
+    }
+}

@@ -1,0 +1,11 @@
+main() {
+  if [ "a" = "b" ]; then
+    echo "no"
+  elif [ "a" = "a" ]; then
+    echo "yes"
+  else
+    echo "never"
+  fi
+}
+
+main "$@"

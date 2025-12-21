@@ -33,6 +33,7 @@ pub enum Stmt {
     If {
         cond: Expr,
         then_body: Vec<Stmt>,
+        elifs: Vec<Elif>,
         else_body: Option<Vec<Stmt>>,
     },
     Pipe(Vec<Vec<Expr>>),
@@ -65,5 +66,11 @@ pub struct CaseArm {
 pub enum Pattern {
     Literal(String),
     Wildcard,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct Elif {
+    pub cond: Expr,
+    pub body: Vec<Stmt>,
 }
 

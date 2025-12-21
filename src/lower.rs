@@ -42,12 +42,21 @@ fn lower_stmt(stmt: ast::Stmt, out: &mut Vec<ir::Cmd>) {
         ast::Stmt::PrintErr(e) => {
             out.push(ir::Cmd::PrintErr(lower_expr(e)));
         }
-        ast::Stmt::If { cond, then_body, else_body } => {
+        ast::Stmt::If { cond, then_body, elifs, else_body } => {
             let mut t_cmds = Vec::new();
             for s in then_body {
                 lower_stmt(s, &mut t_cmds);
             }
             
+            let mut lowered_elifs = Vec::new();
+            for elif in elifs {
+                let mut body_cmds = Vec::new();
+                for s in elif.body {
+                    lower_stmt(s, &mut body_cmds);
+                }
+                lowered_elifs.push((lower_expr(elif.cond), body_cmds));
+            }
+
             let mut e_cmds = Vec::new();
             if let Some(body) = else_body {
                 for s in body {
@@ -58,6 +67,7 @@ fn lower_stmt(stmt: ast::Stmt, out: &mut Vec<ir::Cmd>) {
             out.push(ir::Cmd::If {
                 cond: lower_expr(cond),
                 then_body: t_cmds,
+                elifs: lowered_elifs,
                 else_body: e_cmds,
             });
         }

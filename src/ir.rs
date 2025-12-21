@@ -28,6 +28,7 @@ pub enum Cmd {
     If {
         cond: Val,
         then_body: Vec<Cmd>,
+        elifs: Vec<(Val, Vec<Cmd>)>,
         else_body: Vec<Cmd>,
     },
     Pipe(Vec<Vec<Val>>),

@@ -71,11 +71,19 @@ fn emit_cmd(cmd: &Cmd, out: &mut String, indent: usize) {
             out.push_str(&emit_val(val));
             out.push_str(" >&2\n");
         }
-        Cmd::If { cond, then_body, else_body } => {
+        Cmd::If { cond, then_body, elifs, else_body } => {
             let cond_str = emit_cond(cond);
             out.push_str(&format!("{pad}if {cond_str}; then\n"));
             for c in then_body {
                 emit_cmd(c, out, indent + 2);
+            }
+
+            for (cond, body) in elifs {
+                let cond_str = emit_cond(cond);
+                out.push_str(&format!("{pad}elif {cond_str}; then\n"));
+                for c in body {
+                    emit_cmd(c, out, indent + 2);
+                }
             }
 
             if !else_body.is_empty() {
