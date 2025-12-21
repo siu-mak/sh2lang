@@ -1,0 +1,5 @@
+func main() {
+    with cwd "/tmp" {
+        run("pwd")
+    }
+}

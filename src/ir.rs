@@ -58,6 +58,10 @@ pub enum Cmd {
         bindings: Vec<(String, Val)>,
         body: Vec<Cmd>,
     },
+    WithCwd {
+        path: Val,
+        body: Vec<Cmd>,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq)]

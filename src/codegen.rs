@@ -211,6 +211,14 @@ fn emit_cmd(cmd: &Cmd, out: &mut String, indent: usize) {
             }
             out.push_str(&format!("{pad})\n"));
         }
+        Cmd::WithCwd { path, body } => {
+            out.push_str(&format!("{pad}(\n"));
+            out.push_str(&format!("{pad}  cd {}\n", emit_val(path)));
+            for cmd in body {
+                emit_cmd(cmd, out, indent + 2);
+            }
+            out.push_str(&format!("{pad})\n"));
+        }
 
     }
 }

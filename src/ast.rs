@@ -63,6 +63,10 @@ pub enum Stmt {
         bindings: Vec<(String, Expr)>,
         body: Vec<Stmt>,
     },
+    WithCwd {
+        path: Expr,
+        body: Vec<Stmt>,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq)]
