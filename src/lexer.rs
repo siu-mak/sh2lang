@@ -142,6 +142,12 @@ pub fn lex(input: &str) -> Vec<Token> {
                     _ => tokens.push(Token::Ident(ident)),
                 }
             }
+            '#' => {
+                 while let Some(&ch) = chars.peek() {
+                     if ch == '\n' { break; }
+                     chars.next();
+                 }
+            }
             _ => panic!("Unexpected char: {}", c),
         }
     }

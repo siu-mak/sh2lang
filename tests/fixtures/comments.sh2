@@ -1,0 +1,6 @@
+func main() {
+  # comment: should be ignored
+  print("hi")
+  # another comment
+  run("echo", "ok") # trailing comment
+}
