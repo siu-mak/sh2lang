@@ -81,6 +81,16 @@ fn lower_stmt(stmt: ast::Stmt, out: &mut Vec<ir::Cmd>) {
                 arms: lower_arms,
             });
         }
+        ast::Stmt::While { cond, body } => {
+            let mut lower_body = Vec::new();
+            for s in body {
+                lower_stmt(s, &mut lower_body);
+            }
+            out.push(ir::Cmd::While {
+                cond: lower_expr(cond),
+                body: lower_body,
+            });
+        }
         ast::Stmt::Pipe(segments) => {
             let mut lowered_segments = Vec::new();
             for args in segments {

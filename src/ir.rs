@@ -35,6 +35,10 @@ pub enum Cmd {
         expr: Val,
         arms: Vec<(Vec<Pattern>, Vec<Cmd>)>,
     },
+    While {
+        cond: Val,
+        body: Vec<Cmd>,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq)]

@@ -116,5 +116,14 @@ fn emit_cmd(cmd: &Cmd, out: &mut String, indent: usize) {
             out.push_str(&format!("{}esac\n", pad));
         }
 
+        Cmd::While { cond, body } => {
+            let cond_str = emit_cond(cond);
+            out.push_str(&format!("{pad}while {cond_str}; do\n"));
+            for c in body {
+                emit_cmd(c, out, indent + 2);
+            }
+            out.push_str(&format!("{pad}done\n"));
+        }
+
     }
 }

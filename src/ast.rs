@@ -40,6 +40,10 @@ pub enum Stmt {
         expr: Expr,
         arms: Vec<CaseArm>,
     },
+    While {
+        cond: Expr,
+        body: Vec<Stmt>,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq)]

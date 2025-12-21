@@ -1,0 +1,7 @@
+func main() {
+    let x = "go"
+    while x == "go" {
+        print("loop")
+        let x = "stop"
+    }
+}

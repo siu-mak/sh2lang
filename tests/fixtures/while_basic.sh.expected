@@ -1,0 +1,9 @@
+main() {
+  x="go"
+  while [ "$x" = "go" ]; do
+    echo "loop"
+    x="stop"
+  done
+}
+
+main "$@"

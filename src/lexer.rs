@@ -16,6 +16,7 @@ pub enum Token {
     Case,
     Arrow,
     Underscore,
+    While,
     Ident(String),
     String(String),
     LParen,
@@ -89,6 +90,7 @@ pub fn lex(input: &str) -> Vec<Token> {
                     "else" => tokens.push(Token::Else),
                     "let" => tokens.push(Token::Let),
                     "case" => tokens.push(Token::Case),
+                    "while" => tokens.push(Token::While),
                     _ => tokens.push(Token::Ident(ident)),
                 }
             }

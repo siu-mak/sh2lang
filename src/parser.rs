@@ -189,6 +189,20 @@ fn parse_stmt(tokens: &[Token], i: &mut usize) -> Stmt {
             Stmt::Case { expr, arms }
         }
 
+        Token::While => {
+            *i += 1;
+            let cond = parse_expr(tokens, i);
+            expect(tokens, i, Token::LBrace);
+            
+            let mut body = Vec::new();
+            while !matches!(tokens[*i], Token::RBrace) {
+                body.push(parse_stmt(tokens, i));
+            }
+            expect(tokens, i, Token::RBrace);
+            
+            Stmt::While { cond, body }
+        }
+
         _ => panic!("Expected statement"),
     }
 }
