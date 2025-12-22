@@ -38,6 +38,7 @@ fn emit_val(v: &Val) -> String {
              format!("$( printf \"%s\" {} | awk '{{ print length($0) }}' )", emit_val(inner))
         }
         Val::Arg(n) => format!("\"${}\"", n),
+        Val::Number(n) => format!("\"{}\"", n),
         Val::Compare { .. } | Val::And(..) | Val::Or(..) | Val::Not(..) | Val::Exists(..) | Val::IsDir(..) | Val::IsFile(..) | Val::List(..) | Val::Args => panic!("Cannot emit boolean/list/args value as string"),
     }
 }
@@ -62,6 +63,7 @@ fn emit_word(v: &Val) -> String {
              format!("$( printf \"%s\" {} | awk '{{ print length($0) }}' )", emit_val(inner))
         }
         Val::Arg(n) => format!("\"${}\"", n),
+        Val::Number(n) => format!("\"{}\"", n),
         Val::Args => "\"$@\"".into(),
         Val::Compare { .. } | Val::And(..) | Val::Or(..) | Val::Not(..) | Val::Exists(..) | Val::IsDir(..) | Val::IsFile(..) | Val::List(..) => panic!("Cannot emit boolean/list value as command word"),
     }

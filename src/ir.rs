@@ -21,6 +21,7 @@ pub enum Val {
     IsFile(Box<Val>),
     Len(Box<Val>),
     Arg(u32),
+    Number(u32),
     List(Vec<Val>),
     Args,
 }

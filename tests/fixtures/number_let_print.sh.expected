@@ -1,0 +1,7 @@
+main() {
+  n="42"
+  echo "$n"
+  echo "7"
+}
+
+main "$@"

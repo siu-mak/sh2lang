@@ -580,6 +580,30 @@ fn wait_arg_codegen_matches_snapshot() {
     );
 }
 
+#[test]
+fn number_let_print_codegen_matches_snapshot() {
+    assert_codegen_matches_snapshot(
+        "tests/fixtures/number_let_print.sh2",
+        "tests/fixtures/number_let_print.sh.expected",
+    );
+}
+
+#[test]
+fn return_number_codegen_matches_snapshot() {
+    assert_codegen_matches_snapshot(
+        "tests/fixtures/return_number.sh2",
+        "tests/fixtures/return_number.sh.expected",
+    );
+}
+
+#[test]
+fn if_number_compare_codegen_matches_snapshot() {
+    assert_codegen_matches_snapshot(
+        "tests/fixtures/if_number_compare.sh2",
+        "tests/fixtures/if_number_compare.sh.expected",
+    );
+}
+
 fn assert_codegen_matches_snapshot(sh2_path: &str, expected_path: &str) {
     let src = fs::read_to_string(sh2_path).unwrap();
     let expected = fs::read_to_string(expected_path).unwrap();

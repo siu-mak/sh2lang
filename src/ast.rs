@@ -32,6 +32,7 @@ pub enum Expr {
     IsFile(Box<Expr>),
     Len(Box<Expr>),
     Arg(u32),
+    Number(u32),
     List(Vec<Expr>),
     Args,
 }
