@@ -1,0 +1,10 @@
+echo1() {
+  local x="${1}"
+  echo "$x"
+}
+
+main() {
+  echo1 "hi"
+}
+
+main "$@"

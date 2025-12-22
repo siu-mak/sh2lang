@@ -1,4 +1,5 @@
 greet() {
+  local name="${1}"
   echo "hi ""$1"
 }
 

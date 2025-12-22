@@ -1,0 +1,7 @@
+func echo1(x) {
+  print(x)
+}
+
+func main() {
+  echo1("hi")
+}

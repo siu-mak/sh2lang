@@ -8,6 +8,9 @@ pub fn emit(funcs: &[Function]) -> String {
             out.push('\n');
         }
         out.push_str(&format!("{}() {{\n", f.name));
+        for (idx, param) in f.params.iter().enumerate() {
+            out.push_str(&format!("  local {}=\"${{{}}}\"\n", param, idx + 1));
+        }
         for cmd in &f.commands {
             emit_cmd(cmd, &mut out, 2);
         }
