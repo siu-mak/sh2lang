@@ -33,6 +33,7 @@ pub enum Expr {
     Len(Box<Expr>),
     Arg(u32),
     Index { list: Box<Expr>, index: u32 },
+    Join { list: Box<Expr>, sep: Box<Expr> },
     Number(u32),
     List(Vec<Expr>),
     Args,

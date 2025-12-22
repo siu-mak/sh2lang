@@ -628,6 +628,7 @@ fn is_expr_start(t: Option<&Token>) -> bool {
            | Token::Len
            | Token::Arg
            | Token::Index
+           | Token::Join
            | Token::Number(_)
         )
     )
@@ -797,6 +798,29 @@ fn parse_primary(tokens: &[Token], i: &mut usize) -> Expr {
             *i += 1;
             expect(tokens, i, Token::RParen);
             Expr::Index { list: Box::new(list), index }
+        }
+        Token::Join => {
+            *i += 1;
+            expect(tokens, i, Token::LParen);
+            let list = parse_expr(tokens, i);
+            expect(tokens, i, Token::Comma);
+            let sep = parse_expr(tokens, i);
+            *i += 1; // Consume ')'
+            // Ideally we should use expect(RParen), but relying on logic:
+            if !matches!(tokens.get(*i-1), Some(Token::RParen)) {
+                 // Actually let's just stick to standard expect
+                 *i -= 1; // backtrack the manual increment
+                 expect(tokens, i, Token::RParen);
+            }
+            // Correction: standard pattern is:
+            // *i += 1; // join
+            // expect(LParen)
+            // parse expr
+            // expect(Comma)
+            // parse expr
+            // expect(RParen)
+            // Just rewriting cleanly:
+            Expr::Join { list: Box::new(list), sep: Box::new(sep) }
         }
         Token::Number(n) => {
             *i += 1;

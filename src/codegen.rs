@@ -52,6 +52,23 @@ fn emit_val(v: &Val) -> String {
                  _ => panic!("Index implemented only for variables and list literals"),
             }
         }
+        Val::Join { list, sep } => {
+             match &**list {
+                 Val::Var(name) => {
+                     // Arrays: "$( IFS=<sep>; printf "%s" "${name[*]}" )"
+                     format!("\"$( IFS={}; printf \"%s\" \"${{{}[*]}}\" )\"", emit_val(sep), name)
+                 }
+                 Val::List(elems) => {
+                     let mut arr_str = String::new();
+                     for (i, elem) in elems.iter().enumerate() {
+                         if i > 0 { arr_str.push(' '); }
+                         arr_str.push_str(&emit_word(elem));
+                     }
+                     format!("\"$( arr=({}); IFS={}; printf \"%s\" \"${{arr[*]}}\" )\"", arr_str, emit_val(sep))
+                 }
+                 _ => panic!("Join implemented only for variables and list literals"),
+             }
+        }
         Val::Number(n) => format!("\"{}\"", n),
         Val::Compare { .. } | Val::And(..) | Val::Or(..) | Val::Not(..) | Val::Exists(..) | Val::IsDir(..) | Val::IsFile(..) | Val::List(..) | Val::Args => panic!("Cannot emit boolean/list/args value as string"),
     }
@@ -78,6 +95,7 @@ fn emit_word(v: &Val) -> String {
         }
         Val::Arg(n) => format!("\"${}\"", n),
         Val::Index { list, index } => emit_val(&Val::Index { list: list.clone(), index: *index }),
+        Val::Join { list, sep } => emit_val(&Val::Join { list: list.clone(), sep: sep.clone() }),
         Val::Number(n) => format!("\"{}\"", n),
         Val::Args => "\"$@\"".into(),
         Val::Compare { .. } | Val::And(..) | Val::Or(..) | Val::Not(..) | Val::Exists(..) | Val::IsDir(..) | Val::IsFile(..) | Val::List(..) => panic!("Cannot emit boolean/list value as command word"),

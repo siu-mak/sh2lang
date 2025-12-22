@@ -636,6 +636,22 @@ fn index_list_var_codegen_matches_snapshot() {
     );
 }
 
+#[test]
+fn join_list_literal_codegen_matches_snapshot() {
+    assert_codegen_matches_snapshot(
+        "tests/fixtures/join_list_literal.sh2",
+        "tests/fixtures/join_list_literal.sh.expected",
+    );
+}
+
+#[test]
+fn join_list_var_codegen_matches_snapshot() {
+    assert_codegen_matches_snapshot(
+        "tests/fixtures/join_list_var.sh2",
+        "tests/fixtures/join_list_var.sh.expected",
+    );
+}
+
 fn assert_codegen_matches_snapshot(sh2_path: &str, expected_path: &str) {
     let src = fs::read_to_string(sh2_path).unwrap();
     let expected = fs::read_to_string(expected_path).unwrap();

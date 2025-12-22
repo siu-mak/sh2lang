@@ -1,0 +1,4 @@
+func main() {
+  let s = join(["a", "b", "c"], ",")
+  print(s)
+}
