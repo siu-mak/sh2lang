@@ -627,6 +627,7 @@ fn is_expr_start(t: Option<&Token>) -> bool {
            | Token::IsFile
            | Token::Len
            | Token::Arg
+           | Token::Index
            | Token::Number(_)
         )
     )
@@ -783,6 +784,19 @@ fn parse_primary(tokens: &[Token], i: &mut usize) -> Expr {
             *i += 1;
             expect(tokens, i, Token::RParen);
             Expr::Arg(n)
+        }
+        Token::Index => {
+            *i += 1;
+            expect(tokens, i, Token::LParen);
+            let list = parse_expr(tokens, i);
+            expect(tokens, i, Token::Comma);
+            let index = match tokens[*i] {
+                Token::Number(n) => n,
+                _ => panic!("Expected number index"),
+            };
+            *i += 1;
+            expect(tokens, i, Token::RParen);
+            Expr::Index { list: Box::new(list), index }
         }
         Token::Number(n) => {
             *i += 1;

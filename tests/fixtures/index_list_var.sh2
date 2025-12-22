@@ -1,0 +1,4 @@
+func main() {
+  let xs = ["a", "b", "c"]
+  print(index(xs, 2))
+}

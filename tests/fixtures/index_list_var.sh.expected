@@ -1,0 +1,6 @@
+main() {
+  xs=("a" "b" "c")
+  echo "${xs[2]}"
+}
+
+main "$@"

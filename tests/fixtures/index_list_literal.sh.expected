@@ -1,0 +1,6 @@
+main() {
+  x="$( arr=("a" "b" "c"); printf "%s" "${arr[1]}" )"
+  echo "$x"
+}
+
+main "$@"

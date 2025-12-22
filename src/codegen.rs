@@ -38,6 +38,20 @@ fn emit_val(v: &Val) -> String {
              format!("$( printf \"%s\" {} | awk '{{ print length($0) }}' )", emit_val(inner))
         }
         Val::Arg(n) => format!("\"${}\"", n),
+        Val::Index { list, index } => {
+            match &**list {
+                 Val::Var(name) => format!("\"${{{}[{}]}}\"", name, index),
+                 Val::List(elems) => {
+                     let mut arr_str = String::new();
+                     for (i, elem) in elems.iter().enumerate() {
+                         if i > 0 { arr_str.push(' '); }
+                         arr_str.push_str(&emit_word(elem));
+                     }
+                     format!("\"$( arr=({}); printf \"%s\" \"${{arr[{}]}}\" )\"", arr_str, index)
+                 }
+                 _ => panic!("Index implemented only for variables and list literals"),
+            }
+        }
         Val::Number(n) => format!("\"{}\"", n),
         Val::Compare { .. } | Val::And(..) | Val::Or(..) | Val::Not(..) | Val::Exists(..) | Val::IsDir(..) | Val::IsFile(..) | Val::List(..) | Val::Args => panic!("Cannot emit boolean/list/args value as string"),
     }
@@ -63,6 +77,7 @@ fn emit_word(v: &Val) -> String {
              format!("$( printf \"%s\" {} | awk '{{ print length($0) }}' )", emit_val(inner))
         }
         Val::Arg(n) => format!("\"${}\"", n),
+        Val::Index { list, index } => emit_val(&Val::Index { list: list.clone(), index: *index }),
         Val::Number(n) => format!("\"{}\"", n),
         Val::Args => "\"$@\"".into(),
         Val::Compare { .. } | Val::And(..) | Val::Or(..) | Val::Not(..) | Val::Exists(..) | Val::IsDir(..) | Val::IsFile(..) | Val::List(..) => panic!("Cannot emit boolean/list value as command word"),
@@ -107,10 +122,20 @@ fn emit_cmd(cmd: &Cmd, out: &mut String, indent: usize) {
     match cmd {
         Cmd::Assign(name, val) => {
             out.push_str(&pad);
-            out.push_str(name);
-            out.push('=');
-            out.push_str(&emit_val(val));
-            out.push('\n');
+            if let Val::List(elems) = val {
+                out.push_str(name);
+                out.push_str("=(");
+                for (i, elem) in elems.iter().enumerate() {
+                    if i > 0 { out.push(' '); }
+                    out.push_str(&emit_word(elem));
+                }
+                out.push_str(")\n");
+            } else {
+                out.push_str(name);
+                out.push('=');
+                out.push_str(&emit_val(val));
+                out.push('\n');
+            }
         }
         Cmd::Exec(args) => {
             out.push_str(&pad);
