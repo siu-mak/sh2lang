@@ -728,6 +728,13 @@ fn parse_primary(tokens: &[Token], i: &mut usize) -> Expr {
             expect(tokens, i, Token::RParen);
             Expr::IsFile(Box::new(path))
         }
+        Token::Len => {
+            *i += 1;
+            expect(tokens, i, Token::LParen);
+            let expr = parse_expr(tokens, i);
+            expect(tokens, i, Token::RParen);
+            Expr::Len(Box::new(expr))
+        }
         _ => panic!("Expected string or variable, got {:?}", tokens.get(*i)),
     }
 }

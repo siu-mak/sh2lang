@@ -18,6 +18,7 @@ pub enum Val {
     Exists(Box<Val>),
     IsDir(Box<Val>),
     IsFile(Box<Val>),
+    Len(Box<Val>),
     List(Vec<Val>),
     Args,
 }

@@ -1,0 +1,4 @@
+func main() {
+  let s = "hello"
+  print(len(s))
+}

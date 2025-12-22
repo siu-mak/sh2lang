@@ -29,6 +29,7 @@ pub enum Expr {
     Exists(Box<Expr>),
     IsDir(Box<Expr>),
     IsFile(Box<Expr>),
+    Len(Box<Expr>),
     List(Vec<Expr>),
     Args,
 }
