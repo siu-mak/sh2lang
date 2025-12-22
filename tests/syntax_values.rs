@@ -339,3 +339,61 @@ fn parse_arith_precedence() {
 fn codegen_arith_precedence() { assert_codegen_matches_snapshot("arith_precedence"); }
 #[test]
 fn exec_arith_precedence() { assert_exec_matches_fixture("arith_precedence"); }
+
+#[test]
+fn parse_index_var_index() {
+    let program = parse_fixture("index_var_index");
+    let func = &program.functions[0];
+    if let Stmt::Print(Expr::Index { index, .. }) = &func.body[2] {
+        if let Expr::Var(s) = &**index {
+            assert_eq!(s, "i");
+        } else { panic!("Expected Var index"); }
+    } else { panic!("Expected Print(Index)"); }
+}
+#[test]
+fn codegen_index_var_index() { assert_codegen_matches_snapshot("index_var_index"); }
+#[test]
+fn exec_index_var_index() { assert_exec_matches_fixture("index_var_index"); }
+
+#[test]
+fn parse_index_arith_index() {
+    let program = parse_fixture("index_arith_index");
+    let func = &program.functions[0];
+    if let Stmt::Print(Expr::Index { index, .. }) = &func.body[2] {
+        // i + 2
+        if let Expr::Arith { left, op, right } = &**index {
+             assert_eq!(*op, sh2c::ast::ArithOp::Add);
+             // check operands if needed
+        } else { panic!("Expected Arith index"); }
+    } else { panic!("Expected Print(Index)"); }
+}
+#[test]
+fn codegen_index_arith_index() { assert_codegen_matches_snapshot("index_arith_index"); }
+#[test]
+fn exec_index_arith_index() { assert_exec_matches_fixture("index_arith_index"); }
+
+#[test]
+fn codegen_index_list_literal_expr() { assert_codegen_matches_snapshot("index_list_literal_expr"); }
+#[test]
+fn exec_index_list_literal_expr() { assert_exec_matches_fixture("index_list_literal_expr"); }
+
+#[test]
+fn parse_arith_unary_minus() {
+    let program = parse_fixture("arith_unary_minus");
+    let func = &program.functions[0];
+    if let Stmt::Let { value, .. } = &func.body[0] {
+        // -1 + 2 -> Add(Sub(0, 1), 2)
+        if let Expr::Arith { left, op, .. } = value {
+             assert_eq!(*op, sh2c::ast::ArithOp::Add);
+             if let Expr::Arith { left, op, right } = &**left {
+                 assert_eq!(*op, sh2c::ast::ArithOp::Sub);
+                 assert!(matches!(**left, Expr::Number(0)));
+                 assert!(matches!(**right, Expr::Number(1)));
+             } else { panic!("Expected Sub(0,1) on left"); }
+        } else { panic!("Expected Arith"); }
+    }
+}
+#[test]
+fn codegen_arith_unary_minus() { assert_codegen_matches_snapshot("arith_unary_minus"); }
+#[test]
+fn exec_arith_unary_minus() { assert_exec_matches_fixture("arith_unary_minus"); }

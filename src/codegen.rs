@@ -43,14 +43,15 @@ fn emit_val(v: &Val) -> String {
         Val::Arg(n) => format!("\"${}\"", n),
         Val::Index { list, index } => {
             match &**list {
-                 Val::Var(name) => format!("\"${{{}[{}]}}\"", name, index),
+                 Val::Var(name) => format!("\"${{{}[{}]}}\"", name, emit_index_expr(index)),
                  Val::List(elems) => {
                      let mut arr_str = String::new();
                      for (i, elem) in elems.iter().enumerate() {
                          if i > 0 { arr_str.push(' '); }
                          arr_str.push_str(&emit_word(elem));
                      }
-                     format!("\"$( arr=({}); printf \"%s\" \"${{arr[{}]}}\" )\"", arr_str, index)
+                     // Force evaluation of index
+                     format!("\"$( arr=({}); idx=$(( {} )); printf \"%s\" \"${{arr[idx]}}\" )\"", arr_str, emit_index_expr(index))
                  }
                  _ => panic!("Index implemented only for variables and list literals"),
             }
@@ -105,7 +106,7 @@ fn emit_word(v: &Val) -> String {
              format!("$( printf \"%s\" {} | awk '{{ print length($0) }}' )", emit_val(inner))
         }
         Val::Arg(n) => format!("\"${}\"", n),
-        Val::Index { list, index } => emit_val(&Val::Index { list: list.clone(), index: *index }),
+        Val::Index { list, index } => emit_val(&Val::Index { list: list.clone(), index: index.clone() }),
         Val::Join { list, sep } => emit_val(&Val::Join { list: list.clone(), sep: sep.clone() }),
         Val::Count(inner) => emit_val(&Val::Count(inner.clone())),
         Val::Bool(_) => panic!("Cannot emit boolean value as string/word; booleans are only valid in conditions"),
@@ -183,6 +184,10 @@ fn emit_cond(v: &Val) -> String {
         // Legacy "is set" behavior for direct values
         v => format!("[ -n {} ]", emit_val(v)),
     }
+}
+
+fn emit_index_expr(v: &Val) -> String {
+    emit_arith_expr(v)
 }
 
 fn emit_arith_expr(v: &Val) -> String {

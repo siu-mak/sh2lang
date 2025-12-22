@@ -1,5 +1,5 @@
 main() {
-  x="$( arr=("a" "b" "c"); printf "%s" "${arr[1]}" )"
+  x="$( arr=("a" "b" "c"); idx=$(( 1 )); printf "%s" "${arr[idx]}" )"
   echo "$x"
 }
 

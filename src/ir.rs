@@ -22,7 +22,7 @@ pub enum Val {
     IsFile(Box<Val>),
     Len(Box<Val>),
     Arg(u32),
-    Index { list: Box<Val>, index: u32 },
+    Index { list: Box<Val>, index: Box<Val> },
     Join { list: Box<Val>, sep: Box<Val> },
     Count(Box<Val>),
     Bool(bool),

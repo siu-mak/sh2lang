@@ -747,6 +747,15 @@ fn parse_unary(tokens: &[Token], i: &mut usize) -> Expr {
         *i += 1;
         let expr = parse_unary(tokens, i);
         Expr::Not(Box::new(expr))
+    } else if let Some(Token::Minus) = tokens.get(*i) {
+        // Desugar -x to 0 - x
+        *i += 1;
+        let right = parse_unary(tokens, i);
+        Expr::Arith {
+            left: Box::new(Expr::Number(0)),
+            op: ArithOp::Sub,
+            right: Box::new(right),
+        }
     } else {
         parse_primary(tokens, i)
     }
@@ -835,13 +844,9 @@ fn parse_primary(tokens: &[Token], i: &mut usize) -> Expr {
             expect(tokens, i, Token::LParen);
             let list = parse_expr(tokens, i);
             expect(tokens, i, Token::Comma);
-            let index = match tokens[*i] {
-                Token::Number(n) => n,
-                _ => panic!("Expected number index"),
-            };
-            *i += 1;
+            let index = parse_expr(tokens, i);
             expect(tokens, i, Token::RParen);
-            Expr::Index { list: Box::new(list), index }
+            Expr::Index { list: Box::new(list), index: Box::new(index) }
         }
         Token::Join => {
             *i += 1;

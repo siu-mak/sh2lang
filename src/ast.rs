@@ -46,7 +46,7 @@ pub enum Expr {
     IsFile(Box<Expr>),
     Len(Box<Expr>),
     Arg(u32),
-    Index { list: Box<Expr>, index: u32 },
+    Index { list: Box<Expr>, index: Box<Expr> },
     Join { list: Box<Expr>, sep: Box<Expr> },
     Count(Box<Expr>),
     Bool(bool),

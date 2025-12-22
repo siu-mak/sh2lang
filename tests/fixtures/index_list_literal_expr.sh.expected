@@ -1,0 +1,5 @@
+main() {
+  echo "$( arr=("x" "y" "z"); idx=$(( ( 1 + 1 ) )); printf "%s" "${arr[idx]}" )"
+}
+
+main "$@"

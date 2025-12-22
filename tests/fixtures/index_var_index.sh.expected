@@ -1,0 +1,7 @@
+main() {
+  xs=("a" "b" "c")
+  i="1"
+  echo "${xs[i]}"
+}
+
+main "$@"

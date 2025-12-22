@@ -325,7 +325,7 @@ fn lower_expr(e: ast::Expr) -> ir::Val {
         ast::Expr::Arg(n) => ir::Val::Arg(n),
         ast::Expr::Index { list, index } => ir::Val::Index {
             list: Box::new(lower_expr(*list)),
-            index,
+            index: Box::new(lower_expr(*index)),
         },
         ast::Expr::Join { list, sep } => ir::Val::Join {
             list: Box::new(lower_expr(*list)),
