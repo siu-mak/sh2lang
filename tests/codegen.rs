@@ -604,6 +604,22 @@ fn if_number_compare_codegen_matches_snapshot() {
     );
 }
 
+#[test]
+fn print_args_codegen_matches_snapshot() {
+    assert_codegen_matches_snapshot(
+        "tests/fixtures/print_args.sh2",
+        "tests/fixtures/print_args.sh.expected",
+    );
+}
+
+#[test]
+fn print_err_args_codegen_matches_snapshot() {
+    assert_codegen_matches_snapshot(
+        "tests/fixtures/print_err_args.sh2",
+        "tests/fixtures/print_err_args.sh.expected",
+    );
+}
+
 fn assert_codegen_matches_snapshot(sh2_path: &str, expected_path: &str) {
     let src = fs::read_to_string(sh2_path).unwrap();
     let expected = fs::read_to_string(expected_path).unwrap();

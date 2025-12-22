@@ -121,13 +121,19 @@ fn emit_cmd(cmd: &Cmd, out: &mut String, indent: usize) {
         Cmd::Print(val) => {
             out.push_str(&pad);
             out.push_str("echo ");
-            out.push_str(&emit_val(val));
+            match val {
+                Val::Args => out.push_str(&emit_word(val)),
+                _ => out.push_str(&emit_val(val)),
+            }
             out.push('\n');
         }
         Cmd::PrintErr(val) => {
             out.push_str(&pad);
             out.push_str("echo ");
-            out.push_str(&emit_val(val));
+            match val {
+                Val::Args => out.push_str(&emit_word(val)),
+                _ => out.push_str(&emit_val(val)),
+            }
             out.push_str(" >&2\n");
         }
         Cmd::If { cond, then_body, elifs, else_body } => {
