@@ -49,6 +49,7 @@ pub enum Token {
     Catch,
     Export,
     Unset,
+    Exists,
     Ident(String),
     String(String),
     LParen,
@@ -173,6 +174,7 @@ pub fn lex(input: &str) -> Vec<Token> {
                     "catch" => tokens.push(Token::Catch),
                     "export" => tokens.push(Token::Export),
                     "unset" => tokens.push(Token::Unset),
+                    "exists" => tokens.push(Token::Exists),
                     _ => tokens.push(Token::Ident(ident)),
                 }
             }

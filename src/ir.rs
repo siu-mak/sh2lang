@@ -15,6 +15,7 @@ pub enum Val {
     And(Box<Val>, Box<Val>),
     Or(Box<Val>, Box<Val>),
     Not(Box<Val>),
+    Exists(Box<Val>),
     List(Vec<Val>),
     Args,
 }

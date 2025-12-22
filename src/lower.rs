@@ -278,6 +278,9 @@ fn lower_expr(e: ast::Expr) -> ir::Val {
         ast::Expr::Not(expr) => {
             ir::Val::Not(Box::new(lower_expr(*expr)))
         }
+        ast::Expr::Exists(path) => {
+            ir::Val::Exists(Box::new(lower_expr(*path)))
+        }
         ast::Expr::Command(args) => {
             let lowered_args = args.into_iter().map(lower_expr).collect();
             ir::Val::Command(lowered_args)

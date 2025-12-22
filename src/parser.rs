@@ -707,6 +707,13 @@ fn parse_primary(tokens: &[Token], i: &mut usize) -> Expr {
             *i += 1;
             parse_command_substitution(tokens, i)
         }
+        Token::Exists => {
+            *i += 1;
+            expect(tokens, i, Token::LParen);
+            let path = parse_expr(tokens, i);
+            expect(tokens, i, Token::RParen);
+            Expr::Exists(Box::new(path))
+        }
         _ => panic!("Expected string or variable, got {:?}", tokens.get(*i)),
     }
 }

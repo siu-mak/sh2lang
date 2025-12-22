@@ -1,0 +1,7 @@
+func main() {
+  if exists("a.txt") {
+    print("yes")
+  } else {
+    print("no")
+  }
+}

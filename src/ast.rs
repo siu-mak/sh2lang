@@ -26,6 +26,7 @@ pub enum Expr {
     And(Box<Expr>, Box<Expr>),
     Or(Box<Expr>, Box<Expr>),
     Not(Box<Expr>),
+    Exists(Box<Expr>),
     List(Vec<Expr>),
     Args,
 }

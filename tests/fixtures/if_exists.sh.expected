@@ -1,0 +1,9 @@
+main() {
+  if [ -e "a.txt" ]; then
+    echo "yes"
+  else
+    echo "no"
+  fi
+}
+
+main "$@"
