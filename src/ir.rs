@@ -29,6 +29,7 @@ pub enum Val {
     Number(u32),
     List(Vec<Val>),
     Args,
+    Status,
 }
 
 #[derive(Debug, Clone, PartialEq)]

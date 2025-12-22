@@ -352,5 +352,6 @@ fn lower_expr(e: ast::Expr) -> ir::Val {
             ir::Val::List(lowered_exprs)
         }
         ast::Expr::Args => ir::Val::Args,
+        ast::Expr::Status => ir::Val::Status,
     }
 }

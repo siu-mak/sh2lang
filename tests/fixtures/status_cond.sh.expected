@@ -1,0 +1,10 @@
+main() {
+  "bash" "-c" "exit 7"
+  if [ "$?" = "7" ]; then
+    echo "ok"
+  else
+    echo "bad"
+  fi
+}
+
+main "$@"

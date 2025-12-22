@@ -53,6 +53,7 @@ pub enum Expr {
     Number(u32),
     List(Vec<Expr>),
     Args,
+    Status,
 }
 
 #[derive(Debug, Clone, PartialEq)]

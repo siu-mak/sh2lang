@@ -1,0 +1,4 @@
+func main() {
+    run("bash", "-c", "exit 5")
+    print(status())
+}

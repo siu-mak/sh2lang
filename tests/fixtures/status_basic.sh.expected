@@ -1,0 +1,6 @@
+main() {
+  "bash" "-c" "exit 5"
+  echo "$?"
+}
+
+main "$@"

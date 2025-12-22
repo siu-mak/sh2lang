@@ -87,6 +87,7 @@ fn emit_val(v: &Val) -> String {
         },
         Val::Bool(_) => panic!("Cannot emit boolean value as string/word; booleans are only valid in conditions"),
         Val::Number(n) => format!("\"{}\"", n),
+        Val::Status => "\"$?\"".to_string(),
         Val::Arith { .. } => format!("\"$(( {} ))\"", emit_arith_expr(v)),
         Val::Compare { .. } | Val::And(..) | Val::Or(..) | Val::Not(..) | Val::Exists(..) | Val::IsDir(..) | Val::IsFile(..) | Val::List(..) | Val::Args => panic!("Cannot emit boolean/list/args value as string"),
     }
@@ -117,6 +118,7 @@ fn emit_word(v: &Val) -> String {
         Val::Count(inner) => emit_val(&Val::Count(inner.clone())),
         Val::Bool(_) => panic!("Cannot emit boolean value as string/word; booleans are only valid in conditions"),
         Val::Number(n) => format!("\"{}\"", n),
+        Val::Status => "\"$?\"".to_string(),
         Val::Arith { .. } => format!("\"$(( {} ))\"", emit_arith_expr(v)),
         Val::Args => "\"$@\"".into(),
         Val::Compare { .. } | Val::And(..) | Val::Or(..) | Val::Not(..) | Val::Exists(..) | Val::IsDir(..) | Val::IsFile(..) | Val::List(..) => panic!("Cannot emit boolean/list value as command word"),
@@ -202,6 +204,7 @@ fn emit_arith_expr(v: &Val) -> String {
         Val::Number(n) => n.to_string(),
         Val::Var(s) => s.clone(), // Bare variable for arithmetic context
         Val::Arg(n) => format!("${}", n), // $1 etc
+        Val::Status => "$?".to_string(),
         Val::Arith { left, op, right } => {
             let op_str = match op {
                 crate::ir::ArithOp::Add => "+",
