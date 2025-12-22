@@ -68,6 +68,7 @@ pub enum Stmt {
         path: Expr,
         body: Vec<Stmt>,
     },
+    Cd { path: Expr },
     Sh(String),
     ShBlock(Vec<String>),
     Call { name: String, args: Vec<Expr> },

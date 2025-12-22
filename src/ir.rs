@@ -63,6 +63,7 @@ pub enum Cmd {
         path: Val,
         body: Vec<Cmd>,
     },
+    Cd(Val),
     Raw(String),
     Call { name: String, args: Vec<Val> },
     Subshell { body: Vec<Cmd> },

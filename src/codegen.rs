@@ -250,6 +250,12 @@ fn emit_cmd(cmd: &Cmd, out: &mut String, indent: usize) {
             }
             out.push_str(&format!("{pad})\n"));
         }
+        Cmd::Cd(path) => {
+            out.push_str(&pad);
+            out.push_str("cd ");
+            out.push_str(&emit_val(path));
+            out.push('\n');
+        }
         Cmd::Raw(s) => {
             out.push_str(&pad);
             out.push_str(s);

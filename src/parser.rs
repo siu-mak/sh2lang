@@ -469,6 +469,14 @@ fn parse_stmt_atom(tokens: &[Token], i: &mut usize) -> Stmt {
              Stmt::TryCatch { try_body, catch_body }
         }
 
+        Token::Cd => {
+            *i += 1;
+            expect(tokens, i, Token::LParen);
+            let path = parse_expr(tokens, i);
+            expect(tokens, i, Token::RParen);
+            Stmt::Cd { path }
+        }
+
         Token::Export => {
             *i += 1;
             expect(tokens, i, Token::LParen);

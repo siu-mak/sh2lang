@@ -1,0 +1,6 @@
+func main() {
+  cd("tmp")
+  run("pwd")
+  cd($("pwd"))
+  run("echo", "done")
+}
