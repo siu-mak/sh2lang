@@ -12,6 +12,7 @@ pub enum Val {
     Command(Vec<Val>),
     CommandPipe(Vec<Vec<Val>>),
     Concat(Box<Val>, Box<Val>),
+    Arith { left: Box<Val>, op: ArithOp, right: Box<Val> },
     Compare { left: Box<Val>, op: CompareOp, right: Box<Val> },
     And(Box<Val>, Box<Val>),
     Or(Box<Val>, Box<Val>),
@@ -31,9 +32,22 @@ pub enum Val {
 }
 
 #[derive(Debug, Clone, PartialEq)]
+pub enum ArithOp {
+    Add,
+    Sub,
+    Mul,
+    Div,
+    Mod,
+}
+
+#[derive(Debug, Clone, PartialEq)]
 pub enum CompareOp {
     Eq,
     NotEq,
+    Lt,
+    Le,
+    Gt,
+    Ge,
 }
 
 #[derive(Debug)]

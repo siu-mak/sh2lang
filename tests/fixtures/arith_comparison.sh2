@@ -1,0 +1,8 @@
+func main() {
+    if 5 > 3 {
+        print("yes")
+    }
+    if 2 <= 2 {
+        print("also yes")
+    }
+}

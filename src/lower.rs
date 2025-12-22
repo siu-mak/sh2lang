@@ -262,10 +262,38 @@ fn lower_expr(e: ast::Expr) -> ir::Val {
         ast::Expr::Literal(s) => ir::Val::Literal(s),
         ast::Expr::Var(s) => ir::Val::Var(s),
         ast::Expr::Concat(l, r) => ir::Val::Concat(Box::new(lower_expr(*l)), Box::new(lower_expr(*r))),
+        ast::Expr::Arith { left, op, right } => {
+            // HACK: If op is Add and either side is a string literal, lower to Concat to preserve legacy string behavior.
+            // This is a static heuristic because we don't have types.
+            if matches!(op, ast::ArithOp::Add) {
+                let l_is_lit = matches!(*left, ast::Expr::Literal(_));
+                let r_is_lit = matches!(*right, ast::Expr::Literal(_));
+                if l_is_lit || r_is_lit {
+                    return ir::Val::Concat(Box::new(lower_expr(*left)), Box::new(lower_expr(*right)));
+                }
+            }
+
+            let op = match op {
+                ast::ArithOp::Add => ir::ArithOp::Add,
+                ast::ArithOp::Sub => ir::ArithOp::Sub,
+                ast::ArithOp::Mul => ir::ArithOp::Mul,
+                ast::ArithOp::Div => ir::ArithOp::Div,
+                ast::ArithOp::Mod => ir::ArithOp::Mod,
+            };
+            ir::Val::Arith {
+                left: Box::new(lower_expr(*left)),
+                op,
+                right: Box::new(lower_expr(*right)),
+            }
+        }
         ast::Expr::Compare { left, op, right } => {
             let op = match op {
                 ast::CompareOp::Eq => ir::CompareOp::Eq,
                 ast::CompareOp::NotEq => ir::CompareOp::NotEq,
+                ast::CompareOp::Lt => ir::CompareOp::Lt,
+                ast::CompareOp::Le => ir::CompareOp::Le,
+                ast::CompareOp::Gt => ir::CompareOp::Gt,
+                ast::CompareOp::Ge => ir::CompareOp::Ge,
             };
             ir::Val::Compare {
                 left: Box::new(lower_expr(*left)),

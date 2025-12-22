@@ -278,3 +278,21 @@ fn parse_if_bool_not_basic() {
 fn codegen_if_bool_not_basic() { assert_codegen_matches_snapshot("if_bool_not_basic"); }
 #[test]
 fn exec_if_bool_not_basic() { assert_exec_matches_fixture("if_bool_not_basic"); }
+
+#[test]
+fn parse_arith_comparison() {
+    let program = parse_fixture("arith_comparison");
+    let func = &program.functions[0];
+    if let Stmt::If { cond, .. } = &func.body[0] {
+        // 5 > 3
+        if let Expr::Compare { left, op, right } = cond {
+            assert_eq!(*op, sh2c::ast::CompareOp::Gt);
+            assert!(matches!(**left, Expr::Number(5)));
+            assert!(matches!(**right, Expr::Number(3)));
+        } else { panic!("Expected Compare Gt"); }
+    } else { panic!("Expected If"); }
+}
+#[test]
+fn codegen_arith_comparison() { assert_codegen_matches_snapshot("arith_comparison"); }
+#[test]
+fn exec_arith_comparison() { assert_exec_matches_fixture("arith_comparison"); }

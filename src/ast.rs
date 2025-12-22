@@ -11,9 +11,22 @@ pub struct Function {
 }
 
 #[derive(Debug, Clone, PartialEq)]
+pub enum ArithOp {
+    Add,
+    Sub,
+    Mul,
+    Div,
+    Mod,
+}
+
+#[derive(Debug, Clone, PartialEq)]
 pub enum CompareOp {
     Eq,
     NotEq,
+    Lt,
+    Le,
+    Gt,
+    Ge,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -23,6 +36,7 @@ pub enum Expr {
     Command(Vec<Expr>),
     CommandPipe(Vec<Vec<Expr>>),
     Concat(Box<Expr>, Box<Expr>),
+    Arith { left: Box<Expr>, op: ArithOp, right: Box<Expr> },
     Compare { left: Box<Expr>, op: CompareOp, right: Box<Expr> },
     And(Box<Expr>, Box<Expr>),
     Or(Box<Expr>, Box<Expr>),

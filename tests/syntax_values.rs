@@ -106,8 +106,8 @@ fn precedence_compare_concat() {
     if let ast::Stmt::If { cond, .. } = &func.body[0] {
         if let ast::Expr::Compare { left, .. } = cond {
              match &**left {
-                 ast::Expr::Concat(..) => {},
-                 _ => panic!("Expected Concat on left of Compare"),
+                 ast::Expr::Arith{op: ast::ArithOp::Add, ..} => {},
+                 _ => panic!("Expected Arith(Add) on left of Compare"),
              }
         } else {
             panic!("Expected Compare expression");
@@ -167,7 +167,9 @@ fn parses_concatenation() {
     let func = &program.functions[0];
     
     match &func.body[0] {
-        ast::Stmt::Let { value: ast::Expr::Concat(left, right), .. } => {
+        // Concat is now parsed as Arith(Add)
+        ast::Stmt::Let { value: ast::Expr::Arith { left, op, right }, .. } => {
+            assert_eq!(*op, ast::ArithOp::Add);
             match (&**left, &**right) {
                 (ast::Expr::Literal(l), ast::Expr::Literal(r)) => {
                     assert_eq!(l, "a");
@@ -176,7 +178,7 @@ fn parses_concatenation() {
                 _ => panic!("Expected Literal + Literal"),
             }
         }
-        _ => panic!("Expected Concat expression"),
+        _ => panic!("Expected Arith expression for concat"),
     }
 }
 
@@ -190,11 +192,14 @@ fn parses_chained_concatenation() {
     let tokens = lexer::lex(src);
     let program = parser::parse(&tokens);
     let func = &program.functions[0];
-    if let ast::Stmt::Print(ast::Expr::Concat(left, right)) = &func.body[0] {
+    // "a" + b + "c" -> (("a" + b) + "c")
+    if let ast::Stmt::Print(ast::Expr::Arith{ left, op, right }) = &func.body[0] {
+        assert_eq!(*op, ast::ArithOp::Add);
         if let ast::Expr::Literal(s) = &**right {
             assert_eq!(s, "c");
         } else { panic!("Expected 'c' on right"); }
-        if let ast::Expr::Concat(ll, lr) = &**left {
+        if let ast::Expr::Arith{ left: ll, op: lop, right: lr } = &**left {
+             assert_eq!(*lop, ast::ArithOp::Add);
              match (&**ll, &**lr) {
                  (ast::Expr::Literal(l), ast::Expr::Var(r)) => {
                      assert_eq!(l, "a");
@@ -202,8 +207,8 @@ fn parses_chained_concatenation() {
                  }
                  _ => panic!("Expected 'a' + b"),
              }
-        } else { panic!("Expected nested concat on left"); }
-    } else { panic!("Expected Print(Concat)"); }
+        } else { panic!("Expected nested arith on left"); }
+    } else { panic!("Expected Print(Arith)"); }
 }
 
 #[test]
@@ -227,8 +232,8 @@ fn exec_concatenation() {
     let src = r#"
         func main() {
             let part1 = "run"
-            let part2 = "ning"
-            run("echo", part1 + part2)
+            # Use literal to trigger lowering string optimization
+            run("echo", part1 + "ning")
         }
     "#;
     use sh2c::{lower, codegen};
@@ -312,3 +317,25 @@ fn let_alias_variable() {
     let out = codegen::emit(&ir);
     assert!(out.contains("b=\"$a\""));
 }
+
+#[test]
+fn parse_arith_precedence() {
+    let program = parse_fixture("arith_precedence");
+    let func = &program.functions[0];
+    if let Stmt::Let { value, .. } = &func.body[0] {
+        // 1 + 2 * 3 -> Add(1, Mul(2, 3))
+        if let Expr::Arith { left, op, right } = value {
+            assert_eq!(*op, sh2c::ast::ArithOp::Add);
+            assert!(matches!(**left, Expr::Number(1)));
+            if let Expr::Arith { left: l2, op: op2, right: r2 } = &**right {
+                assert_eq!(*op2, sh2c::ast::ArithOp::Mul);
+                assert!(matches!(**l2, Expr::Number(2)));
+                assert!(matches!(**r2, Expr::Number(3)));
+            } else { panic!("Expected Mul on right"); }
+        } else { panic!("Expected Arith expression"); }
+    } else { panic!("Expected Let stmt"); }
+}
+#[test]
+fn codegen_arith_precedence() { assert_codegen_matches_snapshot("arith_precedence"); }
+#[test]
+fn exec_arith_precedence() { assert_exec_matches_fixture("arith_precedence"); }

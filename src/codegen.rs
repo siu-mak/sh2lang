@@ -80,6 +80,7 @@ fn emit_val(v: &Val) -> String {
         },
         Val::Bool(_) => panic!("Cannot emit boolean value as string/word; booleans are only valid in conditions"),
         Val::Number(n) => format!("\"{}\"", n),
+        Val::Arith { .. } => format!("\"$(( {} ))\"", emit_arith_expr(v)),
         Val::Compare { .. } | Val::And(..) | Val::Or(..) | Val::Not(..) | Val::Exists(..) | Val::IsDir(..) | Val::IsFile(..) | Val::List(..) | Val::Args => panic!("Cannot emit boolean/list/args value as string"),
     }
 }
@@ -109,6 +110,7 @@ fn emit_word(v: &Val) -> String {
         Val::Count(inner) => emit_val(&Val::Count(inner.clone())),
         Val::Bool(_) => panic!("Cannot emit boolean value as string/word; booleans are only valid in conditions"),
         Val::Number(n) => format!("\"{}\"", n),
+        Val::Arith { .. } => format!("\"$(( {} ))\"", emit_arith_expr(v)),
         Val::Args => "\"$@\"".into(),
         Val::Compare { .. } | Val::And(..) | Val::Or(..) | Val::Not(..) | Val::Exists(..) | Val::IsDir(..) | Val::IsFile(..) | Val::List(..) => panic!("Cannot emit boolean/list value as command word"),
     }
@@ -117,11 +119,22 @@ fn emit_word(v: &Val) -> String {
 fn emit_cond(v: &Val) -> String {
     match v {
         Val::Compare { left, op, right } => {
-            let op_str = match op {
-                crate::ir::CompareOp::Eq => "=",
-                crate::ir::CompareOp::NotEq => "!=",
+            let (op_str, is_numeric) = match op {
+                crate::ir::CompareOp::Eq => ("=", false),
+                crate::ir::CompareOp::NotEq => ("!=", false),
+                crate::ir::CompareOp::Lt => ("-lt", true),
+                crate::ir::CompareOp::Le => ("-le", true),
+                crate::ir::CompareOp::Gt => ("-gt", true),
+                crate::ir::CompareOp::Ge => ("-ge", true),
             };
-            format!("[ {} {} {} ]", emit_val(left), op_str, emit_val(right))
+            if is_numeric {
+                 // For numeric, operands can be arith expressions or just numbers.
+                 // emit_val returns quoted strings, which [ ... ] handles nicely for -lt etc.
+                 // e.g. [ "1" -lt "2" ]
+                format!("[ {} {} {} ]", emit_val(left), op_str, emit_val(right))
+            } else {
+                format!("[ {} {} {} ]", emit_val(left), op_str, emit_val(right))
+            }
         }
         Val::And(left, right) => {
             let mut l_str = emit_cond(left);
@@ -169,6 +182,34 @@ fn emit_cond(v: &Val) -> String {
         Val::Bool(false) => "false".to_string(),
         // Legacy "is set" behavior for direct values
         v => format!("[ -n {} ]", emit_val(v)),
+    }
+}
+
+fn emit_arith_expr(v: &Val) -> String {
+    match v {
+        Val::Literal(s) => s.clone(),
+        Val::Number(n) => n.to_string(),
+        Val::Var(s) => s.clone(), // Bare variable for arithmetic context
+        Val::Arg(n) => format!("${}", n), // $1 etc
+        Val::Arith { left, op, right } => {
+            let op_str = match op {
+                crate::ir::ArithOp::Add => "+",
+                crate::ir::ArithOp::Sub => "-",
+                crate::ir::ArithOp::Mul => "*",
+                crate::ir::ArithOp::Div => "/",
+                crate::ir::ArithOp::Mod => "%",
+            };
+            format!("( {} {} {} )", emit_arith_expr(left), op_str, emit_arith_expr(right))
+        }
+        Val::Command(..) | Val::CommandPipe(..) | Val::Len(..) | Val::Count(..) => {
+             // For complex types that emit $(...), we can just delegate to emit_val BUT strict quote removal logic is needed?
+             // emit_val returns $(...) unquoted (based on previous check). 
+             // Wait, emit_val returns `format!("$( {} )", ...)` for Command.
+             // So it creates a String containing `$( ... )`. NO QUOTES.
+             // So we can use emit_val result directly.
+             emit_val(v)
+        }
+        _ => panic!("Unsupported type in arithmetic expression"),
     }
 }
 

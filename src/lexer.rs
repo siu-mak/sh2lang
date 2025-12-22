@@ -18,6 +18,14 @@ pub enum Token {
     AndAnd,
     Bang,
     Case,
+    Minus,
+    Star,
+    Slash,
+    Percent,
+    Lt,
+    Le,
+    Gt,
+    Ge,
     Arrow,
     Underscore,
     While,
@@ -101,6 +109,28 @@ pub fn lex(input: &str) -> Vec<Token> {
             }
             '_' => { tokens.push(Token::Underscore); chars.next(); }
             '+' => { tokens.push(Token::Plus); chars.next(); }
+            '-' => { tokens.push(Token::Minus); chars.next(); }
+            '*' => { tokens.push(Token::Star); chars.next(); }
+            '/' => { tokens.push(Token::Slash); chars.next(); }
+            '%' => { tokens.push(Token::Percent); chars.next(); }
+            '<' => {
+                 chars.next();
+                 if chars.peek() == Some(&'=') {
+                     tokens.push(Token::Le);
+                     chars.next();
+                 } else {
+                     tokens.push(Token::Lt);
+                 }
+            }
+            '>' => {
+                 chars.next();
+                 if chars.peek() == Some(&'=') {
+                     tokens.push(Token::Ge);
+                     chars.next();
+                 } else {
+                     tokens.push(Token::Gt);
+                 }
+            }
             '&' => {
                  chars.next();
                  if chars.peek() == Some(&'&') {

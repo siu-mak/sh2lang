@@ -666,18 +666,22 @@ fn parse_and(tokens: &[Token], i: &mut usize) -> Expr {
 }
 
 fn parse_comparison(tokens: &[Token], i: &mut usize) -> Expr {
-    let left = parse_concat(tokens, i);
+    let left = parse_sum(tokens, i);
 
     if let Some(token) = tokens.get(*i) {
         let op = match token {
             Token::EqEq => Some(CompareOp::Eq),
             Token::NotEq => Some(CompareOp::NotEq),
+            Token::Lt => Some(CompareOp::Lt),
+            Token::Le => Some(CompareOp::Le),
+            Token::Gt => Some(CompareOp::Gt),
+            Token::Ge => Some(CompareOp::Ge),
             _ => None,
         };
 
         if let Some(op) = op {
             *i += 1;
-            let right = parse_concat(tokens, i);
+            let right = parse_sum(tokens, i);
             return Expr::Compare {
                 left: Box::new(left),
                 op,
@@ -689,13 +693,50 @@ fn parse_comparison(tokens: &[Token], i: &mut usize) -> Expr {
     left
 }
 
-fn parse_concat(tokens: &[Token], i: &mut usize) -> Expr {
+fn parse_sum(tokens: &[Token], i: &mut usize) -> Expr {
+    let mut left = parse_term(tokens, i);
+
+    loop {
+        match tokens.get(*i) {
+            Some(Token::Plus) => {
+                *i += 1;
+                let right = parse_term(tokens, i);
+                left = Expr::Arith { left: Box::new(left), op: ArithOp::Add, right: Box::new(right) };
+            }
+            Some(Token::Minus) => {
+                *i += 1;
+                let right = parse_term(tokens, i);
+                left = Expr::Arith { left: Box::new(left), op: ArithOp::Sub, right: Box::new(right) };
+            }
+            _ => break,
+        }
+    }
+
+    left
+}
+
+fn parse_term(tokens: &[Token], i: &mut usize) -> Expr {
     let mut left = parse_unary(tokens, i);
 
-    while let Some(Token::Plus) = tokens.get(*i) {
-        *i += 1;
-        let right = parse_unary(tokens, i);
-        left = Expr::Concat(Box::new(left), Box::new(right));
+    loop {
+        match tokens.get(*i) {
+            Some(Token::Star) => {
+                *i += 1;
+                let right = parse_unary(tokens, i);
+                left = Expr::Arith { left: Box::new(left), op: ArithOp::Mul, right: Box::new(right) };
+            }
+            Some(Token::Slash) => {
+                *i += 1;
+                let right = parse_unary(tokens, i);
+                left = Expr::Arith { left: Box::new(left), op: ArithOp::Div, right: Box::new(right) };
+            }
+            Some(Token::Percent) => {
+                *i += 1;
+                let right = parse_unary(tokens, i);
+                left = Expr::Arith { left: Box::new(left), op: ArithOp::Mod, right: Box::new(right) };
+            }
+            _ => break,
+        }
     }
 
     left
