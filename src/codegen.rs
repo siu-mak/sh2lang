@@ -78,6 +78,7 @@ fn emit_val(v: &Val) -> String {
             Val::Args => "\"$#\"".to_string(),
             _ => panic!("count(...) supports only list literals, list variables, and args"),
         },
+        Val::Bool(_) => panic!("Cannot emit boolean value as string/word; booleans are only valid in conditions"),
         Val::Number(n) => format!("\"{}\"", n),
         Val::Compare { .. } | Val::And(..) | Val::Or(..) | Val::Not(..) | Val::Exists(..) | Val::IsDir(..) | Val::IsFile(..) | Val::List(..) | Val::Args => panic!("Cannot emit boolean/list/args value as string"),
     }
@@ -106,6 +107,7 @@ fn emit_word(v: &Val) -> String {
         Val::Index { list, index } => emit_val(&Val::Index { list: list.clone(), index: *index }),
         Val::Join { list, sep } => emit_val(&Val::Join { list: list.clone(), sep: sep.clone() }),
         Val::Count(inner) => emit_val(&Val::Count(inner.clone())),
+        Val::Bool(_) => panic!("Cannot emit boolean value as string/word; booleans are only valid in conditions"),
         Val::Number(n) => format!("\"{}\"", n),
         Val::Args => "\"$@\"".into(),
         Val::Compare { .. } | Val::And(..) | Val::Or(..) | Val::Not(..) | Val::Exists(..) | Val::IsDir(..) | Val::IsFile(..) | Val::List(..) => panic!("Cannot emit boolean/list value as command word"),
@@ -139,6 +141,8 @@ fn emit_cond(v: &Val) -> String {
         Val::IsFile(path) => {
             format!("[ -f {} ]", emit_val(path))
         }
+        Val::Bool(true) => "true".to_string(),
+        Val::Bool(false) => "false".to_string(),
         // Legacy "is set" behavior for direct values
         v => format!("[ -n {} ]", emit_val(v)),
     }

@@ -1,0 +1,9 @@
+main() {
+  if true && ! false; then
+    echo "ok"
+  else
+    echo "bad"
+  fi
+}
+
+main "$@"

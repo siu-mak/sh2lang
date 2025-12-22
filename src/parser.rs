@@ -630,6 +630,8 @@ fn is_expr_start(t: Option<&Token>) -> bool {
            | Token::Index
            | Token::Join
            | Token::Count
+           | Token::True
+           | Token::False
            | Token::Number(_)
         )
     )
@@ -816,6 +818,14 @@ fn parse_primary(tokens: &[Token], i: &mut usize) -> Expr {
             expect(tokens, i, Token::RParen);
             Expr::Count(Box::new(inner))
         }
+        Token::True => {
+            *i += 1;
+            Expr::Bool(true)
+        }
+        Token::False => {
+            *i += 1;
+            Expr::Bool(false)
+        }
         Token::Number(n) => {
             *i += 1;
             Expr::Number(*n)
@@ -894,11 +904,12 @@ fn parse_redirect_target(tokens: &[Token], i: &mut usize) -> crate::ast::Redirec
                 *i += 1;
                 expect(tokens, i, Token::Equals);
                  // primitive true/false parsing
-                 if let Some(Token::Ident(val)) = tokens.get(*i) {
-                     if val == "true" { append = true; }
-                     *i += 1;
-                 } else {
-                     panic!("Expected true/false for append");
+                 match tokens.get(*i) {
+                     Some(Token::True) => { append = true; *i += 1; }
+                     Some(Token::False) => { append = false; *i += 1; }
+                     Some(Token::Ident(val)) if val == "true" => { append = true; *i += 1; }
+                     Some(Token::Ident(val)) if val == "false" => { append = false; *i += 1; }
+                     _ => panic!("Expected true/false for append"),
                  }
             }
         }

@@ -24,6 +24,7 @@ pub enum Val {
     Index { list: Box<Val>, index: u32 },
     Join { list: Box<Val>, sep: Box<Val> },
     Count(Box<Val>),
+    Bool(bool),
     Number(u32),
     List(Vec<Val>),
     Args,

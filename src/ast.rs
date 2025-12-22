@@ -35,6 +35,7 @@ pub enum Expr {
     Index { list: Box<Expr>, index: u32 },
     Join { list: Box<Expr>, sep: Box<Expr> },
     Count(Box<Expr>),
+    Bool(bool),
     Number(u32),
     List(Vec<Expr>),
     Args,
