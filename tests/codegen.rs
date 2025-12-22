@@ -716,6 +716,22 @@ fn if_bool_literals_combo_codegen_matches_snapshot() {
     );
 }
 
+#[test]
+fn let_args_codegen_matches_snapshot() {
+    assert_codegen_matches_snapshot(
+        "tests/fixtures/let_args.sh2",
+        "tests/fixtures/let_args.sh.expected",
+    );
+}
+
+#[test]
+fn for_list_var_codegen_matches_snapshot() {
+    assert_codegen_matches_snapshot(
+        "tests/fixtures/for_list_var.sh2",
+        "tests/fixtures/for_list_var.sh.expected",
+    );
+}
+
 fn assert_codegen_matches_snapshot(sh2_path: &str, expected_path: &str) {
     let src = fs::read_to_string(sh2_path).unwrap();
     let expected = fs::read_to_string(expected_path).unwrap();

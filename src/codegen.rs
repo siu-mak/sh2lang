@@ -162,6 +162,9 @@ fn emit_cmd(cmd: &Cmd, out: &mut String, indent: usize) {
                     out.push_str(&emit_word(elem));
                 }
                 out.push_str(")\n");
+            } else if let Val::Args = val {
+                out.push_str(name);
+                out.push_str("=(\"$@\")\n");
             } else {
                 out.push_str(name);
                 out.push('=');
@@ -266,6 +269,9 @@ fn emit_cmd(cmd: &Cmd, out: &mut String, indent: usize) {
                     }
                     Val::Args => {
                          out.push_str(" \"$@\"");
+                    }
+                    Val::Var(name) => {
+                        out.push_str(&format!(" \"${{{}[@]}}\"", name));
                     }
                     _ => {
                         out.push(' ');

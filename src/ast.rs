@@ -1,9 +1,9 @@
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct Program {
     pub functions: Vec<Function>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct Function {
     pub name: String,
     pub params: Vec<String>,

@@ -1,0 +1,6 @@
+func main() {
+  let xs = args
+  print(count(xs))
+  print(index(xs, 0))
+  print(join(xs, ","))
+}
