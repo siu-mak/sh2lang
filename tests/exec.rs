@@ -49,6 +49,8 @@ fn assert_exec_matches_fixture(fixture_name: &str) {
     let stdout_path = format!("tests/fixtures/{}.stdout", fixture_name);
     let stderr_path = format!("tests/fixtures/{}.stderr", fixture_name);
     let status_path = format!("tests/fixtures/{}.status", fixture_name);
+    let args_path = format!("tests/fixtures/{}.args", fixture_name);
+    let env_path = format!("tests/fixtures/{}.env", fixture_name);
 
     if !Path::new(&sh2_path).exists() {
         panic!("Fixture {} does not exist", sh2_path);
@@ -64,11 +66,30 @@ fn assert_exec_matches_fixture(fixture_name: &str) {
     let src = fs::read_to_string(&sh2_path).expect("Failed to read fixture");
     let bash = compile_to_bash(&src);
 
-    // Run without extra env/args for now (can expand if fixtures need them)
-    // For specific tests requiring args (like let_args), we might need a way to specify them.
-    // But for the generic "assert_exec_matches_fixture", we assume no args/env unless we add a config file.
-    // For now, consistent with instructions, we assume generic run.
-    let (stdout, stderr, status) = run_bash_script(&bash, &[], &[]);
+    let mut env_vars = Vec::new();
+    if Path::new(&env_path).exists() {
+        let env_content = fs::read_to_string(&env_path).expect("Failed to read env fixture");
+        for line in env_content.lines() {
+            if let Some((k, v)) = line.split_once('=') {
+                env_vars.push((k.to_string(), v.to_string()));
+            }
+        }
+    }
+    // We need env_vars references for run_bash_script
+    let env_refs: Vec<(&str, &str)> = env_vars.iter().map(|(k, v)| (k.as_str(), v.as_str())).collect();
+
+    let mut args = Vec::new();
+    if Path::new(&args_path).exists() {
+        let args_content = fs::read_to_string(&args_path).expect("Failed to read args fixture");
+        for line in args_content.lines() {
+            if !line.trim().is_empty() {
+                args.push(line.to_string());
+            }
+        }
+    }
+    let args_refs: Vec<&str> = args.iter().map(|s| s.as_str()).collect();
+
+    let (stdout, stderr, status) = run_bash_script(&bash, &env_refs, &args_refs);
 
     if Path::new(&stdout_path).exists() {
         let expected_stdout = fs::read_to_string(&stdout_path).expect("Failed to read stdout fixture")
@@ -114,3 +135,22 @@ fn exec_if_bool_and() { assert_exec_matches_fixture("if_bool_and"); }
 fn exec_exists_check() { assert_exec_matches_fixture("exists_check"); }
 #[test]
 fn exec_with_cwd_check() { assert_exec_matches_fixture("with_cwd_check"); }
+
+#[test]
+fn exec_hello() { assert_exec_matches_fixture("hello_exec"); }
+#[test]
+fn exec_if_env_true() { assert_exec_matches_fixture("if_env_true"); }
+#[test]
+fn exec_if_env_false() { assert_exec_matches_fixture("if_env_false"); }
+#[test]
+fn exec_print_err() { assert_exec_matches_fixture("print_err_exec"); }
+#[test]
+fn exec_for_args() { assert_exec_matches_fixture("for_args"); }
+#[test]
+fn exec_let_args() { assert_exec_matches_fixture("let_args"); }
+#[test]
+fn exec_run_args() { assert_exec_matches_fixture("run_args"); }
+#[test]
+fn exec_print_args() { assert_exec_matches_fixture("print_args"); }
+#[test]
+fn exec_try_catch_basic() { assert_exec_matches_fixture("try_catch_basic"); }

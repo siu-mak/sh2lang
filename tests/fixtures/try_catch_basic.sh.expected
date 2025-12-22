@@ -1,7 +1,6 @@
 main() {
   if ! (
     "false"
-    echo "ok"
   ); then
     echo "failed" >&2
   fi

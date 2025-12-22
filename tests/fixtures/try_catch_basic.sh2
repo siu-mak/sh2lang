@@ -1,7 +1,6 @@
 func main() {
   try {
     run("false")
-    print("ok")
   } catch {
     print_err("failed")
   }

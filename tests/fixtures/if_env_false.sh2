@@ -1,0 +1,7 @@
+func main() {
+  if TESTVAR {
+    print("yes")
+  } else {
+    print("no")
+  }
+}
