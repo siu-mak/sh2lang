@@ -320,22 +320,22 @@ fn parse_stmt_atom(tokens: &[Token], i: &mut usize) -> Stmt {
 
         Token::Return => {
             *i += 1;
-            let expr = if matches!(tokens.get(*i), Some(Token::String(_) | Token::Ident(_) | Token::Dollar | Token::LParen)) {
+            let val = if is_expr_start(tokens.get(*i)) {
                 Some(parse_expr(tokens, i))
             } else {
                 None
             };
-            Stmt::Return(expr)
+            Stmt::Return(val)
         }
 
         Token::Exit => {
             *i += 1;
-            let expr = if matches!(tokens.get(*i), Some(Token::String(_) | Token::Ident(_) | Token::Dollar | Token::LParen)) {
+            let code = if is_expr_start(tokens.get(*i)) {
                 Some(parse_expr(tokens, i))
             } else {
                 None
             };
-            Stmt::Exit(expr)
+            Stmt::Exit(code)
         }
 
         Token::With => {
@@ -450,15 +450,7 @@ fn parse_stmt_atom(tokens: &[Token], i: &mut usize) -> Stmt {
             *i += 1;
             expect(tokens, i, Token::LParen);
             
-            let expr = if matches!(tokens.get(*i),
-                Some(Token::String(_)
-                  | Token::Ident(_)
-                  | Token::Dollar
-                  | Token::LParen
-                  | Token::LBracket
-                  | Token::Args
-                  | Token::Capture)
-            ) {
+            let expr = if is_expr_start(tokens.get(*i)) {
               Some(parse_expr(tokens, i))
             } else {
               None
@@ -619,6 +611,25 @@ fn expect(tokens: &[Token], i: &mut usize, t: Token) {
         panic!("Expected {:?}, got {:?}", t, tokens.get(*i));
     }
     *i += 1;
+}
+
+fn is_expr_start(t: Option<&Token>) -> bool {
+    matches!(t,
+        Some(Token::String(_)
+           | Token::Ident(_)
+           | Token::Dollar
+           | Token::LParen
+           | Token::LBracket
+           | Token::Args
+           | Token::Capture
+           | Token::Exists
+           | Token::IsDir
+           | Token::IsFile
+           | Token::Len
+           | Token::Arg
+           | Token::Number(_)
+        )
+    )
 }
 
 fn parse_expr(tokens: &[Token], i: &mut usize) -> Expr {

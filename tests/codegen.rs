@@ -556,6 +556,30 @@ fn func_args_basic_codegen_matches_snapshot() {
     );
 }
 
+#[test]
+fn return_arg_codegen_matches_snapshot() {
+    assert_codegen_matches_snapshot(
+        "tests/fixtures/return_arg.sh2",
+        "tests/fixtures/return_arg.sh.expected",
+    );
+}
+
+#[test]
+fn exit_arg_codegen_matches_snapshot() {
+    assert_codegen_matches_snapshot(
+        "tests/fixtures/exit_arg.sh2",
+        "tests/fixtures/exit_arg.sh.expected",
+    );
+}
+
+#[test]
+fn wait_arg_codegen_matches_snapshot() {
+    assert_codegen_matches_snapshot(
+        "tests/fixtures/wait_arg.sh2",
+        "tests/fixtures/wait_arg.sh.expected",
+    );
+}
+
 fn assert_codegen_matches_snapshot(sh2_path: &str, expected_path: &str) {
     let src = fs::read_to_string(sh2_path).unwrap();
     let expected = fs::read_to_string(expected_path).unwrap();
