@@ -16,6 +16,25 @@ pub fn parse(tokens: &[Token]) -> Program {
         i += 1;
 
         expect(tokens, &mut i, Token::LParen);
+        
+        let mut params = Vec::new();
+        if !matches!(tokens.get(i), Some(Token::RParen)) {
+             loop {
+                 let param_name = match &tokens[i] {
+                     Token::Ident(s) => s.clone(),
+                     _ => panic!("Expected parameter name"),
+                 };
+                 i += 1;
+                 params.push(param_name);
+                 
+                 if matches!(tokens.get(i), Some(Token::Comma)) {
+                     i += 1;
+                 } else {
+                     break;
+                 }
+             }
+        }
+
         expect(tokens, &mut i, Token::RParen);
         expect(tokens, &mut i, Token::LBrace);
 
@@ -26,7 +45,7 @@ pub fn parse(tokens: &[Token]) -> Program {
 
         expect(tokens, &mut i, Token::RBrace);
 
-        functions.push(Function { name, body });
+        functions.push(Function { name, params, body });
     }
 
     Program { functions }
@@ -742,6 +761,17 @@ fn parse_primary(tokens: &[Token], i: &mut usize) -> Expr {
             let expr = parse_expr(tokens, i);
             expect(tokens, i, Token::RParen);
             Expr::Len(Box::new(expr))
+        }
+        Token::Arg => {
+            *i += 1;
+            expect(tokens, i, Token::LParen);
+            let n = match tokens[*i] {
+                Token::Number(v) => v,
+                 _ => panic!("Expected number in arg(n)"),
+            };
+            *i += 1;
+            expect(tokens, i, Token::RParen);
+            Expr::Arg(n)
         }
         _ => panic!("Expected string or variable, got {:?}", tokens.get(*i)),
     }

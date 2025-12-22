@@ -1,0 +1,9 @@
+greet() {
+  echo "hi ""$1"
+}
+
+main() {
+  greet "Herbert"
+}
+
+main "$@"

@@ -54,6 +54,8 @@ pub enum Token {
     IsFile,
     Len,
     Source,
+    Arg,
+    Number(u32),
     Ident(String),
     String(String),
     LParen,
@@ -133,6 +135,16 @@ pub fn lex(input: &str) -> Vec<Token> {
                 chars.next();
                 tokens.push(Token::String(s));
             }
+            _ if c.is_ascii_digit() => {
+                let mut num_str = String::new();
+                while let Some(&ch) = chars.peek() {
+                    if !ch.is_ascii_digit() { break; }
+                    num_str.push(ch);
+                    chars.next();
+                }
+                let n: u32 = num_str.parse().expect("Invalid number literal");
+                tokens.push(Token::Number(n));
+            }
             _ if c.is_alphabetic() => {
                 let mut ident = String::new();
                 while let Some(&ch) = chars.peek() {
@@ -180,6 +192,7 @@ pub fn lex(input: &str) -> Vec<Token> {
                     "unset" => tokens.push(Token::Unset),
                     "source" => tokens.push(Token::Source),
                     "exists" => tokens.push(Token::Exists),
+                    "arg" => tokens.push(Token::Arg),
                     "is_dir" => tokens.push(Token::IsDir),
                     "is_file" => tokens.push(Token::IsFile),
                     "len" => tokens.push(Token::Len),

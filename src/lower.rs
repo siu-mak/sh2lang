@@ -19,6 +19,7 @@ fn lower_function(f: ast::Function) -> ir::Function {
 
     ir::Function {
         name: f.name,
+        params: f.params,
         commands,
     }
 }
@@ -293,6 +294,7 @@ fn lower_expr(e: ast::Expr) -> ir::Val {
         ast::Expr::Len(expr) => {
             ir::Val::Len(Box::new(lower_expr(*expr)))
         }
+        ast::Expr::Arg(n) => ir::Val::Arg(n),
         ast::Expr::Command(args) => {
             let lowered_args = args.into_iter().map(lower_expr).collect();
             ir::Val::Command(lowered_args)

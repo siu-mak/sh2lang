@@ -1,6 +1,7 @@
 #[derive(Debug)]
 pub struct Function {
     pub name: String,
+    pub params: Vec<String>,
     pub commands: Vec<Cmd>,
 }
 
@@ -19,6 +20,7 @@ pub enum Val {
     IsDir(Box<Val>),
     IsFile(Box<Val>),
     Len(Box<Val>),
+    Arg(u32),
     List(Vec<Val>),
     Args,
 }
