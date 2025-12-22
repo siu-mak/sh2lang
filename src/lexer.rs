@@ -46,6 +46,8 @@ pub enum Token {
     Wait,
     Try,
     Catch,
+    Export,
+    Unset,
     Ident(String),
     String(String),
     LParen,
@@ -167,6 +169,8 @@ pub fn lex(input: &str) -> Vec<Token> {
                     "wait" => tokens.push(Token::Wait),
                     "try" => tokens.push(Token::Try),
                     "catch" => tokens.push(Token::Catch),
+                    "export" => tokens.push(Token::Export),
+                    "unset" => tokens.push(Token::Unset),
                     _ => tokens.push(Token::Ident(ident)),
                 }
             }

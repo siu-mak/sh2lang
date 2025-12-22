@@ -469,6 +469,38 @@ fn parse_stmt_atom(tokens: &[Token], i: &mut usize) -> Stmt {
              Stmt::TryCatch { try_body, catch_body }
         }
 
+        Token::Export => {
+            *i += 1;
+            expect(tokens, i, Token::LParen);
+            let name = match &tokens[*i] {
+                Token::String(s) => s.clone(),
+                _ => panic!("Expected string literal for export name"),
+            };
+            *i += 1;
+            
+            let value = if matches!(tokens.get(*i), Some(Token::Comma)) {
+                *i += 1;
+                Some(parse_expr(tokens, i))
+            } else {
+                None
+            };
+            
+            expect(tokens, i, Token::RParen);
+            Stmt::Export { name, value }
+        }
+
+        Token::Unset => {
+            *i += 1;
+            expect(tokens, i, Token::LParen);
+            let name = match &tokens[*i] {
+                Token::String(s) => s.clone(),
+                _ => panic!("Expected string literal for unset name"),
+            };
+            *i += 1;
+            expect(tokens, i, Token::RParen);
+            Stmt::Unset { name }
+        }
+
         Token::Subshell => {
             *i += 1;
             expect(tokens, i, Token::LBrace);

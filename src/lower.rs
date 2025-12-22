@@ -238,6 +238,15 @@ fn lower_stmt(stmt: ast::Stmt, out: &mut Vec<ir::Cmd>) {
             lower_stmt(*right, &mut r_cmds);
             out.push(ir::Cmd::OrElse { left: l_cmds, right: r_cmds });
         }
+        ast::Stmt::Export { name, value } => {
+            out.push(ir::Cmd::Export {
+                name,
+                value: value.map(lower_expr),
+            });
+        }
+        ast::Stmt::Unset { name } => {
+            out.push(ir::Cmd::Unset(name));
+        }
     }
 }
 

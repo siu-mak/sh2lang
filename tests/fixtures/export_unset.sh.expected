@@ -1,0 +1,12 @@
+main() {
+  export FOO="bar"
+  export BAZ
+  unset FOO
+  {
+    "env" | "grep" "BAZ"
+  } || {
+    echo "no baz"
+  }
+}
+
+main "$@"

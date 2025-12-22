@@ -86,7 +86,10 @@ pub enum Stmt {
         catch_body: Vec<Stmt>,
     },
     AndThen { left: Box<Stmt>, right: Box<Stmt> },
+
     OrElse { left: Box<Stmt>, right: Box<Stmt> },
+    Export { name: String, value: Option<Expr> },
+    Unset { name: String },
 }
 
 #[derive(Debug, Clone, PartialEq)]

@@ -420,5 +420,21 @@ fn emit_cmd(cmd: &Cmd, out: &mut String, indent: usize) {
             }
             out.push_str(&format!("{pad}}}\n"));
         }
+        Cmd::Export { name, value } => {
+            out.push_str(&pad);
+            out.push_str("export ");
+            out.push_str(name);
+            if let Some(v) = value {
+                out.push('=');
+                out.push_str(&emit_val(v));
+            }
+            out.push('\n');
+        }
+        Cmd::Unset(name) => {
+            out.push_str(&pad);
+            out.push_str("unset ");
+            out.push_str(name);
+            out.push('\n');
+        }
     }
 }

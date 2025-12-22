@@ -81,6 +81,8 @@ pub enum Cmd {
     },
     AndThen { left: Vec<Cmd>, right: Vec<Cmd> },
     OrElse { left: Vec<Cmd>, right: Vec<Cmd> },
+    Export { name: String, value: Option<Val> },
+    Unset(String),
 }
 
 #[derive(Debug, Clone, PartialEq)]
