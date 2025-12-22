@@ -124,13 +124,37 @@ fn emit_cond(v: &Val) -> String {
             format!("[ {} {} {} ]", emit_val(left), op_str, emit_val(right))
         }
         Val::And(left, right) => {
-            format!("{} && {}", emit_cond(left), emit_cond(right))
+            let mut l_str = emit_cond(left);
+            let mut r_str = emit_cond(right);
+            // Wrap left if Or (for clarity/spec, even if bash left-associativity makes it implicit)
+            // (A || B) && C -> ( A || B ) && C
+            if let Val::Or(..) = **left {
+                l_str = format!("( {} )", l_str);
+            }
+            // If right is Or, we must wrap it because && > || in sh2c but equal in bash (left-associative).
+            // A && (B || C) -> A && B || C (bash interprets as (A&&B)||C).
+            if let Val::Or(..) = **right {
+                r_str = format!("( {} )", r_str);
+            }
+            format!("{} && {}", l_str, r_str)
         }
         Val::Or(left, right) => {
-            format!("{} || {}", emit_cond(left), emit_cond(right))
+            let l_str = emit_cond(left);
+            let mut r_str = emit_cond(right);
+            // If right is And, we must wrap it because && > || in sh2c but equal in bash.
+            // A || B && C -> A || B && C (bash interprets as (A||B)&&C). We want A || (B&&C).
+            if let Val::And(..) = **right {
+                r_str = format!("( {} )", r_str);
+            }
+            format!("{} || {}", l_str, r_str)
         }
         Val::Not(expr) => {
-            format!("! {}", emit_cond(expr))
+            let inner = emit_cond(expr);
+            // If inner is binary, wrap it. ! (A && B) -> ! A && B (bash interprets as (!A) && B).
+            match **expr {
+                Val::And(..) | Val::Or(..) => format!("! ( {} )", inner),
+                _ => format!("! {}", inner),
+            }
         }
         Val::Exists(path) => {
             format!("[ -e {} ]", emit_val(path))

@@ -217,3 +217,64 @@ fn codegen_if_bool() { assert_codegen_matches_snapshot("if_bool"); }
 fn codegen_if_else() { assert_codegen_matches_snapshot("if_else"); }
 #[test]
 fn codegen_compare() { assert_codegen_matches_snapshot("compare"); }
+
+#[test]
+fn parse_if_bool_or() {
+    let program = parse_fixture("if_bool_or");
+    let func = &program.functions[0];
+    if let Stmt::If { cond, .. } = &func.body[0] {
+        assert!(matches!(cond, Expr::Or(..)));
+    } else {
+        panic!("Expected If");
+    }
+}
+#[test]
+fn codegen_if_bool_or() { assert_codegen_matches_snapshot("if_bool_or"); }
+#[test]
+fn exec_if_bool_or() { assert_exec_matches_fixture("if_bool_or"); }
+
+#[test]
+fn parse_if_bool_precedence_and_over_or() {
+    let program = parse_fixture("if_bool_precedence_and_over_or");
+    let func = &program.functions[0];
+    if let Stmt::If { cond, .. } = &func.body[0] {
+        // A || B && C -> Or(A, And(B, C))
+        if let Expr::Or(left, right) = cond {
+             assert!(matches!(**left, Expr::Compare{..}));
+             assert!(matches!(**right, Expr::And(..)));
+        } else { panic!("Expected Or(Compare, And)"); }
+    } else { panic!("Expected If"); }
+}
+#[test]
+fn codegen_if_bool_precedence_and_over_or() { assert_codegen_matches_snapshot("if_bool_precedence_and_over_or"); }
+#[test]
+fn exec_if_bool_precedence_and_over_or() { assert_exec_matches_fixture("if_bool_precedence_and_over_or"); }
+
+#[test]
+fn parse_if_bool_paren_overrides_precedence() {
+    let program = parse_fixture("if_bool_paren_overrides_precedence");
+    let func = &program.functions[0];
+    if let Stmt::If { cond, .. } = &func.body[0] {
+        // (A || B) && C -> And(Or(A, B), C)
+        if let Expr::And(left, right) = cond {
+             assert!(matches!(**left, Expr::Or(..)));
+             assert!(matches!(**right, Expr::Compare{..}));
+        } else { panic!("Expected And(Or, Compare)"); }
+    } else { panic!("Expected If"); }
+}
+#[test]
+fn codegen_if_bool_paren_overrides_precedence() { assert_codegen_matches_snapshot("if_bool_paren_overrides_precedence"); }
+#[test]
+fn exec_if_bool_paren_overrides_precedence() { assert_exec_matches_fixture("if_bool_paren_overrides_precedence"); }
+
+#[test]
+fn parse_if_bool_not_basic() {
+    let program = parse_fixture("if_bool_not_basic");
+    if let Stmt::If { cond, .. } = &program.functions[0].body[0] {
+        assert!(matches!(cond, Expr::Not(..)));
+    } else { panic!("Expected If"); }
+}
+#[test]
+fn codegen_if_bool_not_basic() { assert_codegen_matches_snapshot("if_bool_not_basic"); }
+#[test]
+fn exec_if_bool_not_basic() { assert_exec_matches_fixture("if_bool_not_basic"); }

@@ -1,0 +1,7 @@
+func main() {
+    if 1 == 2 || 3 == 3 && 4 == 4 {
+        print("yes")
+    } else {
+        print("no")
+    }
+}
