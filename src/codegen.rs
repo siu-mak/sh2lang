@@ -457,5 +457,11 @@ fn emit_cmd(cmd: &Cmd, out: &mut String, indent: usize) {
             out.push_str(name);
             out.push('\n');
         }
+        Cmd::Source(path) => {
+            out.push_str(&pad);
+            out.push_str(". ");
+            out.push_str(&emit_word(path));
+            out.push('\n');
+        }
     }
 }

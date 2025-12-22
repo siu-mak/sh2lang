@@ -1,0 +1,5 @@
+func main() {
+  let p = "env.sh"
+  source(p)
+  source("lib.sh")
+}

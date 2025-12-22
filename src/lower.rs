@@ -250,6 +250,9 @@ fn lower_stmt(stmt: ast::Stmt, out: &mut Vec<ir::Cmd>) {
         ast::Stmt::Unset { name } => {
             out.push(ir::Cmd::Unset(name));
         }
+        ast::Stmt::Source { path } => {
+            out.push(ir::Cmd::Source(lower_expr(path)));
+        }
     }
 }
 

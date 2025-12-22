@@ -95,6 +95,7 @@ pub enum Stmt {
     OrElse { left: Box<Stmt>, right: Box<Stmt> },
     Export { name: String, value: Option<Expr> },
     Unset { name: String },
+    Source { path: Expr },
 }
 
 #[derive(Debug, Clone, PartialEq)]

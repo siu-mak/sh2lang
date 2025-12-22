@@ -1,0 +1,7 @@
+main() {
+  p="env.sh"
+  . "$p"
+  . "lib.sh"
+}
+
+main "$@"

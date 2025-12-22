@@ -509,6 +509,14 @@ fn parse_stmt_atom(tokens: &[Token], i: &mut usize) -> Stmt {
             Stmt::Unset { name }
         }
 
+        Token::Source => {
+            *i += 1;
+            expect(tokens, i, Token::LParen);
+            let path = parse_expr(tokens, i);
+            expect(tokens, i, Token::RParen);
+            Stmt::Source { path }
+        }
+
         Token::Subshell => {
             *i += 1;
             expect(tokens, i, Token::LBrace);
