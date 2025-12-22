@@ -34,7 +34,7 @@ fn emit_val(v: &Val) -> String {
              }).collect();
              format!("$( {} )", seg_strs.join(" | "))
         }
-        Val::Compare { .. } | Val::And(..) | Val::Or(..) | Val::Not(..) | Val::Exists(..) | Val::IsDir(..) | Val::List(..) | Val::Args => panic!("Cannot emit boolean/list/args value as string"),
+        Val::Compare { .. } | Val::And(..) | Val::Or(..) | Val::Not(..) | Val::Exists(..) | Val::IsDir(..) | Val::IsFile(..) | Val::List(..) | Val::Args => panic!("Cannot emit boolean/list/args value as string"),
     }
 }
 
@@ -55,7 +55,7 @@ fn emit_word(v: &Val) -> String {
              format!("$( {} )", seg_strs.join(" | "))
         }
         Val::Args => "\"$@\"".into(),
-        Val::Compare { .. } | Val::And(..) | Val::Or(..) | Val::Not(..) | Val::Exists(..) | Val::IsDir(..) | Val::List(..) => panic!("Cannot emit boolean/list value as command word"),
+        Val::Compare { .. } | Val::And(..) | Val::Or(..) | Val::Not(..) | Val::Exists(..) | Val::IsDir(..) | Val::IsFile(..) | Val::List(..) => panic!("Cannot emit boolean/list value as command word"),
     }
 }
 
@@ -82,6 +82,9 @@ fn emit_cond(v: &Val) -> String {
         }
         Val::IsDir(path) => {
             format!("[ -d {} ]", emit_val(path))
+        }
+        Val::IsFile(path) => {
+            format!("[ -f {} ]", emit_val(path))
         }
         // Legacy "is set" behavior for direct values
         v => format!("[ -n {} ]", emit_val(v)),

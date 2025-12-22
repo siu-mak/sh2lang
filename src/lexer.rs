@@ -51,6 +51,7 @@ pub enum Token {
     Unset,
     Exists,
     IsDir,
+    IsFile,
     Ident(String),
     String(String),
     LParen,
@@ -177,6 +178,7 @@ pub fn lex(input: &str) -> Vec<Token> {
                     "unset" => tokens.push(Token::Unset),
                     "exists" => tokens.push(Token::Exists),
                     "is_dir" => tokens.push(Token::IsDir),
+                    "is_file" => tokens.push(Token::IsFile),
                     _ => tokens.push(Token::Ident(ident)),
                 }
             }

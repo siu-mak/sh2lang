@@ -28,6 +28,7 @@ pub enum Expr {
     Not(Box<Expr>),
     Exists(Box<Expr>),
     IsDir(Box<Expr>),
+    IsFile(Box<Expr>),
     List(Vec<Expr>),
     Args,
 }

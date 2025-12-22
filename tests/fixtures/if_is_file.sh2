@@ -1,0 +1,7 @@
+func main() {
+  if is_file("a.txt") {
+    print("file")
+  } else {
+    print("no")
+  }
+}
