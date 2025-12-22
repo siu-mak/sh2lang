@@ -1,10 +1,10 @@
 main() {
-  i="0"
-  while [ "$i" = "0" ]; do
-    echo "start"
-    i="1"
-    continue
-    echo "skipped"
+  xs=("a" "skip" "b")
+  for x in "${xs[@]}"; do
+    if [ "$x" = "skip" ]; then
+      continue
+    fi
+    echo "$x"
   done
 }
 

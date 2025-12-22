@@ -1,9 +1,10 @@
 main() {
+  x="outer"
   (
-    x="hi"
+    x="inner"
     echo "$x"
   )
-  echo "after"
+  echo "$x"
 }
 
 main "$@"

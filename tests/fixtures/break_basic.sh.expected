@@ -1,8 +1,10 @@
 main() {
-  while [ "x" = "x" ]; do
-    echo "once"
-    break
-    echo "never"
+  xs=("a" "stop" "b")
+  for x in "${xs[@]}"; do
+    if [ "$x" = "stop" ]; then
+      break
+    fi
+    echo "$x"
   done
 }
 

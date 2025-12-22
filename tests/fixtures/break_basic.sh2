@@ -1,7 +1,7 @@
 func main() {
-    while "x" == "x" {
-        print("once")
-        break
-        print("never")
+    let xs = ["a", "stop", "b"]
+    for x in xs {
+        if x == "stop" { break }
+        print(x)
     }
 }

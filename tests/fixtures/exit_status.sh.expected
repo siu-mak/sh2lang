@@ -1,5 +1,5 @@
 main() {
-  echo "fail" >&2
+  exit "7"
 }
 
 main "$@"

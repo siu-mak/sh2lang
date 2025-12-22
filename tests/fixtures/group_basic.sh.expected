@@ -1,6 +1,7 @@
 main() {
+  x="outside"
   {
-    x="hi"
+    x="inside"
     echo "$x"
   }
   echo "$x"

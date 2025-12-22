@@ -7,4 +7,5 @@ main() {
     echo "not guest"
   fi
 }
-main
+
+main "$@"

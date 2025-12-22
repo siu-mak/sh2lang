@@ -1,8 +1,8 @@
 main() {
   if [ -n "$registry" ]; then
-    echo yes
+    echo "yes"
   else
-    echo no
+    echo "no"
   fi
 }
 

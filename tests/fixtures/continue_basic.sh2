@@ -1,9 +1,7 @@
 func main() {
-    let i = "0"
-    while i == "0" {
-        print("start")
-        let i = "1"
-        continue
-        print("skipped")
+    let xs = ["a", "skip", "b"]
+    for x in xs {
+        if x == "skip" { continue }
+        print(x)
     }
 }

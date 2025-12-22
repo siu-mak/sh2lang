@@ -3,12 +3,31 @@ use std::path::Path;
 use std::process::Command;
 use std::time::{SystemTime, UNIX_EPOCH};
 use sh2c::{lexer, parser, lower, codegen};
+use sh2c::ast;
 
-fn compile_to_bash(src: &str) -> String {
+pub fn compile_to_bash(src: &str) -> String {
     let tokens = lexer::lex(src);
     let program = parser::parse(&tokens);
     let ir = lower::lower(program);
     codegen::emit(&ir)
+}
+
+pub fn parse_fixture(fixture_name: &str) -> ast::Program {
+    let sh2_path = format!("tests/fixtures/{}.sh2", fixture_name);
+    let src = fs::read_to_string(&sh2_path).expect("Failed to read fixture");
+    let tokens = lexer::lex(&src);
+    parser::parse(&tokens)
+}
+
+pub fn assert_codegen_matches_snapshot(fixture_name: &str) {
+    let sh2_path = format!("tests/fixtures/{}.sh2", fixture_name);
+    let expected_path = format!("tests/fixtures/{}.sh.expected", fixture_name);
+    
+    let src = fs::read_to_string(&sh2_path).expect("Failed to read source fixture");
+    let expected = fs::read_to_string(&expected_path).expect("Failed to read expected codegen fixture");
+    
+    let output = compile_to_bash(&src);
+    assert_eq!(output.trim(), expected.trim(), "Codegen mismatch for {}", fixture_name);
 }
 
 fn write_temp_script(prefix: &str, bash: &str) -> std::path::PathBuf {
@@ -21,7 +40,7 @@ fn write_temp_script(prefix: &str, bash: &str) -> std::path::PathBuf {
     path
 }
 
-fn run_bash_script(bash: &str, env: &[(&str, &str)], args: &[&str]) -> (String, String, i32) {
+pub fn run_bash_script(bash: &str, env: &[(&str, &str)], args: &[&str]) -> (String, String, i32) {
     let path = write_temp_script("sh2_test", bash);
     
     let mut cmd = Command::new("bash");
@@ -44,7 +63,7 @@ fn run_bash_script(bash: &str, env: &[(&str, &str)], args: &[&str]) -> (String, 
     (stdout, stderr, output.status.code().unwrap_or(0))
 }
 
-fn assert_exec_matches_fixture(fixture_name: &str) {
+pub fn assert_exec_matches_fixture(fixture_name: &str) {
     let sh2_path = format!("tests/fixtures/{}.sh2", fixture_name);
     let stdout_path = format!("tests/fixtures/{}.stdout", fixture_name);
     let stderr_path = format!("tests/fixtures/{}.stderr", fixture_name);
@@ -75,7 +94,6 @@ fn assert_exec_matches_fixture(fixture_name: &str) {
             }
         }
     }
-    // We need env_vars references for run_bash_script
     let env_refs: Vec<(&str, &str)> = env_vars.iter().map(|(k, v)| (k.as_str(), v.as_str())).collect();
 
     let mut args = Vec::new();
@@ -109,48 +127,3 @@ fn assert_exec_matches_fixture(fixture_name: &str) {
         assert_eq!(status, expected_status, "Exit code mismatch for {}", fixture_name);
     }
 }
-
-// Inline tests refactored or removed in favor of fixture tests where applicable
-// We'll keep the specialized inline ones if they test things not covered by fixtures, 
-// but mostly we want to move to fixtures.
-
-#[test]
-fn exec_for_list_var() {
-    assert_exec_matches_fixture("for_list_var");
-}
-
-#[test]
-fn exec_pipe_basic() { assert_exec_matches_fixture("pipe_basic"); }
-#[test]
-fn exec_case_wildcard() { assert_exec_matches_fixture("case_wildcard"); }
-#[test]
-fn exec_while_basic() { assert_exec_matches_fixture("while_basic"); }
-#[test]
-fn exec_for_list() { assert_exec_matches_fixture("for_list"); }
-#[test]
-fn exec_if_true_literal() { assert_exec_matches_fixture("if_true_literal"); }
-#[test]
-fn exec_if_bool_and() { assert_exec_matches_fixture("if_bool_and"); }
-#[test]
-fn exec_exists_check() { assert_exec_matches_fixture("exists_check"); }
-#[test]
-fn exec_with_cwd_check() { assert_exec_matches_fixture("with_cwd_check"); }
-
-#[test]
-fn exec_hello() { assert_exec_matches_fixture("hello_exec"); }
-#[test]
-fn exec_if_env_true() { assert_exec_matches_fixture("if_env_true"); }
-#[test]
-fn exec_if_env_false() { assert_exec_matches_fixture("if_env_false"); }
-#[test]
-fn exec_print_err() { assert_exec_matches_fixture("print_err_exec"); }
-#[test]
-fn exec_for_args() { assert_exec_matches_fixture("for_args"); }
-#[test]
-fn exec_let_args() { assert_exec_matches_fixture("let_args"); }
-#[test]
-fn exec_run_args() { assert_exec_matches_fixture("run_args"); }
-#[test]
-fn exec_print_args() { assert_exec_matches_fixture("print_args"); }
-#[test]
-fn exec_try_catch_basic() { assert_exec_matches_fixture("try_catch_basic"); }
