@@ -16,6 +16,7 @@ pub enum Val {
     Or(Box<Val>, Box<Val>),
     Not(Box<Val>),
     Exists(Box<Val>),
+    IsDir(Box<Val>),
     List(Vec<Val>),
     Args,
 }

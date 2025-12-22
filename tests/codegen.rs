@@ -508,6 +508,14 @@ fn if_exists_codegen_matches_snapshot() {
     );
 }
 
+#[test]
+fn if_is_dir_codegen_matches_snapshot() {
+    assert_codegen_matches_snapshot(
+        "tests/fixtures/if_is_dir.sh2",
+        "tests/fixtures/if_is_dir.sh.expected",
+    );
+}
+
 fn assert_codegen_matches_snapshot(sh2_path: &str, expected_path: &str) {
     let src = fs::read_to_string(sh2_path).unwrap();
     let expected = fs::read_to_string(expected_path).unwrap();

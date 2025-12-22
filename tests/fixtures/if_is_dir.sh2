@@ -1,0 +1,7 @@
+func main() {
+  if is_dir("src") {
+    print("dir")
+  } else {
+    print("no")
+  }
+}

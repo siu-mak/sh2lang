@@ -27,6 +27,7 @@ pub enum Expr {
     Or(Box<Expr>, Box<Expr>),
     Not(Box<Expr>),
     Exists(Box<Expr>),
+    IsDir(Box<Expr>),
     List(Vec<Expr>),
     Args,
 }

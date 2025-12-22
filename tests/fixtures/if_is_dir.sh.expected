@@ -1,0 +1,9 @@
+main() {
+  if [ -d "src" ]; then
+    echo "dir"
+  else
+    echo "no"
+  fi
+}
+
+main "$@"
