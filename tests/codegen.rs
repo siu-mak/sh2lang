@@ -732,6 +732,31 @@ fn for_list_var_codegen_matches_snapshot() {
     );
 }
 
+#[test]
+fn pipe_basic_codegen_matches_snapshot() {
+    assert_codegen_matches_snapshot("tests/fixtures/pipe_basic.sh2", "tests/fixtures/pipe_basic.sh.expected");
+}
+
+#[test]
+fn case_wildcard_codegen_matches_snapshot() {
+    assert_codegen_matches_snapshot("tests/fixtures/case_wildcard.sh2", "tests/fixtures/case_wildcard.sh.expected");
+}
+
+#[test]
+fn if_bool_and_codegen_matches_snapshot() {
+    assert_codegen_matches_snapshot("tests/fixtures/if_bool_and.sh2", "tests/fixtures/if_bool_and.sh.expected");
+}
+
+#[test]
+fn exists_check_codegen_matches_snapshot() {
+    assert_codegen_matches_snapshot("tests/fixtures/exists_check.sh2", "tests/fixtures/exists_check.sh.expected");
+}
+
+#[test]
+fn with_cwd_check_codegen_matches_snapshot() {
+    assert_codegen_matches_snapshot("tests/fixtures/with_cwd_check.sh2", "tests/fixtures/with_cwd_check.sh.expected");
+}
+
 fn assert_codegen_matches_snapshot(sh2_path: &str, expected_path: &str) {
     let src = fs::read_to_string(sh2_path).unwrap();
     let expected = fs::read_to_string(expected_path).unwrap();

@@ -1,0 +1,13 @@
+main() {
+  x="foo"
+  case "$x" in
+    "bar")
+      echo "no"
+    ;;
+    *)
+      echo "yes"
+    ;;
+  esac
+}
+
+main "$@"

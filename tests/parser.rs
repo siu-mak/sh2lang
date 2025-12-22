@@ -43,3 +43,47 @@ fn parse_for_list_var() {
         _ => panic!("Expected For stmt"),
     }
 }
+
+#[test]
+fn parse_pipe_basic() {
+    let src = include_str!("fixtures/pipe_basic.sh2");
+    let tokens = lex(src);
+    let program = parse(&tokens);
+    let func = &program.functions[0];
+    assert!(matches!(func.body[0], Stmt::Pipe(_)));
+}
+
+#[test]
+fn parse_case_wildcard() {
+    let src = include_str!("fixtures/case_wildcard.sh2");
+    let tokens = lex(src);
+    let program = parse(&tokens);
+    let func = &program.functions[0];
+    assert!(matches!(func.body[1], Stmt::Case { .. }));
+}
+
+#[test]
+fn parse_if_bool_and() {
+    let src = include_str!("fixtures/if_bool_and.sh2");
+    let tokens = lex(src);
+    let program = parse(&tokens);
+    let func = &program.functions[0];
+    if let Stmt::If { cond, .. } = &func.body[0] {
+        assert!(matches!(cond, Expr::And(..)));
+    } else {
+        panic!("Expected If");
+    }
+}
+
+#[test]
+fn parse_exists_check() {
+    let src = include_str!("fixtures/exists_check.sh2");
+    let tokens = lex(src);
+    let program = parse(&tokens);
+    let func = &program.functions[0];
+    if let Stmt::If { cond, .. } = &func.body[0] {
+        assert!(matches!(cond, Expr::Exists(..)));
+    } else {
+        panic!("Expected If");
+    }
+}

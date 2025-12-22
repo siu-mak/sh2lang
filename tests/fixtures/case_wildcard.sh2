@@ -1,0 +1,7 @@
+func main() {
+  let x = "foo"
+  case x {
+    "bar" => { print("no") }
+    _ => { print("yes") }
+  }
+}

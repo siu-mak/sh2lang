@@ -1,0 +1,6 @@
+func main() {
+  with cwd "/tmp" {
+    let p = capture("pwd")
+    if p == "/tmp" { print("yes") }
+  }
+}
