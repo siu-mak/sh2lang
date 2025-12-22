@@ -668,6 +668,30 @@ fn func_params_10_codegen_matches_snapshot() {
     );
 }
 
+#[test]
+fn count_list_literal_codegen_matches_snapshot() {
+    assert_codegen_matches_snapshot(
+        "tests/fixtures/count_list_literal.sh2",
+        "tests/fixtures/count_list_literal.sh.expected",
+    );
+}
+
+#[test]
+fn count_list_var_codegen_matches_snapshot() {
+    assert_codegen_matches_snapshot(
+        "tests/fixtures/count_list_var.sh2",
+        "tests/fixtures/count_list_var.sh.expected",
+    );
+}
+
+#[test]
+fn count_args_codegen_matches_snapshot() {
+    assert_codegen_matches_snapshot(
+        "tests/fixtures/count_args.sh2",
+        "tests/fixtures/count_args.sh.expected",
+    );
+}
+
 fn assert_codegen_matches_snapshot(sh2_path: &str, expected_path: &str) {
     let src = fs::read_to_string(sh2_path).unwrap();
     let expected = fs::read_to_string(expected_path).unwrap();

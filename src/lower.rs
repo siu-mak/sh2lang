@@ -303,6 +303,7 @@ fn lower_expr(e: ast::Expr) -> ir::Val {
             list: Box::new(lower_expr(*list)),
             sep: Box::new(lower_expr(*sep)),
         },
+        ast::Expr::Count(inner) => ir::Val::Count(Box::new(lower_expr(*inner))),
         ast::Expr::Number(n) => ir::Val::Number(n),
         ast::Expr::Command(args) => {
             let lowered_args = args.into_iter().map(lower_expr).collect();

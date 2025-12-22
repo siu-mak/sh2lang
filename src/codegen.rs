@@ -72,6 +72,12 @@ fn emit_val(v: &Val) -> String {
                  _ => panic!("Join implemented only for variables and list literals"),
              }
         }
+        Val::Count(inner) => match &**inner {
+            Val::List(elems) => format!("\"{}\"", elems.len()),
+            Val::Var(name) => format!("\"${{#{}[@]}}\"", name),
+            Val::Args => "\"$#\"".to_string(),
+            _ => panic!("count(...) supports only list literals, list variables, and args"),
+        },
         Val::Number(n) => format!("\"{}\"", n),
         Val::Compare { .. } | Val::And(..) | Val::Or(..) | Val::Not(..) | Val::Exists(..) | Val::IsDir(..) | Val::IsFile(..) | Val::List(..) | Val::Args => panic!("Cannot emit boolean/list/args value as string"),
     }
@@ -99,6 +105,7 @@ fn emit_word(v: &Val) -> String {
         Val::Arg(n) => format!("\"${}\"", n),
         Val::Index { list, index } => emit_val(&Val::Index { list: list.clone(), index: *index }),
         Val::Join { list, sep } => emit_val(&Val::Join { list: list.clone(), sep: sep.clone() }),
+        Val::Count(inner) => emit_val(&Val::Count(inner.clone())),
         Val::Number(n) => format!("\"{}\"", n),
         Val::Args => "\"$@\"".into(),
         Val::Compare { .. } | Val::And(..) | Val::Or(..) | Val::Not(..) | Val::Exists(..) | Val::IsDir(..) | Val::IsFile(..) | Val::List(..) => panic!("Cannot emit boolean/list value as command word"),
