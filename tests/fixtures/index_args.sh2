@@ -1,0 +1,4 @@
+func main() {
+    print(index(args, 0))
+    print(index(args, 2))
+}

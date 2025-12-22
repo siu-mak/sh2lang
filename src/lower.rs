@@ -254,6 +254,9 @@ fn lower_stmt(stmt: ast::Stmt, out: &mut Vec<ir::Cmd>) {
         ast::Stmt::Source { path } => {
             out.push(ir::Cmd::Source(lower_expr(path)));
         }
+        ast::Stmt::Exec(args) => {
+            out.push(ir::Cmd::ExecReplace(args.into_iter().map(lower_expr).collect()));
+        }
     }
 }
 

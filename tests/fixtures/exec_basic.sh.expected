@@ -1,0 +1,5 @@
+main() {
+  exec "echo" "hi"
+}
+
+main "$@"

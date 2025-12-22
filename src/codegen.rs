@@ -53,6 +53,9 @@ fn emit_val(v: &Val) -> String {
                      // Force evaluation of index
                      format!("\"$( arr=({}); idx=$(( {} )); printf \"%s\" \"${{arr[idx]}}\" )\"", arr_str, emit_index_expr(index))
                  }
+                 Val::Args => {
+                     format!("\"$( arr=(\"$@\"); idx=$(( {} )); printf \"%s\" \"${{arr[idx]}}\" )\"", emit_index_expr(index))
+                 }
                  _ => panic!("Index implemented only for variables and list literals"),
             }
         }
@@ -69,6 +72,9 @@ fn emit_val(v: &Val) -> String {
                          arr_str.push_str(&emit_word(elem));
                      }
                      format!("\"$( arr=({}); IFS={}; printf \"%s\" \"${{arr[*]}}\" )\"", arr_str, emit_val(sep))
+                 }
+                 Val::Args => {
+                     format!("\"$( IFS={}; printf \"%s\" \"$*\" )\"", emit_val(sep))
                  }
                  _ => panic!("Join implemented only for variables and list literals"),
              }
@@ -244,6 +250,13 @@ fn emit_cmd(cmd: &Cmd, out: &mut String, indent: usize) {
         }
         Cmd::Exec(args) => {
             out.push_str(&pad);
+            let shell_args: Vec<String> = args.iter().map(emit_word).collect();
+            out.push_str(&shell_args.join(" "));
+            out.push('\n');
+        }
+        Cmd::ExecReplace(args) => {
+            out.push_str(&pad);
+            out.push_str("exec ");
             let shell_args: Vec<String> = args.iter().map(emit_word).collect();
             out.push_str(&shell_args.join(" "));
             out.push('\n');

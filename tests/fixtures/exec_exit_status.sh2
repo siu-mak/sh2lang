@@ -1,0 +1,4 @@
+func main() {
+    exec("bash", "-c", "echo ok; exit 7")
+    print("after")  # must not run
+}

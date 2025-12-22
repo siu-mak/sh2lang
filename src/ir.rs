@@ -110,6 +110,7 @@ pub enum Cmd {
     Export { name: String, value: Option<Val> },
     Unset(String),
     Source(Val),
+    ExecReplace(Vec<Val>),
 }
 
 #[derive(Debug, Clone, PartialEq)]

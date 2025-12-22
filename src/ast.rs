@@ -117,6 +117,7 @@ pub enum Stmt {
     Export { name: String, value: Option<Expr> },
     Unset { name: String },
     Source { path: Expr },
+    Exec(Vec<Expr>),
 }
 
 #[derive(Debug, Clone, PartialEq)]

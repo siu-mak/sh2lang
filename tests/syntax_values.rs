@@ -397,3 +397,29 @@ fn parse_arith_unary_minus() {
 fn codegen_arith_unary_minus() { assert_codegen_matches_snapshot("arith_unary_minus"); }
 #[test]
 fn exec_arith_unary_minus() { assert_exec_matches_fixture("arith_unary_minus"); }
+
+#[test]
+fn parse_index_args() {
+    let program = parse_fixture("index_args");
+    let func = &program.functions[0];
+    if let Stmt::Print(Expr::Index { list, .. }) = &func.body[0] {
+        assert!(matches!(**list, Expr::Args));
+    } else { panic!("Expected Print(Index(Args))"); }
+}
+#[test]
+fn codegen_index_args() { assert_codegen_matches_snapshot("index_args"); }
+#[test]
+fn exec_index_args() { assert_exec_matches_fixture("index_args"); }
+
+#[test]
+fn parse_join_args() {
+    let program = parse_fixture("join_args");
+    let func = &program.functions[0];
+    if let Stmt::Print(Expr::Join { list, .. }) = &func.body[0] {
+        assert!(matches!(**list, Expr::Args));
+    } else { panic!("Expected Print(Join(Args))"); }
+}
+#[test]
+fn codegen_join_args() { assert_codegen_matches_snapshot("join_args"); }
+#[test]
+fn exec_join_args() { assert_exec_matches_fixture("join_args"); }

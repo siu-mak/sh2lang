@@ -99,10 +99,8 @@ pub fn assert_exec_matches_fixture(fixture_name: &str) {
     let mut args = Vec::new();
     if Path::new(&args_path).exists() {
         let args_content = fs::read_to_string(&args_path).expect("Failed to read args fixture");
-        for line in args_content.lines() {
-            if !line.trim().is_empty() {
-                args.push(line.to_string());
-            }
+        for arg in args_content.split_whitespace() {
+            args.push(arg.to_string());
         }
     }
     let args_refs: Vec<&str> = args.iter().map(|s| s.as_str()).collect();
