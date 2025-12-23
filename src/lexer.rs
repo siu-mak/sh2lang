@@ -169,14 +169,24 @@ pub fn lex(input: &str) -> Vec<Token> {
                 }
             }
             '"' => {
-                chars.next();
+                chars.next(); // consume opening quote
                 let mut s = String::new();
                 while let Some(&ch) = chars.peek() {
                     if ch == '"' { break; }
-                    s.push(ch);
-                    chars.next();
+                    if ch == '\\' {
+                        chars.next(); // consume backslash
+                        if let Some(&escaped) = chars.peek() {
+                            s.push(escaped);
+                            chars.next();
+                        }
+                    } else {
+                        s.push(ch);
+                        chars.next();
+                    }
                 }
-                chars.next();
+                if chars.peek() == Some(&'"') {
+                    chars.next(); // consume closing quote
+                }
                 tokens.push(Token::String(s));
             }
             _ if c.is_ascii_digit() => {

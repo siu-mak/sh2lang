@@ -1,4 +1,4 @@
 func main() {
-  let out = capture(run("printf","hi\n") | run("sed","s/hi/ok/"))
+  let out = capture(run("printf","hi\\n") | run("sed","s/hi/ok/"))
   print(out)
 }
