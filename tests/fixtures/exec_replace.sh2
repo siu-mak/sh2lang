@@ -1,0 +1,5 @@
+func main() {
+  print("before")
+  exec("sh", "-c", "echo after")
+  print("never") # should never execute
+}

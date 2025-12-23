@@ -1,0 +1,19 @@
+func main() {
+  # Spawn a job that exits with a known code
+  spawn run("sh", "-c", "exit 7")
+
+  # pid() should now be set (> 0)
+  if pid() > 0 {
+    print("pid_ok")
+  } else {
+    print("pid_bad")
+  }
+
+  # Wait for that pid; then status() should be 7 (wait’s exit status)
+  wait(pid())
+  if status() == 7 {
+    print("status_ok")
+  } else {
+    print("status_bad")
+  }
+}
