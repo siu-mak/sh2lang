@@ -1,0 +1,8 @@
+main() {
+  "bash" "-c" "exit 7" &
+  p="$!"
+  wait "$p"
+  echo "$?"
+}
+
+main "$@"

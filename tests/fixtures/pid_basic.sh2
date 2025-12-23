@@ -1,0 +1,6 @@
+func main() {
+    spawn run("bash", "-c", "exit 7")
+    let p = pid()
+    wait(p)
+    print(status())
+}

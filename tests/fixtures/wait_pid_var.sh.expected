@@ -1,6 +1,6 @@
 main() {
-  pid="1234"
-  wait "$pid"
+  p="1234"
+  wait "$p"
 }
 
 main "$@"

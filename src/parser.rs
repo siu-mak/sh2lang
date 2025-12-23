@@ -648,6 +648,7 @@ fn is_expr_start(t: Option<&Token>) -> bool {
            | Token::Index
            | Token::Join
            | Token::Status
+           | Token::Pid
            | Token::Count
            | Token::True
            | Token::False
@@ -882,6 +883,12 @@ fn parse_primary(tokens: &[Token], i: &mut usize) -> Expr {
             expect(tokens, i, Token::LParen);
             expect(tokens, i, Token::RParen);
             Expr::Status
+        }
+        Token::Pid => {
+            *i += 1;
+            expect(tokens, i, Token::LParen);
+            expect(tokens, i, Token::RParen);
+            Expr::Pid
         }
         Token::Count => {
             *i += 1;

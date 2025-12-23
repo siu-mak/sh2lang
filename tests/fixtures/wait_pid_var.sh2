@@ -1,4 +1,4 @@
 func main() {
-  let pid = "1234"
-  wait(pid)
+  let p = "1234"
+  wait(p)
 }

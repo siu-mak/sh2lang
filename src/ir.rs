@@ -30,6 +30,7 @@ pub enum Val {
     List(Vec<Val>),
     Args,
     Status,
+    Pid,
 }
 
 #[derive(Debug, Clone, PartialEq)]

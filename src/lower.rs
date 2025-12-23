@@ -353,5 +353,6 @@ fn lower_expr(e: ast::Expr) -> ir::Val {
         }
         ast::Expr::Args => ir::Val::Args,
         ast::Expr::Status => ir::Val::Status,
+        ast::Expr::Pid => ir::Val::Pid,
     }
 }

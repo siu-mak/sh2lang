@@ -54,6 +54,7 @@ pub enum Expr {
     List(Vec<Expr>),
     Args,
     Status,
+    Pid,
 }
 
 #[derive(Debug, Clone, PartialEq)]
