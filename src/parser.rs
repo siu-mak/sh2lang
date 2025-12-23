@@ -638,6 +638,7 @@ fn is_expr_start(t: Option<&Token>) -> bool {
            | Token::Dollar
            | Token::LParen
            | Token::LBracket
+           | Token::Env
            | Token::Args
            | Token::Capture
            | Token::Exists
@@ -889,6 +890,13 @@ fn parse_primary(tokens: &[Token], i: &mut usize) -> Expr {
             expect(tokens, i, Token::LParen);
             expect(tokens, i, Token::RParen);
             Expr::Pid
+        }
+        Token::Env => {
+            *i += 1;
+            expect(tokens, i, Token::LParen);
+            let name = parse_expr(tokens, i);
+            expect(tokens, i, Token::RParen);
+            Expr::Env(Box::new(name))
         }
         Token::Count => {
             *i += 1;

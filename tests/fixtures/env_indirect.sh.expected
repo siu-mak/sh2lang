@@ -1,0 +1,9 @@
+main() {
+  k="FOO"
+  (
+    FOO="bar"
+    echo "${!k}"
+  )
+}
+
+main "$@"

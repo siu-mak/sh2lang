@@ -55,6 +55,7 @@ pub enum Expr {
     Args,
     Status,
     Pid,
+    Env(Box<Expr>),
 }
 
 #[derive(Debug, Clone, PartialEq)]

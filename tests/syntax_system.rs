@@ -143,6 +143,8 @@ fn codegen_wait_list_var() { assert_codegen_matches_snapshot("wait_list_var"); }
 fn codegen_wait_list_complex() { assert_codegen_matches_snapshot("wait_list_complex"); }
 #[test]
 fn codegen_wait_pid_literal() { assert_codegen_matches_snapshot("wait_pid_literal"); }
+#[test]
+fn exec_wait_pid_var() { assert_exec_matches_fixture("wait_pid_var"); }
 
 // --- Parse Coverage for Process ---
 

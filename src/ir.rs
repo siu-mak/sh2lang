@@ -31,6 +31,7 @@ pub enum Val {
     Args,
     Status,
     Pid,
+    Env(Box<Val>),
 }
 
 #[derive(Debug, Clone, PartialEq)]

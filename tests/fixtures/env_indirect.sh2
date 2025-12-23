@@ -1,0 +1,6 @@
+func main() {
+    let k = "FOO"
+    with env { FOO="bar" } {
+        print(env(k))
+    }
+}

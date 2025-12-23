@@ -89,6 +89,11 @@ fn emit_val(v: &Val) -> String {
         Val::Number(n) => format!("\"{}\"", n),
         Val::Status => "\"$?\"".to_string(),
         Val::Pid => "\"$!\"".to_string(),
+        Val::Env(inner) => match &**inner {
+            Val::Literal(s) => format!("\"${{{}}}\"", s),
+            Val::Var(name) => format!("\"${{!{}}}\"", name),
+            _ => panic!("env(...) requires a string literal name or variable name"),
+        },
         Val::Arith { .. } => format!("\"$(( {} ))\"", emit_arith_expr(v)),
         Val::Compare { .. } | Val::And(..) | Val::Or(..) | Val::Not(..) | Val::Exists(..) | Val::IsDir(..) | Val::IsFile(..) | Val::List(..) | Val::Args => panic!("Cannot emit boolean/list/args value as string"),
     }
@@ -121,6 +126,11 @@ fn emit_word(v: &Val) -> String {
         Val::Number(n) => format!("\"{}\"", n),
         Val::Status => "\"$?\"".to_string(),
         Val::Pid => "\"$!\"".to_string(),
+        Val::Env(inner) => match &**inner {
+            Val::Literal(s) => format!("\"${{{}}}\"", s),
+            Val::Var(name) => format!("\"${{!{}}}\"", name),
+            _ => panic!("env(...) requires a string literal name or variable name"),
+        },
         Val::Arith { .. } => format!("\"$(( {} ))\"", emit_arith_expr(v)),
         Val::Args => "\"$@\"".into(),
         Val::Compare { .. } | Val::And(..) | Val::Or(..) | Val::Not(..) | Val::Exists(..) | Val::IsDir(..) | Val::IsFile(..) | Val::List(..) => panic!("Cannot emit boolean/list value as command word"),

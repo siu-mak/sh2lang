@@ -1,0 +1,8 @@
+main() {
+  (
+    FOO="bar"
+    echo "${FOO}"
+  )
+}
+
+main "$@"
