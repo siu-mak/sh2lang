@@ -1,0 +1,15 @@
+func main() {
+  run("true")
+  if status() == 0 {
+    print("true_ok")
+  } else {
+    print("true_bad")
+  }
+
+  run("false")
+  if status() != 0 {
+    print("false_ok")
+  } else {
+    print("false_bad")
+  }
+}

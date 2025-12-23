@@ -1,0 +1,16 @@
+main() {
+  "true"
+  if [ "$?" = "0" ]; then
+    echo "true_ok"
+  else
+    echo "true_bad"
+  fi
+  "false"
+  if [ "$?" != "0" ]; then
+    echo "false_ok"
+  else
+    echo "false_bad"
+  fi
+}
+
+main "$@"

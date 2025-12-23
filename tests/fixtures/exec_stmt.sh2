@@ -1,0 +1,4 @@
+func main() {
+  exec("sh", "-c", "echo exec_ok")
+  print("after_exec_bad")
+}

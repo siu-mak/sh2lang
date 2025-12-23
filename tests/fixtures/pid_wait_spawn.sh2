@@ -1,0 +1,11 @@
+func main() {
+  spawn run("sh", "-c", "exit 0")
+  let p = pid()
+  wait(p)
+
+  if status() == 0 {
+    print("wait_ok")
+  } else {
+    print("wait_bad")
+  }
+}

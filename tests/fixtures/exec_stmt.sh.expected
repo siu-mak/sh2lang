@@ -1,0 +1,6 @@
+main() {
+  exec "sh" "-c" "echo exec_ok"
+  echo "after_exec_bad"
+}
+
+main "$@"
