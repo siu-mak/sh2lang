@@ -1,0 +1,39 @@
+func main() {
+  # 1) stdout -> file
+  let f = capture("mktemp")
+  with redirect { stdout: file(f) } {
+    print("out")
+  }
+
+  # 2) stderr -> file (append)
+  with redirect { stderr: file(f, append=true) } {
+    print_err("err")
+  }
+
+  # show file contents on stdout
+  run("cat", f)
+
+  # 3) stderr -> stdout (so print_err becomes visible on stdout)
+  with redirect { stderr: stdout } {
+    print_err("e2s")
+  }
+
+  # 4) stdin <- file
+  let infile = capture("mktemp")
+  sh("echo hello > $infile")
+  with redirect { stdin: file(infile) } {
+    run("cat")
+  }
+  # 5) ordering-sensitive: stdout -> stderr AND stderr -> file
+  # Correct bash must emit: 2>file THEN 1>&2 so stdout ends up in file.
+  let f2 = capture("mktemp")
+  with redirect { stdout: stderr, stderr: file(f2) } {
+    print("swap_ok")
+  }
+  run("cat", f2)
+
+  # cleanup
+  run("rm", "-f", f)
+  run("rm", "-f", infile)
+  run("rm", "-f", f2)
+}

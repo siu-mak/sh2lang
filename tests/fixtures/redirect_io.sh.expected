@@ -1,0 +1,28 @@
+main() {
+  f=$( "mktemp" )
+  {
+    echo "out"
+  } > "$f"
+  {
+    echo "err" >&2
+  } 2>> "$f"
+  "cat" "$f"
+  {
+    echo "e2s" >&2
+  } 2>&1
+  infile=$( "mktemp" )
+  echo hello > $infile
+  {
+    "cat"
+  } < "$infile"
+  f2=$( "mktemp" )
+  {
+    echo "swap_ok"
+  } 2> "$f2" 1>&2
+  "cat" "$f2"
+  "rm" "-f" "$f"
+  "rm" "-f" "$infile"
+  "rm" "-f" "$f2"
+}
+
+main "$@"
