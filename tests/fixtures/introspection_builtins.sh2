@@ -1,0 +1,44 @@
+func main() {
+  # env(...) should read a variable set by with env
+  with env { FOO = "bar" } {
+    if env("FOO") == "bar" {
+      print("env_ok")
+    } else {
+      print("env_bad")
+    }
+  }
+
+  # Stable checks: lengths should be > 0
+  if len(pwd()) > 0 {
+    print("pwd_ok")
+  } else {
+    print("pwd_bad")
+  }
+
+  if len(argv0()) > 0 {
+    print("argv0_ok")
+  } else {
+    print("argv0_bad")
+  }
+
+  # In our harness, main is invoked as: main "$@" with no args => argc() == 0
+  if argc() == 0 {
+    print("argc_ok")
+  } else {
+    print("argc_bad")
+  }
+
+  # PIDs should be > 0
+  if self_pid() > 0 && ppid() > 0 {
+    print("pid_ok")
+  } else {
+    print("pid_bad")
+  }
+
+  # uid() is >= 0 always
+  if uid() >= 0 {
+    print("uid_ok")
+  } else {
+    print("uid_bad")
+  }
+}

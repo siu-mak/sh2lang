@@ -1,0 +1,37 @@
+main() {
+  (
+    FOO="bar"
+    if [ "${FOO}" = "bar" ]; then
+      echo "env_ok"
+    else
+      echo "env_bad"
+    fi
+  )
+  if [ $( printf "%s" "$PWD" | awk '{ print length($0) }' ) -gt "0" ]; then
+    echo "pwd_ok"
+  else
+    echo "pwd_bad"
+  fi
+  if [ $( printf "%s" "$0" | awk '{ print length($0) }' ) -gt "0" ]; then
+    echo "argv0_ok"
+  else
+    echo "argv0_bad"
+  fi
+  if [ "$#" = "0" ]; then
+    echo "argc_ok"
+  else
+    echo "argc_bad"
+  fi
+  if [ "$$" -gt "0" ] && [ "$PPID" -gt "0" ]; then
+    echo "pid_ok"
+  else
+    echo "pid_bad"
+  fi
+  if [ "$UID" -ge "0" ]; then
+    echo "uid_ok"
+  else
+    echo "uid_bad"
+  fi
+}
+
+main "$@"
