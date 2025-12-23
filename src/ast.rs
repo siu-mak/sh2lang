@@ -98,6 +98,8 @@ pub enum Stmt {
         bindings: Vec<(String, Expr)>,
         body: Vec<Stmt>,
     },
+    AndThen { left: Vec<Stmt>, right: Vec<Stmt> },
+    OrElse { left: Vec<Stmt>, right: Vec<Stmt> },
     WithCwd {
         path: Expr,
         body: Vec<Stmt>,
@@ -120,9 +122,6 @@ pub enum Stmt {
         try_body: Vec<Stmt>,
         catch_body: Vec<Stmt>,
     },
-    AndThen { left: Box<Stmt>, right: Box<Stmt> },
-
-    OrElse { left: Box<Stmt>, right: Box<Stmt> },
     Export { name: String, value: Option<Expr> },
     Unset { name: String },
     Source { path: Expr },

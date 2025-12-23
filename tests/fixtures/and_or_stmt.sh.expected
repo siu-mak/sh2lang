@@ -1,0 +1,24 @@
+main() {
+  {
+    "sh" "-c" "exit 0"
+  } && {
+    echo "and_ok"
+  }
+  {
+    "sh" "-c" "exit 1"
+  } && {
+    echo "and_bad"
+  }
+  {
+    "sh" "-c" "exit 1"
+  } || {
+    echo "or_ok"
+  }
+  {
+    "sh" "-c" "exit 0"
+  } || {
+    echo "or_bad"
+  }
+}
+
+main "$@"

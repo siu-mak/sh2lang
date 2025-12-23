@@ -145,6 +145,28 @@ fn lower_stmt(stmt: ast::Stmt, out: &mut Vec<ir::Cmd>) {
                 body: lower_body,
             });
         }
+        ast::Stmt::AndThen { left, right } => {
+            let mut lower_left = Vec::new();
+            for s in left {
+                lower_stmt(s, &mut lower_left);
+            }
+            let mut lower_right = Vec::new();
+            for s in right {
+                lower_stmt(s, &mut lower_right);
+            }
+            out.push(ir::Cmd::AndThen { left: lower_left, right: lower_right });
+        }
+        ast::Stmt::OrElse { left, right } => {
+            let mut lower_left = Vec::new();
+            for s in left {
+                lower_stmt(s, &mut lower_left);
+            }
+            let mut lower_right = Vec::new();
+            for s in right {
+                lower_stmt(s, &mut lower_right);
+            }
+            out.push(ir::Cmd::OrElse { left: lower_left, right: lower_right });
+        }
         ast::Stmt::WithCwd { path, body } => {
             let lowered_path = lower_expr(path);
             let mut lower_body = Vec::new();
@@ -227,20 +249,6 @@ fn lower_stmt(stmt: ast::Stmt, out: &mut Vec<ir::Cmd>) {
                 lower_stmt(s, &mut lower_catch);
             }
             out.push(ir::Cmd::TryCatch { try_body: lower_try, catch_body: lower_catch });
-        }
-        ast::Stmt::AndThen { left, right } => {
-            let mut l_cmds = Vec::new();
-            lower_stmt(*left, &mut l_cmds);
-            let mut r_cmds = Vec::new();
-            lower_stmt(*right, &mut r_cmds);
-            out.push(ir::Cmd::AndThen { left: l_cmds, right: r_cmds });
-        }
-        ast::Stmt::OrElse { left, right } => {
-            let mut l_cmds = Vec::new();
-            lower_stmt(*left, &mut l_cmds);
-            let mut r_cmds = Vec::new();
-            lower_stmt(*right, &mut r_cmds);
-            out.push(ir::Cmd::OrElse { left: l_cmds, right: r_cmds });
         }
         ast::Stmt::Export { name, value } => {
             out.push(ir::Cmd::Export {

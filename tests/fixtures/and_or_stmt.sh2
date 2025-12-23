@@ -1,0 +1,7 @@
+func main() {
+  run("sh", "-c", "exit 0") && print("and_ok")
+  run("sh", "-c", "exit 1") && print("and_bad")
+
+  run("sh", "-c", "exit 1") || print("or_ok")
+  run("sh", "-c", "exit 0") || print("or_bad")
+}
