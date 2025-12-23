@@ -1,0 +1,26 @@
+func main() {
+  # Create a temp directory and a file inside it
+  let d = capture("mktemp", "-d")
+
+  with cwd d {
+    sh("touch f.txt")
+  }
+
+  let f = d + "/f.txt"
+
+  if exists(f) && is_file(f) && !is_dir(f) {
+    print("fs_ok")
+  } else {
+    print("fs_bad")
+  }
+
+  cd(d)
+  if pwd() == d {
+    print("cd_ok")
+  } else {
+    print("cd_bad")
+  }
+
+  # cleanup
+  run("rm", "-rf", d)
+}
