@@ -21,9 +21,24 @@ pub fn emit(funcs: &[Function]) -> String {
     out
 }
 
+
+// Helper to escape double quotes within a string literal
+fn emit_dq(s: &str) -> String {
+    let mut out = String::from("\"");
+    for ch in s.chars() {
+        match ch {
+            '"' => out.push_str("\\\""),
+            // We do not escape backslashes here; see implementation details
+            _ => out.push(ch),
+        }
+    }
+    out.push('"');
+    out
+}
+
 fn emit_val(v: &Val) -> String {
     match v {
-        Val::Literal(s) => format!("\"{}\"", s),
+        Val::Literal(s) => emit_dq(s),
         Val::Var(s) => format!("\"${}\"", s),
         Val::Concat(l, r) => format!("{}{}", emit_val(l), emit_val(r)),
         Val::Command(args) => {
@@ -107,7 +122,7 @@ fn emit_val(v: &Val) -> String {
 
 fn emit_word(v: &Val) -> String {
     match v {
-        Val::Literal(s) => format!("\"{}\"", s),
+        Val::Literal(s) => emit_dq(s),
         Val::Var(s) => format!("\"${}\"", s),
         Val::Concat(l, r) => format!("{}{}", emit_word(l), emit_word(r)),
         Val::Command(args) => {
@@ -350,7 +365,7 @@ fn emit_cmd(cmd: &Cmd, out: &mut String, indent: usize) {
                 out.push_str(&pad);
                 out.push_str("  ");
                 let pat_strs: Vec<String> = patterns.iter().map(|p| match p {
-                    crate::ir::Pattern::Literal(s) => format!("\"{}\"", s),
+                    crate::ir::Pattern::Literal(s) => emit_dq(s),
                     crate::ir::Pattern::Wildcard => "*".to_string(),
                 }).collect();
                 out.push_str(&pat_strs.join("|"));

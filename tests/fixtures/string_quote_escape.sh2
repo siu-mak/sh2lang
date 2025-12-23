@@ -1,0 +1,5 @@
+func main() {
+  # lexer should turn \" into a literal quote char in the AST
+  print("a\"b")
+  run("sh", "-c", "echo \"hi\"")
+}

@@ -1,0 +1,4 @@
+func main() {
+  let out = $(run("printf","hi\\n") | run("sed","s/hi/ok/"))
+  print(out)
+}

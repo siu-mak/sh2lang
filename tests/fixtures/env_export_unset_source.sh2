@@ -10,7 +10,7 @@ func main() {
 
   # unset
   unset("X")
-  run("sh", "-c", "test -z \\\"\\$X\\\" && echo unset_ok || echo unset_bad")
+  run("sh", "-c", "test -z \"\\$X\" && echo unset_ok || echo unset_bad")
 
   # source a file (dot command)
   let f = capture("mktemp")
