@@ -1,0 +1,19 @@
+main() {
+  if [ "$0" = "$0" ]; then
+    echo "argv0_ok"
+  else
+    echo "argv0_bad"
+  fi
+  if [ "$#" = "$#" ]; then
+    echo "argc_ok"
+  else
+    echo "argc_bad"
+  fi
+  if [ "$$" = "${BASHPID}" ]; then
+    echo "self_pid_ok"
+  else
+    echo "self_pid_bad"
+  fi
+}
+
+main "$@"

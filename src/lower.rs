@@ -358,5 +358,8 @@ fn lower_expr(e: ast::Expr) -> ir::Val {
         ast::Expr::Uid => ir::Val::Uid,
         ast::Expr::Ppid => ir::Val::Ppid,
         ast::Expr::Pwd => ir::Val::Pwd,
+        ast::Expr::SelfPid => ir::Val::SelfPid,
+        ast::Expr::Argv0 => ir::Val::Argv0,
+        ast::Expr::Argc => ir::Val::Argc,
     }
 }

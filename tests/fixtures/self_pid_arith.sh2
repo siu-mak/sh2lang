@@ -1,0 +1,9 @@
+func main() {
+  # force arithmetic context involving self_pid()
+  let x = self_pid() + 1
+  if x > self_pid() {
+    print("arith_ok")
+  } else {
+    print("arith_bad")
+  }
+}

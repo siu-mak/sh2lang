@@ -97,6 +97,9 @@ fn emit_val(v: &Val) -> String {
         Val::Uid => "\"$UID\"".to_string(),
         Val::Ppid => "\"$PPID\"".to_string(),
         Val::Pwd => "\"$PWD\"".to_string(),
+        Val::SelfPid => "\"$$\"".to_string(),
+        Val::Argv0 => "\"$0\"".to_string(),
+        Val::Argc => "\"$#\"".to_string(),
         Val::Arith { .. } => format!("\"$(( {} ))\"", emit_arith_expr(v)),
         Val::Compare { .. } | Val::And(..) | Val::Or(..) | Val::Not(..) | Val::Exists(..) | Val::IsDir(..) | Val::IsFile(..) | Val::List(..) | Val::Args => panic!("Cannot emit boolean/list/args value as string"),
     }
@@ -137,6 +140,9 @@ fn emit_word(v: &Val) -> String {
         Val::Uid => "\"$UID\"".to_string(),
         Val::Ppid => "\"$PPID\"".to_string(),
         Val::Pwd => "\"$PWD\"".to_string(),
+        Val::SelfPid => "\"$$\"".to_string(),
+        Val::Argv0 => "\"$0\"".to_string(),
+        Val::Argc => "\"$#\"".to_string(),
         Val::Arith { .. } => format!("\"$(( {} ))\"", emit_arith_expr(v)),
         Val::Args => "\"$@\"".into(),
         Val::Compare { .. } | Val::And(..) | Val::Or(..) | Val::Not(..) | Val::Exists(..) | Val::IsDir(..) | Val::IsFile(..) | Val::List(..) => panic!("Cannot emit boolean/list value as command word"),
@@ -226,6 +232,8 @@ fn emit_arith_expr(v: &Val) -> String {
         Val::Pid => "$!".to_string(),
         Val::Uid => "$UID".to_string(),
         Val::Ppid => "$PPID".to_string(),
+        Val::SelfPid => "$$".to_string(),
+        Val::Argc => "$#".to_string(),
         Val::Arith { left, op, right } => {
             let op_str = match op {
                 crate::ir::ArithOp::Add => "+",

@@ -18,6 +18,32 @@ fn parse_system_vars_builtins() {
             } else { panic!("Expected Env on RHS"); }
         } else { panic!("Expected Compare"); }
     } else { panic!("Expected If"); }
+
+    // Check second If: ppid() == env("PPID")
+    if let Stmt::If { cond, .. } = &func.body[1] {
+        if let Expr::Compare { left, op, right } = cond {
+            assert!(matches!(**left, Expr::Ppid));
+            assert_eq!(*op, CompareOp::Eq);
+            if let Expr::Env(inner) = &**right {
+                 if let Expr::Literal(s) = &**inner {
+                     assert_eq!(s, "PPID");
+                 } else { panic!("Expected Env(Literal(PPID))"); }
+            } else { panic!("Expected Env on RHS"); }
+        } else { panic!("Expected Compare"); }
+    } else { panic!("Expected If"); }
+
+    // Check third If: pwd() == env("PWD")
+    if let Stmt::If { cond, .. } = &func.body[2] {
+        if let Expr::Compare { left, op, right } = cond {
+            assert!(matches!(**left, Expr::Pwd));
+            assert_eq!(*op, CompareOp::Eq);
+            if let Expr::Env(inner) = &**right {
+                 if let Expr::Literal(s) = &**inner {
+                     assert_eq!(s, "PWD");
+                 } else { panic!("Expected Env(Literal(PWD))"); }
+            } else { panic!("Expected Env on RHS"); }
+        } else { panic!("Expected Compare"); }
+    } else { panic!("Expected If"); }
 }
 
 #[test]

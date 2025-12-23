@@ -1,0 +1,19 @@
+func main() {
+    if argv0() == arg(0) {
+        print("argv0_ok")
+    } else {
+        print("argv0_bad")
+    }
+
+    if argc() == count(args) {
+        print("argc_ok")
+    } else {
+        print("argc_bad")
+    }
+
+    if self_pid() == env("BASHPID") {
+        print("self_pid_ok")
+    } else {
+        print("self_pid_bad")
+    }
+}

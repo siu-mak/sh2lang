@@ -35,6 +35,9 @@ pub enum Val {
     Uid,
     Ppid,
     Pwd,
+    SelfPid,
+    Argv0,
+    Argc,
 }
 
 #[derive(Debug, Clone, PartialEq)]

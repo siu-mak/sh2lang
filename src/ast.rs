@@ -59,6 +59,9 @@ pub enum Expr {
     Uid,
     Ppid,
     Pwd,
+    SelfPid,
+    Argv0,
+    Argc,
 }
 
 #[derive(Debug, Clone, PartialEq)]

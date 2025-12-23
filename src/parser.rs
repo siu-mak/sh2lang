@@ -654,6 +654,9 @@ fn is_expr_start(t: Option<&Token>) -> bool {
            | Token::Uid
            | Token::Ppid
            | Token::Pwd
+           | Token::SelfPid
+           | Token::Argv0
+           | Token::Argc
            | Token::True
            | Token::False
            | Token::Number(_)
@@ -918,6 +921,24 @@ fn parse_primary(tokens: &[Token], i: &mut usize) -> Expr {
             expect(tokens, i, Token::LParen);
             expect(tokens, i, Token::RParen);
             Expr::Pwd
+        }
+        Token::SelfPid => {
+            *i += 1;
+            expect(tokens, i, Token::LParen);
+            expect(tokens, i, Token::RParen);
+            Expr::SelfPid
+        }
+        Token::Argv0 => {
+            *i += 1;
+            expect(tokens, i, Token::LParen);
+            expect(tokens, i, Token::RParen);
+            Expr::Argv0
+        }
+        Token::Argc => {
+            *i += 1;
+            expect(tokens, i, Token::LParen);
+            expect(tokens, i, Token::RParen);
+            Expr::Argc
         }
         Token::Count => {
             *i += 1;
