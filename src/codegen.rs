@@ -28,7 +28,9 @@ fn emit_dq(s: &str) -> String {
     for ch in s.chars() {
         match ch {
             '"' => out.push_str("\\\""),
-            // We do not escape backslashes here; see implementation details
+            '$' => out.push_str("\\$"),
+            '\\' => out.push_str("\\\\"),
+            '`' => out.push_str("\\`"),
             _ => out.push(ch),
         }
     }
@@ -423,14 +425,24 @@ fn emit_cmd(cmd: &Cmd, out: &mut String, indent: usize) {
         }
         Cmd::Return(val) => {
              if let Some(v) = val {
-                 out.push_str(&format!("{pad}return {}\n", emit_val(v)));
+                 if is_boolean_expr(v) {
+                     let cond_str = emit_cond(v);
+                     out.push_str(&format!("{pad}if {}; then return 0; else return 1; fi\n", cond_str));
+                 } else {
+                     out.push_str(&format!("{pad}return {}\n", emit_val(v)));
+                 }
              } else {
                  out.push_str(&format!("{pad}return\n"));
              }
         }
         Cmd::Exit(val) => {
              if let Some(v) = val {
-                 out.push_str(&format!("{pad}exit {}\n", emit_val(v)));
+                 if is_boolean_expr(v) {
+                     let cond_str = emit_cond(v);
+                     out.push_str(&format!("{pad}if {}; then exit 0; else exit 1; fi\n", cond_str));
+                 } else {
+                     out.push_str(&format!("{pad}exit {}\n", emit_val(v)));
+                 }
              } else {
                  out.push_str(&format!("{pad}exit\n"));
              }
@@ -667,4 +679,8 @@ fn emit_cmd(cmd: &Cmd, out: &mut String, indent: usize) {
             out.push('\n');
         }
     }
+}
+
+fn is_boolean_expr(v: &Val) -> bool {
+    matches!(v, Val::Compare { .. } | Val::And(..) | Val::Or(..) | Val::Not(..) | Val::Exists(..) | Val::IsDir(..) | Val::IsFile(..) | Val::Bool(..))
 }

@@ -177,8 +177,14 @@ pub fn lex(input: &str) -> Vec<Token> {
                     if ch == '\\' {
                         chars.next(); // consume backslash
                         if let Some(&escaped) = chars.peek() {
-                            s.push(escaped);
-                            chars.next();
+                            if escaped == '$' {
+                                s.push('\\');
+                                s.push('$');
+                                chars.next();
+                            } else {
+                                s.push(escaped);
+                                chars.next();
+                            }
                         }
                     } else {
                         s.push(ch);

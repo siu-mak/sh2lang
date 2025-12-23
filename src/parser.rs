@@ -659,6 +659,7 @@ fn is_expr_start(t: Option<&Token>) -> bool {
            | Token::False
            | Token::Number(_)
            | Token::Minus
+           | Token::Bang
         )
     )
 }
@@ -807,7 +808,7 @@ fn parse_primary(tokens: &[Token], i: &mut usize) -> Expr {
         }
         Token::String(s) => {
             *i += 1;
-            Expr::Literal(s.clone())
+            parse_interpolated_string(s)
         }
         Token::Ident(s) => {
             *i += 1;
@@ -1061,5 +1062,73 @@ fn parse_redirect_target(tokens: &[Token], i: &mut usize) -> crate::ast::Redirec
         crate::ast::RedirectTarget::Stderr
     } else {
         panic!("Expected file(...), stdout, or stderr as redirect target");
+    }
+}
+
+fn parse_interpolated_string(raw: &str) -> Expr {
+    let mut parts: Vec<Expr> = Vec::new();
+    let mut i = 0;
+    // We treat the string as bytes to index standard interpolation logic
+    let mut buf = String::new();
+
+    while i < raw.len() {
+        // handle escaped dollar: "\$"
+        if raw[i..].starts_with("\\$") {
+            buf.push('$');
+            i += 2;
+            continue;
+        }
+
+        // handle interpolation "${...}"
+        if raw[i..].starts_with("${") {
+            // flush buf
+            if !buf.is_empty() {
+                parts.push(Expr::Literal(std::mem::take(&mut buf)));
+            }
+            // parse ident until '}'
+            let start = i + 2;
+            if let Some(end_rel) = raw[start..].find('}') {
+                let end = start + end_rel;
+                let ident = &raw[start..end];
+                if is_valid_ident(ident) {
+                    parts.push(Expr::Var(ident.to_string()));
+                    i = end + 1;
+                    continue;
+                }
+            }
+            // if malformed or not an identifier, treat '${' as literal characters
+            // BUT wait, we failed to match "${ident}", so just consume '$' and continue loop
+            buf.push('$');
+            i += 1;
+            continue;
+        }
+
+        // default: copy next char
+        let ch = raw[i..].chars().next().unwrap();
+        buf.push(ch);
+        i += ch.len_utf8();
+    }
+
+    if !buf.is_empty() { parts.push(Expr::Literal(buf)); }
+    if parts.is_empty() { return Expr::Literal(String::new()); }
+
+    // fold into Concat
+    let mut expr = parts[0].clone();
+    for p in parts.into_iter().skip(1) {
+        expr = Expr::Concat(Box::new(expr), Box::new(p));
+    }
+    expr
+}
+
+fn is_valid_ident(s: &str) -> bool {
+    let mut chars = s.chars();
+    if let Some(first) = chars.next() {
+        if !first.is_alphabetic() && first != '_' { return false; }
+        for c in chars {
+            if !c.is_alphanumeric() && c != '_' { return false; }
+        }
+        true
+    } else {
+        false
     }
 }
