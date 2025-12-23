@@ -1,0 +1,17 @@
+func main() {
+  let xs = ["a","b","c"]
+
+  if count(xs) == 3 {
+    print("count_ok")
+  } else {
+    print("count_bad")
+  }
+
+  if index(xs, 1) == "b" {
+    print("index_ok")
+  } else {
+    print("index_bad")
+  }
+
+  print(join(xs, "-"))
+}

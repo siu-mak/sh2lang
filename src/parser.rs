@@ -692,7 +692,7 @@ fn parse_and(tokens: &[Token], i: &mut usize) -> Expr {
 }
 
 fn parse_comparison(tokens: &[Token], i: &mut usize) -> Expr {
-    let left = parse_sum(tokens, i);
+    let left = parse_concat(tokens, i);
 
     if let Some(token) = tokens.get(*i) {
         let op = match token {
@@ -707,7 +707,7 @@ fn parse_comparison(tokens: &[Token], i: &mut usize) -> Expr {
 
         if let Some(op) = op {
             *i += 1;
-            let right = parse_sum(tokens, i);
+            let right = parse_concat(tokens, i);
             return Expr::Compare {
                 left: Box::new(left),
                 op,
@@ -716,6 +716,16 @@ fn parse_comparison(tokens: &[Token], i: &mut usize) -> Expr {
         }
     }
 
+    left
+}
+
+fn parse_concat(tokens: &[Token], i: &mut usize) -> Expr {
+    let mut left = parse_sum(tokens, i);
+    while matches!(tokens.get(*i), Some(Token::Amp)) {
+        *i += 1;
+        let right = parse_sum(tokens, i);
+        left = Expr::Concat(Box::new(left), Box::new(right));
+    }
     left
 }
 

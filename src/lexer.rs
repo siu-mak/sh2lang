@@ -16,6 +16,7 @@ pub enum Token {
     Pipe,
     OrOr,
     AndAnd,
+    Amp,
     Bang,
     Case,
     Minus,
@@ -146,7 +147,7 @@ pub fn lex(input: &str) -> Vec<Token> {
                      tokens.push(Token::AndAnd);
                      chars.next();
                  } else {
-                     panic!("Unexpected character '&'");
+                     tokens.push(Token::Amp);
                  }
             }
             '|' => {

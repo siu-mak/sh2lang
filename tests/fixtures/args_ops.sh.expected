@@ -1,0 +1,29 @@
+show() {
+  if [ "$#" = "3" ]; then
+    echo "argc_ok"
+  else
+    echo "argc_bad"
+  fi
+  if [ "$2" = "y" ]; then
+    echo "arg_ok"
+  else
+    echo "arg_bad"
+  fi
+  if [ "$( arr=("$@"); idx=$(( 0 )); printf "%s" "${arr[idx]}" )" = "x" ]; then
+    echo "index_ok"
+  else
+    echo "index_bad"
+  fi
+  echo "$( IFS=","; printf "%s" "$*" )"
+  if [ "$#" = "3" ]; then
+    echo "count_ok"
+  else
+    echo "count_bad"
+  fi
+}
+
+main() {
+  show "x" "y" "z"
+}
+
+main "$@"

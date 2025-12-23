@@ -1,0 +1,5 @@
+func main() {
+  let x = "a" & "b"
+  print(x)
+  run("echo", "c" & "d")
+}

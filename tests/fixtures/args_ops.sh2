@@ -1,0 +1,15 @@
+func show() {
+  if argc() == 3 { print("argc_ok") } else { print("argc_bad") }
+
+  if arg(2) == "y" { print("arg_ok") } else { print("arg_bad") }
+
+  if index(args, 0) == "x" { print("index_ok") } else { print("index_bad") }
+
+  print(join(args, ","))
+
+  if count(args) == 3 { print("count_ok") } else { print("count_bad") }
+}
+
+func main() {
+  show("x","y","z")
+}
