@@ -1,0 +1,25 @@
+test() {
+  echo "$#"
+  echo "$1"
+  echo "$3"
+  echo "$( arr=("$@"); idx=$(( 0 )); printf "%s" "${arr[idx]}" )"
+  echo "$( arr=("$@"); idx=$(( 2 )); printf "%s" "${arr[idx]}" )"
+  echo "$( IFS="-"; printf "%s" "$*" )"
+  echo "$#"
+  for a in "$@"; do
+    echo "$a"
+  done
+}
+
+main() {
+  xs=("a" "b" "c")
+  echo "${#xs[@]}"
+  echo "${xs[1]}"
+  echo "$( IFS="-"; printf "%s" "${xs[*]}" )"
+  for item in "${xs[@]}"; do
+    echo "$item"
+  done
+  test "x" "y" "z"
+}
+
+main "$@"
