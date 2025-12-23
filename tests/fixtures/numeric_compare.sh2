@@ -1,0 +1,17 @@
+func main() {
+  if 1 < 2 {
+    print("lt_ok")
+  } else { print("lt_bad") }
+
+  if 2 <= 2 {
+    print("le_ok")
+  } else { print("le_bad") }
+
+  if 3 > 2 {
+    print("gt_ok")
+  } else { print("gt_bad") }
+
+  if 3 >= 3 {
+    print("ge_ok")
+  } else { print("ge_bad") }
+}

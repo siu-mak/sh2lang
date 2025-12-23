@@ -1,0 +1,13 @@
+func main() {
+  if true {
+    print("t_ok")
+  } else {
+    print("t_bad")
+  }
+
+  if false {
+    print("f_bad")
+  } else {
+    print("f_ok")
+  }
+}
