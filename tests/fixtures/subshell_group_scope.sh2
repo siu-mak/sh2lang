@@ -1,0 +1,13 @@
+func main() {
+  let x = "0"
+
+  subshell {
+    let x = "1"
+  }
+  print(x)   # should still be 0
+
+  group {
+    let x = "2"
+  }
+  print(x)   # should now be 2
+}
