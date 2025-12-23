@@ -355,5 +355,8 @@ fn lower_expr(e: ast::Expr) -> ir::Val {
         ast::Expr::Status => ir::Val::Status,
         ast::Expr::Pid => ir::Val::Pid,
         ast::Expr::Env(inner) => ir::Val::Env(Box::new(lower_expr(*inner))),
+        ast::Expr::Uid => ir::Val::Uid,
+        ast::Expr::Ppid => ir::Val::Ppid,
+        ast::Expr::Pwd => ir::Val::Pwd,
     }
 }

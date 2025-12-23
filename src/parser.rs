@@ -651,6 +651,9 @@ fn is_expr_start(t: Option<&Token>) -> bool {
            | Token::Status
            | Token::Pid
            | Token::Count
+           | Token::Uid
+           | Token::Ppid
+           | Token::Pwd
            | Token::True
            | Token::False
            | Token::Number(_)
@@ -897,6 +900,24 @@ fn parse_primary(tokens: &[Token], i: &mut usize) -> Expr {
             let name = parse_expr(tokens, i);
             expect(tokens, i, Token::RParen);
             Expr::Env(Box::new(name))
+        }
+        Token::Uid => {
+            *i += 1;
+            expect(tokens, i, Token::LParen);
+            expect(tokens, i, Token::RParen);
+            Expr::Uid
+        }
+        Token::Ppid => {
+            *i += 1;
+            expect(tokens, i, Token::LParen);
+            expect(tokens, i, Token::RParen);
+            Expr::Ppid
+        }
+        Token::Pwd => {
+            *i += 1;
+            expect(tokens, i, Token::LParen);
+            expect(tokens, i, Token::RParen);
+            Expr::Pwd
         }
         Token::Count => {
             *i += 1;

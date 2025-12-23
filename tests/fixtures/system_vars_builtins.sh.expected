@@ -1,0 +1,19 @@
+main() {
+  if [ "$UID" = "${UID}" ]; then
+    echo "uid_ok"
+  else
+    echo "uid_bad"
+  fi
+  if [ "$PPID" = "${PPID}" ]; then
+    echo "ppid_ok"
+  else
+    echo "ppid_bad"
+  fi
+  if [ "$PWD" = "${PWD}" ]; then
+    echo "pwd_ok"
+  else
+    echo "pwd_bad"
+  fi
+}
+
+main "$@"

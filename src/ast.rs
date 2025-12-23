@@ -56,6 +56,9 @@ pub enum Expr {
     Status,
     Pid,
     Env(Box<Expr>),
+    Uid,
+    Ppid,
+    Pwd,
 }
 
 #[derive(Debug, Clone, PartialEq)]

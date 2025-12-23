@@ -1,0 +1,19 @@
+func main() {
+    if uid() == env("UID") {
+        print("uid_ok")
+    } else {
+        print("uid_bad")
+    }
+
+    if ppid() == env("PPID") {
+        print("ppid_ok")
+    } else {
+        print("ppid_bad")
+    }
+
+    if pwd() == env("PWD") {
+        print("pwd_ok")
+    } else {
+        print("pwd_bad")
+    }
+}
