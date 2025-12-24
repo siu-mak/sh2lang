@@ -1,0 +1,18 @@
+check() {
+  local path="${1}"
+  if [ -s "$path" ]; then return 0; else return 1; fi
+}
+
+main() {
+  "sh" "-c" "rm -f empty nonempty; : > empty; echo hi > nonempty"
+  check "nonempty"
+  if [ "$?" = "0" ]; then
+    echo "nonempty: ok"
+  fi
+  check "empty"
+  if [ "$?" = "1" ]; then
+    echo "empty: ok"
+  fi
+}
+
+main "$@"

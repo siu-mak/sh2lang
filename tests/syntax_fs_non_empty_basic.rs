@@ -15,6 +15,18 @@ fn parse_fs_non_empty_basic() {
             } else { panic!("Expected string literal"); }
         } else { panic!("Expected IsNonEmpty"); }
     } else { panic!("Expected If"); }
+    
+    // Check later if condition: !is_non_empty("empty")
+    // The 2nd if stmt is index 2 (run, if, if)
+    if let Stmt::If { cond, .. } = &func.body[2] {
+         if let Expr::Not(inner) = cond {
+             if let Expr::IsNonEmpty(path) = &**inner {
+                  if let Expr::Literal(s) = &**path {
+                       assert_eq!(s, "empty");
+                  } else { panic!("Expected 'empty' literal"); }
+             } else { panic!("Expected IsNonEmpty inside Not"); }
+         } else { panic!("Expected Not"); }
+    }
 }
 
 #[test]

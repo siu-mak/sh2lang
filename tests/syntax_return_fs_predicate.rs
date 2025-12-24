@@ -1,5 +1,31 @@
 mod common;
 use common::*;
+use sh2c::ast::{Stmt, Expr};
+
+#[test]
+fn parse_return_fs_predicate() {
+    let program = parse_fixture("return_fs_predicate");
+    let check_func = &program.functions[0];
+    assert_eq!(check_func.name, "check");
+    // return(is_non_empty(path))
+    if let Stmt::Return(Some(expr)) = &check_func.body[0] {
+        if let Expr::IsNonEmpty(path) = expr {
+            match &**path {
+                Expr::Var(name) => assert_eq!(name, "path"),
+                _ => panic!("Expected path var"),
+            }
+        } else {
+            panic!("Expected IsNonEmpty");
+        }
+    } else {
+        panic!("Expected ReturnStmt");
+    }
+}
+
+#[test]
+fn codegen_return_fs_predicate() {
+    assert_codegen_matches_snapshot("return_fs_predicate");
+}
 
 #[test]
 fn exec_return_fs_predicate() {
