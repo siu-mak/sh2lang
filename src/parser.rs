@@ -1123,9 +1123,9 @@ fn parse_interpolated_string(raw: &str) -> Expr {
 fn is_valid_ident(s: &str) -> bool {
     let mut chars = s.chars();
     if let Some(first) = chars.next() {
-        if !first.is_alphabetic() && first != '_' { return false; }
+        if !first.is_ascii_alphabetic() && first != '_' { return false; }
         for c in chars {
-            if !c.is_alphanumeric() && c != '_' { return false; }
+            if !c.is_ascii_alphanumeric() && c != '_' { return false; }
         }
         true
     } else {

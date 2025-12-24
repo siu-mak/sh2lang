@@ -1,0 +1,7 @@
+main() {
+  name="world"
+  echo "literal: \${name}"
+  echo "dollar: \$"
+}
+
+main "$@"
