@@ -1,0 +1,8 @@
+main() {
+  {
+    "sh" "-c" "echo hi"
+  } &
+  wait
+}
+
+main "$@"

@@ -1,0 +1,4 @@
+func main() {
+  spawn { run("sh", "-c", "echo hi") }
+  wait()
+}

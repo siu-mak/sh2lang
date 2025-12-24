@@ -368,9 +368,21 @@ fn parse_stmt_atom(tokens: &[Token], i: &mut usize) -> Stmt {
                          _ => panic!("Expected identifier for env binding"),
                      };
                      *i += 1;
-                     expect(tokens, i, Token::Equals);
+                     
+                     // Expect Colon or Equals
+                     if matches!(tokens.get(*i), Some(Token::Colon) | Some(Token::Equals)) {
+                         *i += 1;
+                     } else {
+                         panic!("Expected : or = after env key");
+                     }
+
                      let val = parse_expr(tokens, i);
                      bindings.push((name, val));
+                     
+                     // Consume comma if present
+                     if matches!(tokens.get(*i), Some(Token::Comma)) {
+                         *i += 1;
+                     }
                 }
                 expect(tokens, i, Token::RBrace);
 
@@ -458,8 +470,18 @@ fn parse_stmt_atom(tokens: &[Token], i: &mut usize) -> Stmt {
 
         Token::Spawn => {
             *i += 1;
-            let stmt = parse_stmt(tokens, i);
-            Stmt::Spawn { stmt: Box::new(stmt) }
+            if matches!(tokens.get(*i), Some(Token::LBrace)) {
+                 expect(tokens, i, Token::LBrace);
+                 let mut body = Vec::new();
+                 while !matches!(tokens[*i], Token::RBrace) {
+                     body.push(parse_stmt(tokens, i));
+                 }
+                 expect(tokens, i, Token::RBrace);
+                 Stmt::Spawn { stmt: Box::new(Stmt::Group { body }) }
+            } else {
+                 let stmt = parse_stmt(tokens, i);
+                 Stmt::Spawn { stmt: Box::new(stmt) }
+            }
         }
 
         Token::Wait => {

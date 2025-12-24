@@ -1,0 +1,9 @@
+main() {
+  (
+    FOO="bar"
+    BAZ="qux"
+    echo "$FOO"":""$BAZ"
+  )
+}
+
+main "$@"
