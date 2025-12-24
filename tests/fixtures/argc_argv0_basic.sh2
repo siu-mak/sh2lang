@@ -1,0 +1,8 @@
+func f(a, b) {
+  if argc() == 2 { print("argc_ok") } else { print("argc_bad") }
+  if len(argv0()) > 0 { print("argv0_ok") } else { print("argv0_bad") }
+}
+
+func main() {
+  f("x", "y")
+}

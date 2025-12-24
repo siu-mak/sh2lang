@@ -1,0 +1,7 @@
+func main() {
+  if uid() == env("UID") && ppid() == env("PPID") && pwd() == env("PWD") {
+    print("ok")
+  } else {
+    print("bad")
+  }
+}

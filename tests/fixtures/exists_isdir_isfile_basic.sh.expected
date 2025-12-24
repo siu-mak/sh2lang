@@ -1,0 +1,10 @@
+main() {
+  "sh" "-c" "rm -rf tdir tfile; mkdir tdir; echo hi > tfile"
+  if [ -e "tfile" ] && [ -f "tfile" ] && [ -d "tdir" ]; then
+    echo "ok"
+  else
+    echo "bad"
+  fi
+}
+
+main "$@"
