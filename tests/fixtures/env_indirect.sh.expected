@@ -1,7 +1,7 @@
 main() {
   k="FOO"
   (
-    FOO="bar"
+    export FOO="bar"
     echo "${!k}"
   )
 }

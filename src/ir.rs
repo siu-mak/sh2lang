@@ -37,6 +37,7 @@ pub enum Val {
     Status,
     Pid,
     Env(Box<Val>),
+    EnvDot(String),
     Uid,
     Ppid,
     Pwd,

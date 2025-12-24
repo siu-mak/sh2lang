@@ -1,0 +1,8 @@
+func main() {
+  run("sh", "-c", "rm -f exe noexe; echo 'echo hi' > exe; chmod +x exe; echo 'echo hi' > noexe; chmod 644 noexe")
+  if is_exec("exe") && !is_exec("noexe") {
+    print("ok")
+  } else {
+    print("bad")
+  }
+}

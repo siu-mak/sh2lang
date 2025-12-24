@@ -1,7 +1,14 @@
-main() {
-  export FOO="bar"
+shadow() {
+  local FOO="${1}"
   echo "$( ( typeset +x FOO; printenv FOO ) 2>/dev/null || printenv FOO 2>/dev/null || true )"
-  echo "${FOO}"
+  echo "$FOO"
+}
+
+main() {
+  (
+    export FOO="outer"
+    shadow "local"
+  )
 }
 
 main "$@"

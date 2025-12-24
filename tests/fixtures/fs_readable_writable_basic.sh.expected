@@ -1,0 +1,10 @@
+main() {
+  "sh" "-c" "rm -f ro rw; : > ro; : > rw; chmod 444 ro; chmod 644 rw"
+  if [ -r "ro" ] && ! [ -w "ro" ] && [ -r "rw" ] && [ -w "rw" ]; then
+    echo "ok"
+  else
+    echo "bad"
+  fi
+}
+
+main "$@"

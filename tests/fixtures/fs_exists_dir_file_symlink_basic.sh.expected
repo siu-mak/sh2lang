@@ -1,0 +1,10 @@
+main() {
+  "sh" "-c" "rm -rf tmp; mkdir -p tmp/dir; : > tmp/file; ln -s file tmp/link"
+  if [ -e "tmp/file" ] && [ -f "tmp/file" ] && [ -d "tmp/dir" ] && [ -L "tmp/link" ]; then
+    echo "ok"
+  else
+    echo "bad"
+  fi
+}
+
+main "$@"

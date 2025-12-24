@@ -1,6 +1,6 @@
 main() {
   export FOO="bar"
-  echo "$FOO"
+  echo "$( ( typeset +x FOO; printenv FOO ) 2>/dev/null || printenv FOO 2>/dev/null || true )"
   "sh" "-c" "echo ""$FOO"
 }
 

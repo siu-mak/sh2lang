@@ -1,0 +1,8 @@
+func main() {
+  run("sh", "-c", "rm -f ro rw; : > ro; : > rw; chmod 444 ro; chmod 644 rw")
+  if is_readable("ro") && !is_writable("ro") && is_readable("rw") && is_writable("rw") {
+    print("ok")
+  } else {
+    print("bad")
+  }
+}

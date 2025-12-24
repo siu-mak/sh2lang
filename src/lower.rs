@@ -408,6 +408,6 @@ fn lower_expr(e: ast::Expr) -> ir::Val {
         ast::Expr::SelfPid => ir::Val::SelfPid,
         ast::Expr::Argv0 => ir::Val::Argv0,
         ast::Expr::Argc => ir::Val::Argc,
-        ast::Expr::EnvDot(name) => ir::Val::Var(name),
+        ast::Expr::EnvDot(name) => ir::Val::EnvDot(name),
     }
 }

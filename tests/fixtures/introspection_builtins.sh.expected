@@ -1,6 +1,6 @@
 main() {
   (
-    FOO="bar"
+    export FOO="bar"
     if [ "${FOO}" = "bar" ]; then
       echo "env_ok"
     else

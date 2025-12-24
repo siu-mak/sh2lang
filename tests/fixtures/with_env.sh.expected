@@ -1,6 +1,6 @@
 main() {
   (
-    FOO="bar"
+    export FOO="bar"
     echo "$FOO"
   )
 }

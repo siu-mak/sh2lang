@@ -111,6 +111,7 @@ fn emit_val(v: &Val) -> String {
             Val::Var(name) => format!("\"${{!{}}}\"", name),
             _ => panic!("env(...) requires a string literal name or variable name"),
         },
+        Val::EnvDot(name) => format!("\"$( ( typeset +x {0}; printenv {0} ) 2>/dev/null || printenv {0} 2>/dev/null || true )\"", name),
         Val::Uid => "\"$UID\"".to_string(),
         Val::Ppid => "\"$PPID\"".to_string(),
         Val::Pwd => "\"$PWD\"".to_string(),
@@ -154,6 +155,7 @@ fn emit_word(v: &Val) -> String {
             Val::Var(name) => format!("\"${{!{}}}\"", name),
             _ => panic!("env(...) requires a string literal name or variable name"),
         },
+        Val::EnvDot(name) => format!("\"$( ( typeset +x {0}; printenv {0} ) 2>/dev/null || printenv {0} 2>/dev/null || true )\"", name),
         Val::Uid => "\"$UID\"".to_string(),
         Val::Ppid => "\"$PPID\"".to_string(),
         Val::Pwd => "\"$PWD\"".to_string(),
@@ -483,7 +485,7 @@ fn emit_cmd(cmd: &Cmd, out: &mut String, indent: usize) {
                 if let Cmd::Exec(args) = &body[0] {
                     out.push_str(&pad);
                     for (k, v) in bindings {
-                        out.push_str(&format!("{}={} ", k, emit_val(v)));
+                        out.push_str(&format!("export {}={} ", k, emit_val(v)));
                     }
                     let shell_args: Vec<String> = args.iter().map(emit_word).collect();
                     out.push_str(&shell_args.join(" "));
@@ -495,7 +497,7 @@ fn emit_cmd(cmd: &Cmd, out: &mut String, indent: usize) {
             // General case: Subshell
             out.push_str(&format!("{pad}(\n"));
             for (k, v) in bindings {
-                out.push_str(&format!("{}  {}={}\n", pad, k, emit_val(v)));
+                out.push_str(&format!("{}  export {}={}\n", pad, k, emit_val(v)));
             }
             for cmd in body {
                 emit_cmd(cmd, out, indent + 2);

@@ -1,0 +1,10 @@
+func shadow(FOO) {
+  print(env.FOO)
+  print(FOO)
+}
+
+func main() {
+  with env { FOO: "outer" } {
+    shadow("local")
+  }
+}
