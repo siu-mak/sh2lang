@@ -1,0 +1,5 @@
+func main() {
+  set env.FOO = "bar"
+  print(env.FOO)
+  print(env("FOO"))
+}

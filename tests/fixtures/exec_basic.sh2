@@ -1,3 +1,5 @@
 func main() {
-  exec("echo", "hi")
+  print("before")
+  exec("sh", "-c", "echo execed")
+  print("after")
 }
