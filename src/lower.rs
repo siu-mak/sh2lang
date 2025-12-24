@@ -354,6 +354,18 @@ fn lower_expr(e: ast::Expr) -> ir::Val {
         ast::Expr::IsFile(path) => {
             ir::Val::IsFile(Box::new(lower_expr(*path)))
         }
+        ast::Expr::IsSymlink(path) => {
+            ir::Val::IsSymlink(Box::new(lower_expr(*path)))
+        }
+        ast::Expr::IsExec(path) => {
+            ir::Val::IsExec(Box::new(lower_expr(*path)))
+        }
+        ast::Expr::IsReadable(path) => {
+            ir::Val::IsReadable(Box::new(lower_expr(*path)))
+        }
+        ast::Expr::IsWritable(path) => {
+            ir::Val::IsWritable(Box::new(lower_expr(*path)))
+        }
         ast::Expr::Len(expr) => {
             ir::Val::Len(Box::new(lower_expr(*expr)))
         }

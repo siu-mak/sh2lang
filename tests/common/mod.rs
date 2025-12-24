@@ -41,13 +41,23 @@ fn write_temp_script(prefix: &str, bash: &str) -> std::path::PathBuf {
 }
 
 pub fn run_bash_script(bash: &str, env: &[(&str, &str)], args: &[&str]) -> (String, String, i32) {
-    let path = write_temp_script("sh2_test", bash);
+    let pid = std::process::id();
+    let nanos = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_nanos();
+    let dir_name = format!("sh2_test_{}_{}", pid, nanos);
+    let mut temp_dir = std::env::temp_dir();
+    temp_dir.push(dir_name);
+    
+    fs::create_dir(&temp_dir).expect("Failed to create temp dir");
+
+    let script_path = temp_dir.join("script.sh");
+    fs::write(&script_path, bash).expect("Failed to write temp script");
     
     let mut cmd = Command::new("bash");
+    cmd.current_dir(&temp_dir);
     for (k, v) in env {
         cmd.env(k, v);
     }
-    cmd.arg(&path);
+    cmd.arg(&script_path);
     for arg in args {
         cmd.arg(arg);
     }
@@ -55,7 +65,7 @@ pub fn run_bash_script(bash: &str, env: &[(&str, &str)], args: &[&str]) -> (Stri
     let output = cmd.output().expect("Failed to execute bash");
     
     // Best-effort cleanup
-    let _ = fs::remove_file(&path);
+    let _ = fs::remove_dir_all(&temp_dir);
 
     let stdout = String::from_utf8_lossy(&output.stdout).replace("\r\n", "\n");
     let stderr = String::from_utf8_lossy(&output.stderr).replace("\r\n", "\n");

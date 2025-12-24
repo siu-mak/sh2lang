@@ -118,7 +118,7 @@ fn emit_val(v: &Val) -> String {
         Val::Argv0 => "\"$0\"".to_string(),
         Val::Argc => "\"$#\"".to_string(),
         Val::Arith { .. } => format!("\"$(( {} ))\"", emit_arith_expr(v)),
-        Val::Compare { .. } | Val::And(..) | Val::Or(..) | Val::Not(..) | Val::Exists(..) | Val::IsDir(..) | Val::IsFile(..) | Val::List(..) | Val::Args => panic!("Cannot emit boolean/list/args value as string"),
+        Val::Compare { .. } | Val::And(..) | Val::Or(..) | Val::Not(..) | Val::Exists(..) | Val::IsDir(..) | Val::IsFile(..) | Val::IsSymlink(..) | Val::IsExec(..) | Val::IsReadable(..) | Val::IsWritable(..) | Val::List(..) | Val::Args => panic!("Cannot emit boolean/list/args value as string"),
     }
 }
 
@@ -162,7 +162,7 @@ fn emit_word(v: &Val) -> String {
         Val::Argc => "\"$#\"".to_string(),
         Val::Arith { .. } => format!("\"$(( {} ))\"", emit_arith_expr(v)),
         Val::Args => "\"$@\"".into(),
-        Val::Compare { .. } | Val::And(..) | Val::Or(..) | Val::Not(..) | Val::Exists(..) | Val::IsDir(..) | Val::IsFile(..) | Val::List(..) => panic!("Cannot emit boolean/list value as command word"),
+        Val::Compare { .. } | Val::And(..) | Val::Or(..) | Val::Not(..) | Val::Exists(..) | Val::IsDir(..) | Val::IsFile(..) | Val::IsSymlink(..) | Val::IsExec(..) | Val::IsReadable(..) | Val::IsWritable(..) | Val::List(..) => panic!("Cannot emit boolean/list value as command word"),
     }
 }
 
@@ -227,6 +227,18 @@ fn emit_cond(v: &Val) -> String {
         }
         Val::IsFile(path) => {
             format!("[ -f {} ]", emit_val(path))
+        }
+        Val::IsSymlink(path) => {
+            format!("[ -L {} ]", emit_val(path))
+        }
+        Val::IsExec(path) => {
+            format!("[ -x {} ]", emit_val(path))
+        }
+        Val::IsReadable(path) => {
+            format!("[ -r {} ]", emit_val(path))
+        }
+        Val::IsWritable(path) => {
+            format!("[ -w {} ]", emit_val(path))
         }
         Val::Bool(true) => "true".to_string(),
         Val::Bool(false) => "false".to_string(),

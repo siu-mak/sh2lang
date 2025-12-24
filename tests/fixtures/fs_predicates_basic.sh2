@@ -1,0 +1,8 @@
+func main() {
+  run("sh", "-c", "rm -rf tfile tlink; echo hi > tfile; chmod 600 tfile; chmod +x tfile; ln -s tfile tlink")
+  if is_symlink("tlink") && is_exec("tfile") && is_readable("tfile") && is_writable("tfile") {
+    print("ok")
+  } else {
+    print("bad")
+  }
+}

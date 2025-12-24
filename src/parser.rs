@@ -730,6 +730,10 @@ fn is_expr_start(t: Option<&Token>) -> bool {
            | Token::Exists
            | Token::IsDir
            | Token::IsFile
+           | Token::IsSymlink
+           | Token::IsExec
+           | Token::IsReadable
+           | Token::IsWritable
            | Token::Len
            | Token::Arg
            | Token::Index
@@ -950,6 +954,34 @@ fn parse_primary(tokens: &[Token], i: &mut usize) -> Expr {
             let path = parse_expr(tokens, i);
             expect(tokens, i, Token::RParen);
             Expr::IsFile(Box::new(path))
+        }
+        Token::IsSymlink => {
+            *i += 1;
+            expect(tokens, i, Token::LParen);
+            let path = parse_expr(tokens, i);
+            expect(tokens, i, Token::RParen);
+            Expr::IsSymlink(Box::new(path))
+        }
+        Token::IsExec => {
+            *i += 1;
+            expect(tokens, i, Token::LParen);
+            let path = parse_expr(tokens, i);
+            expect(tokens, i, Token::RParen);
+            Expr::IsExec(Box::new(path))
+        }
+        Token::IsReadable => {
+            *i += 1;
+            expect(tokens, i, Token::LParen);
+            let path = parse_expr(tokens, i);
+            expect(tokens, i, Token::RParen);
+            Expr::IsReadable(Box::new(path))
+        }
+        Token::IsWritable => {
+            *i += 1;
+            expect(tokens, i, Token::LParen);
+            let path = parse_expr(tokens, i);
+            expect(tokens, i, Token::RParen);
+            Expr::IsWritable(Box::new(path))
         }
         Token::Len => {
             *i += 1;
