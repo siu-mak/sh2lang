@@ -1102,6 +1102,31 @@ fn parse_interpolated_string(raw: &str) -> Expr {
             i += 1;
             continue;
         }
+        
+        // handle unbraced interpolation "$ident"
+        if raw[i..].starts_with("$") && raw.len() > i + 1 {
+            let next_char = raw[i+1..].chars().next().unwrap();
+            // check valid identifier start
+            if next_char.is_ascii_alphabetic() || next_char == '_' {
+                 // flush buf
+                 if !buf.is_empty() {
+                     parts.push(Expr::Literal(std::mem::take(&mut buf)));
+                 }
+                 
+                 let start = i + 1;
+                 let mut end = start;
+                 // consume ident chars
+                 for c in raw[start..].chars() {
+                     if !c.is_ascii_alphanumeric() && c != '_' { break; }
+                     end += c.len_utf8();
+                 }
+                 
+                 let ident = &raw[start..end];
+                 parts.push(Expr::Var(ident.to_string()));
+                 i = end;
+                 continue;
+            }
+        }
 
         // default: copy next char
         let ch = raw[i..].chars().next().unwrap();

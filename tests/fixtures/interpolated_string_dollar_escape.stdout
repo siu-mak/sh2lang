@@ -1,0 +1,2 @@
+literal: $name
+literal2: ${name}
