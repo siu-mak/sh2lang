@@ -1,0 +1,10 @@
+main() {
+  {
+    "sh" "-c" "sleep 0.05"
+  } &
+  p="$!"
+  wait "$p"
+  echo "done"
+}
+
+main "$@"

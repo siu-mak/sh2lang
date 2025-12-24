@@ -1,0 +1,8 @@
+func main() {
+  spawn { run("sh", "-c", "sleep 0.05") }
+  let p1 = pid()
+  spawn { run("sh", "-c", "sleep 0.05") }
+  let p2 = pid()
+  wait([p1, p2])
+  print("done")
+}

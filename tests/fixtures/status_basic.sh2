@@ -1,4 +1,4 @@
 func main() {
-    run("bash", "-c", "exit 5")
-    print(status())
+  run("sh", "-c", "exit 7")
+  print(status())
 }
