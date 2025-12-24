@@ -1,3 +1,3 @@
 func main() {
-    exec("echo", "hi")
+  exec("echo", "hi")
 }

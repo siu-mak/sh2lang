@@ -1,0 +1,7 @@
+main() {
+  echo "before"
+  exec "sh" "-c" "echo exec"
+  echo "after"
+}
+
+main "$@"

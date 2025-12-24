@@ -1,0 +1,5 @@
+func main() {
+  print("before")
+  exec("sh", "-c", "echo exec")
+  print("after")
+}
