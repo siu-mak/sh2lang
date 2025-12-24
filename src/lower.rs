@@ -278,6 +278,17 @@ fn lower_stmt(stmt: ast::Stmt, out: &mut Vec<ir::Cmd>) {
                  }
              }
         }
+        ast::Stmt::PipeBlocks { segments } => {
+            let mut lower_segments = Vec::new();
+            for seg in segments {
+                let mut lowered = Vec::new();
+                for s in seg {
+                    lower_stmt(s, &mut lowered);
+                }
+                lower_segments.push(lowered);
+            }
+            out.push(ir::Cmd::PipeBlocks(lower_segments));
+        }
     }
 }
 

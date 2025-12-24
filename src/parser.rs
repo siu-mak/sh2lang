@@ -649,6 +649,32 @@ fn parse_stmt_atom(tokens: &[Token], i: &mut usize) -> Stmt {
             Stmt::Set { target, value }
         }
 
+        Token::PipeKw => {
+            *i += 1;
+            let mut segments = Vec::new();
+            
+            // Helper to parse block
+            loop {
+                expect(tokens, i, Token::LBrace);
+                let mut body = Vec::new();
+                while !matches!(tokens[*i], Token::RBrace) {
+                    body.push(parse_stmt(tokens, i));
+                }
+                expect(tokens, i, Token::RBrace);
+                segments.push(body);
+
+                if matches!(tokens.get(*i), Some(Token::Pipe)) {
+                    *i += 1;
+                } else {
+                    break;
+                }
+            }
+            if segments.len() < 2 {
+                panic!("pipe requires at least two blocks: pipe {{..}} | {{..}}");
+            }
+            Stmt::PipeBlocks { segments }
+        }
+
         Token::Ident(name) => {
             *i += 1;
             expect(tokens, i, Token::LParen);

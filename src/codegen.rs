@@ -361,6 +361,21 @@ fn emit_cmd(cmd: &Cmd, out: &mut String, indent: usize) {
              out.push_str(&cmds.join(" | "));
              out.push('\n');
         }
+        Cmd::PipeBlocks(segments) => {
+            for (i, seg) in segments.iter().enumerate() {
+                out.push_str(&pad);
+                out.push_str("{\n");
+                for cmd in seg {
+                    emit_cmd(cmd, out, indent + 2);
+                }
+                out.push_str(&format!("{pad}}}"));
+                if i < segments.len() - 1 {
+                    out.push_str(" |\n");
+                } else {
+                    out.push('\n');
+                }
+            }
+        }
         Cmd::Case { expr, arms } => {
             out.push_str(&format!("{}case {} in\n", pad, emit_val(expr)));
             for (patterns, body) in arms {

@@ -72,6 +72,7 @@ pub enum Cmd {
         else_body: Vec<Cmd>,
     },
     Pipe(Vec<Vec<Val>>),
+    PipeBlocks(Vec<Vec<Cmd>>),
     Case {
         expr: Val,
         arms: Vec<(Vec<Pattern>, Vec<Cmd>)>,

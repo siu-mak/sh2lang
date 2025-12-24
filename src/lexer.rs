@@ -90,6 +90,7 @@ pub enum Token {
     Comma,
     Dot,
     Set,
+    PipeKw,
 }
 
 pub fn lex(input: &str) -> Vec<Token> {
@@ -275,6 +276,7 @@ pub fn lex(input: &str) -> Vec<Token> {
                     "false" => tokens.push(Token::False),
                     "is_dir" => tokens.push(Token::IsDir),
                     "is_file" => tokens.push(Token::IsFile),
+                    "pipe" => tokens.push(Token::PipeKw),
                     "len" => tokens.push(Token::Len),
                     _ => tokens.push(Token::Ident(ident)),
                 }

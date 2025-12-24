@@ -134,6 +134,7 @@ pub enum Stmt {
     Source { path: Expr },
     Exec(Vec<Expr>),
     Set { target: LValue, value: Expr },
+    PipeBlocks { segments: Vec<Vec<Stmt>> },
 }
 
 #[derive(Debug, Clone, PartialEq)]
