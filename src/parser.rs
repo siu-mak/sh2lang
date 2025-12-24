@@ -816,7 +816,12 @@ fn parse_primary(tokens: &[Token], i: &mut usize) -> Expr {
         }
         Token::Dollar => {
             *i += 1;
-            parse_command_substitution(tokens, i)
+            if let Some(Token::String(s)) = tokens.get(*i) {
+                *i += 1;
+                parse_brace_interpolated_string(s)
+            } else {
+                parse_command_substitution(tokens, i)
+            }
         }
         Token::LBracket => {
             *i += 1;
@@ -1138,6 +1143,58 @@ fn parse_interpolated_string(raw: &str) -> Expr {
     if parts.is_empty() { return Expr::Literal(String::new()); }
 
     // fold into Concat
+    let mut expr = parts[0].clone();
+    for p in parts.into_iter().skip(1) {
+        expr = Expr::Concat(Box::new(expr), Box::new(p));
+    }
+    expr
+}
+
+fn parse_brace_interpolated_string(raw: &str) -> Expr {
+    let mut parts: Vec<Expr> = Vec::new();
+    let mut i = 0;
+    let mut buf = String::new();
+
+    while i < raw.len() {
+        // handle escapes: \{, \}, \$
+        if raw[i..].starts_with("\\{") ||
+           raw[i..].starts_with("\\}") ||
+           raw[i..].starts_with("\\$") {
+             // prompt says "\$" is optional but consistent
+             // consumes backslash, pushes kept char
+             let ch = raw[i+1..].chars().next().unwrap();
+             buf.push(ch);
+             i += 1 + ch.len_utf8();
+             continue;
+        }
+
+        // handle interpolation "{ident}"
+        if raw[i..].starts_with("{") {
+             let start = i + 1;
+             if let Some(end_rel) = raw[start..].find('}') {
+                 let end = start + end_rel;
+                 let ident = &raw[start..end];
+                 if is_valid_ident(ident) {
+                      // flush buffer
+                      if !buf.is_empty() {
+                          parts.push(Expr::Literal(std::mem::take(&mut buf)));
+                      }
+                      parts.push(Expr::Var(ident.to_string()));
+                      i = end + 1;
+                      continue;
+                 }
+             }
+             // Fallthrough: treat '{' as literal
+        }
+
+        let ch = raw[i..].chars().next().unwrap();
+        buf.push(ch);
+        i += ch.len_utf8();
+    }
+
+    if !buf.is_empty() { parts.push(Expr::Literal(buf)); }
+    if parts.is_empty() { return Expr::Literal(String::new()); }
+
     let mut expr = parts[0].clone();
     for p in parts.into_iter().skip(1) {
         expr = Expr::Concat(Box::new(expr), Box::new(p));
