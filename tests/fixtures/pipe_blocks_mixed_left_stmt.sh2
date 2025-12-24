@@ -1,0 +1,3 @@
+func main() {
+  pipe run("sh", "-c", "echo a; echo b") | { run("grep", "b") }
+}

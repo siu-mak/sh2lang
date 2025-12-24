@@ -1,0 +1,11 @@
+main() {
+  {
+    echo "a"
+    echo "b"
+  } |
+  {
+    "grep" "b"
+  }
+}
+
+main "$@"

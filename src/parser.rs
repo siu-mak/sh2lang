@@ -112,9 +112,13 @@ fn parse_stmt_atom(tokens: &[Token], i: &mut usize) -> Stmt {
 
             // Additional run(...) segments separated by `|`
             while matches!(tokens.get(*i), Some(Token::Pipe)) {
-                *i += 1;
-                expect(tokens, i, Token::Run);
-                expect(tokens, i, Token::LParen);
+                if matches!(tokens.get(*i + 1), Some(Token::Run)) {
+                    *i += 1;
+                    expect(tokens, i, Token::Run);
+                    expect(tokens, i, Token::LParen);
+                } else {
+                    break;
+                }
                 
                 let mut next_args = Vec::new();
                 loop {
@@ -652,25 +656,38 @@ fn parse_stmt_atom(tokens: &[Token], i: &mut usize) -> Stmt {
         Token::PipeKw => {
             *i += 1;
             let mut segments = Vec::new();
-            
-            // Helper to parse block
-            loop {
-                expect(tokens, i, Token::LBrace);
-                let mut body = Vec::new();
-                while !matches!(tokens[*i], Token::RBrace) {
-                    body.push(parse_stmt(tokens, i));
-                }
-                expect(tokens, i, Token::RBrace);
-                segments.push(body);
 
-                if matches!(tokens.get(*i), Some(Token::Pipe)) {
-                    *i += 1;
+            // Helper to parse pipe segment
+            fn parse_pipe_segment(tokens: &[Token], i: &mut usize) -> Vec<Stmt> {
+                if matches!(tokens.get(*i), Some(Token::LBrace)) {
+                    // block segment: { ... }
+                    expect(tokens, i, Token::LBrace);
+                    let mut body = Vec::new();
+                    while !matches!(tokens[*i], Token::RBrace) {
+                        body.push(parse_stmt(tokens, i));
+                    }
+                    expect(tokens, i, Token::RBrace);
+                    body
                 } else {
-                    break;
+                    // single statement segment
+                    vec![parse_stmt_atom(tokens, i)]
                 }
             }
+            
+            segments.push(parse_pipe_segment(tokens, i));
+
+            // require at least one `|`
+            if !matches!(tokens.get(*i), Some(Token::Pipe)) {
+                panic!("pipe requires at least two segments: pipe <seg> | <seg>");
+            }
+
+            while matches!(tokens.get(*i), Some(Token::Pipe)) {
+                 *i += 1;
+                 segments.push(parse_pipe_segment(tokens, i));
+            }
+            
             if segments.len() < 2 {
-                panic!("pipe requires at least two blocks: pipe {{..}} | {{..}}");
+                 panic!("pipe requires at least two segments: pipe <seg> | <seg>");
             }
             Stmt::PipeBlocks { segments }
         }
