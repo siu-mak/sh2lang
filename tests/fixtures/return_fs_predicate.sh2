@@ -1,5 +1,5 @@
 func check(path) {
-  return(is_nonempty(path))
+  return(is_non_empty(path))
 }
 
 func main() {

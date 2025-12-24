@@ -1,0 +1,20 @@
+func main() {
+    run("sh", "-c", "rm -f empty nonempty; : > empty; echo hi > nonempty")
+    if is_non_empty("nonempty") {
+        print("nonempty_ok")
+    } else {
+        print("nonempty_bad")
+    }
+    
+    if !is_non_empty("empty") {
+        print("empty_ok")
+    } else {
+        print("empty_bad")
+    }
+    
+    if !is_non_empty("missing") {
+        print("missing_ok")
+    } else {
+        print("missing_bad")
+    }
+}

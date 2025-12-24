@@ -1,8 +1,8 @@
 main() {
   (
-    FOO="bar"
-    BAZ="qux"
-    echo "$FOO"":""$BAZ"
+    export FOO="bar"
+    export BAZ="qux"
+    echo "$( ( typeset +x FOO; printenv FOO ) 2>/dev/null || printenv FOO 2>/dev/null || true )"":""$( ( typeset +x BAZ; printenv BAZ ) 2>/dev/null || printenv BAZ 2>/dev/null || true )"
   )
 }
 

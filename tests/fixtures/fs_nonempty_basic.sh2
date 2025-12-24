@@ -1,8 +1,0 @@
-func main() {
-  run("sh", "-c", "rm -f empty nonempty; : > empty; echo hi > nonempty")
-  if !is_nonempty("empty") && is_nonempty("nonempty") {
-    print("ok")
-  } else {
-    print("bad")
-  }
-}
