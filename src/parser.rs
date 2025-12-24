@@ -734,6 +734,7 @@ fn is_expr_start(t: Option<&Token>) -> bool {
            | Token::IsExec
            | Token::IsReadable
            | Token::IsWritable
+           | Token::IsNonEmpty
            | Token::Len
            | Token::Arg
            | Token::Index
@@ -982,6 +983,13 @@ fn parse_primary(tokens: &[Token], i: &mut usize) -> Expr {
             let path = parse_expr(tokens, i);
             expect(tokens, i, Token::RParen);
             Expr::IsWritable(Box::new(path))
+        }
+        Token::IsNonEmpty => {
+            *i += 1;
+            expect(tokens, i, Token::LParen);
+            let path = parse_expr(tokens, i);
+            expect(tokens, i, Token::RParen);
+            Expr::IsNonEmpty(Box::new(path))
         }
         Token::Len => {
             *i += 1;

@@ -1,0 +1,16 @@
+func check(path) {
+  return(is_nonempty(path))
+}
+
+func main() {
+  run("sh", "-c", "rm -f empty nonempty; : > empty; echo hi > nonempty")
+  check("nonempty")
+  if status() == 0 {
+    print("nonempty: ok")
+  }
+
+  check("empty")
+  if status() == 1 {
+    print("empty: ok")
+  }
+}

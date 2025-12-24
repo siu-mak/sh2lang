@@ -65,6 +65,7 @@ pub enum Token {
     IsExec,
     IsReadable,
     IsWritable,
+    IsNonEmpty,
     Len,
     Source,
     Arg,
@@ -284,6 +285,8 @@ pub fn lex(input: &str) -> Vec<Token> {
                     "is_exec" => tokens.push(Token::IsExec),
                     "is_readable" => tokens.push(Token::IsReadable),
                     "is_writable" => tokens.push(Token::IsWritable),
+                    "is_nonempty" => tokens.push(Token::IsNonEmpty),
+
                     "pipe" => tokens.push(Token::PipeKw),
                     "len" => tokens.push(Token::Len),
                     _ => tokens.push(Token::Ident(ident)),

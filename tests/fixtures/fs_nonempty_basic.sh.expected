@@ -1,0 +1,10 @@
+main() {
+  "sh" "-c" "rm -f empty nonempty; : > empty; echo hi > nonempty"
+  if ! [ -s "empty" ] && [ -s "nonempty" ]; then
+    echo "ok"
+  else
+    echo "bad"
+  fi
+}
+
+main "$@"

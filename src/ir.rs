@@ -24,6 +24,7 @@ pub enum Val {
     IsExec(Box<Val>),
     IsReadable(Box<Val>),
     IsWritable(Box<Val>),
+    IsNonEmpty(Box<Val>),
     Len(Box<Val>),
     Arg(u32),
     Index { list: Box<Val>, index: Box<Val> },
