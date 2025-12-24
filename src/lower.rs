@@ -265,6 +265,19 @@ fn lower_stmt(stmt: ast::Stmt, out: &mut Vec<ir::Cmd>) {
         ast::Stmt::Exec(args) => {
             out.push(ir::Cmd::ExecReplace(args.into_iter().map(lower_expr).collect()));
         }
+        ast::Stmt::Set { target, value } => {
+             match target {
+                 ast::LValue::Var(name) => {
+                     out.push(ir::Cmd::Assign(name, lower_expr(value)));
+                 }
+                 ast::LValue::Env(name) => {
+                     out.push(ir::Cmd::Export {
+                         name,
+                         value: Some(lower_expr(value)),
+                     });
+                 }
+             }
+        }
     }
 }
 
@@ -369,5 +382,6 @@ fn lower_expr(e: ast::Expr) -> ir::Val {
         ast::Expr::SelfPid => ir::Val::SelfPid,
         ast::Expr::Argv0 => ir::Val::Argv0,
         ast::Expr::Argc => ir::Val::Argc,
+        ast::Expr::EnvDot(name) => ir::Val::Var(name),
     }
 }

@@ -600,8 +600,31 @@ fn parse_stmt_atom(tokens: &[Token], i: &mut usize) -> Stmt {
                 expect(tokens, i, Token::RBrace);
                 Stmt::ShBlock(lines)
             } else {
-                panic!("Expected parenthesis or brace after 'sh'");
+                panic!("Expected ( or {{ after sh");
             }
+        }
+
+        Token::Set => {
+            *i += 1;
+            let target = if let Some(Token::Ident(name)) = tokens.get(*i) {
+                *i += 1;
+                LValue::Var(name.clone())
+            } else if matches!(tokens.get(*i), Some(Token::Env)) {
+                *i += 1;
+                expect(tokens, i, Token::Dot);
+                if let Some(Token::Ident(name)) = tokens.get(*i) {
+                    *i += 1;
+                    LValue::Env(name.clone())
+                } else {
+                    panic!("Expected identifier after env.");
+                }
+            } else {
+                panic!("Expected identifier or env.VAR after set");
+            };
+
+            expect(tokens, i, Token::Equals);
+            let value = parse_expr(tokens, i);
+            Stmt::Set { target, value }
         }
 
         Token::Ident(name) => {
@@ -912,11 +935,21 @@ fn parse_primary(tokens: &[Token], i: &mut usize) -> Expr {
             Expr::Pid
         }
         Token::Env => {
-            *i += 1;
-            expect(tokens, i, Token::LParen);
-            let name = parse_expr(tokens, i);
-            expect(tokens, i, Token::RParen);
-            Expr::Env(Box::new(name))
+            if matches!(tokens.get(*i+1), Some(Token::Dot)) {
+                *i += 2; // consume Env and Dot
+                if let Some(Token::Ident(name)) = tokens.get(*i) {
+                     *i += 1;
+                     Expr::EnvDot(name.clone())
+                } else {
+                     panic!("Expected identifier after env.");
+                }
+            } else {
+                *i += 1;
+                expect(tokens, i, Token::LParen);
+                let name_expr = parse_expr(tokens, i);
+                expect(tokens, i, Token::RParen);
+                Expr::Env(Box::new(name_expr))
+            }
         }
         Token::Uid => {
             *i += 1;

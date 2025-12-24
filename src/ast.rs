@@ -30,6 +30,12 @@ pub enum CompareOp {
 }
 
 #[derive(Debug, Clone, PartialEq)]
+pub enum LValue {
+    Var(String),
+    Env(String),
+}
+
+#[derive(Debug, Clone, PartialEq)]
 pub enum Expr {
     Literal(String),
     Var(String),
@@ -62,6 +68,7 @@ pub enum Expr {
     SelfPid,
     Argv0,
     Argc,
+    EnvDot(String),
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -126,6 +133,7 @@ pub enum Stmt {
     Unset { name: String },
     Source { path: Expr },
     Exec(Vec<Expr>),
+    Set { target: LValue, value: Expr },
 }
 
 #[derive(Debug, Clone, PartialEq)]

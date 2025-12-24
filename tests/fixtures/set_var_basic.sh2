@@ -1,0 +1,5 @@
+func main() {
+  let x = "a"
+  set x = "b"
+  print(x)
+}

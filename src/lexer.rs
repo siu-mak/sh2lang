@@ -88,6 +88,8 @@ pub enum Token {
     LBracket,
     RBracket,
     Comma,
+    Dot,
+    Set,
 }
 
 pub fn lex(input: &str) -> Vec<Token> {
@@ -149,7 +151,9 @@ pub fn lex(input: &str) -> Vec<Token> {
                  } else {
                      tokens.push(Token::Amp);
                  }
+
             }
+            '.' => { tokens.push(Token::Dot); chars.next(); }
             '|' => {
                  chars.next();
                  if chars.peek() == Some(&'|') {
@@ -252,6 +256,7 @@ pub fn lex(input: &str) -> Vec<Token> {
                     "export" => tokens.push(Token::Export),
                     "unset" => tokens.push(Token::Unset),
                     "source" => tokens.push(Token::Source),
+                    "set" => tokens.push(Token::Set),
                     "exists" => tokens.push(Token::Exists),
                     "arg" => tokens.push(Token::Arg),
                     "index" => tokens.push(Token::Index),
