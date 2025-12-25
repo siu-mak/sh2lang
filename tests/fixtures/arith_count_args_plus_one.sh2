@@ -1,0 +1,4 @@
+func main() {
+  let n = count(args) + 1
+  print(n)
+}

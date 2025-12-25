@@ -1,0 +1,4 @@
+func main() {
+  let n = $("sh", "-c", "printf '%s' 41") + 1
+  print(n)
+}

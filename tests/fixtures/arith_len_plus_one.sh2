@@ -1,0 +1,4 @@
+func main() {
+  let n = len("hi") + 1
+  print(n)
+}

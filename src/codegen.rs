@@ -15,25 +15,6 @@ pub fn emit_with_target(funcs: &[Function], target: TargetShell) -> String {
     
     // Existing codegen didn't emit shebang or options, but tests might expect bare functions.
     // Preserving identical output for Bash target.
-    // Safety options - set -e is generally good for both? 
-    // Existing codegen didn't emit shebang or options, but tests might expect bare functions.
-    // Wait, existing codegen:
-    // out.push_str(&format!("{}() {{\n", f.name));
-    // It did NOT emit shebang! 
-    // And it puts `main "$@"` at end.
-    // Tests snapshot full output.
-    // If I add shebang now, ALL SNAPSHOTS WILL BREAK unless I update them.
-    // The requirement says "sh2c --target bash ... emits identical output to current codegen::emit".
-    // So I must NOT add shebang for Bash if it wasn't there.
-    // But POSIX requires sh? Or maybe bare definitions are fine?
-    // User request: "Use #!/bin/sh (or omit shebang if you currently omit; but be consistent)."
-    // So I will OMIT shebang for now to preserve compatibility, or maybe just matching existing behavior.
-    // Existing behavior: NO shebang.
-    // So I will stick to NO shebang for Bash.
-    // For POSIX, I should also omit it to match expected behavior unless explicitly requested.
-    // I entered that "Use #!/bin/sh" in plan but user approved. 
-    // But requirement criteria 1: "sh2c --target bash ... emits identical output to current".
-    // So I will NOT add shebang.
     
     for (i, f) in funcs.iter().enumerate() {
         if i > 0 {
@@ -340,6 +321,20 @@ fn emit_index_expr(v: &Val, target: TargetShell) -> String {
     emit_arith_expr(v, target)
 }
 
+// Helper for command substitution without outer double quotes (for use in arithmetic)
+fn emit_cmdsub_raw(args: &[Val], target: TargetShell) -> String {
+    let parts: Vec<String> = args.iter().map(|a| emit_word(a, target)).collect();
+    format!("$( {} )", parts.join(" "))
+}
+
+fn emit_cmdsub_pipe_raw(segments: &[Vec<Val>], target: TargetShell) -> String {
+    let seg_strs: Vec<String> = segments.iter().map(|seg| {
+        let words: Vec<String> = seg.iter().map(|w| emit_word(w, target)).collect();
+        words.join(" ")
+    }).collect();
+    format!("$( {} )", seg_strs.join(" | "))
+}
+
 fn emit_arith_expr(v: &Val, target: TargetShell) -> String {
     match v {
         Val::Literal(s) => s.clone(),
@@ -368,14 +363,24 @@ fn emit_arith_expr(v: &Val, target: TargetShell) -> String {
             };
             format!("( {} {} {} )", emit_arith_expr(left, target), op_str, emit_arith_expr(right, target))
         }
-        Val::Command(..) | Val::CommandPipe(..) | Val::Len(..) | Val::Count(..) => {
-             // For complex types that emit $(...), we can just delegate to emit_val BUT strict quote removal logic is needed?
-             // emit_val returns $(...) unquoted (based on previous check). 
-             // Wait, emit_val returns `format!("$( {} )", ...)` for Command.
-             // So it creates a String containing `$( ... )`. NO QUOTES.
-             // So we can use emit_val result directly.
-             emit_val(v, target)
+        Val::Command(args) => emit_cmdsub_raw(args, target),
+        Val::CommandPipe(segments) => emit_cmdsub_pipe_raw(segments, target),
+        Val::Len(inner) => {
+            // Raw command substitution: emits $( ... )
+            format!("$( printf \"%s\" {} | awk '{{ print length($0) }}' )", emit_val(inner, target))
         }
+        Val::Count(inner) => match &**inner {
+            Val::List(elems) => match target {
+                TargetShell::Bash => elems.len().to_string(),
+                TargetShell::Posix => panic!("List literals not supported in POSIX target"),
+            },
+            Val::Var(name) => match target {
+                TargetShell::Bash => format!("${{#{}[@]}}", name),
+                TargetShell::Posix => panic!("Array count not supported in POSIX target"),
+            },
+            Val::Args => "$#".to_string(),
+            _ => panic!("count(...) supports only list literals, list variables, and args"),
+        },
         _ => panic!("Unsupported type in arithmetic expression"),
     }
 }
