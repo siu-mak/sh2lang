@@ -4,12 +4,17 @@ use std::process::Command;
 use std::time::{SystemTime, UNIX_EPOCH};
 use sh2c::{lexer, parser, lower, codegen};
 use sh2c::ast;
+use sh2c::codegen::TargetShell;
 
 pub fn compile_to_bash(src: &str) -> String {
+    compile_to_shell(src, TargetShell::Bash)
+}
+
+pub fn compile_to_shell(src: &str, target: TargetShell) -> String {
     let tokens = lexer::lex(src);
     let program = parser::parse(&tokens);
     let ir = lower::lower(program);
-    codegen::emit(&ir)
+    codegen::emit_with_target(&ir, target)
 }
 
 pub fn parse_fixture(fixture_name: &str) -> ast::Program {
@@ -53,9 +58,57 @@ pub fn assert_codegen_panics(fixture_name: &str, expected_msg_part: &str) {
         }
     }
 }
+pub fn assert_codegen_matches_snapshot_target(fixture_name: &str, target: TargetShell) {
+    let sh2_path = format!("tests/fixtures/{}.sh2", fixture_name);
+    let target_str = match target {
+        TargetShell::Bash => "bash",
+        TargetShell::Posix => "posix",
+    };
+    let target_expected_path = format!("tests/fixtures/{}.{}.sh.expected", fixture_name, target_str);
+    let default_expected_path = format!("tests/fixtures/{}.sh.expected", fixture_name);
+    
+    let expected_path = if Path::new(&target_expected_path).exists() {
+        target_expected_path
+    } else {
+        default_expected_path
+    };
+
+    let src = fs::read_to_string(&sh2_path).expect("Failed to read source fixture");
+    let expected = fs::read_to_string(&expected_path).expect("Failed to read expected codegen fixture");
+    
+    let output = compile_to_shell(&src, target);
+    assert_eq!(output.trim(), expected.trim(), "Codegen mismatch for {} (target={:?})", fixture_name, target);
+}
+
+pub fn assert_codegen_panics_target(fixture_name: &str, target: TargetShell, expected_msg_part: &str) {
+    let sh2_path = format!("tests/fixtures/{}.sh2", fixture_name);
+    let src = fs::read_to_string(&sh2_path).expect("Failed to read source fixture");
+    
+    let result = std::panic::catch_unwind(|| {
+        compile_to_shell(&src, target)
+    });
+
+    match result {
+        Ok(_) => panic!("Expected panic during codegen for {}, but it succeeded", fixture_name),
+        Err(err) => {
+            let msg = if let Some(s) = err.downcast_ref::<&str>() {
+                *s
+            } else if let Some(s) = err.downcast_ref::<String>() {
+                s.as_str()
+            } else {
+                "Unknown panic message"
+            };
+            assert!(msg.contains(expected_msg_part), "Expected panic message containing '{}', got '{}'", expected_msg_part, msg);
+        }
+    }
+}
 
 
 pub fn run_bash_script(bash: &str, env: &[(&str, &str)], args: &[&str]) -> (String, String, i32) {
+    run_shell_script(bash, "bash", env, args)
+}
+
+pub fn run_shell_script(script: &str, shell: &str, env: &[(&str, &str)], args: &[&str]) -> (String, String, i32) {
     let pid = std::process::id();
     let nanos = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_nanos();
     let dir_name = format!("sh2_test_{}_{}", pid, nanos);
@@ -65,9 +118,9 @@ pub fn run_bash_script(bash: &str, env: &[(&str, &str)], args: &[&str]) -> (Stri
     fs::create_dir(&temp_dir).expect("Failed to create temp dir");
 
     let script_path = temp_dir.join("script.sh");
-    fs::write(&script_path, bash).expect("Failed to write temp script");
+    fs::write(&script_path, script).expect("Failed to write temp script");
     
-    let mut cmd = Command::new("bash");
+    let mut cmd = Command::new(shell);
     cmd.current_dir(&temp_dir);
     for (k, v) in env {
         cmd.env(k, v);
@@ -77,7 +130,20 @@ pub fn run_bash_script(bash: &str, env: &[(&str, &str)], args: &[&str]) -> (Stri
         cmd.arg(arg);
     }
 
-    let output = cmd.output().expect("Failed to execute bash");
+    let output = match cmd.output() {
+        Ok(o) => o,
+        Err(_) => {
+             // If shell is missing (e.g. dash), return fake error or handle gracefully
+             // Tests should check if shell exists before calling?
+             // Or we just fail.
+             // But plan said "tests should detect if dash exists".
+             // We can return -1 status if failed to start?
+             // But callers expect output.
+             // We'll panic here if fail, but tests should gate.
+             let _ = fs::remove_dir_all(&temp_dir);
+             panic!("Failed to execute {}", shell);
+        }
+    };
     
     // Best-effort cleanup
     let _ = fs::remove_dir_all(&temp_dir);
@@ -89,6 +155,10 @@ pub fn run_bash_script(bash: &str, env: &[(&str, &str)], args: &[&str]) -> (Stri
 }
 
 pub fn assert_exec_matches_fixture(fixture_name: &str) {
+    assert_exec_matches_fixture_target(fixture_name, TargetShell::Bash);
+}
+
+pub fn assert_exec_matches_fixture_target(fixture_name: &str, target: TargetShell) {
     let sh2_path = format!("tests/fixtures/{}.sh2", fixture_name);
     let stdout_path = format!("tests/fixtures/{}.stdout", fixture_name);
     let stderr_path = format!("tests/fixtures/{}.stderr", fixture_name);
@@ -108,7 +178,22 @@ pub fn assert_exec_matches_fixture(fixture_name: &str) {
     }
 
     let src = fs::read_to_string(&sh2_path).expect("Failed to read fixture");
-    let bash = compile_to_bash(&src);
+    let shell_script = compile_to_shell(&src, target);
+    
+    let shell_bin = match target {
+        TargetShell::Bash => "bash",
+        TargetShell::Posix => {
+            // Check for dash
+            // If checking fails, we panic in run_shell_script?
+            // Checking here allows skipping.
+            if Command::new("dash").output().is_ok() {
+                "dash"
+            } else {
+                println!("Skipping POSIX test for {} because 'dash' is not available", fixture_name);
+                return;
+            }
+        }
+    };
 
     let mut env_vars = Vec::new();
     if Path::new(&env_path).exists() {
@@ -130,7 +215,7 @@ pub fn assert_exec_matches_fixture(fixture_name: &str) {
     }
     let args_refs: Vec<&str> = args.iter().map(|s| s.as_str()).collect();
 
-    let (stdout, stderr, status) = run_bash_script(&bash, &env_refs, &args_refs);
+    let (stdout, stderr, status) = run_shell_script(&shell_script, shell_bin, &env_refs, &args_refs);
 
     if Path::new(&stdout_path).exists() {
         let expected_stdout = fs::read_to_string(&stdout_path).expect("Failed to read stdout fixture")

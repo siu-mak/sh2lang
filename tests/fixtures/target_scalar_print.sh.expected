@@ -1,0 +1,7 @@
+main() {
+  x='hello'
+  export FOO="$x"
+  echo "${FOO}"
+}
+
+main "$@"

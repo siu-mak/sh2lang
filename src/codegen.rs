@@ -1,8 +1,40 @@
 use crate::ir::{Function, Cmd, Val, RedirectTarget};
 
-pub fn emit(funcs: &[Function]) -> String {
-    let mut out = String::new();
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum TargetShell {
+    Bash,
+    Posix,
+}
 
+pub fn emit(funcs: &[Function]) -> String {
+    emit_with_target(funcs, TargetShell::Bash)
+}
+
+pub fn emit_with_target(funcs: &[Function], target: TargetShell) -> String {
+    let mut out = String::new();
+    
+    // Existing codegen didn't emit shebang or options, but tests might expect bare functions.
+    // Preserving identical output for Bash target.
+    // Safety options - set -e is generally good for both? 
+    // Existing codegen didn't emit shebang or options, but tests might expect bare functions.
+    // Wait, existing codegen:
+    // out.push_str(&format!("{}() {{\n", f.name));
+    // It did NOT emit shebang! 
+    // And it puts `main "$@"` at end.
+    // Tests snapshot full output.
+    // If I add shebang now, ALL SNAPSHOTS WILL BREAK unless I update them.
+    // The requirement says "sh2c --target bash ... emits identical output to current codegen::emit".
+    // So I must NOT add shebang for Bash if it wasn't there.
+    // But POSIX requires sh? Or maybe bare definitions are fine?
+    // User request: "Use #!/bin/sh (or omit shebang if you currently omit; but be consistent)."
+    // So I will OMIT shebang for now to preserve compatibility, or maybe just matching existing behavior.
+    // Existing behavior: NO shebang.
+    // So I will stick to NO shebang for Bash.
+    // For POSIX, I should also omit it to match expected behavior unless explicitly requested.
+    // I entered that "Use #!/bin/sh" in plan but user approved. 
+    // But requirement criteria 1: "sh2c --target bash ... emits identical output to current".
+    // So I will NOT add shebang.
+    
     for (i, f) in funcs.iter().enumerate() {
         if i > 0 {
             out.push('\n');
@@ -12,7 +44,7 @@ pub fn emit(funcs: &[Function]) -> String {
             out.push_str(&format!("  local {}=\"${{{}}}\"\n", param, idx + 1));
         }
         for cmd in &f.commands {
-            emit_cmd(cmd, &mut out, 2);
+            emit_cmd(cmd, &mut out, 2, target);
         }
         out.push_str("}\n");
     }
@@ -38,67 +70,79 @@ fn sh_single_quote(s: &str) -> String {
 }
 
 
-fn emit_val(v: &Val) -> String {
+fn emit_val(v: &Val, target: TargetShell) -> String {
     match v {
         Val::Literal(s) => sh_single_quote(s),
         Val::Var(s) => format!("\"${}\"", s),
-        Val::Concat(l, r) => format!("{}{}", emit_val(l), emit_val(r)),
+        Val::Concat(l, r) => format!("{}{}", emit_val(l, target), emit_val(r, target)),
         Val::Command(args) => {
-            let parts: Vec<String> = args.iter().map(emit_word).collect();
+            let parts: Vec<String> = args.iter().map(|a| emit_word(a, target)).collect();
             format!("\"$( {} )\"", parts.join(" "))
         }
         Val::CommandPipe(segments) => {
              let seg_strs: Vec<String> = segments.iter().map(|seg| {
-                 let words: Vec<String> = seg.iter().map(emit_word).collect();
+                 let words: Vec<String> = seg.iter().map(|w| emit_word(w, target)).collect();
                  words.join(" ")
              }).collect();
              format!("\"$( {} )\"", seg_strs.join(" | "))
         }
         Val::Len(inner) => {
-             format!("\"$( printf \"%s\" {} | awk '{{ print length($0) }}' )\"", emit_val(inner))
+             format!("\"$( printf \"%s\" {} | awk '{{ print length($0) }}' )\"", emit_val(inner, target))
         }
         Val::Arg(n) => format!("\"${}\"", n),
         Val::Index { list, index } => {
+            if target == TargetShell::Posix {
+                panic!("List indexing is not supported in POSIX sh target");
+            }
             match &**list {
-                 Val::Var(name) => format!("\"${{{}[{}]}}\"", name, emit_index_expr(index)),
+                 Val::Var(name) => format!("\"${{{}[{}]}}\"", name, emit_index_expr(index, target)),
                  Val::List(elems) => {
                      let mut arr_str = String::new();
                      for (i, elem) in elems.iter().enumerate() {
                          if i > 0 { arr_str.push(' '); }
-                         arr_str.push_str(&emit_word(elem));
+                         arr_str.push_str(&emit_word(elem, target));
                      }
                      // Force evaluation of index
-                     format!("\"$( arr=({}); idx=$(( {} )); printf \"%s\" \"${{arr[idx]}}\" )\"", arr_str, emit_index_expr(index))
+                     format!("\"$( arr=({}); idx=$(( {} )); printf \"%s\" \"${{arr[idx]}}\" )\"", arr_str, emit_index_expr(index, target))
                  }
                  Val::Args => {
-                     format!("\"$( arr=(\"$@\"); idx=$(( {} )); printf \"%s\" \"${{arr[idx]}}\" )\"", emit_index_expr(index))
+                     format!("\"$( arr=(\"$@\"); idx=$(( {} )); printf \"%s\" \"${{arr[idx]}}\" )\"", emit_index_expr(index, target))
                  }
                  _ => panic!("Index implemented only for variables and list literals"),
             }
         }
         Val::Join { list, sep } => {
+             if target == TargetShell::Posix {
+                 panic!("List join is not supported in POSIX sh target");
+             }
              match &**list {
                  Val::Var(name) => {
                      // Arrays: "$( IFS=<sep>; printf "%s" "${name[*]}" )"
-                     format!("\"$( IFS={}; printf \"%s\" \"${{{}[*]}}\" )\"", emit_val(sep), name)
+                     format!("\"$( IFS={}; printf \"%s\" \"${{{}[*]}}\" )\"", emit_val(sep, target), name)
                  }
                  Val::List(elems) => {
                      let mut arr_str = String::new();
                      for (i, elem) in elems.iter().enumerate() {
                          if i > 0 { arr_str.push(' '); }
-                         arr_str.push_str(&emit_word(elem));
+                         arr_str.push_str(&emit_word(elem, target));
                      }
-                     format!("\"$( arr=({}); IFS={}; printf \"%s\" \"${{arr[*]}}\" )\"", arr_str, emit_val(sep))
+                     format!("\"$( arr=({}); IFS={}; printf \"%s\" \"${{arr[*]}}\" )\"", arr_str, emit_val(sep, target))
                  }
                  Val::Args => {
-                     format!("\"$( IFS={}; printf \"%s\" \"$*\" )\"", emit_val(sep))
+                     format!("\"$( IFS={}; printf \"%s\" \"$*\" )\"", emit_val(sep, target))
                  }
                  _ => panic!("Join implemented only for variables and list literals"),
              }
         }
         Val::Count(inner) => match &**inner {
-            Val::List(elems) => format!("\"{}\"", elems.len()),
-            Val::Var(name) => format!("\"${{#{}[@]}}\"", name),
+            Val::List(elems) => match target {
+                TargetShell::Bash => format!("\"{}\"", elems.len()),
+                TargetShell::Posix => panic!("List literals not supported in POSIX target"),
+            },
+            Val::Var(name) => match target {
+                TargetShell::Bash => format!("\"${{#{}[@]}}\"", name),
+                TargetShell::Posix => panic!("Array count not supported in POSIX target"),
+            },
             Val::Args => "\"$#\"".to_string(),
             _ => panic!("count(...) supports only list literals, list variables, and args"),
         },
@@ -118,37 +162,37 @@ fn emit_val(v: &Val) -> String {
         Val::SelfPid => "\"$$\"".to_string(),
         Val::Argv0 => "\"$0\"".to_string(),
         Val::Argc => "\"$#\"".to_string(),
-        Val::Arith { .. } => format!("\"$(( {} ))\"", emit_arith_expr(v)),
+        Val::Arith { .. } => format!("\"$(( {} ))\"", emit_arith_expr(v, target)),
         Val::BoolStr(inner) => {
-             format!("\"$( if {}; then printf \"%s\" \"true\"; else printf \"%s\" \"false\"; fi )\"", emit_cond(inner))
+             format!("\"$( if {}; then printf \"%s\" \"true\"; else printf \"%s\" \"false\"; fi )\"", emit_cond(inner, target))
         },
         Val::Compare { .. } | Val::And(..) | Val::Or(..) | Val::Not(..) | Val::Exists(..) | Val::IsDir(..) | Val::IsFile(..) | Val::IsSymlink(..) | Val::IsExec(..) | Val::IsReadable(..) | Val::IsWritable(..) | Val::IsNonEmpty(..) | Val::List(..) | Val::Args => panic!("Cannot emit boolean/list/args value as string"),
     }
 }
 
-fn emit_word(v: &Val) -> String {
+fn emit_word(v: &Val, target: TargetShell) -> String {
     match v {
         Val::Literal(s) => sh_single_quote(s),
         Val::Var(s) => format!("\"${}\"", s),
-        Val::Concat(l, r) => format!("{}{}", emit_word(l), emit_word(r)),
+        Val::Concat(l, r) => format!("{}{}", emit_word(l, target), emit_word(r, target)),
         Val::Command(args) => {
-            let parts: Vec<String> = args.iter().map(emit_word).collect();
+            let parts: Vec<String> = args.iter().map(|a| emit_word(a, target)).collect();
             format!("\"$( {} )\"", parts.join(" "))
         }
         Val::CommandPipe(segments) => {
              let seg_strs: Vec<String> = segments.iter().map(|seg| {
-                 let words: Vec<String> = seg.iter().map(emit_word).collect();
+                 let words: Vec<String> = seg.iter().map(|w| emit_word(w, target)).collect();
                  words.join(" ")
              }).collect();
              format!("\"$( {} )\"", seg_strs.join(" | "))
         }
         Val::Len(inner) => {
-             format!("\"$( printf \"%s\" {} | awk '{{ print length($0) }}' )\"", emit_val(inner))
+             format!("\"$( printf \"%s\" {} | awk '{{ print length($0) }}' )\"", emit_val(inner, target))
         }
         Val::Arg(n) => format!("\"${}\"", n),
-        Val::Index { list, index } => emit_val(&Val::Index { list: list.clone(), index: index.clone() }),
-        Val::Join { list, sep } => emit_val(&Val::Join { list: list.clone(), sep: sep.clone() }),
-        Val::Count(inner) => emit_val(&Val::Count(inner.clone())),
+        Val::Index { list, index } => emit_val(&Val::Index { list: list.clone(), index: index.clone() }, target),
+        Val::Join { list, sep } => emit_val(&Val::Join { list: list.clone(), sep: sep.clone() }, target),
+        Val::Count(inner) => emit_val(&Val::Count(inner.clone()), target),
         Val::Bool(_) => panic!("Cannot emit boolean value as string/word; booleans are only valid in conditions"),
         Val::Number(n) => format!("\"{}\"", n),
         Val::Status => "\"$?\"".to_string(),
@@ -165,16 +209,16 @@ fn emit_word(v: &Val) -> String {
         Val::SelfPid => "\"$$\"".to_string(),
         Val::Argv0 => "\"$0\"".to_string(),
         Val::Argc => "\"$#\"".to_string(),
-        Val::Arith { .. } => format!("\"$(( {} ))\"", emit_arith_expr(v)),
+        Val::Arith { .. } => format!("\"$(( {} ))\"", emit_arith_expr(v, target)),
         Val::BoolStr(inner) => {
-             format!("\"$( if {}; then printf \"%s\" \"true\"; else printf \"%s\" \"false\"; fi )\"", emit_cond(inner))
+             format!("\"$( if {}; then printf \"%s\" \"true\"; else printf \"%s\" \"false\"; fi )\"", emit_cond(inner, target))
         },
         Val::Args => "\"$@\"".into(),
         Val::Compare { .. } | Val::And(..) | Val::Or(..) | Val::Not(..) | Val::Exists(..) | Val::IsDir(..) | Val::IsFile(..) | Val::IsSymlink(..) | Val::IsExec(..) | Val::IsReadable(..) | Val::IsWritable(..) | Val::IsNonEmpty(..) | Val::List(..) => panic!("Cannot emit boolean/list value as command word"),
     }
 }
 
-fn emit_cond(v: &Val) -> String {
+fn emit_cond(v: &Val, target: TargetShell) -> String {
     match v {
         Val::Compare { left, op, right } => {
             let (op_str, is_numeric) = match op {
@@ -189,14 +233,14 @@ fn emit_cond(v: &Val) -> String {
                  // For numeric, operands can be arith expressions or just numbers.
                  // emit_val returns quoted strings, which [ ... ] handles nicely for -lt etc.
                  // e.g. [ "1" -lt "2" ]
-                format!("[ {} {} {} ]", emit_val(left), op_str, emit_val(right))
+                format!("[ {} {} {} ]", emit_val(left, target), op_str, emit_val(right, target))
             } else {
-                format!("[ {} {} {} ]", emit_val(left), op_str, emit_val(right))
+                format!("[ {} {} {} ]", emit_val(left, target), op_str, emit_val(right, target))
             }
         }
         Val::And(left, right) => {
-            let mut l_str = emit_cond(left);
-            let mut r_str = emit_cond(right);
+            let mut l_str = emit_cond(left, target);
+            let mut r_str = emit_cond(right, target);
             // Wrap left if Or (for clarity/spec, even if bash left-associativity makes it implicit)
             // (A || B) && C -> ( A || B ) && C
             if let Val::Or(..) = **left {
@@ -210,8 +254,8 @@ fn emit_cond(v: &Val) -> String {
             format!("{} && {}", l_str, r_str)
         }
         Val::Or(left, right) => {
-            let l_str = emit_cond(left);
-            let mut r_str = emit_cond(right);
+            let l_str = emit_cond(left, target);
+            let mut r_str = emit_cond(right, target);
             // If right is And, we must wrap it because && > || in sh2c but equal in bash.
             // A || B && C -> A || B && C (bash interprets as (A||B)&&C). We want A || (B&&C).
             if let Val::And(..) = **right {
@@ -220,7 +264,7 @@ fn emit_cond(v: &Val) -> String {
             format!("{} || {}", l_str, r_str)
         }
         Val::Not(expr) => {
-            let inner = emit_cond(expr);
+            let inner = emit_cond(expr, target);
             // If inner is binary, wrap it. ! (A && B) -> ! A && B (bash interprets as (!A) && B).
             match **expr {
                 Val::And(..) | Val::Or(..) => format!("! ( {} )", inner),
@@ -228,41 +272,41 @@ fn emit_cond(v: &Val) -> String {
             }
         }
         Val::Exists(path) => {
-            format!("[ -e {} ]", emit_val(path))
+            format!("[ -e {} ]", emit_val(path, target))
         }
         Val::IsDir(path) => {
-            format!("[ -d {} ]", emit_val(path))
+            format!("[ -d {} ]", emit_val(path, target))
         }
         Val::IsFile(path) => {
-            format!("[ -f {} ]", emit_val(path))
+            format!("[ -f {} ]", emit_val(path, target))
         }
         Val::IsSymlink(path) => {
-            format!("[ -L {} ]", emit_val(path))
+            format!("[ -L {} ]", emit_val(path, target))
         }
         Val::IsExec(path) => {
-            format!("[ -x {} ]", emit_val(path))
+            format!("[ -x {} ]", emit_val(path, target))
         }
         Val::IsReadable(path) => {
-            format!("[ -r {} ]", emit_val(path))
+            format!("[ -r {} ]", emit_val(path, target))
         }
         Val::IsWritable(path) => {
-            format!("[ -w {} ]", emit_val(path))
+            format!("[ -w {} ]", emit_val(path, target))
         }
         Val::IsNonEmpty(path) => {
-            format!("[ -s {} ]", emit_val(path))
+            format!("[ -s {} ]", emit_val(path, target))
         }
         Val::Bool(true) => "true".to_string(),
         Val::Bool(false) => "false".to_string(),
         // Legacy "is set" behavior for direct values
-        v => format!("[ -n {} ]", emit_val(v)),
+        v => format!("[ -n {} ]", emit_val(v, target)),
     }
 }
 
-fn emit_index_expr(v: &Val) -> String {
-    emit_arith_expr(v)
+fn emit_index_expr(v: &Val, target: TargetShell) -> String {
+    emit_arith_expr(v, target)
 }
 
-fn emit_arith_expr(v: &Val) -> String {
+fn emit_arith_expr(v: &Val, target: TargetShell) -> String {
     match v {
         Val::Literal(s) => s.clone(),
         Val::Number(n) => n.to_string(),
@@ -282,7 +326,7 @@ fn emit_arith_expr(v: &Val) -> String {
                 crate::ir::ArithOp::Div => "/",
                 crate::ir::ArithOp::Mod => "%",
             };
-            format!("( {} {} {} )", emit_arith_expr(left), op_str, emit_arith_expr(right))
+            format!("( {} {} {} )", emit_arith_expr(left, target), op_str, emit_arith_expr(right, target))
         }
         Val::Command(..) | Val::CommandPipe(..) | Val::Len(..) | Val::Count(..) => {
              // For complex types that emit $(...), we can just delegate to emit_val BUT strict quote removal logic is needed?
@@ -290,24 +334,27 @@ fn emit_arith_expr(v: &Val) -> String {
              // Wait, emit_val returns `format!("$( {} )", ...)` for Command.
              // So it creates a String containing `$( ... )`. NO QUOTES.
              // So we can use emit_val result directly.
-             emit_val(v)
+             emit_val(v, target)
         }
         _ => panic!("Unsupported type in arithmetic expression"),
     }
 }
 
-fn emit_cmd(cmd: &Cmd, out: &mut String, indent: usize) {
+fn emit_cmd(cmd: &Cmd, out: &mut String, indent: usize, target: TargetShell) {
     let pad = " ".repeat(indent);
 
     match cmd {
         Cmd::Assign(name, val) => {
+            if target == TargetShell::Posix && matches!(val, Val::List(_) | Val::Args) {
+                panic!("Array assignment is not supported in POSIX sh target");
+            }
             out.push_str(&pad);
             if let Val::List(elems) = val {
                 out.push_str(name);
                 out.push_str("=(");
                 for (i, elem) in elems.iter().enumerate() {
                     if i > 0 { out.push(' '); }
-                    out.push_str(&emit_word(elem));
+                    out.push_str(&emit_word(elem, target));
                 }
                 out.push_str(")\n");
             } else if let Val::Args = val {
@@ -316,20 +363,20 @@ fn emit_cmd(cmd: &Cmd, out: &mut String, indent: usize) {
             } else {
                 out.push_str(name);
                 out.push('=');
-                out.push_str(&emit_val(val));
+                out.push_str(&emit_val(val, target));
                 out.push('\n');
             }
         }
         Cmd::Exec(args) => {
             out.push_str(&pad);
-            let shell_args: Vec<String> = args.iter().map(emit_word).collect();
+            let shell_args: Vec<String> = args.iter().map(|a| emit_word(a, target)).collect();
             out.push_str(&shell_args.join(" "));
             out.push('\n');
         }
         Cmd::ExecReplace(args) => {
             out.push_str(&pad);
             out.push_str("exec ");
-            let shell_args: Vec<String> = args.iter().map(emit_word).collect();
+            let shell_args: Vec<String> = args.iter().map(|a| emit_word(a, target)).collect();
             out.push_str(&shell_args.join(" "));
             out.push('\n');
         }
@@ -337,8 +384,8 @@ fn emit_cmd(cmd: &Cmd, out: &mut String, indent: usize) {
             out.push_str(&pad);
             out.push_str("echo ");
             match val {
-                Val::Args => out.push_str(&emit_word(val)),
-                _ => out.push_str(&emit_val(val)),
+                Val::Args => out.push_str(&emit_word(val, target)),
+                _ => out.push_str(&emit_val(val, target)),
             }
             out.push('\n');
         }
@@ -346,30 +393,30 @@ fn emit_cmd(cmd: &Cmd, out: &mut String, indent: usize) {
             out.push_str(&pad);
             out.push_str("echo ");
             match val {
-                Val::Args => out.push_str(&emit_word(val)),
-                _ => out.push_str(&emit_val(val)),
+                Val::Args => out.push_str(&emit_word(val, target)),
+                _ => out.push_str(&emit_val(val, target)),
             }
             out.push_str(" >&2\n");
         }
         Cmd::If { cond, then_body, elifs, else_body } => {
-            let cond_str = emit_cond(cond);
+            let cond_str = emit_cond(cond, target);
             out.push_str(&format!("{pad}if {cond_str}; then\n"));
             for c in then_body {
-                emit_cmd(c, out, indent + 2);
+                emit_cmd(c, out, indent + 2, target);
             }
 
             for (cond, body) in elifs {
-                let cond_str = emit_cond(cond);
+                let cond_str = emit_cond(cond, target);
                 out.push_str(&format!("{pad}elif {cond_str}; then\n"));
                 for c in body {
-                    emit_cmd(c, out, indent + 2);
+                    emit_cmd(c, out, indent + 2, target);
                 }
             }
 
             if !else_body.is_empty() {
                 out.push_str(&format!("{pad}else\n"));
                 for c in else_body {
-                    emit_cmd(c, out, indent + 2);
+                    emit_cmd(c, out, indent + 2, target);
                 }
             }
 
@@ -378,7 +425,7 @@ fn emit_cmd(cmd: &Cmd, out: &mut String, indent: usize) {
         Cmd::Pipe(segments) => {
              out.push_str(&pad);
              let cmds: Vec<String> = segments.iter().map(|args| {
-                 let parts: Vec<String> = args.iter().map(emit_word).collect();
+                 let parts: Vec<String> = args.iter().map(|a| emit_word(a, target)).collect();
                  parts.join(" ")
              }).collect();
              out.push_str(&cmds.join(" | "));
@@ -389,7 +436,7 @@ fn emit_cmd(cmd: &Cmd, out: &mut String, indent: usize) {
                 out.push_str(&pad);
                 out.push_str("{\n");
                 for cmd in seg {
-                    emit_cmd(cmd, out, indent + 2);
+                    emit_cmd(cmd, out, indent + 2, target);
                 }
                 out.push_str(&format!("{pad}}}"));
                 if i < segments.len() - 1 {
@@ -400,7 +447,7 @@ fn emit_cmd(cmd: &Cmd, out: &mut String, indent: usize) {
             }
         }
         Cmd::Case { expr, arms } => {
-            out.push_str(&format!("{}case {} in\n", pad, emit_val(expr)));
+            out.push_str(&format!("{}case {} in\n", pad, emit_val(expr, target)));
             for (patterns, body) in arms {
                 out.push_str(&pad);
                 out.push_str("  ");
@@ -412,7 +459,7 @@ fn emit_cmd(cmd: &Cmd, out: &mut String, indent: usize) {
                 out.push_str(")\n");
                 
                 for cmd in body {
-                    emit_cmd(cmd, out, indent + 4);
+                    emit_cmd(cmd, out, indent + 4, target);
                 }
                 out.push_str(&format!("{}  ;;\n", pad));
             }
@@ -420,10 +467,10 @@ fn emit_cmd(cmd: &Cmd, out: &mut String, indent: usize) {
         }
 
         Cmd::While { cond, body } => {
-            let cond_str = emit_cond(cond);
+            let cond_str = emit_cond(cond, target);
             out.push_str(&format!("{pad}while {cond_str}; do\n"));
             for c in body {
-                emit_cmd(c, out, indent + 2);
+                emit_cmd(c, out, indent + 2, target);
             }
             out.push_str(&format!("{pad}done\n"));
         }
@@ -434,24 +481,27 @@ fn emit_cmd(cmd: &Cmd, out: &mut String, indent: usize) {
                     Val::List(elems) => {
                         for elem in elems {
                             out.push(' ');
-                            out.push_str(&emit_val(elem));
+                            out.push_str(&emit_val(elem, target));
                         }
                     }
                     Val::Args => {
                          out.push_str(" \"$@\"");
                     }
                     Val::Var(name) => {
+                        if target == TargetShell::Posix {
+                            panic!("Iterating over array variable not supported in POSIX");
+                        }
                         out.push_str(&format!(" \"${{{}[@]}}\"", name));
                     }
                     _ => {
                         out.push(' ');
-                        out.push_str(&emit_val(item));
+                        out.push_str(&emit_val(item, target));
                     }
                 }
              }
              out.push_str("; do\n");
              for c in body {
-                 emit_cmd(c, out, indent + 2);
+                 emit_cmd(c, out, indent + 2, target);
              }
              out.push_str(&format!("{}done\n", pad));
         }
@@ -464,10 +514,10 @@ fn emit_cmd(cmd: &Cmd, out: &mut String, indent: usize) {
         Cmd::Return(val) => {
              if let Some(v) = val {
                  if is_boolean_expr(v) {
-                     let cond_str = emit_cond(v);
+                     let cond_str = emit_cond(v, target);
                      out.push_str(&format!("{pad}if {}; then return 0; else return 1; fi\n", cond_str));
                  } else {
-                     out.push_str(&format!("{pad}return {}\n", emit_val(v)));
+                     out.push_str(&format!("{pad}return {}\n", emit_val(v, target)));
                  }
              } else {
                  out.push_str(&format!("{pad}return\n"));
@@ -476,10 +526,10 @@ fn emit_cmd(cmd: &Cmd, out: &mut String, indent: usize) {
         Cmd::Exit(val) => {
              if let Some(v) = val {
                  if is_boolean_expr(v) {
-                     let cond_str = emit_cond(v);
+                     let cond_str = emit_cond(v, target);
                      out.push_str(&format!("{pad}if {}; then exit 0; else exit 1; fi\n", cond_str));
                  } else {
-                     out.push_str(&format!("{pad}exit {}\n", emit_val(v)));
+                     out.push_str(&format!("{pad}exit {}\n", emit_val(v, target)));
                  }
              } else {
                  out.push_str(&format!("{pad}exit\n"));
@@ -491,9 +541,9 @@ fn emit_cmd(cmd: &Cmd, out: &mut String, indent: usize) {
                 if let Cmd::Exec(args) = &body[0] {
                     out.push_str(&pad);
                     for (k, v) in bindings {
-                        out.push_str(&format!("export {}={} ", k, emit_val(v)));
+                        out.push_str(&format!("export {}={} ", k, emit_val(v, target)));
                     }
-                    let shell_args: Vec<String> = args.iter().map(emit_word).collect();
+                    let shell_args: Vec<String> = args.iter().map(|a| emit_word(a, target)).collect();
                     out.push_str(&shell_args.join(" "));
                     out.push('\n');
                     return;
@@ -503,25 +553,25 @@ fn emit_cmd(cmd: &Cmd, out: &mut String, indent: usize) {
             // General case: Subshell
             out.push_str(&format!("{pad}(\n"));
             for (k, v) in bindings {
-                out.push_str(&format!("{}  export {}={}\n", pad, k, emit_val(v)));
+                out.push_str(&format!("{}  export {}={}\n", pad, k, emit_val(v, target)));
             }
             for cmd in body {
-                emit_cmd(cmd, out, indent + 2);
+                emit_cmd(cmd, out, indent + 2, target);
             }
             out.push_str(&format!("{pad})\n"));
         }
         Cmd::WithCwd { path, body } => {
             out.push_str(&format!("{pad}(\n"));
-            out.push_str(&format!("{pad}  cd {}\n", emit_val(path)));
+            out.push_str(&format!("{pad}  cd {}\n", emit_val(path, target)));
             for cmd in body {
-                emit_cmd(cmd, out, indent + 2);
+                emit_cmd(cmd, out, indent + 2, target);
             }
             out.push_str(&format!("{pad})\n"));
         }
         Cmd::Cd(path) => {
             out.push_str(&pad);
             out.push_str("cd ");
-            out.push_str(&emit_val(path));
+            out.push_str(&emit_val(path, target));
             out.push('\n');
         }
         Cmd::Raw(s) => {
@@ -534,35 +584,35 @@ fn emit_cmd(cmd: &Cmd, out: &mut String, indent: usize) {
             out.push_str(name);
             for arg in args {
                 out.push(' ');
-                out.push_str(&emit_word(arg));
+                out.push_str(&emit_word(arg, target));
             }
             out.push('\n');
         }
         Cmd::Subshell { body } => {
             out.push_str(&format!("{pad}(\n"));
             for cmd in body {
-                emit_cmd(cmd, out, indent + 2);
+                emit_cmd(cmd, out, indent + 2, target);
             }
             out.push_str(&format!("{pad})\n"));
         }
         Cmd::Group { body } => {
             out.push_str(&format!("{pad}{{\n"));
             for cmd in body {
-                emit_cmd(cmd, out, indent + 2);
+                emit_cmd(cmd, out, indent + 2, target);
             }
             out.push_str(&format!("{pad}}}\n"));
         }
         Cmd::WithRedirect { stdout, stderr, stdin, body } => {
             out.push_str(&format!("{pad}{{\n"));
             for cmd in body {
-                 emit_cmd(cmd, out, indent + 2);
+                 emit_cmd(cmd, out, indent + 2, target);
             }
             out.push_str(&format!("{pad}}}")); // No newline yet, redirections follow
             
-            if let Some(target) = stdin {
-                match target {
+            if let Some(target_redir) = stdin {
+                match target_redir {
                     RedirectTarget::File { path, .. } => {
-                        out.push_str(&format!(" < {}", emit_val(path)));
+                        out.push_str(&format!(" < {}", emit_val(path, target)));
                     }
                     _ => panic!("stdin redirected to something invalid (only file supported)"),
                 }
@@ -585,12 +635,12 @@ fn emit_cmd(cmd: &Cmd, out: &mut String, indent: usize) {
                 }
             }
 
-            let emit_stdout = |out: &mut String| {
-                if let Some(target) = &stdout {
-                    match target {
+            let mut emit_stdout = |out: &mut String| {
+                if let Some(target_redir) = &stdout {
+                    match target_redir {
                         RedirectTarget::File { path, append } => {
                             let op = if *append { ">>" } else { ">" };
-                            out.push_str(&format!(" {} {}", op, emit_val(path)));
+                            out.push_str(&format!(" {} {}", op, emit_val(path, target)));
                         }
                         RedirectTarget::Stderr => {
                             out.push_str(" 1>&2");
@@ -602,12 +652,12 @@ fn emit_cmd(cmd: &Cmd, out: &mut String, indent: usize) {
                 }
             };
 
-            let emit_stderr = |out: &mut String| {
-                if let Some(target) = &stderr {
-                    match target {
+            let mut emit_stderr = |out: &mut String| {
+                if let Some(target_redir) = &stderr {
+                    match target_redir {
                         RedirectTarget::File { path, append } => {
                              let op = if *append { ">>" } else { ">" };
-                             out.push_str(&format!(" 2{} {}", op, emit_val(path)));
+                             out.push_str(&format!(" 2{} {}", op, emit_val(path, target)));
                         }
                         RedirectTarget::Stdout => {
                              out.push_str(" 2>&1");
@@ -631,7 +681,7 @@ fn emit_cmd(cmd: &Cmd, out: &mut String, indent: usize) {
         Cmd::Spawn(cmd) => {
              // Emit inner command to a temp buffer to handle trailing newline
              let mut inner_out = String::new();
-             emit_cmd(cmd, &mut inner_out, indent);
+             emit_cmd(cmd, &mut inner_out, indent, target);
              
              // Trim trailing newline if present
              if inner_out.ends_with('\n') {
@@ -649,12 +699,12 @@ fn emit_cmd(cmd: &Cmd, out: &mut String, indent: usize) {
                              out.push_str(&format!("{pad}wait"));
                              for elem in elems {
                                  out.push(' ');
-                                 out.push_str(&emit_word(elem));
+                                 out.push_str(&emit_word(elem, target));
                              }
                              out.push('\n');
-                         }
+                          }
                          _ => {
-                             out.push_str(&format!("{pad}wait {}\n", emit_word(val)));
+                             out.push_str(&format!("{pad}wait {}\n", emit_word(val, target)));
                          }
                      }
                  }
@@ -664,33 +714,33 @@ fn emit_cmd(cmd: &Cmd, out: &mut String, indent: usize) {
         Cmd::TryCatch { try_body, catch_body } => {
             out.push_str(&format!("{pad}if ! (\n"));
             for cmd in try_body {
-                emit_cmd(cmd, out, indent + 2);
+                emit_cmd(cmd, out, indent + 2, target);
             }
             out.push_str(&format!("{pad}); then\n"));
             for cmd in catch_body {
-                emit_cmd(cmd, out, indent + 2);
+                emit_cmd(cmd, out, indent + 2, target);
             }
             out.push_str(&format!("{pad}fi\n"));
         }
         Cmd::AndThen { left, right } => {
             out.push_str(&format!("{pad}{{\n"));
             for cmd in left {
-                emit_cmd(cmd, out, indent + 2);
+                emit_cmd(cmd, out, indent + 2, target);
             }
             out.push_str(&format!("{pad}}} && {{\n"));
             for cmd in right {
-                emit_cmd(cmd, out, indent + 2);
+                emit_cmd(cmd, out, indent + 2, target);
             }
             out.push_str(&format!("{pad}}}\n"));
         }
         Cmd::OrElse { left, right } => {
             out.push_str(&format!("{pad}{{\n"));
             for cmd in left {
-                emit_cmd(cmd, out, indent + 2);
+                emit_cmd(cmd, out, indent + 2, target);
             }
             out.push_str(&format!("{pad}}} || {{\n"));
             for cmd in right {
-                emit_cmd(cmd, out, indent + 2);
+                emit_cmd(cmd, out, indent + 2, target);
             }
             out.push_str(&format!("{pad}}}\n"));
         }
@@ -700,7 +750,7 @@ fn emit_cmd(cmd: &Cmd, out: &mut String, indent: usize) {
             out.push_str(name);
             if let Some(v) = value {
                 out.push('=');
-                out.push_str(&emit_val(v));
+                out.push_str(&emit_val(v, target));
             }
             out.push('\n');
         }
@@ -713,7 +763,7 @@ fn emit_cmd(cmd: &Cmd, out: &mut String, indent: usize) {
         Cmd::Source(path) => {
             out.push_str(&pad);
             out.push_str(". ");
-            out.push_str(&emit_word(path));
+            out.push_str(&emit_word(path, target));
             out.push('\n');
         }
     }

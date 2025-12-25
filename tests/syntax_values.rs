@@ -130,7 +130,7 @@ fn codegen_comparison() {
     let ast = parser::parse(&tokens);
     let ir = lower::lower(ast);
     let out = codegen::emit(&ir);
-    assert!(out.contains("[ \"$x\" != \"bar\" ]"));
+    assert!(out.contains("[ \"$x\" != 'bar' ]"));
 }
 
 #[test]
@@ -224,7 +224,7 @@ fn codegen_concatenation() {
     let ast = parser::parse(&tokens);
     let ir = lower::lower(ast);
     let out = codegen::emit(&ir);
-    assert!(out.contains("\"hello \"\"$name\""));
+    assert!(out.contains("'hello '\"$name\""));
 }
 
 #[test]
@@ -280,7 +280,7 @@ fn codegen_let_and_usage() {
     let ast = parser::parse(&tokens);
     let ir = lower::lower(ast);
     let out = codegen::emit(&ir);
-    assert!(out.contains("msg=\"hello\""));
+    assert!(out.contains("msg='hello'"));
     assert!(out.contains("echo \"$msg\""));
 }
 

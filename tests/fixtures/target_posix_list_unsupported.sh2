@@ -1,0 +1,4 @@
+func main() {
+  let xs = ["a", "b"]
+  print(join(xs, ","))
+}
