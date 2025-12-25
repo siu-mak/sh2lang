@@ -7,3 +7,4 @@ f_empty is not exec
 f_empty is writable
 f_ro is not writable
 f_full is readable
+f_noread is not readable

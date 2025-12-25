@@ -10,7 +10,10 @@ func main() {
         run("chmod", "+x", "f_exec")
         
         run("touch", "f_ro")
-        run("chmod", "-w", "f_ro")
+        run("chmod", "444", "f_ro")
+
+        run("touch", "f_noread")
+        run("chmod", "000", "f_noread")
 
         if is_symlink("link") { print("link is symlink") }
         if !is_symlink("f_empty") { print("f_empty is not symlink") }
@@ -25,5 +28,6 @@ func main() {
         if !is_writable("f_ro") { print("f_ro is not writable") }
 
         if is_readable("f_full") { print("f_full is readable") }
+        if !is_readable("f_noread") { print("f_noread is not readable") }
     }
 }

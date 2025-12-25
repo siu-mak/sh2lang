@@ -9,7 +9,9 @@ main() {
     'touch' 'f_exec'
     'chmod' '+x' 'f_exec'
     'touch' 'f_ro'
-    'chmod' '-w' 'f_ro'
+    'chmod' '444' 'f_ro'
+    'touch' 'f_noread'
+    'chmod' '000' 'f_noread'
     if [ -L 'link' ]; then
       printf '%s\n' 'link is symlink'
     fi
@@ -36,6 +38,9 @@ main() {
     fi
     if [ -r 'f_full' ]; then
       printf '%s\n' 'f_full is readable'
+    fi
+    if ! [ -r 'f_noread' ]; then
+      printf '%s\n' 'f_noread is not readable'
     fi
   )
 }
