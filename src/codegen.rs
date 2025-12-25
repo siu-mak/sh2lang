@@ -119,6 +119,9 @@ fn emit_val(v: &Val) -> String {
         Val::Argv0 => "\"$0\"".to_string(),
         Val::Argc => "\"$#\"".to_string(),
         Val::Arith { .. } => format!("\"$(( {} ))\"", emit_arith_expr(v)),
+        Val::BoolStr(inner) => {
+             format!("\"$( if {}; then printf \"%s\" \"true\"; else printf \"%s\" \"false\"; fi )\"", emit_cond(inner))
+        },
         Val::Compare { .. } | Val::And(..) | Val::Or(..) | Val::Not(..) | Val::Exists(..) | Val::IsDir(..) | Val::IsFile(..) | Val::IsSymlink(..) | Val::IsExec(..) | Val::IsReadable(..) | Val::IsWritable(..) | Val::IsNonEmpty(..) | Val::List(..) | Val::Args => panic!("Cannot emit boolean/list/args value as string"),
     }
 }
@@ -163,6 +166,9 @@ fn emit_word(v: &Val) -> String {
         Val::Argv0 => "\"$0\"".to_string(),
         Val::Argc => "\"$#\"".to_string(),
         Val::Arith { .. } => format!("\"$(( {} ))\"", emit_arith_expr(v)),
+        Val::BoolStr(inner) => {
+             format!("\"$( if {}; then printf \"%s\" \"true\"; else printf \"%s\" \"false\"; fi )\"", emit_cond(inner))
+        },
         Val::Args => "\"$@\"".into(),
         Val::Compare { .. } | Val::And(..) | Val::Or(..) | Val::Not(..) | Val::Exists(..) | Val::IsDir(..) | Val::IsFile(..) | Val::IsSymlink(..) | Val::IsExec(..) | Val::IsReadable(..) | Val::IsWritable(..) | Val::IsNonEmpty(..) | Val::List(..) => panic!("Cannot emit boolean/list value as command word"),
     }

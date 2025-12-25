@@ -1,0 +1,9 @@
+main() {
+  "sh" "-c" "rm -f empty nonempty; : > empty; echo hi > nonempty"
+  echo "$( if [ -s "nonempty" ]; then printf "%s" "true"; else printf "%s" "false"; fi )"
+  echo "$( if [ -s "empty" ]; then printf "%s" "true"; else printf "%s" "false"; fi )"
+  echo "missing=""$( if [ -s "missing" ]; then printf "%s" "true"; else printf "%s" "false"; fi )"
+  echo "not_empty=""$( if ! [ -s "empty" ]; then printf "%s" "true"; else printf "%s" "false"; fi )"
+}
+
+main "$@"

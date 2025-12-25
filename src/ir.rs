@@ -40,6 +40,7 @@ pub enum Val {
     EnvDot(String),
     Uid,
     Ppid,
+    BoolStr(Box<Val>),
     Pwd,
     SelfPid,
     Argv0,

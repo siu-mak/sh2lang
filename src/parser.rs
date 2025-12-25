@@ -991,6 +991,13 @@ fn parse_primary(tokens: &[Token], i: &mut usize) -> Expr {
             expect(tokens, i, Token::RParen);
             Expr::IsNonEmpty(Box::new(path))
         }
+        Token::BoolStr => {
+            *i += 1;
+            expect(tokens, i, Token::LParen);
+            let expr = parse_expr(tokens, i);
+            expect(tokens, i, Token::RParen);
+            Expr::BoolStr(Box::new(expr))
+        }
         Token::Len => {
             *i += 1;
             expect(tokens, i, Token::LParen);

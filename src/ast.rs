@@ -55,6 +55,7 @@ pub enum Expr {
     IsReadable(Box<Expr>),
     IsWritable(Box<Expr>),
     IsNonEmpty(Box<Expr>),
+    BoolStr(Box<Expr>),
     Len(Box<Expr>),
     Arg(u32),
     Index { list: Box<Expr>, index: Box<Expr> },

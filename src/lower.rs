@@ -369,6 +369,9 @@ fn lower_expr(e: ast::Expr) -> ir::Val {
         ast::Expr::IsNonEmpty(path) => {
             ir::Val::IsNonEmpty(Box::new(lower_expr(*path)))
         }
+        ast::Expr::BoolStr(inner) => {
+            ir::Val::BoolStr(Box::new(lower_expr(*inner)))
+        }
         ast::Expr::Len(expr) => {
             ir::Val::Len(Box::new(lower_expr(*expr)))
         }

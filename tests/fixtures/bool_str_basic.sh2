@@ -1,0 +1,7 @@
+func main() {
+  run("sh", "-c", "rm -f empty nonempty; : > empty; echo hi > nonempty")
+  print(bool_str(is_non_empty("nonempty")))
+  print(bool_str(is_non_empty("empty")))
+  print("missing=" + bool_str(is_non_empty("missing")))
+  print("not_empty=" + bool_str(!is_non_empty("empty")))
+}
