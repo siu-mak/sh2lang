@@ -1,16 +1,20 @@
 use std::process::Command;
 use std::fs;
 
-fn run_cli(args: &[&str], input_file: &str) -> std::process::Output {
+fn run_cli(args: &[&str]) -> std::process::Output {
     let bin_path = env!("CARGO_BIN_EXE_sh2c");
     let mut cmd = Command::new(bin_path);
     cmd.args(args);
-    cmd.arg(input_file);
     cmd.output().expect("Failed to execute sh2c binary")
 }
 
 fn assert_output_matches(output: std::process::Output, expected_path: &str) {
-    assert!(output.status.success(), "CLI failed with status: {:?}\nStderr: {}", output.status, String::from_utf8_lossy(&output.stderr));
+    if !output.status.success() {
+        eprintln!("CLI failed with status: {:?}", output.status);
+        eprintln!("Stdout: {}", String::from_utf8_lossy(&output.stdout));
+        eprintln!("Stderr: {}", String::from_utf8_lossy(&output.stderr));
+        panic!("CLI execution failed");
+    }
     
     let stdout = String::from_utf8(output.stdout).expect("Stdout not utf8");
     let expected = fs::read_to_string(expected_path).expect("Failed to read expected output");
@@ -24,44 +28,51 @@ fn assert_output_matches(output: std::process::Output, expected_path: &str) {
 
 #[test]
 fn cli_default_is_bash() {
-    let output = run_cli(&[], "tests/fixtures/posix_params.sh2");
+    let output = run_cli(&["tests/fixtures/posix_params.sh2"]);
     assert_output_matches(output, "tests/fixtures/posix_params.sh.expected");
 }
 
 #[test]
 fn cli_explicit_bash() {
-    let output = run_cli(&["--target", "bash"], "tests/fixtures/posix_params.sh2");
+    let output = run_cli(&["--target", "bash", "tests/fixtures/posix_params.sh2"]);
     assert_output_matches(output, "tests/fixtures/posix_params.sh.expected");
 }
 
 #[test]
 fn cli_explicit_posix() {
-    let output = run_cli(&["--target", "posix"], "tests/fixtures/posix_params.sh2");
+    let output = run_cli(&["--target", "posix", "tests/fixtures/posix_params.sh2"]);
     assert_output_matches(output, "tests/fixtures/posix_params.posix.sh.expected");
 }
 
 #[test]
 fn cli_equals_bash() {
-    let output = run_cli(&["--target=bash"], "tests/fixtures/posix_params.sh2");
+    let output = run_cli(&["--target=bash", "tests/fixtures/posix_params.sh2"]);
     assert_output_matches(output, "tests/fixtures/posix_params.sh.expected");
 }
 
 #[test]
 fn cli_equals_posix() {
-    let output = run_cli(&["--target=posix"], "tests/fixtures/posix_params.sh2");
+    let output = run_cli(&["--target=posix", "tests/fixtures/posix_params.sh2"]);
+    assert_output_matches(output, "tests/fixtures/posix_params.posix.sh.expected");
+}
+
+#[test]
+fn cli_target_after_script() {
+    // New test case: sh2c script --target posix
+    let output = run_cli(&["tests/fixtures/posix_params.sh2", "--target", "posix"]);
+    assert_output_matches(output, "tests/fixtures/posix_params.posix.sh.expected");
+}
+
+#[test]
+fn cli_target_equals_after_script() {
+    // New test case: sh2c script --target=posix
+    let output = run_cli(&["tests/fixtures/posix_params.sh2", "--target=posix"]);
     assert_output_matches(output, "tests/fixtures/posix_params.posix.sh.expected");
 }
 
 #[test]
 fn cli_invalid_target() {
-    let bin_path = env!("CARGO_BIN_EXE_sh2c");
-    let output = Command::new(bin_path)
-        .arg("--target")
-        .arg("invalid")
-        .arg("tests/fixtures/posix_params.sh2")
-        .output()
-        .expect("Failed to start");
-        
+    let output = run_cli(&["--target", "invalid", "tests/fixtures/posix_params.sh2"]);
     assert!(!output.status.success());
     let stderr = String::from_utf8_lossy(&output.stderr);
     assert!(stderr.contains("Invalid target: invalid"));
@@ -69,13 +80,24 @@ fn cli_invalid_target() {
 
 #[test]
 fn cli_missing_arg() {
-    let bin_path = env!("CARGO_BIN_EXE_sh2c");
-    let output = Command::new(bin_path)
-        .arg("--target")
-        .output()
-        .expect("Failed to start");
-        
+    let output = run_cli(&["--target"]);
     assert!(!output.status.success());
     let stderr = String::from_utf8_lossy(&output.stderr);
-    assert!(stderr.contains("--target requires an argument") || stderr.contains("Usage:"));
+    assert!(stderr.contains("--target requires an argument"));
+}
+
+#[test]
+fn cli_multiple_scripts_fails() {
+    let output = run_cli(&["script1.sh2", "script2.sh2"]);
+    assert!(!output.status.success());
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(stderr.contains("Unexpected argument: script2.sh2"));
+}
+
+#[test]
+fn cli_read_error_exits_gracefully() {
+    let output = run_cli(&["non_existent_file.sh2"]);
+    assert!(!output.status.success());
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(stderr.contains("Failed to read non_existent_file.sh2"));
 }

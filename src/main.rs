@@ -1,83 +1,90 @@
-mod lexer;
-mod parser;
-mod ast;
-mod ir;
-mod lower;
-mod codegen;
-
 use std::fs;
-use codegen::TargetShell;
+use std::process;
+use sh2c::lexer;
+use sh2c::parser;
+use sh2c::lower;
+use sh2c::codegen;
+use sh2c::codegen::TargetShell;
 
 fn main() {
     let args: Vec<String> = std::env::args().collect();
     if args.len() < 2 {
-        eprintln!("Usage: sh2c <script.sh2> [--target {{bash|posix}}]");
-        std::process::exit(1);
+        print_usage();
+        process::exit(1);
     }
 
-    // Basic arg parsing (no clap)
-    // sh2c <script> [--target <target>]
-    // sh2c --target <target> <script> (harder to support without proper parsing, let's assume script is first or just iterate)
-    
-    let mut filename = String::new();
+    let mut filename: Option<String> = None;
     let mut target = TargetShell::Bash;
-    
+
     let mut i = 1;
     while i < args.len() {
         let arg = &args[i];
         if arg == "--target" {
             if i + 1 < args.len() {
-                let t_str = &args[i+1];
-                match t_str.as_str() {
-                    "bash" => target = TargetShell::Bash,
-                    "posix" => target = TargetShell::Posix,
-                    _ => {
-                        eprintln!("Invalid target: {}. Supported: bash, posix", t_str);
-                        std::process::exit(1);
-                    }
-                }
+                target = parse_target(&args[i+1]);
                 i += 2;
             } else {
                 eprintln!("--target requires an argument");
-                std::process::exit(1);
+                process::exit(1);
             }
         } else if arg.starts_with("--target=") {
-            let t_str = &arg["--target=".len()..];
-            if t_str.is_empty() {
+            let val = &arg["--target=".len()..];
+            if val.is_empty() {
                 eprintln!("--target requires an argument");
-                std::process::exit(1);
+                process::exit(1);
             }
-            match t_str {
-                "bash" => target = TargetShell::Bash,
-                "posix" => target = TargetShell::Posix,
-                _ => {
-                    eprintln!("Invalid target: {}. Supported: bash, posix", t_str);
-                    std::process::exit(1);
-                }
-            }
+            target = parse_target(val);
             i += 1;
+        } else if arg.starts_with("-") {
+            eprintln!("Unexpected argument: {}", arg);
+            process::exit(1);
         } else {
-            if filename.is_empty() {
-                filename = arg.clone();
-                i += 1;
-            } else {
-                eprintln!("Unexpected argument: {}", arg);
-                std::process::exit(1);
+            if filename.is_some() {
+                eprintln!("Unexpected argument: {} (script already specified)", arg);
+                process::exit(1);
             }
+            filename = Some(arg.clone());
+            i += 1;
         }
     }
-    
-    if filename.is_empty() {
-        eprintln!("Usage: sh2c <script.sh2> [--target {{bash|posix}}]");
-        std::process::exit(1);
-    }
-    
-    let src = fs::read_to_string(&filename).unwrap();
+
+    let filename = match filename {
+        Some(f) => f,
+        None => {
+            print_usage();
+            process::exit(1);
+        }
+    };
+
+    let src = match fs::read_to_string(&filename) {
+        Ok(s) => s,
+        Err(e) => {
+            eprintln!("Failed to read {}: {}", filename, e);
+            process::exit(1);
+        }
+    };
 
     let tokens = lexer::lex(&src);
     let ast = parser::parse(&tokens);
     let ir = lower::lower(ast);
-    let bash = codegen::emit_with_target(&ir, target);
+    let out = codegen::emit_with_target(&ir, target);
 
-    println!("{}", bash);
+    print!("{}", out);
+}
+
+fn parse_target(s: &str) -> TargetShell {
+    match s {
+        "bash" => TargetShell::Bash,
+        "posix" => TargetShell::Posix,
+        _ => {
+            eprintln!("Invalid target: {}. Supported: bash, posix", s);
+            process::exit(1);
+        }
+    }
+}
+
+fn print_usage() {
+    eprintln!("Usage: sh2c [flags] <script.sh2> [flags]");
+    eprintln!("Flags:");
+    eprintln!("  --target <bash|posix>  Select output shell dialect (default: bash)");
 }
