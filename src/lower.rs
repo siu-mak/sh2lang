@@ -271,12 +271,23 @@ fn lower_stmt(stmt: ast::Stmt, out: &mut Vec<ir::Cmd>) {
                      out.push(ir::Cmd::Assign(name, lower_expr(value)));
                  }
                   ast::LValue::Env(name) => {
-                      if let ast::Expr::List(_) = value {
-                          panic!("Cannot assign a list to an environment variable");
+                      // 1. Pre-check for obvious invalid types to give good errors before lowering
+                      if matches!(&value, ast::Expr::List(_) | ast::Expr::Args) {
+                          panic!("set env.<NAME> requires a scalar string/number; lists/args are not supported");
                       }
+
+                      let val = lower_expr(value);
+
+                      // 2. Post-check for types that lowered into lists (e.g. variable references that happen to be lists, though lower_expr usually emits Var for those, type check happens at runtime for some, but if we can detect usage of list-like constructs here)
+                      // Actually, Val::List comes from literal lists. Val::Args comes from `args`. 
+                      // Lowering generally preserves structure.
+                      if matches!(val, ir::Val::List(_) | ir::Val::Args) {
+                           panic!("set env.<NAME> requires a scalar string/number; lists/args are not supported");
+                      }
+                      
                       out.push(ir::Cmd::Export {
                           name,
-                          value: Some(lower_expr(value)),
+                          value: Some(val),
                       });
                   }
              }
