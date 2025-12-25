@@ -55,15 +55,24 @@ fn exec_set_env_basic() {
 }
 
 #[test]
-#[should_panic(expected = "set env.<NAME> requires a scalar string/number")]
+#[test]
 fn codegen_set_env_list_invalid() {
     // This should panic during lowering because we assign a list to strict env var
-    assert_codegen_matches_snapshot("set_env_list_invalid");
+    assert_codegen_panics("set_env_list_invalid", "set env.<NAME> requires a scalar string/number");
 }
 
 #[test]
-#[should_panic(expected = "set env.<NAME> requires a scalar string/number")]
 fn codegen_set_env_args_invalid() {
     // This should panic during lowering because we assign args to strict env var
-    assert_codegen_matches_snapshot("set_env_args_invalid");
+    assert_codegen_panics("set_env_args_invalid", "set env.<NAME> requires a scalar string/number");
+}
+
+#[test]
+fn codegen_set_env_scalar_ok() {
+    assert_codegen_matches_snapshot("set_env_scalar_ok");
+}
+
+#[test]
+fn exec_set_env_scalar_ok() {
+    assert_exec_matches_fixture("set_env_scalar_ok");
 }

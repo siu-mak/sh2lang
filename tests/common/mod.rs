@@ -30,6 +30,30 @@ pub fn assert_codegen_matches_snapshot(fixture_name: &str) {
     assert_eq!(output.trim(), expected.trim(), "Codegen mismatch for {}", fixture_name);
 }
 
+pub fn assert_codegen_panics(fixture_name: &str, expected_msg_part: &str) {
+    let sh2_path = format!("tests/fixtures/{}.sh2", fixture_name);
+    let src = fs::read_to_string(&sh2_path).expect("Failed to read source fixture");
+    
+    // We need to catch unwind, so we can verify the panic message
+    let result = std::panic::catch_unwind(|| {
+        compile_to_bash(&src)
+    });
+
+    match result {
+        Ok(_) => panic!("Expected panic during codegen for {}, but it succeeded", fixture_name),
+        Err(err) => {
+            let msg = if let Some(s) = err.downcast_ref::<&str>() {
+                *s
+            } else if let Some(s) = err.downcast_ref::<String>() {
+                s.as_str()
+            } else {
+                "Unknown panic message"
+            };
+            assert!(msg.contains(expected_msg_part), "Expected panic message containing '{}', got '{}'", expected_msg_part, msg);
+        }
+    }
+}
+
 fn write_temp_script(prefix: &str, bash: &str) -> std::path::PathBuf {
     let pid = std::process::id();
     let nanos = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_nanos();
