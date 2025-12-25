@@ -735,6 +735,7 @@ fn is_expr_start(t: Option<&Token>) -> bool {
            | Token::IsReadable
            | Token::IsWritable
            | Token::IsNonEmpty
+           | Token::BoolStr
            | Token::Len
            | Token::Arg
            | Token::Index

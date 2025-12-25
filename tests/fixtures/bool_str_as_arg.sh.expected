@@ -1,0 +1,6 @@
+main() {
+  "sh" "-c" "rm -f empty; : > empty"
+  "printf" "%s\n" $( if [ -s "empty" ]; then printf "%s" "true"; else printf "%s" "false"; fi )
+}
+
+main "$@"
