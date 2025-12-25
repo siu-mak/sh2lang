@@ -4,7 +4,7 @@ use std::process::Command;
 use std::time::{SystemTime, UNIX_EPOCH};
 use sh2c::{lexer, parser, lower, codegen};
 use sh2c::ast;
-use sh2c::codegen::TargetShell;
+pub use sh2c::codegen::TargetShell;
 
 pub fn compile_to_bash(src: &str) -> String {
     compile_to_shell(src, TargetShell::Bash)

@@ -1,0 +1,6 @@
+main() {
+  printf '%s\n' 'a
+b'
+}
+
+main "$@"

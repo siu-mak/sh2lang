@@ -130,7 +130,18 @@ pub fn lex(input: &str) -> Vec<Token> {
             '+' => { tokens.push(Token::Plus); chars.next(); }
             '-' => { tokens.push(Token::Minus); chars.next(); }
             '*' => { tokens.push(Token::Star); chars.next(); }
-            '/' => { tokens.push(Token::Slash); chars.next(); }
+            '/' => {
+                chars.next();
+                if chars.peek() == Some(&'/') {
+                    // Comment
+                    while let Some(&ch) = chars.peek() {
+                         if ch == '\n' { break; }
+                         chars.next();
+                    }
+                } else {
+                    tokens.push(Token::Slash);
+                }
+            }
             '%' => { tokens.push(Token::Percent); chars.next(); }
             '<' => {
                  chars.next();

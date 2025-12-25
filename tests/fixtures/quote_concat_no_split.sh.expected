@@ -1,0 +1,6 @@
+main() {
+  x='b c'
+  printf '%s\n' 'a:'"$x"
+}
+
+main "$@"

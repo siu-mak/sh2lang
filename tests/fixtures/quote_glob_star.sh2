@@ -1,0 +1,6 @@
+func main() {
+  // Use run to check how it passes arg, since print uses printf '%s\n' which might mask globbing if not quoted
+  // But wait, printf '%s\n' * would expand star!
+  // So print("*") is a good test.
+  print("*")
+}
