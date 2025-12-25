@@ -41,6 +41,21 @@ fn main() {
                 eprintln!("--target requires an argument");
                 std::process::exit(1);
             }
+        } else if arg.starts_with("--target=") {
+            let t_str = &arg["--target=".len()..];
+            if t_str.is_empty() {
+                eprintln!("--target requires an argument");
+                std::process::exit(1);
+            }
+            match t_str {
+                "bash" => target = TargetShell::Bash,
+                "posix" => target = TargetShell::Posix,
+                _ => {
+                    eprintln!("Invalid target: {}. Supported: bash, posix", t_str);
+                    std::process::exit(1);
+                }
+            }
+            i += 1;
         } else {
             if filename.is_empty() {
                 filename = arg.clone();
