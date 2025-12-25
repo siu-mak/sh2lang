@@ -1,4 +1,5 @@
 func main() {
-  set x = "hi"
+  let x = "a"
+  set x = "b"
   print(x)
 }

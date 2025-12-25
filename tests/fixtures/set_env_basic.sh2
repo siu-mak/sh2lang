@@ -1,5 +1,5 @@
 func main() {
   set env.FOO = "bar"
-  print(env.FOO)
   print(env("FOO"))
+  run("sh", "-c", "test \"$FOO\" = bar && echo child_ok")
 }

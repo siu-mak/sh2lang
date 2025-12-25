@@ -717,6 +717,31 @@ fn expect(tokens: &[Token], i: &mut usize, t: Token) {
     *i += 1;
 }
 
+fn is_stmt_start(t: Option<&Token>) -> bool {
+    matches!(t,
+        Some(Token::Let
+           | Token::Run
+           | Token::Print
+           | Token::PrintErr
+           | Token::If
+           | Token::Case
+           | Token::While
+           | Token::For
+           | Token::Break
+           | Token::Continue
+           | Token::Return
+           | Token::Exit
+           | Token::With
+           | Token::Cd
+           | Token::Sh
+           | Token::LBrace
+           | Token::Ident(_)
+           | Token::Exec
+           | Token::Set
+           | Token::Source
+           | Token::Unset
+           | Token::Spawn))
+}
 fn is_expr_start(t: Option<&Token>) -> bool {
     matches!(t,
         Some(Token::String(_)

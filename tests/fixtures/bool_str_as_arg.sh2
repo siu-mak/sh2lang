@@ -1,4 +1,4 @@
 func main() {
   run("sh", "-c", "rm -f empty; : > empty")
-  run("printf", "%s\n", bool_str(is_non_empty("empty")))
+  run("printf", "%s\\n", bool_str(is_non_empty("empty")))
 }

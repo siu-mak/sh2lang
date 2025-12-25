@@ -1,5 +1,6 @@
 main() {
-  x="hi"
+  x="a"
+  x="b"
   echo "$x"
 }
 

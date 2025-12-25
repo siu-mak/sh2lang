@@ -270,12 +270,15 @@ fn lower_stmt(stmt: ast::Stmt, out: &mut Vec<ir::Cmd>) {
                  ast::LValue::Var(name) => {
                      out.push(ir::Cmd::Assign(name, lower_expr(value)));
                  }
-                 ast::LValue::Env(name) => {
-                     out.push(ir::Cmd::Export {
-                         name,
-                         value: Some(lower_expr(value)),
-                     });
-                 }
+                  ast::LValue::Env(name) => {
+                      if let ast::Expr::List(_) = value {
+                          panic!("Cannot assign a list to an environment variable");
+                      }
+                      out.push(ir::Cmd::Export {
+                          name,
+                          value: Some(lower_expr(value)),
+                      });
+                  }
              }
         }
         ast::Stmt::PipeBlocks { segments } => {

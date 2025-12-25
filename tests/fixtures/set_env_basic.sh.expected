@@ -1,7 +1,7 @@
 main() {
   export FOO="bar"
-  echo "$( ( typeset +x FOO; printenv FOO ) 2>/dev/null || printenv FOO 2>/dev/null || true )"
   echo "${FOO}"
+  "sh" "-c" "test \"""$FOO""\" = bar && echo child_ok"
 }
 
 main "$@"
