@@ -183,13 +183,12 @@ pub fn assert_exec_matches_fixture_target(fixture_name: &str, target: TargetShel
     let shell_bin = match target {
         TargetShell::Bash => "bash",
         TargetShell::Posix => {
-            // Check for dash
-            // If checking fails, we panic in run_shell_script?
-            // Checking here allows skipping.
-            if Command::new("dash").output().is_ok() {
+            if Command::new("dash").arg("-c").arg("true").status().map(|s| s.success()).unwrap_or(false) {
                 "dash"
+            } else if Command::new("sh").arg("-c").arg("true").status().map(|s| s.success()).unwrap_or(false) {
+                "sh"
             } else {
-                println!("Skipping POSIX test for {} because 'dash' is not available", fixture_name);
+                eprintln!("Skipping POSIX test for {} because 'dash' and 'sh' are not available", fixture_name);
                 return;
             }
         }

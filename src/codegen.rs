@@ -41,7 +41,10 @@ pub fn emit_with_target(funcs: &[Function], target: TargetShell) -> String {
         }
         out.push_str(&format!("{}() {{\n", f.name));
         for (idx, param) in f.params.iter().enumerate() {
-            out.push_str(&format!("  local {}=\"${{{}}}\"\n", param, idx + 1));
+            match target {
+                TargetShell::Bash => out.push_str(&format!("  local {}=\"${{{}}}\"\n", param, idx + 1)),
+                TargetShell::Posix => out.push_str(&format!("  {}=\"${{{}}}\"\n", param, idx + 1)),
+            }
         }
         for cmd in &f.commands {
             emit_cmd(cmd, &mut out, 2, target);
@@ -152,13 +155,28 @@ fn emit_val(v: &Val, target: TargetShell) -> String {
         Val::Pid => "\"$!\"".to_string(),
         Val::Env(inner) => match &**inner {
             Val::Literal(s) => format!("\"${{{}}}\"", s),
-            Val::Var(name) => format!("\"${{!{}}}\"", name),
+            Val::Var(name) => match target {
+                TargetShell::Bash => format!("\"${{!{}}}\"", name),
+                TargetShell::Posix => panic!("env(var_name) is not supported in POSIX sh target; use env(\"NAME\") or env.NAME"),
+            },
             _ => panic!("env(...) requires a string literal name or variable name"),
         },
-        Val::EnvDot(name) => format!("\"$( ( typeset +x {0}; printenv {0} ) 2>/dev/null || printenv {0} 2>/dev/null || true )\"", name),
-        Val::Uid => "\"$UID\"".to_string(),
-        Val::Ppid => "\"$PPID\"".to_string(),
-        Val::Pwd => "\"$PWD\"".to_string(),
+        Val::EnvDot(name) => match target {
+            TargetShell::Bash => format!("\"$( ( typeset +x {0}; printenv {0} ) 2>/dev/null || printenv {0} 2>/dev/null || true )\"", name),
+            TargetShell::Posix => format!("\"${{{}-}}\"", name),
+        },
+        Val::Uid => match target { 
+            TargetShell::Bash => "\"$UID\"".to_string(), 
+            TargetShell::Posix => panic!("uid() is not supported in POSIX sh target") 
+        },
+        Val::Ppid => match target { 
+            TargetShell::Bash => "\"$PPID\"".to_string(), 
+            TargetShell::Posix => panic!("ppid() is not supported in POSIX sh target") 
+        },
+        Val::Pwd => match target { 
+            TargetShell::Bash => "\"$PWD\"".to_string(), 
+            TargetShell::Posix => panic!("pwd() is not supported in POSIX sh target") 
+        },
         Val::SelfPid => "\"$$\"".to_string(),
         Val::Argv0 => "\"$0\"".to_string(),
         Val::Argc => "\"$#\"".to_string(),
@@ -199,13 +217,28 @@ fn emit_word(v: &Val, target: TargetShell) -> String {
         Val::Pid => "\"$!\"".to_string(),
         Val::Env(inner) => match &**inner {
             Val::Literal(s) => format!("\"${{{}}}\"", s),
-            Val::Var(name) => format!("\"${{!{}}}\"", name),
+            Val::Var(name) => match target {
+                TargetShell::Bash => format!("\"${{!{}}}\"", name),
+                TargetShell::Posix => panic!("env(var_name) is not supported in POSIX sh target; use env(\"NAME\") or env.NAME"),
+            },
             _ => panic!("env(...) requires a string literal name or variable name"),
         },
-        Val::EnvDot(name) => format!("\"$( ( typeset +x {0}; printenv {0} ) 2>/dev/null || printenv {0} 2>/dev/null || true )\"", name),
-        Val::Uid => "\"$UID\"".to_string(),
-        Val::Ppid => "\"$PPID\"".to_string(),
-        Val::Pwd => "\"$PWD\"".to_string(),
+        Val::EnvDot(name) => match target {
+            TargetShell::Bash => format!("\"$( ( typeset +x {0}; printenv {0} ) 2>/dev/null || printenv {0} 2>/dev/null || true )\"", name),
+            TargetShell::Posix => format!("\"${{{}-}}\"", name),
+        },
+        Val::Uid => match target { 
+            TargetShell::Bash => "\"$UID\"".to_string(), 
+            TargetShell::Posix => panic!("uid() is not supported in POSIX sh target") 
+        },
+        Val::Ppid => match target { 
+            TargetShell::Bash => "\"$PPID\"".to_string(), 
+            TargetShell::Posix => panic!("ppid() is not supported in POSIX sh target") 
+        },
+        Val::Pwd => match target { 
+            TargetShell::Bash => "\"$PWD\"".to_string(), 
+            TargetShell::Posix => panic!("pwd() is not supported in POSIX sh target") 
+        },
         Val::SelfPid => "\"$$\"".to_string(),
         Val::Argv0 => "\"$0\"".to_string(),
         Val::Argc => "\"$#\"".to_string(),
