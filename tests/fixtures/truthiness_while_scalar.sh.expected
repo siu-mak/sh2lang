@@ -1,0 +1,10 @@
+main() {
+  x='go'
+  while [ -n "$x" ]; do
+    printf '%s\n' 'loop'
+    x=''
+  done
+  printf '%s\n' 'done'
+}
+
+main "$@"

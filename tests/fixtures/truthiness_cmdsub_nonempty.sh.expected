@@ -1,0 +1,10 @@
+main() {
+  out="$( 'sh' '-c' 'printf '\''%s'\'' hi' )"
+  if [ -n "$out" ]; then
+    printf '%s\n' 'ok'
+  else
+    printf '%s\n' 'bad'
+  fi
+}
+
+main "$@"

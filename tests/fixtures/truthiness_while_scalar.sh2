@@ -1,0 +1,8 @@
+func main() {
+  let x = "go"
+  while x {
+    print("loop")
+    let x = ""
+  }
+  print("done")
+}

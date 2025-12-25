@@ -1,0 +1,9 @@
+main() {
+  if [ -n '0' ]; then
+    printf '%s\n' 'ok'
+  else
+    printf '%s\n' 'bad'
+  fi
+}
+
+main "$@"

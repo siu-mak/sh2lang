@@ -1,0 +1,8 @@
+func main() {
+  let x = ""
+  if x {
+    print("bad")
+  } else {
+    print("ok")
+  }
+}

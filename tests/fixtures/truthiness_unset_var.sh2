@@ -1,0 +1,7 @@
+func main() {
+  if missing {
+    print("bad")
+  } else {
+    print("ok")
+  }
+}

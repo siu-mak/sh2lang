@@ -330,7 +330,8 @@ fn emit_cond(v: &Val, target: TargetShell) -> String {
         }
         Val::Bool(true) => "true".to_string(),
         Val::Bool(false) => "false".to_string(),
-        // Legacy "is set" behavior for direct values
+        Val::List(_) | Val::Args => panic!("args/list is not a valid condition; use count(...) > 0"),
+        // "Truthiness" fallback for scalar values: check if non-empty string.
         v => format!("[ -n {} ]", emit_val(v, target)),
     }
 }

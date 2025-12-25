@@ -1,0 +1,7 @@
+func main() {
+  if "" {
+    print("bad")
+  } else {
+    print("ok")
+  }
+}
