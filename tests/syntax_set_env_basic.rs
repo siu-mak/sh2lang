@@ -21,8 +21,8 @@ fn parse_set_env_basic() {
     }
 
     match &func.body[2] {
-        Stmt::Exec(_) => {}, // run(...)
-        _ => panic!("Expected Exec"),
+        Stmt::Run(_) | Stmt::Pipe(_) => {},
+        _ => panic!("Expected Run or Pipe"),
     }
 }
 
