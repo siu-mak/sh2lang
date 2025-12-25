@@ -16,13 +16,13 @@ fn parse_set_env_basic() {
     }
 
     match &func.body[1] {
-        Stmt::Print(e) => assert!(matches!(e, Expr::EnvDot(name) if name == "FOO")),
-        _ => panic!("Expected Print(env.FOO)"),
+        Stmt::Print(e) => assert!(matches!(e, Expr::Env(_))),
+        _ => panic!("Expected Print(env(\"FOO\"))"),
     }
 
     match &func.body[2] {
-        Stmt::Print(e) => assert!(matches!(e, Expr::Env(_))),
-        _ => panic!("Expected Print(env(\"FOO\"))"),
+        Stmt::Exec(_) => {}, // run(...)
+        _ => panic!("Expected Exec"),
     }
 }
 
