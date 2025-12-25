@@ -1,7 +1,7 @@
 main() {
-  echo 'fatal'
+  printf '%s\n' 'fatal'
   exit '1'
-  echo 'never'
+  printf '%s\n' 'never'
 }
 
 main "$@"

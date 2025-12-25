@@ -1,6 +1,6 @@
 main() {
   'sleep' '1' &
-  echo 'after'
+  printf '%s\n' 'after'
   wait
 }
 

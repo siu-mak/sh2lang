@@ -1,7 +1,7 @@
 main() {
   {
-    echo 'a'
-    echo 'b'
+    printf '%s\n' 'a'
+    printf '%s\n' 'b'
   } |
   {
     'grep' 'b'

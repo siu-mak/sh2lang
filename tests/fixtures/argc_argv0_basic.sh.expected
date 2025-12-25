@@ -2,14 +2,14 @@ f() {
   local a="${1}"
   local b="${2}"
   if [ "$#" = "2" ]; then
-    echo 'argc_ok'
+    printf '%s\n' 'argc_ok'
   else
-    echo 'argc_bad'
+    printf '%s\n' 'argc_bad'
   fi
   if [ "$( printf "%s" "$0" | awk '{ print length($0) }' )" -gt "0" ]; then
-    echo 'argv0_ok'
+    printf '%s\n' 'argv0_ok'
   else
-    echo 'argv0_bad'
+    printf '%s\n' 'argv0_bad'
   fi
 }
 

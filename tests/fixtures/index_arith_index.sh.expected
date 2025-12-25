@@ -1,7 +1,7 @@
 main() {
   xs=('a' 'b' 'c')
   i="0"
-  echo "${xs[( i + 2 )]}"
+  printf '%s\n' "${xs[( i + 2 )]}"
 }
 
 main "$@"

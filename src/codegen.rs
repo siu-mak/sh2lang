@@ -347,8 +347,14 @@ fn emit_arith_expr(v: &Val, target: TargetShell) -> String {
         Val::Arg(n) => format!("${}", n), // $1 etc
         Val::Status => "$?".to_string(),
         Val::Pid => "$!".to_string(),
-        Val::Uid => "$UID".to_string(),
-        Val::Ppid => "$PPID".to_string(),
+        Val::Uid => match target {
+            TargetShell::Bash => "$UID".to_string(),
+            TargetShell::Posix => panic!("uid() is not supported in POSIX sh target"),
+        },
+        Val::Ppid => match target {
+            TargetShell::Bash => "$PPID".to_string(),
+            TargetShell::Posix => panic!("ppid() is not supported in POSIX sh target"),
+        },
         Val::SelfPid => "$$".to_string(),
         Val::Argc => "$#".to_string(),
         Val::Arith { left, op, right } => {
@@ -415,18 +421,18 @@ fn emit_cmd(cmd: &Cmd, out: &mut String, indent: usize, target: TargetShell) {
         }
         Cmd::Print(val) => {
             out.push_str(&pad);
-            out.push_str("echo ");
+            out.push_str("printf '%s\\n' ");
             match val {
-                Val::Args => out.push_str(&emit_word(val, target)),
+                Val::Args => out.push_str("\"$*\""),
                 _ => out.push_str(&emit_val(val, target)),
             }
             out.push('\n');
         }
         Cmd::PrintErr(val) => {
             out.push_str(&pad);
-            out.push_str("echo ");
+            out.push_str("printf '%s\\n' ");
             match val {
-                Val::Args => out.push_str(&emit_word(val, target)),
+                Val::Args => out.push_str("\"$*\""),
                 _ => out.push_str(&emit_val(val, target)),
             }
             out.push_str(" >&2\n");

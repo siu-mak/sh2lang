@@ -1,6 +1,6 @@
 main() {
   export FOO='bar'
-  echo "$( ( typeset +x FOO; printenv FOO ) 2>/dev/null || printenv FOO 2>/dev/null || true )"
+  printf '%s\n' "$( ( typeset +x FOO; printenv FOO ) 2>/dev/null || printenv FOO 2>/dev/null || true )"
   'sh' '-c' 'echo '"$FOO"
 }
 

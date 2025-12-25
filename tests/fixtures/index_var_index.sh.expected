@@ -1,7 +1,7 @@
 main() {
   xs=('a' 'b' 'c')
   i="1"
-  echo "${xs[i]}"
+  printf '%s\n' "${xs[i]}"
 }
 
 main "$@"

@@ -1,23 +1,23 @@
 main() {
   if [ "1" -lt "2" ]; then
-    echo 'lt_ok'
+    printf '%s\n' 'lt_ok'
   else
-    echo 'lt_bad'
+    printf '%s\n' 'lt_bad'
   fi
   if [ "2" -le "2" ]; then
-    echo 'le_ok'
+    printf '%s\n' 'le_ok'
   else
-    echo 'le_bad'
+    printf '%s\n' 'le_bad'
   fi
   if [ "3" -gt "2" ]; then
-    echo 'gt_ok'
+    printf '%s\n' 'gt_ok'
   else
-    echo 'gt_bad'
+    printf '%s\n' 'gt_bad'
   fi
   if [ "3" -ge "3" ]; then
-    echo 'ge_ok'
+    printf '%s\n' 'ge_ok'
   else
-    echo 'ge_bad'
+    printf '%s\n' 'ge_bad'
   fi
 }
 

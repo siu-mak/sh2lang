@@ -2,12 +2,12 @@ main() {
   {
     'true'
   } && {
-    echo 'ok'
+    printf '%s\n' 'ok'
   }
   {
     'false'
   } || {
-    echo 'fallback'
+    printf '%s\n' 'fallback'
   }
 }
 

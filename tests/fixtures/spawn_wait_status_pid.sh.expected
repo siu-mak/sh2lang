@@ -1,15 +1,15 @@
 main() {
   'sh' '-c' 'exit 7' &
   if [ "$!" -gt "0" ]; then
-    echo 'pid_ok'
+    printf '%s\n' 'pid_ok'
   else
-    echo 'pid_bad'
+    printf '%s\n' 'pid_bad'
   fi
   wait "$!"
   if [ "$?" = "7" ]; then
-    echo 'status_ok'
+    printf '%s\n' 'status_ok'
   else
-    echo 'status_bad'
+    printf '%s\n' 'status_bad'
   fi
 }
 

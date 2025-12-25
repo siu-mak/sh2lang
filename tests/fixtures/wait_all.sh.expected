@@ -2,7 +2,7 @@ main() {
   'sleep' '1' &
   'sleep' '1' &
   wait
-  echo 'done'
+  printf '%s\n' 'done'
 }
 
 main "$@"

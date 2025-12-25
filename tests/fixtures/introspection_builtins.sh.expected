@@ -2,35 +2,35 @@ main() {
   (
     export FOO='bar'
     if [ "${FOO}" = 'bar' ]; then
-      echo 'env_ok'
+      printf '%s\n' 'env_ok'
     else
-      echo 'env_bad'
+      printf '%s\n' 'env_bad'
     fi
   )
   if [ "$( printf "%s" "$PWD" | awk '{ print length($0) }' )" -gt "0" ]; then
-    echo 'pwd_ok'
+    printf '%s\n' 'pwd_ok'
   else
-    echo 'pwd_bad'
+    printf '%s\n' 'pwd_bad'
   fi
   if [ "$( printf "%s" "$0" | awk '{ print length($0) }' )" -gt "0" ]; then
-    echo 'argv0_ok'
+    printf '%s\n' 'argv0_ok'
   else
-    echo 'argv0_bad'
+    printf '%s\n' 'argv0_bad'
   fi
   if [ "$#" = "0" ]; then
-    echo 'argc_ok'
+    printf '%s\n' 'argc_ok'
   else
-    echo 'argc_bad'
+    printf '%s\n' 'argc_bad'
   fi
   if [ "$$" -gt "0" ] && [ "$PPID" -gt "0" ]; then
-    echo 'pid_ok'
+    printf '%s\n' 'pid_ok'
   else
-    echo 'pid_bad'
+    printf '%s\n' 'pid_bad'
   fi
   if [ "$UID" -ge "0" ]; then
-    echo 'uid_ok'
+    printf '%s\n' 'uid_ok'
   else
-    echo 'uid_bad'
+    printf '%s\n' 'uid_bad'
   fi
 }
 

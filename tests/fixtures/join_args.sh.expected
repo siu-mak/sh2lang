@@ -1,5 +1,5 @@
 main() {
-  echo "$( IFS=','; printf "%s" "$*" )"
+  printf '%s\n' "$( IFS=','; printf "%s" "$*" )"
 }
 
 main "$@"

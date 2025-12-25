@@ -1,8 +1,8 @@
 main() {
   if true; then
-    echo 'yes'
+    printf '%s\n' 'yes'
   else
-    echo 'no'
+    printf '%s\n' 'no'
   fi
 }
 

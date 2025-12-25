@@ -1,6 +1,6 @@
 main() {
-  echo "$( arr=("$@"); idx=$(( 0 )); printf "%s" "${arr[idx]}" )"
-  echo "$( arr=("$@"); idx=$(( 2 )); printf "%s" "${arr[idx]}" )"
+  printf '%s\n' "$( arr=("$@"); idx=$(( 0 )); printf "%s" "${arr[idx]}" )"
+  printf '%s\n' "$( arr=("$@"); idx=$(( 2 )); printf "%s" "${arr[idx]}" )"
 }
 
 main "$@"

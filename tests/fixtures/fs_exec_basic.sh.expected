@@ -1,9 +1,9 @@
 main() {
   'sh' '-c' 'rm -f exe noexe; echo '\''echo hi'\'' > exe; chmod +x exe; echo '\''echo hi'\'' > noexe; chmod 644 noexe'
   if [ -x 'exe' ] && ! [ -x 'noexe' ]; then
-    echo 'ok'
+    printf '%s\n' 'ok'
   else
-    echo 'bad'
+    printf '%s\n' 'bad'
   fi
 }
 

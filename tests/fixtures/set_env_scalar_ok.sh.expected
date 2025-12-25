@@ -1,7 +1,7 @@
 main() {
   x='ok'
   export FOO="$x"
-  echo "${FOO}"
+  printf '%s\n' "${FOO}"
 }
 
 main "$@"

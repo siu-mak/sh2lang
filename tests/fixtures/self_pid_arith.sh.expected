@@ -1,9 +1,9 @@
 main() {
   x="$(( ( $$ + 1 ) ))"
   if [ "$x" -gt "$$" ]; then
-    echo 'arith_ok'
+    printf '%s\n' 'arith_ok'
   else
-    echo 'arith_bad'
+    printf '%s\n' 'arith_bad'
   fi
 }
 

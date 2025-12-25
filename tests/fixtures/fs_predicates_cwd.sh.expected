@@ -6,15 +6,15 @@ main() {
   )
   f="$d"'/f.txt'
   if [ -e "$f" ] && [ -f "$f" ] && ! [ -d "$f" ]; then
-    echo 'fs_ok'
+    printf '%s\n' 'fs_ok'
   else
-    echo 'fs_bad'
+    printf '%s\n' 'fs_bad'
   fi
   cd "$d"
   if [ "$PWD" = "$d" ]; then
-    echo 'cd_ok'
+    printf '%s\n' 'cd_ok'
   else
-    echo 'cd_bad'
+    printf '%s\n' 'cd_bad'
   fi
   'rm' '-rf' "$d"
 }

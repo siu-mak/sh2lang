@@ -2,7 +2,7 @@ main() {
   'bash' '-c' 'exit 7' &
   p="$!"
   wait "$p"
-  echo "$?"
+  printf '%s\n' "$?"
 }
 
 main "$@"

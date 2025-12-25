@@ -1,8 +1,8 @@
 main() {
   if [ 'a' = 'a' ]; then
-    echo 'ok'
+    printf '%s\n' 'ok'
   else
-    echo 'no'
+    printf '%s\n' 'no'
   fi
 }
 

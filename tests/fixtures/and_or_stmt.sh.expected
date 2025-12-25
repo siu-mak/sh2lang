@@ -2,22 +2,22 @@ main() {
   {
     'sh' '-c' 'exit 0'
   } && {
-    echo 'and_ok'
+    printf '%s\n' 'and_ok'
   }
   {
     'sh' '-c' 'exit 1'
   } && {
-    echo 'and_bad'
+    printf '%s\n' 'and_bad'
   }
   {
     'sh' '-c' 'exit 1'
   } || {
-    echo 'or_ok'
+    printf '%s\n' 'or_ok'
   }
   {
     'sh' '-c' 'exit 0'
   } || {
-    echo 'or_bad'
+    printf '%s\n' 'or_bad'
   }
 }
 

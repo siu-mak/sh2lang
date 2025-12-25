@@ -3,7 +3,7 @@ main() {
     cd '/tmp'
     p="$( 'pwd' )"
     if [ "$p" = '/tmp' ]; then
-      echo 'yes'
+      printf '%s\n' 'yes'
     fi
   )
 }

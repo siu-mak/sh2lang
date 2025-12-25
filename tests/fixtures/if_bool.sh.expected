@@ -1,6 +1,6 @@
 main() {
   if [ 'a' = 'a' ] && [ 'b' != 'c' ]; then
-    echo 'ok'
+    printf '%s\n' 'ok'
   fi
 }
 

@@ -281,7 +281,7 @@ fn codegen_let_and_usage() {
     let ir = lower::lower(ast);
     let out = codegen::emit(&ir);
     assert!(out.contains("msg='hello'"));
-    assert!(out.contains("echo \"$msg\""));
+    assert!(out.contains("printf '%s\\n' \"$msg\""));
 }
 
 #[test]

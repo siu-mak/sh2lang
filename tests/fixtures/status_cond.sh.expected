@@ -1,9 +1,9 @@
 main() {
   'bash' '-c' 'exit 7'
   if [ "$?" = "7" ]; then
-    echo 'ok'
+    printf '%s\n' 'ok'
   else
-    echo 'bad'
+    printf '%s\n' 'bad'
   fi
 }
 

@@ -1,15 +1,15 @@
 main() {
   'true'
   if [ "$?" = "0" ]; then
-    echo 'true_ok'
+    printf '%s\n' 'true_ok'
   else
-    echo 'true_bad'
+    printf '%s\n' 'true_bad'
   fi
   'false'
   if [ "$?" != "0" ]; then
-    echo 'false_ok'
+    printf '%s\n' 'false_ok'
   else
-    echo 'false_bad'
+    printf '%s\n' 'false_bad'
   fi
 }
 

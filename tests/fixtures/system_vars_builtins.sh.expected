@@ -1,18 +1,18 @@
 main() {
   if [ "$UID" = "${UID}" ]; then
-    echo 'uid_ok'
+    printf '%s\n' 'uid_ok'
   else
-    echo 'uid_bad'
+    printf '%s\n' 'uid_bad'
   fi
   if [ "$PPID" = "${PPID}" ]; then
-    echo 'ppid_ok'
+    printf '%s\n' 'ppid_ok'
   else
-    echo 'ppid_bad'
+    printf '%s\n' 'ppid_bad'
   fi
   if [ "$PWD" = "${PWD}" ]; then
-    echo 'pwd_ok'
+    printf '%s\n' 'pwd_ok'
   else
-    echo 'pwd_bad'
+    printf '%s\n' 'pwd_bad'
   fi
 }
 

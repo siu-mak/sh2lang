@@ -8,7 +8,7 @@ main() {
   } &
   p2="$!"
   wait "$p1" "$p2"
-  echo 'done'
+  printf '%s\n' 'done'
 }
 
 main "$@"

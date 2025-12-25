@@ -1,7 +1,7 @@
 main() {
   x='hi'
   {
-    echo "$x"
+    printf '%s\n' "$x"
   } &
   wait
 }

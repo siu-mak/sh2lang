@@ -1,8 +1,8 @@
 main() {
   if [ -d 'src' ]; then
-    echo 'dir'
+    printf '%s\n' 'dir'
   else
-    echo 'no'
+    printf '%s\n' 'no'
   fi
 }
 

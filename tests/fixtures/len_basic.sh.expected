@@ -1,6 +1,6 @@
 main() {
   s='hello'
-  echo "$( printf "%s" "$s" | awk '{ print length($0) }' )"
+  printf '%s\n' "$( printf "%s" "$s" | awk '{ print length($0) }' )"
 }
 
 main "$@"

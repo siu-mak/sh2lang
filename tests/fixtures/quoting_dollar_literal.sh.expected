@@ -1,0 +1,6 @@
+main() {
+  printf '%s\n' '$HOME'
+  'sh' '-c' 'printf '\''%s\n'\'' "$1"' '_' '$HOME'
+}
+
+main "$@"

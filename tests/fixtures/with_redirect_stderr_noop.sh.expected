@@ -1,6 +1,6 @@
 main() {
   {
-    echo 'ok'
+    printf '%s\n' 'ok'
   }
 }
 

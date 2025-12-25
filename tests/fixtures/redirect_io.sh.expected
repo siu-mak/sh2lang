@@ -1,14 +1,14 @@
 main() {
   f="$( 'mktemp' )"
   {
-    echo 'out'
+    printf '%s\n' 'out'
   } > "$f"
   {
-    echo 'err' >&2
+    printf '%s\n' 'err' >&2
   } 2>> "$f"
   'cat' "$f"
   {
-    echo 'e2s' >&2
+    printf '%s\n' 'e2s' >&2
   } 2>&1
   infile="$( 'mktemp' )"
   echo hello > $infile
@@ -17,7 +17,7 @@ main() {
   } < "$infile"
   f2="$( 'mktemp' )"
   {
-    echo 'swap_ok'
+    printf '%s\n' 'swap_ok'
   } 2> "$f2" 1>&2
   'cat' "$f2"
   'rm' '-f' "$f"

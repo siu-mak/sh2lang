@@ -1,6 +1,6 @@
 main() {
   {
-    echo 'hi'
+    printf '%s\n' 'hi'
   } 2> 'err.log' 1>&2
 }
 

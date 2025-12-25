@@ -1,7 +1,7 @@
 main() {
   {
-    echo 'to-stdout'
-    echo 'to-stderr' >&2
+    printf '%s\n' 'to-stdout'
+    printf '%s\n' 'to-stderr' >&2
   } 1>&2
 }
 

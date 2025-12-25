@@ -1,6 +1,6 @@
 main() {
   for x in 'a' 'b'; do
-    echo "$x"
+    printf '%s\n' "$x"
   done
 }
 

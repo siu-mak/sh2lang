@@ -1,8 +1,8 @@
 main() {
   if ! (
-    echo 'ok'
+    printf '%s\n' 'ok'
   ); then
-    echo 'no' >&2
+    printf '%s\n' 'no' >&2
   fi
 }
 

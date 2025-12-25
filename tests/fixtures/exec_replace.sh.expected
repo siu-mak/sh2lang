@@ -1,8 +1,7 @@
 main() {
-  echo 'before'
+  printf '%s\n' 'before'
   exec 'sh' '-c' 'echo after'
-  echo 'never'
+  printf '%s\n' 'never'
 }
 
 main "$@"
-

@@ -1,6 +1,6 @@
 main() {
   if [ -e '/tmp' ]; then
-    echo 'yes'
+    printf '%s\n' 'yes'
   fi
 }
 

@@ -1,6 +1,6 @@
 main() {
   for a in "$@"; do
-    echo "$a"
+    printf '%s\n' "$a"
   done
 }
 

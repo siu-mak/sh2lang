@@ -1,8 +1,8 @@
 main() {
   name='world'
-  echo 'literal: {name}'
-  echo 'dollar: $'
-  echo 'interp: '"$name"
+  printf '%s\n' 'literal: {name}'
+  printf '%s\n' 'dollar: $'
+  printf '%s\n' 'interp: '"$name"
 }
 
 main "$@"

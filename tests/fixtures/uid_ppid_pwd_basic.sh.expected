@@ -1,8 +1,8 @@
 main() {
   if [ "$UID" = "${UID}" ] && [ "$PPID" = "${PPID}" ] && [ "$PWD" = "${PWD}" ]; then
-    echo 'ok'
+    printf '%s\n' 'ok'
   else
-    echo 'bad'
+    printf '%s\n' 'bad'
   fi
 }
 

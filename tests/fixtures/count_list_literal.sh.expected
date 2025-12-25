@@ -1,5 +1,5 @@
 main() {
-  echo "3"
+  printf '%s\n' "3"
 }
 
 main "$@"

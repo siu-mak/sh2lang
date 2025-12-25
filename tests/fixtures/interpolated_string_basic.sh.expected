@@ -1,6 +1,6 @@
 main() {
   name='world'
-  echo 'hello '"$name"'!'
+  printf '%s\n' 'hello '"$name"'!'
 }
 
 main "$@"

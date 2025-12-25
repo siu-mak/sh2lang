@@ -1,6 +1,6 @@
 main() {
   export FOO='bar'
-  echo "${FOO}"
+  printf '%s\n' "${FOO}"
   'sh' '-c' 'test "'"$FOO"'" = bar && echo child_ok'
 }
 

@@ -1,9 +1,9 @@
 main() {
   'sh' '-c' 'rm -rf tfile tlink; echo hi > tfile; chmod 600 tfile; chmod +x tfile; ln -s tfile tlink'
   if [ -L 'tlink' ] && [ -x 'tfile' ] && [ -r 'tfile' ] && [ -w 'tfile' ]; then
-    echo 'ok'
+    printf '%s\n' 'ok'
   else
-    echo 'bad'
+    printf '%s\n' 'bad'
   fi
 }
 

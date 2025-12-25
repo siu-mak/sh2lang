@@ -1,6 +1,6 @@
 main() {
   if [ "1" = "1" ] && [ "2" = "2" ]; then
-    echo 'yes'
+    printf '%s\n' 'yes'
   fi
 }
 

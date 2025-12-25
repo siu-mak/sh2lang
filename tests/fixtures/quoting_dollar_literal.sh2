@@ -1,0 +1,4 @@
+func main() {
+  print("\$HOME")
+  run("sh", "-c", "printf '%s\\n' \"$1\"", "_", "\$HOME")
+}

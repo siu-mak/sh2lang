@@ -2,10 +2,10 @@ main() {
   x='foo'
   case "$x" in
     'bar')
-      echo 'no'
+      printf '%s\n' 'no'
     ;;
     *)
-      echo 'yes'
+      printf '%s\n' 'yes'
     ;;
   esac
 }

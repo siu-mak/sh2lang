@@ -1,6 +1,6 @@
 main() {
   out="$( 'sh' '-c' 'echo hi' | 'tr' 'a-z' 'A-Z' )"
-  echo "$out"
+  printf '%s\n' "$out"
 }
 
 main "$@"

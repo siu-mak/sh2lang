@@ -1,7 +1,6 @@
 main() {
   exec 'sh' '-c' 'echo exec_ok'
-  echo 'after_exec_bad'
+  printf '%s\n' 'after_exec_bad'
 }
 
 main "$@"
-

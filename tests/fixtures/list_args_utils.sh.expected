@@ -1,23 +1,23 @@
 test() {
-  echo "$#"
-  echo "$1"
-  echo "$3"
-  echo "$( arr=("$@"); idx=$(( 0 )); printf "%s" "${arr[idx]}" )"
-  echo "$( arr=("$@"); idx=$(( 2 )); printf "%s" "${arr[idx]}" )"
-  echo "$( IFS='-'; printf "%s" "$*" )"
-  echo "$#"
+  printf '%s\n' "$#"
+  printf '%s\n' "$1"
+  printf '%s\n' "$3"
+  printf '%s\n' "$( arr=("$@"); idx=$(( 0 )); printf "%s" "${arr[idx]}" )"
+  printf '%s\n' "$( arr=("$@"); idx=$(( 2 )); printf "%s" "${arr[idx]}" )"
+  printf '%s\n' "$( IFS='-'; printf "%s" "$*" )"
+  printf '%s\n' "$#"
   for a in "$@"; do
-    echo "$a"
+    printf '%s\n' "$a"
   done
 }
 
 main() {
   xs=('a' 'b' 'c')
-  echo "${#xs[@]}"
-  echo "${xs[1]}"
-  echo "$( IFS='-'; printf "%s" "${xs[*]}" )"
+  printf '%s\n' "${#xs[@]}"
+  printf '%s\n' "${xs[1]}"
+  printf '%s\n' "$( IFS='-'; printf "%s" "${xs[*]}" )"
   for item in "${xs[@]}"; do
-    echo "$item"
+    printf '%s\n' "$item"
   done
   test 'x' 'y' 'z'
 }

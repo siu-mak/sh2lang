@@ -1,72 +1,33 @@
 mod common;
 use common::*;
+use sh2c::codegen::TargetShell;
 
 #[test]
-fn exec_literal_arg_spaces() {
-    assert_exec_matches_fixture("literal_arg_spaces");
-}
+fn codegen_quoting_glob_run() { assert_codegen_matches_snapshot("quoting_glob_run"); }
+#[test]
+fn exec_quoting_glob_run() { assert_exec_matches_fixture("quoting_glob_run"); }
 
 #[test]
-fn exec_literal_arg_dollar() {
-    assert_exec_matches_fixture("literal_arg_dollar");
-}
+fn codegen_quoting_space_argv_count() { assert_codegen_matches_snapshot("quoting_space_argv_count"); }
+#[test]
+fn exec_quoting_space_argv_count() { assert_exec_matches_fixture("quoting_space_argv_count"); }
 
 #[test]
-fn exec_literal_arg_glob_star() {
-    assert_exec_matches_fixture("literal_arg_glob_star");
-}
+fn codegen_quoting_dollar_literal() { assert_codegen_matches_snapshot("quoting_dollar_literal"); }
+#[test]
+fn exec_quoting_dollar_literal() { assert_exec_matches_fixture("quoting_dollar_literal"); }
 
 #[test]
-fn exec_literal_arg_backslash() {
-    assert_exec_matches_fixture("literal_arg_backslash");
-}
+fn codegen_quoting_backslash_literal() { assert_codegen_matches_snapshot("quoting_backslash_literal"); }
+#[test]
+fn exec_quoting_backslash_literal() { assert_exec_matches_fixture("quoting_backslash_literal"); }
 
 #[test]
-fn exec_literal_arg_newline() {
-    assert_exec_matches_fixture("literal_arg_newline");
-}
+fn codegen_quoting_single_quote() { assert_codegen_matches_snapshot("quoting_single_quote"); }
+#[test]
+fn exec_quoting_single_quote() { assert_exec_matches_fixture("quoting_single_quote"); }
 
 #[test]
-fn exec_concat_var_and_literal_safe() {
-    assert_exec_matches_fixture("concat_var_and_literal_safe");
-}
-
+fn codegen_quoting_newline_literal() { assert_codegen_matches_snapshot("quoting_newline_literal"); }
 #[test]
-fn exec_capture_is_single_arg() {
-    assert_exec_matches_fixture("capture_is_single_arg");
-}
-
-#[test]
-fn codegen_literal_arg_spaces() {
-    assert_codegen_matches_snapshot("literal_arg_spaces");
-}
-
-#[test]
-fn codegen_literal_arg_dollar() {
-    assert_codegen_matches_snapshot("literal_arg_dollar");
-}
-
-#[test]
-fn codegen_literal_arg_glob_star() {
-    assert_codegen_matches_snapshot("literal_arg_glob_star");
-}
-
-#[test]
-fn codegen_literal_arg_backslash() {
-    assert_codegen_matches_snapshot("literal_arg_backslash");
-}
-
-#[test]
-fn codegen_literal_arg_newline() {
-    assert_codegen_matches_snapshot("literal_arg_newline");
-}
-
-#[test]
-fn codegen_concat_var_and_literal_safe() {
-    assert_codegen_matches_snapshot("concat_var_and_literal_safe");
-}
-
-#[test]
-fn codegen_capture_is_single_arg() {
-    assert_codegen_matches_snapshot("capture_is_single_arg");
-}
+fn exec_quoting_newline_literal() { assert_exec_matches_fixture("quoting_newline_literal"); }

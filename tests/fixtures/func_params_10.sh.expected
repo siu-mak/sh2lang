@@ -9,7 +9,7 @@ tenth() {
   local a8="${8}"
   local a9="${9}"
   local a10="${10}"
-  echo "$a10"
+  printf '%s\n' "$a10"
 }
 
 main() {

@@ -7,11 +7,11 @@ main() {
   'sh' '-c' 'rm -f empty nonempty; : > empty; echo hi > nonempty'
   check 'nonempty'
   if [ "$?" = "0" ]; then
-    echo 'nonempty: ok'
+    printf '%s\n' 'nonempty: ok'
   fi
   check 'empty'
   if [ "$?" = "1" ]; then
-    echo 'empty: ok'
+    printf '%s\n' 'empty: ok'
   fi
 }
 

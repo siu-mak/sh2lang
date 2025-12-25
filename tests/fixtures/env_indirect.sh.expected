@@ -2,7 +2,7 @@ main() {
   k='FOO'
   (
     export FOO='bar'
-    echo "${!k}"
+    printf '%s\n' "${!k}"
   )
 }
 

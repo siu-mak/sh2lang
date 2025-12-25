@@ -1,5 +1,5 @@
 main() {
-  echo 'error message' >&2
+  printf '%s\n' 'error message' >&2
 }
 
 main "$@"

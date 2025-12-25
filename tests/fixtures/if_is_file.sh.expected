@@ -1,8 +1,8 @@
 main() {
   if [ -f 'a.txt' ]; then
-    echo 'file'
+    printf '%s\n' 'file'
   else
-    echo 'no'
+    printf '%s\n' 'no'
   fi
 }
 

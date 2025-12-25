@@ -1,6 +1,6 @@
 main() {
   x="$(( ( 1 + ( 2 * 3 ) ) ))"
-  echo "$x"
+  printf '%s\n' "$x"
 }
 
 main "$@"

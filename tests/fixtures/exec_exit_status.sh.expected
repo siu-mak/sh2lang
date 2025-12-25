@@ -1,6 +1,6 @@
 main() {
-  exec 'bash' '-c' 'echo ok; exit 7'
-  echo 'after'
+  exec 'bash' '-c' 'printf '%s\n' ok; exit 7'
+  printf '%s\n' 'after'
 }
 
 main "$@"

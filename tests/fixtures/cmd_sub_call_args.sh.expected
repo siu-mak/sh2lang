@@ -4,7 +4,7 @@ show() {
 
 main() {
   out="$( 'show' "$@" )"
-  echo "$out"
+  printf '%s\n' "$out"
 }
 
 main "$@"

@@ -1,5 +1,5 @@
 main() {
-  echo 'hi'
+  printf '%s\n' 'hi'
   'echo' 'ok'
 }
 

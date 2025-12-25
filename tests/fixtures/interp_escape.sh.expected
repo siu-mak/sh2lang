@@ -1,6 +1,6 @@
 main() {
   name='world'
-  echo 'literal ${name}'
+  printf '%s\n' 'literal ${name}'
 }
 
 main "$@"

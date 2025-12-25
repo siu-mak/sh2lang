@@ -1,6 +1,6 @@
 main() {
   files="$( 'ls' )"
-  echo 'Files: '"$files"
+  printf '%s\n' 'Files: '"$files"
 }
 
 main "$@"

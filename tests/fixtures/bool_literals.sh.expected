@@ -1,13 +1,13 @@
 main() {
   if true; then
-    echo 't_ok'
+    printf '%s\n' 't_ok'
   else
-    echo 't_bad'
+    printf '%s\n' 't_bad'
   fi
   if false; then
-    echo 'f_bad'
+    printf '%s\n' 'f_bad'
   else
-    echo 'f_ok'
+    printf '%s\n' 'f_ok'
   fi
 }
 

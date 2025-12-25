@@ -1,7 +1,7 @@
 main() {
-  echo 'before'
+  printf '%s\n' 'before'
   return
-  echo 'after'
+  printf '%s\n' 'after'
 }
 
 main "$@"

@@ -5,7 +5,7 @@ main() {
   {
     'env' | 'grep' 'BAZ'
   } || {
-    echo 'no baz'
+    printf '%s\n' 'no baz'
   }
 }
 

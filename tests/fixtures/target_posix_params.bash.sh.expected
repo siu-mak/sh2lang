@@ -1,8 +1,8 @@
 main() {
   local a="${1}"
   local b="${2}"
-  echo "$a"
-  echo "$b"
+  printf '%s\n' "$a"
+  printf '%s\n' "$b"
 }
 
 main "$@"

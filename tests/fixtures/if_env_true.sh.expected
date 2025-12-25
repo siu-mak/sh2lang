@@ -1,6 +1,6 @@
 main() {
   if [ -n "$TESTVAR" ]; then
-    echo 'yes'
+    printf '%s\n' 'yes'
   fi
 }
 

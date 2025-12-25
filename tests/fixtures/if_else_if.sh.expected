@@ -1,10 +1,10 @@
 main() {
   if [ 'a' = 'b' ]; then
-    echo 'no'
+    printf '%s\n' 'no'
   elif [ 'a' = 'a' ]; then
-    echo 'yes'
+    printf '%s\n' 'yes'
   else
-    echo 'fallback'
+    printf '%s\n' 'fallback'
   fi
 }
 

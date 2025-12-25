@@ -1,6 +1,6 @@
 main() {
   'sh' '-c' 'exit 7'
-  echo "$?"
+  printf '%s\n' "$?"
 }
 
 main "$@"

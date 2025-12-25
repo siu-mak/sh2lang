@@ -1,24 +1,24 @@
 show() {
   if [ "$#" = "3" ]; then
-    echo 'argc_ok'
+    printf '%s\n' 'argc_ok'
   else
-    echo 'argc_bad'
+    printf '%s\n' 'argc_bad'
   fi
   if [ "$2" = 'y' ]; then
-    echo 'arg_ok'
+    printf '%s\n' 'arg_ok'
   else
-    echo 'arg_bad'
+    printf '%s\n' 'arg_bad'
   fi
   if [ "$( arr=("$@"); idx=$(( 0 )); printf "%s" "${arr[idx]}" )" = 'x' ]; then
-    echo 'index_ok'
+    printf '%s\n' 'index_ok'
   else
-    echo 'index_bad'
+    printf '%s\n' 'index_bad'
   fi
-  echo "$( IFS=','; printf "%s" "$*" )"
+  printf '%s\n' "$( IFS=','; printf "%s" "$*" )"
   if [ "$#" = "3" ]; then
-    echo 'count_ok'
+    printf '%s\n' 'count_ok'
   else
-    echo 'count_bad'
+    printf '%s\n' 'count_bad'
   fi
 }
 

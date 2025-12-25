@@ -1,6 +1,6 @@
 main() {
   s="$( arr=('a' 'b' 'c'); IFS=','; printf "%s" "${arr[*]}" )"
-  echo "$s"
+  printf '%s\n' "$s"
 }
 
 main "$@"

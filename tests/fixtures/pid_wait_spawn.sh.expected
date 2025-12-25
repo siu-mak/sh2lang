@@ -3,9 +3,9 @@ main() {
   p="$!"
   wait "$p"
   if [ "$?" = "0" ]; then
-    echo 'wait_ok'
+    printf '%s\n' 'wait_ok'
   else
-    echo 'wait_bad'
+    printf '%s\n' 'wait_bad'
   fi
 }
 

@@ -2,9 +2,9 @@ main() {
   x='outer'
   (
     x='inner'
-    echo "$x"
+    printf '%s\n' "$x"
   )
-  echo "$x"
+  printf '%s\n' "$x"
 }
 
 main "$@"

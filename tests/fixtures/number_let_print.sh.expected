@@ -1,7 +1,7 @@
 main() {
   n="42"
-  echo "$n"
-  echo "7"
+  printf '%s\n' "$n"
+  printf '%s\n' "7"
 }
 
 main "$@"

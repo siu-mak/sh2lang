@@ -2,7 +2,7 @@ main() {
   {
     'false'
   } || {
-    echo 'yes'
+    printf '%s\n' 'yes'
   }
 }
 

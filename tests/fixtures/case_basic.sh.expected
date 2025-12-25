@@ -2,13 +2,13 @@ main() {
   x='b'
   case "$x" in
     'a')
-      echo 'A'
+      printf '%s\n' 'A'
     ;;
     'b'|'c')
-      echo 'B or C'
+      printf '%s\n' 'B or C'
     ;;
     *)
-      echo 'default'
+      printf '%s\n' 'default'
     ;;
   esac
 }

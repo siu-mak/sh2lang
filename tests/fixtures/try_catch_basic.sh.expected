@@ -2,7 +2,7 @@ main() {
   if ! (
     'false'
   ); then
-    echo 'failed' >&2
+    printf '%s\n' 'failed' >&2
   fi
 }
 

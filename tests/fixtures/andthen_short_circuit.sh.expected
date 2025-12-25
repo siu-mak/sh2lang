@@ -2,7 +2,7 @@ main() {
   {
     'false'
   } && {
-    echo 'WRONG'
+    printf '%s\n' 'WRONG'
   }
 }
 

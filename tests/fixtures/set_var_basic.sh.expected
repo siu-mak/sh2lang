@@ -1,7 +1,7 @@
 main() {
   x='a'
   x='b'
-  echo "$x"
+  printf '%s\n' "$x"
 }
 
 main "$@"

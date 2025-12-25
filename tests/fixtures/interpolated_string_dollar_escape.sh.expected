@@ -1,7 +1,7 @@
 main() {
   name='world'
-  echo 'literal: $name'
-  echo 'literal2: ${name}'
+  printf '%s\n' 'literal: $name'
+  printf '%s\n' 'literal2: ${name}'
 }
 
 main "$@"

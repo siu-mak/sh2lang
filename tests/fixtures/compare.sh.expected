@@ -1,10 +1,10 @@
 main() {
   user='admin'
   if [ "$user" = 'admin' ]; then
-    echo 'welcome root'
+    printf '%s\n' 'welcome root'
   fi
   if [ "$user" != 'guest' ]; then
-    echo 'not guest'
+    printf '%s\n' 'not guest'
   fi
 }
 

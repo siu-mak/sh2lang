@@ -1,7 +1,7 @@
 main() {
-  echo 'start'
+  printf '%s\n' 'start'
   if [ -n "$registry" ]; then
-    echo 'configured'
+    printf '%s\n' 'configured'
   fi
 }
 
