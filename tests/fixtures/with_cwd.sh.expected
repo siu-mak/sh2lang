@@ -1,8 +1,9 @@
 main() {
   (
-    cd "/tmp"
-    "pwd"
+    cd '/tmp'
+    'pwd'
   )
 }
 
 main "$@"
+

@@ -22,40 +22,40 @@ pub fn emit(funcs: &[Function]) -> String {
 }
 
 
-// Helper to escape double quotes within a string literal
-fn emit_dq(s: &str) -> String {
-    let mut out = String::from("\"");
+// Helper to escape single quotes within a string literal for safe shell quoting
+// Replaces ' with '\'' and wraps in '...'
+fn sh_single_quote(s: &str) -> String {
+    let mut out = String::from("'");
     for ch in s.chars() {
-        match ch {
-            '"' => out.push_str("\\\""),
-            '$' => out.push_str("\\$"),
-            '\\' => out.push_str("\\\\"),
-            '`' => out.push_str("\\`"),
-            _ => out.push(ch),
+        if ch == '\'' {
+            out.push_str("'\\''");
+        } else {
+            out.push(ch);
         }
     }
-    out.push('"');
+    out.push('\'');
     out
 }
 
+
 fn emit_val(v: &Val) -> String {
     match v {
-        Val::Literal(s) => emit_dq(s),
+        Val::Literal(s) => sh_single_quote(s),
         Val::Var(s) => format!("\"${}\"", s),
         Val::Concat(l, r) => format!("{}{}", emit_val(l), emit_val(r)),
         Val::Command(args) => {
             let parts: Vec<String> = args.iter().map(emit_word).collect();
-            format!("$( {} )", parts.join(" "))
+            format!("\"$( {} )\"", parts.join(" "))
         }
         Val::CommandPipe(segments) => {
              let seg_strs: Vec<String> = segments.iter().map(|seg| {
                  let words: Vec<String> = seg.iter().map(emit_word).collect();
                  words.join(" ")
              }).collect();
-             format!("$( {} )", seg_strs.join(" | "))
+             format!("\"$( {} )\"", seg_strs.join(" | "))
         }
         Val::Len(inner) => {
-             format!("$( printf \"%s\" {} | awk '{{ print length($0) }}' )", emit_val(inner))
+             format!("\"$( printf \"%s\" {} | awk '{{ print length($0) }}' )\"", emit_val(inner))
         }
         Val::Arg(n) => format!("\"${}\"", n),
         Val::Index { list, index } => {
@@ -120,7 +120,7 @@ fn emit_val(v: &Val) -> String {
         Val::Argc => "\"$#\"".to_string(),
         Val::Arith { .. } => format!("\"$(( {} ))\"", emit_arith_expr(v)),
         Val::BoolStr(inner) => {
-             format!("$( if {}; then printf \"%s\" \"true\"; else printf \"%s\" \"false\"; fi )", emit_cond(inner))
+             format!("\"$( if {}; then printf \"%s\" \"true\"; else printf \"%s\" \"false\"; fi )\"", emit_cond(inner))
         },
         Val::Compare { .. } | Val::And(..) | Val::Or(..) | Val::Not(..) | Val::Exists(..) | Val::IsDir(..) | Val::IsFile(..) | Val::IsSymlink(..) | Val::IsExec(..) | Val::IsReadable(..) | Val::IsWritable(..) | Val::IsNonEmpty(..) | Val::List(..) | Val::Args => panic!("Cannot emit boolean/list/args value as string"),
     }
@@ -128,22 +128,22 @@ fn emit_val(v: &Val) -> String {
 
 fn emit_word(v: &Val) -> String {
     match v {
-        Val::Literal(s) => emit_dq(s),
+        Val::Literal(s) => sh_single_quote(s),
         Val::Var(s) => format!("\"${}\"", s),
         Val::Concat(l, r) => format!("{}{}", emit_word(l), emit_word(r)),
         Val::Command(args) => {
             let parts: Vec<String> = args.iter().map(emit_word).collect();
-            format!("$( {} )", parts.join(" "))
+            format!("\"$( {} )\"", parts.join(" "))
         }
         Val::CommandPipe(segments) => {
              let seg_strs: Vec<String> = segments.iter().map(|seg| {
                  let words: Vec<String> = seg.iter().map(emit_word).collect();
                  words.join(" ")
              }).collect();
-             format!("$( {} )", seg_strs.join(" | "))
+             format!("\"$( {} )\"", seg_strs.join(" | "))
         }
         Val::Len(inner) => {
-             format!("$( printf \"%s\" {} | awk '{{ print length($0) }}' )", emit_val(inner))
+             format!("\"$( printf \"%s\" {} | awk '{{ print length($0) }}' )\"", emit_val(inner))
         }
         Val::Arg(n) => format!("\"${}\"", n),
         Val::Index { list, index } => emit_val(&Val::Index { list: list.clone(), index: index.clone() }),
@@ -167,7 +167,7 @@ fn emit_word(v: &Val) -> String {
         Val::Argc => "\"$#\"".to_string(),
         Val::Arith { .. } => format!("\"$(( {} ))\"", emit_arith_expr(v)),
         Val::BoolStr(inner) => {
-             format!("$( if {}; then printf \"%s\" \"true\"; else printf \"%s\" \"false\"; fi )", emit_cond(inner))
+             format!("\"$( if {}; then printf \"%s\" \"true\"; else printf \"%s\" \"false\"; fi )\"", emit_cond(inner))
         },
         Val::Args => "\"$@\"".into(),
         Val::Compare { .. } | Val::And(..) | Val::Or(..) | Val::Not(..) | Val::Exists(..) | Val::IsDir(..) | Val::IsFile(..) | Val::IsSymlink(..) | Val::IsExec(..) | Val::IsReadable(..) | Val::IsWritable(..) | Val::IsNonEmpty(..) | Val::List(..) => panic!("Cannot emit boolean/list value as command word"),
@@ -405,7 +405,7 @@ fn emit_cmd(cmd: &Cmd, out: &mut String, indent: usize) {
                 out.push_str(&pad);
                 out.push_str("  ");
                 let pat_strs: Vec<String> = patterns.iter().map(|p| match p {
-                    crate::ir::Pattern::Literal(s) => emit_dq(s),
+                    crate::ir::Pattern::Literal(s) => sh_single_quote(s),
                     crate::ir::Pattern::Wildcard => "*".to_string(),
                 }).collect();
                 out.push_str(&pat_strs.join("|"));

@@ -1,7 +1,8 @@
 main() {
-  if [ -e "/tmp" ]; then
-    echo "yes"
+  if [ -e '/tmp' ]; then
+    echo 'yes'
   fi
 }
 
 main "$@"
+

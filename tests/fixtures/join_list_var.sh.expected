@@ -1,6 +1,7 @@
 main() {
-  xs=("a" "b" "c")
-  echo "$( IFS="-"; printf "%s" "${xs[*]}" )"
+  xs=('a' 'b' 'c')
+  echo "$( IFS='-'; printf "%s" "${xs[*]}" )"
 }
 
 main "$@"
+

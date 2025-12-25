@@ -1,11 +1,12 @@
 main() {
-  if [ "a" = "b" ]; then
-    echo "no"
-  elif [ "a" = "a" ]; then
-    echo "yes"
+  if [ 'a' = 'b' ]; then
+    echo 'no'
+  elif [ 'a' = 'a' ]; then
+    echo 'yes'
   else
-    echo "never"
+    echo 'never'
   fi
 }
 
 main "$@"
+

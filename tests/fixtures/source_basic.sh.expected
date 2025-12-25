@@ -1,7 +1,8 @@
 main() {
-  p="env.sh"
+  p='env.sh'
   . "$p"
-  . "lib.sh"
+  . 'lib.sh'
 }
 
 main "$@"
+

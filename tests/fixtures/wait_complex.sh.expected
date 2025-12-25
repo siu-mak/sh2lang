@@ -1,5 +1,6 @@
 main() {
-  wait $( "sh" "-c" "echo 1234" )
+  wait "$( 'sh' '-c' 'echo 1234' )"
 }
 
 main "$@"
+

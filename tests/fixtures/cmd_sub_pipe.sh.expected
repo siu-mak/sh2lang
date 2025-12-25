@@ -1,6 +1,7 @@
 main() {
-  out=$( "sh" "-c" "echo hi" | "tr" "a-z" "A-Z" )
+  out="$( 'sh' '-c' 'echo hi' | 'tr' 'a-z' 'A-Z' )"
   echo "$out"
 }
 
 main "$@"
+

@@ -1,5 +1,5 @@
 main() {
-  x="hi"
+  x='hi'
   {
     echo "$x"
   } &
@@ -7,3 +7,4 @@ main() {
 }
 
 main "$@"
+

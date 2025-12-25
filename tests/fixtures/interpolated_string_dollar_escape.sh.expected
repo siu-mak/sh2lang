@@ -1,7 +1,8 @@
 main() {
-  name="world"
-  echo "literal: \$name"
-  echo "literal2: \${name}"
+  name='world'
+  echo 'literal: $name'
+  echo 'literal2: ${name}'
 }
 
 main "$@"
+

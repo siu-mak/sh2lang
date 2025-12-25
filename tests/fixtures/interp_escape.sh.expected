@@ -1,6 +1,7 @@
 main() {
-  name="world"
-  echo "literal \${name}"
+  name='world'
+  echo 'literal ${name}'
 }
 
 main "$@"
+

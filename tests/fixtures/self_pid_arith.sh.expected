@@ -1,10 +1,11 @@
 main() {
   x="$(( ( $$ + 1 ) ))"
   if [ "$x" -gt "$$" ]; then
-    echo "arith_ok"
+    echo 'arith_ok'
   else
-    echo "arith_bad"
+    echo 'arith_bad'
   fi
 }
 
 main "$@"
+

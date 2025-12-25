@@ -1,10 +1,11 @@
 main() {
   {
-    "sh" "-c" "echo a; echo b"
+    'sh' '-c' 'echo a; echo b'
   } |
   {
-    "grep" "b"
+    'grep' 'b'
   }
 }
 
 main "$@"
+

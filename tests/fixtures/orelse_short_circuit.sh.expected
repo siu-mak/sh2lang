@@ -1,9 +1,10 @@
 main() {
   {
-    "false"
+    'false'
   } || {
-    echo "yes"
+    echo 'yes'
   }
 }
 
 main "$@"
+

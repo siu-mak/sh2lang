@@ -1,6 +1,7 @@
 main() {
-  "sh" "-c" "exit 7"
+  'sh' '-c' 'exit 7'
   echo "$?"
 }
 
 main "$@"
+

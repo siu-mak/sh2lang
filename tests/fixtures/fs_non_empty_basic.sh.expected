@@ -1,20 +1,21 @@
 main() {
-  "sh" "-c" "rm -f empty nonempty; : > empty; echo hi > nonempty"
-  if [ -s "nonempty" ]; then
-    echo "nonempty_ok"
+  'sh' '-c' 'rm -f empty nonempty; : > empty; echo hi > nonempty'
+  if [ -s 'nonempty' ]; then
+    echo 'nonempty_ok'
   else
-    echo "nonempty_bad"
+    echo 'nonempty_bad'
   fi
-  if ! [ -s "empty" ]; then
-    echo "empty_ok"
+  if ! [ -s 'empty' ]; then
+    echo 'empty_ok'
   else
-    echo "empty_bad"
+    echo 'empty_bad'
   fi
-  if ! [ -s "missing" ]; then
-    echo "missing_ok"
+  if ! [ -s 'missing' ]; then
+    echo 'missing_ok'
   else
-    echo "missing_bad"
+    echo 'missing_bad'
   fi
 }
 
 main "$@"
+

@@ -1,10 +1,11 @@
 main() {
-  "sh" "-c" "rm -f exe noexe; echo 'echo hi' > exe; chmod +x exe; echo 'echo hi' > noexe; chmod 644 noexe"
-  if [ -x "exe" ] && ! [ -x "noexe" ]; then
-    echo "ok"
+  'sh' '-c' 'rm -f exe noexe; echo '\''echo hi'\'' > exe; chmod +x exe; echo '\''echo hi'\'' > noexe; chmod 644 noexe'
+  if [ -x 'exe' ] && ! [ -x 'noexe' ]; then
+    echo 'ok'
   else
-    echo "bad"
+    echo 'bad'
   fi
 }
 
 main "$@"
+

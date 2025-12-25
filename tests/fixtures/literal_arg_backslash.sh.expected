@@ -1,0 +1,6 @@
+main() {
+  'echo' 'a\b\c'
+}
+
+main "$@"
+

@@ -1,0 +1,7 @@
+main() {
+  out="$( 'echo' 'a b' )"
+  'echo' "$out"
+}
+
+main "$@"
+

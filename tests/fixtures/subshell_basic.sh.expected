@@ -1,10 +1,11 @@
 main() {
-  x="outer"
+  x='outer'
   (
-    x="inner"
+    x='inner'
     echo "$x"
   )
   echo "$x"
 }
 
 main "$@"
+

@@ -1,9 +1,10 @@
 main() {
   {
-    "false"
+    'false'
   } && {
-    echo "WRONG"
+    echo 'WRONG'
   }
 }
 
 main "$@"
+

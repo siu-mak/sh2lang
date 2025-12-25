@@ -1,6 +1,7 @@
 main() {
-  greeting="hello universe"
+  greeting='hello universe'
   echo "$greeting"
 }
 
 main "$@"
+

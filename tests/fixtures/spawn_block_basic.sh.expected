@@ -1,8 +1,9 @@
 main() {
   {
-    "sh" "-c" "echo hi"
+    'sh' '-c' 'echo hi'
   } &
   wait
 }
 
 main "$@"
+

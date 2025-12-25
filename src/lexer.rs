@@ -188,13 +188,36 @@ pub fn lex(input: &str) -> Vec<Token> {
                     if ch == '\\' {
                         chars.next(); // consume backslash
                         if let Some(&escaped) = chars.peek() {
-                            if escaped == '$' {
-                                s.push('\\');
-                                s.push('$');
-                                chars.next();
-                            } else {
-                                s.push(escaped);
-                                chars.next();
+                            match escaped {
+                                'n' => {
+                                    s.push('\n');
+                                    chars.next();
+                                }
+                                't' => {
+                                    s.push('\t');
+                                    chars.next();
+                                }
+                                'r' => {
+                                    s.push('\r');
+                                    chars.next();
+                                }
+                                '\\' => {
+                                    s.push('\\');
+                                    chars.next();
+                                }
+                                '"' => {
+                                    s.push('"');
+                                    chars.next();
+                                }
+                                '$' => {
+                                    s.push('\\');
+                                    s.push('$');
+                                    chars.next();
+                                }
+                                _ => {
+                                    s.push(escaped);
+                                    chars.next();
+                                }
                             }
                         }
                     } else {

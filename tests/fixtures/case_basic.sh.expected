@@ -1,16 +1,17 @@
 main() {
-  x="b"
+  x='b'
   case "$x" in
-    "a")
-      echo "A"
+    'a')
+      echo 'A'
     ;;
-    "b"|"c")
-      echo "B or C"
+    'b'|'c')
+      echo 'B or C'
     ;;
     *)
-      echo "default"
+      echo 'default'
     ;;
   esac
 }
 
 main "$@"
+

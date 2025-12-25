@@ -1,6 +1,7 @@
 main() {
-  files=$( "ls" )
-  echo "Files: ""$files"
+  files="$( 'ls' )"
+  echo 'Files: '"$files"
 }
 
 main "$@"
+

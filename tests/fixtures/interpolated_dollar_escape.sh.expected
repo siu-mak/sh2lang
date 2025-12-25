@@ -1,8 +1,9 @@
 main() {
-  name="world"
-  echo "literal: {name}"
-  echo "dollar: \$"
-  echo "interp: ""$name"
+  name='world'
+  echo 'literal: {name}'
+  echo 'dollar: $'
+  echo 'interp: '"$name"
 }
 
 main "$@"
+

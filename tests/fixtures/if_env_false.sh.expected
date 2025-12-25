@@ -1,0 +1,10 @@
+main() {
+  if [ -n "$TESTVAR" ]; then
+    echo 'yes'
+  else
+    echo 'no'
+  fi
+}
+
+main "$@"
+

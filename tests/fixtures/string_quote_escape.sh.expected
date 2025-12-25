@@ -1,6 +1,7 @@
 main() {
-  echo "a\"b"
-  "sh" "-c" "echo \"hi\""
+  echo 'a"b'
+  'sh' '-c' 'echo "hi"'
 }
 
 main "$@"
+

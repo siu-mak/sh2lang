@@ -1,7 +1,8 @@
 main() {
   {
-    echo "ok"
+    echo 'ok'
   }
 }
 
 main "$@"
+

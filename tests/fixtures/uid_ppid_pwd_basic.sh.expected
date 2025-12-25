@@ -1,9 +1,10 @@
 main() {
   if [ "$UID" = "${UID}" ] && [ "$PPID" = "${PPID}" ] && [ "$PWD" = "${PWD}" ]; then
-    echo "ok"
+    echo 'ok'
   else
-    echo "bad"
+    echo 'bad'
   fi
 }
 
 main "$@"
+

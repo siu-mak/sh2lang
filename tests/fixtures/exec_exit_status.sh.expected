@@ -1,0 +1,7 @@
+main() {
+  exec 'bash' '-c' 'echo ok; exit 7'
+  echo 'after'
+}
+
+main "$@"
+

@@ -1,7 +1,8 @@
 main() {
   {
-    "echo" "hi"
-  } > "out.log" 2>&1
+    'echo' 'hi'
+  } > 'out.log' 2>&1
 }
 
 main "$@"
+

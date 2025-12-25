@@ -1,6 +1,7 @@
 main() {
-  name="world"
-  echo "hello ""$name""!"
+  name='world'
+  echo 'hello '"$name"'!'
 }
 
 main "$@"
+

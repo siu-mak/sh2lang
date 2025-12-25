@@ -1,8 +1,9 @@
 main() {
-  xs=("a" "b" "c")
+  xs=('a' 'b' 'c')
   for x in "${xs[@]}"; do
     echo "$x"
   done
 }
 
 main "$@"
+

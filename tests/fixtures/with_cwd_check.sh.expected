@@ -1,11 +1,12 @@
 main() {
   (
-    cd "/tmp"
-    p=$( "pwd" )
-    if [ "$p" = "/tmp" ]; then
-      echo "yes"
+    cd '/tmp'
+    p="$( 'pwd' )"
+    if [ "$p" = '/tmp' ]; then
+      echo 'yes'
     fi
   )
 }
 
 main "$@"
+

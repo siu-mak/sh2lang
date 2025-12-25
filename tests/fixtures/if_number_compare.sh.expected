@@ -1,9 +1,10 @@
 main() {
   if [ "1" = "2" ]; then
-    echo "no"
+    echo 'no'
   else
-    echo "yes"
+    echo 'yes'
   fi
 }
 
 main "$@"
+

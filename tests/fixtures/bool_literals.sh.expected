@@ -1,14 +1,15 @@
 main() {
   if true; then
-    echo "t_ok"
+    echo 't_ok'
   else
-    echo "t_bad"
+    echo 't_bad'
   fi
   if false; then
-    echo "f_bad"
+    echo 'f_bad'
   else
-    echo "f_ok"
+    echo 'f_ok'
   fi
 }
 
 main "$@"
+

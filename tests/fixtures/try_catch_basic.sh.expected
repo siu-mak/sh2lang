@@ -1,9 +1,10 @@
 main() {
   if ! (
-    "false"
+    'false'
   ); then
-    echo "failed" >&2
+    echo 'failed' >&2
   fi
 }
 
 main "$@"
+

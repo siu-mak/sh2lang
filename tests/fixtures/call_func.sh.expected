@@ -3,7 +3,8 @@ show() {
 }
 
 main() {
-  show "hi"
+  show 'hi'
 }
 
 main "$@"
+

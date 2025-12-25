@@ -1,37 +1,38 @@
 main() {
   (
-    export FOO="bar"
-    if [ "${FOO}" = "bar" ]; then
-      echo "env_ok"
+    export FOO='bar'
+    if [ "${FOO}" = 'bar' ]; then
+      echo 'env_ok'
     else
-      echo "env_bad"
+      echo 'env_bad'
     fi
   )
-  if [ $( printf "%s" "$PWD" | awk '{ print length($0) }' ) -gt "0" ]; then
-    echo "pwd_ok"
+  if [ "$( printf "%s" "$PWD" | awk '{ print length($0) }' )" -gt "0" ]; then
+    echo 'pwd_ok'
   else
-    echo "pwd_bad"
+    echo 'pwd_bad'
   fi
-  if [ $( printf "%s" "$0" | awk '{ print length($0) }' ) -gt "0" ]; then
-    echo "argv0_ok"
+  if [ "$( printf "%s" "$0" | awk '{ print length($0) }' )" -gt "0" ]; then
+    echo 'argv0_ok'
   else
-    echo "argv0_bad"
+    echo 'argv0_bad'
   fi
   if [ "$#" = "0" ]; then
-    echo "argc_ok"
+    echo 'argc_ok'
   else
-    echo "argc_bad"
+    echo 'argc_bad'
   fi
   if [ "$$" -gt "0" ] && [ "$PPID" -gt "0" ]; then
-    echo "pid_ok"
+    echo 'pid_ok'
   else
-    echo "pid_bad"
+    echo 'pid_bad'
   fi
   if [ "$UID" -ge "0" ]; then
-    echo "uid_ok"
+    echo 'uid_ok'
   else
-    echo "uid_bad"
+    echo 'uid_bad'
   fi
 }
 
 main "$@"
+

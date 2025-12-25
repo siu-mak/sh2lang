@@ -6,9 +6,10 @@ shadow() {
 
 main() {
   (
-    export FOO="outer"
-    shadow "local"
+    export FOO='outer'
+    shadow 'local'
   )
 }
 
 main "$@"
+

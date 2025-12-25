@@ -1,7 +1,8 @@
 main() {
-  "sleep" "1" &
-  echo "after"
+  'sleep' '1' &
+  echo 'after'
   wait
 }
 
 main "$@"
+

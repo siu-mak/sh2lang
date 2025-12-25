@@ -1,9 +1,10 @@
 main() {
-  if [ -f "a.txt" ]; then
-    echo "file"
+  if [ -f 'a.txt' ]; then
+    echo 'file'
   else
-    echo "no"
+    echo 'no'
   fi
 }
 
 main "$@"
+

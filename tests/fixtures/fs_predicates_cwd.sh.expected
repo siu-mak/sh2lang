@@ -1,22 +1,23 @@
 main() {
-  d=$( "mktemp" "-d" )
+  d="$( 'mktemp' '-d' )"
   (
     cd "$d"
     touch f.txt
   )
-  f="$d""/f.txt"
+  f="$d"'/f.txt'
   if [ -e "$f" ] && [ -f "$f" ] && ! [ -d "$f" ]; then
-    echo "fs_ok"
+    echo 'fs_ok'
   else
-    echo "fs_bad"
+    echo 'fs_bad'
   fi
   cd "$d"
   if [ "$PWD" = "$d" ]; then
-    echo "cd_ok"
+    echo 'cd_ok'
   else
-    echo "cd_bad"
+    echo 'cd_bad'
   fi
-  "rm" "-rf" "$d"
+  'rm' '-rf' "$d"
 }
 
 main "$@"
+

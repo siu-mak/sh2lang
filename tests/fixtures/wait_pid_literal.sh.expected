@@ -1,5 +1,6 @@
 main() {
-  wait "1234"
+  wait '1234'
 }
 
 main "$@"
+

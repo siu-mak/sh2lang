@@ -1,8 +1,9 @@
 main() {
-  cd "tmp"
-  "pwd"
-  cd $( "pwd" )
-  "echo" "done"
+  cd 'tmp'
+  'pwd'
+  cd "$( 'pwd' )"
+  'echo' 'done'
 }
 
 main "$@"
+

@@ -1,7 +1,8 @@
 main() {
-  x="a"
-  x="b"
+  x='a'
+  x='b'
   echo "$x"
 }
 
 main "$@"
+

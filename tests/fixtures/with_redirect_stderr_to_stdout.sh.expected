@@ -1,7 +1,8 @@
 main() {
   {
-    "sh" "-c" "echo err 1>&2"
+    'sh' '-c' 'echo err 1>&2'
   } 2>&1
 }
 
 main "$@"
+

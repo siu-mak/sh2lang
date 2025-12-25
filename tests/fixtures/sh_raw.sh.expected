@@ -1,6 +1,7 @@
 main() {
   set -euo pipefail
-  "echo" "hi"
+  'echo' 'hi'
 }
 
 main "$@"
+

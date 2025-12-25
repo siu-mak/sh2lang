@@ -1,16 +1,17 @@
 main() {
-  "sh" "-c" "exit 7" &
+  'sh' '-c' 'exit 7' &
   if [ "$!" -gt "0" ]; then
-    echo "pid_ok"
+    echo 'pid_ok'
   else
-    echo "pid_bad"
+    echo 'pid_bad'
   fi
   wait "$!"
   if [ "$?" = "7" ]; then
-    echo "status_ok"
+    echo 'status_ok'
   else
-    echo "status_bad"
+    echo 'status_bad'
   fi
 }
 
 main "$@"
+

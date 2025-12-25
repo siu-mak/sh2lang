@@ -1,7 +1,8 @@
 main() {
   {
-    "cat"
-  } < "in.txt"
+    'cat'
+  } < 'in.txt'
 }
 
 main "$@"
+

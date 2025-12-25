@@ -1,24 +1,25 @@
 main() {
   if [ "1" -lt "2" ]; then
-    echo "lt_ok"
+    echo 'lt_ok'
   else
-    echo "lt_bad"
+    echo 'lt_bad'
   fi
   if [ "2" -le "2" ]; then
-    echo "le_ok"
+    echo 'le_ok'
   else
-    echo "le_bad"
+    echo 'le_bad'
   fi
   if [ "3" -gt "2" ]; then
-    echo "gt_ok"
+    echo 'gt_ok'
   else
-    echo "gt_bad"
+    echo 'gt_bad'
   fi
   if [ "3" -ge "3" ]; then
-    echo "ge_ok"
+    echo 'ge_ok'
   else
-    echo "ge_bad"
+    echo 'ge_bad'
   fi
 }
 
 main "$@"
+

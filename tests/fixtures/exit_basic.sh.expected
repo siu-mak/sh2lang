@@ -1,7 +1,8 @@
 main() {
-  echo "fatal"
-  exit "1"
-  echo "never"
+  echo 'fatal'
+  exit '1'
+  echo 'never'
 }
 
 main "$@"
+

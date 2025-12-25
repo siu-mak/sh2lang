@@ -4,7 +4,8 @@ echo1() {
 }
 
 main() {
-  echo1 "hi"
+  echo1 'hi'
 }
 
 main "$@"
+

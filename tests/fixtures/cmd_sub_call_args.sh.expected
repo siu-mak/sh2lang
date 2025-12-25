@@ -3,8 +3,9 @@ show() {
 }
 
 main() {
-  out=$( "show" "$@" )
+  out="$( 'show' "$@" )"
   echo "$out"
 }
 
 main "$@"
+

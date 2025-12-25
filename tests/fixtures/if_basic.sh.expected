@@ -1,8 +1,9 @@
 main() {
-  echo "start"
+  echo 'start'
   if [ -n "$registry" ]; then
-    echo "configured"
+    echo 'configured'
   fi
 }
 
 main "$@"
+

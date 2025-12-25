@@ -1,7 +1,8 @@
 main() {
-  xs=("a")
-  xs=("a" "b" "c")
+  xs=('a')
+  xs=('a' 'b' 'c')
   echo "${xs[1]}"
 }
 
 main "$@"
+

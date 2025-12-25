@@ -1,5 +1,6 @@
 main() {
-  return $( printf "%s" "abc" | awk '{ print length($0) }' )
+  return "$( printf "%s" 'abc' | awk '{ print length($0) }' )"
 }
 
 main "$@"
+

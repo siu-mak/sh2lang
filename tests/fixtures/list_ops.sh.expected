@@ -1,16 +1,17 @@
 main() {
-  xs=("a" "b" "c")
+  xs=('a' 'b' 'c')
   if [ "${#xs[@]}" = "3" ]; then
-    echo "count_ok"
+    echo 'count_ok'
   else
-    echo "count_bad"
+    echo 'count_bad'
   fi
-  if [ "${xs[1]}" = "b" ]; then
-    echo "index_ok"
+  if [ "${xs[1]}" = 'b' ]; then
+    echo 'index_ok'
   else
-    echo "index_bad"
+    echo 'index_bad'
   fi
-  echo "$( IFS="-"; printf "%s" "${xs[*]}" )"
+  echo "$( IFS='-'; printf "%s" "${xs[*]}" )"
 }
 
 main "$@"
+

@@ -1,10 +1,11 @@
 main() {
   if [ "5" -gt "3" ]; then
-    echo "yes"
+    echo 'yes'
   fi
   if [ "2" -le "2" ]; then
-    echo "also yes"
+    echo 'also yes'
   fi
 }
 
 main "$@"
+

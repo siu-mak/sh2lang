@@ -1,15 +1,16 @@
 main() {
-  export X="hello"
-  "sh" "-c" "echo \$X"
-  y="yo"
+  export X='hello'
+  'sh' '-c' 'echo $X'
+  y='yo'
   export y
-  "sh" "-c" "echo \$y"
+  'sh' '-c' 'echo $y'
   unset X
-  "sh" "-c" "test -z \"\$X\" && echo unset_ok || echo unset_bad"
-  f=$( "mktemp" )
+  'sh' '-c' 'test -z "$X" && echo unset_ok || echo unset_bad'
+  f="$( 'mktemp' )"
   echo 'echo sourced_ok' > $f
   . "$f"
-  "rm" "-f" "$f"
+  'rm' '-f' "$f"
 }
 
 main "$@"
+

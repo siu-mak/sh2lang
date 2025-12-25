@@ -1,7 +1,8 @@
 main() {
-  xs=("a" "b" "c")
+  xs=('a' 'b' 'c')
   i="0"
   echo "${xs[( i + 2 )]}"
 }
 
 main "$@"
+

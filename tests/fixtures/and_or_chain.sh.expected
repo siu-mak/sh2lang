@@ -1,14 +1,15 @@
 main() {
   {
-    "true"
+    'true'
   } && {
-    echo "ok"
+    echo 'ok'
   }
   {
-    "false"
+    'false'
   } || {
-    echo "fallback"
+    echo 'fallback'
   }
 }
 
 main "$@"
+

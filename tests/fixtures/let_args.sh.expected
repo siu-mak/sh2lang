@@ -2,7 +2,8 @@ main() {
   xs=("$@")
   echo "${#xs[@]}"
   echo "${xs[0]}"
-  echo "$( IFS=","; printf "%s" "${xs[*]}" )"
+  echo "$( IFS=','; printf "%s" "${xs[*]}" )"
 }
 
 main "$@"
+

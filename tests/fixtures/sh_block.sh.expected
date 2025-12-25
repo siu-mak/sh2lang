@@ -1,7 +1,8 @@
 main() {
   set -e
   trap 'echo bye' EXIT
-  "echo" "ok"
+  'echo' 'ok'
 }
 
 main "$@"
+

@@ -1,12 +1,13 @@
 main() {
-  "sh" "-c" "exit 0" &
+  'sh' '-c' 'exit 0' &
   p="$!"
   wait "$p"
   if [ "$?" = "0" ]; then
-    echo "wait_ok"
+    echo 'wait_ok'
   else
-    echo "wait_bad"
+    echo 'wait_bad'
   fi
 }
 
 main "$@"
+

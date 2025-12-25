@@ -1,7 +1,8 @@
 main() {
-  echo "before"
+  echo 'before'
   return
-  echo "after"
+  echo 'after'
 }
 
 main "$@"
+

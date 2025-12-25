@@ -1,7 +1,7 @@
 main() {
-  xs=("a" "stop" "b")
+  xs=('a' 'stop' 'b')
   for x in "${xs[@]}"; do
-    if [ "$x" = "stop" ]; then
+    if [ "$x" = 'stop' ]; then
       break
     fi
     echo "$x"
@@ -9,3 +9,4 @@ main() {
 }
 
 main "$@"
+

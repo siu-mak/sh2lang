@@ -1,6 +1,7 @@
 main() {
-  out=$( "printf" "%s" "$@" )
+  out="$( 'printf' '%s' "$@" )"
   echo "$out"
 }
 
 main "$@"
+

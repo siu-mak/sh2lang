@@ -1,0 +1,4 @@
+func main() {
+    let x = "a b"
+    run("echo", x & "*" & "\$")
+}

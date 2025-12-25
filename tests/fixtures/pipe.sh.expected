@@ -1,5 +1,6 @@
 main() {
-  "cat" "file.txt" | "grep" "error" | "sort"
+  'cat' 'file.txt' | 'grep' 'error' | 'sort'
 }
 
 main "$@"
+

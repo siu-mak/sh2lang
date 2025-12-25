@@ -1,9 +1,10 @@
 main() {
-  k="FOO"
+  k='FOO'
   (
-    export FOO="bar"
+    export FOO='bar'
     echo "${!k}"
   )
 }
 
 main "$@"
+

@@ -1,11 +1,12 @@
 main() {
   {
-    echo "a"
-    echo "b"
+    echo 'a'
+    echo 'b'
   } |
   {
-    "grep" "b"
+    'grep' 'b'
   }
 }
 
 main "$@"
+

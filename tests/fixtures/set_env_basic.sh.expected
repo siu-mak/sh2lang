@@ -1,7 +1,8 @@
 main() {
-  export FOO="bar"
+  export FOO='bar'
   echo "${FOO}"
-  "sh" "-c" "test \"""$FOO""\" = bar && echo child_ok"
+  'sh' '-c' 'test "'"$FOO"'" = bar && echo child_ok'
 }
 
 main "$@"
+
