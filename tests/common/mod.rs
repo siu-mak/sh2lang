@@ -54,15 +54,6 @@ pub fn assert_codegen_panics(fixture_name: &str, expected_msg_part: &str) {
     }
 }
 
-fn write_temp_script(prefix: &str, bash: &str) -> std::path::PathBuf {
-    let pid = std::process::id();
-    let nanos = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_nanos();
-    let filename = format!("{}_{}_{}.sh", prefix, pid, nanos);
-    let mut path = std::env::temp_dir();
-    path.push(filename);
-    fs::write(&path, bash).expect("Failed to write temp script");
-    path
-}
 
 pub fn run_bash_script(bash: &str, env: &[(&str, &str)], args: &[&str]) -> (String, String, i32) {
     let pid = std::process::id();

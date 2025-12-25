@@ -1,6 +1,6 @@
 mod common;
 use common::*;
-use sh2c::ast::{Stmt, LValue, Expr};
+use sh2c::ast::{Stmt, LValue};
 
 #[test]
 fn parse_set_var_and_env() {
@@ -54,7 +54,6 @@ fn exec_set_env_basic() {
     assert_exec_matches_fixture("set_env_basic");
 }
 
-#[test]
 #[test]
 fn codegen_set_env_list_invalid() {
     // This should panic during lowering because we assign a list to strict env var
