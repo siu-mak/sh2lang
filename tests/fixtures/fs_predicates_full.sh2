@@ -1,0 +1,29 @@
+func main() {
+    run("mkdir", "-p", "sandbox")
+    with cwd "sandbox" {
+        run("touch", "f_empty")
+        run("touch", "f_full") 
+        run("sh", "-c", "echo x > f_full")
+        run("ln", "-s", "f_empty", "link")
+        
+        run("touch", "f_exec")
+        run("chmod", "+x", "f_exec")
+        
+        run("touch", "f_ro")
+        run("chmod", "-w", "f_ro")
+
+        if is_symlink("link") { print("link is symlink") }
+        if !is_symlink("f_empty") { print("f_empty is not symlink") }
+
+        if is_non_empty("f_full") { print("f_full is non_empty") }
+        if !is_non_empty("f_empty") { print("f_empty is empty") }
+
+        if is_exec("f_exec") { print("f_exec is exec") }
+        if !is_exec("f_empty") { print("f_empty is not exec") }
+
+        if is_writable("f_empty") { print("f_empty is writable") }
+        if !is_writable("f_ro") { print("f_ro is not writable") }
+
+        if is_readable("f_full") { print("f_full is readable") }
+    }
+}

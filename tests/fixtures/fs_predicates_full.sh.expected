@@ -1,0 +1,43 @@
+main() {
+  'mkdir' '-p' 'sandbox'
+  (
+    cd 'sandbox'
+    'touch' 'f_empty'
+    'touch' 'f_full'
+    'sh' '-c' 'echo x > f_full'
+    'ln' '-s' 'f_empty' 'link'
+    'touch' 'f_exec'
+    'chmod' '+x' 'f_exec'
+    'touch' 'f_ro'
+    'chmod' '-w' 'f_ro'
+    if [ -L 'link' ]; then
+      printf '%s\n' 'link is symlink'
+    fi
+    if ! [ -L 'f_empty' ]; then
+      printf '%s\n' 'f_empty is not symlink'
+    fi
+    if [ -s 'f_full' ]; then
+      printf '%s\n' 'f_full is non_empty'
+    fi
+    if ! [ -s 'f_empty' ]; then
+      printf '%s\n' 'f_empty is empty'
+    fi
+    if [ -x 'f_exec' ]; then
+      printf '%s\n' 'f_exec is exec'
+    fi
+    if ! [ -x 'f_empty' ]; then
+      printf '%s\n' 'f_empty is not exec'
+    fi
+    if [ -w 'f_empty' ]; then
+      printf '%s\n' 'f_empty is writable'
+    fi
+    if ! [ -w 'f_ro' ]; then
+      printf '%s\n' 'f_ro is not writable'
+    fi
+    if [ -r 'f_full' ]; then
+      printf '%s\n' 'f_full is readable'
+    fi
+  )
+}
+
+main "$@"
