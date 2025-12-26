@@ -1,0 +1,4 @@
+func main() {
+    run("sh", "-c", "printf hi", allow_fail=true) | run("sh", "-c", "exit 9", allow_fail=true)
+    print(status())
+}

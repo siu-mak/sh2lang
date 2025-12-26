@@ -1,0 +1,5 @@
+func main() {
+    run("sh", "-c", "exit 7", allow_fail=true)
+    print(status())
+    print((status() + 1))
+}

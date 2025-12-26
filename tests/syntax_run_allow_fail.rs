@@ -21,6 +21,24 @@ fn exec_run_allow_fail_pipe_segment() {
 }
 
 #[test]
+fn exec_run_allow_fail_sets_status() {
+    assert_exec_matches_fixture_target("run_allow_fail_sets_status", TargetShell::Bash);
+    assert_exec_matches_fixture_target("run_allow_fail_sets_status", TargetShell::Posix);
+}
+
+#[test]
+fn exec_run_allow_fail_does_not_trigger_try_catch() {
+    assert_exec_matches_fixture_target("run_allow_fail_does_not_trigger_try_catch", TargetShell::Bash);
+    assert_exec_matches_fixture_target("run_allow_fail_does_not_trigger_try_catch", TargetShell::Posix);
+}
+
+#[test]
+fn exec_run_allow_fail_pipe_last() {
+    assert_exec_matches_fixture_target("run_allow_fail_pipe_last", TargetShell::Bash);
+    assert_exec_matches_fixture_target("run_allow_fail_pipe_last", TargetShell::Posix);
+}
+
+#[test]
 fn compile_panic_run_allow_fail_unknown_option() {
     assert_codegen_panics_target("run_allow_fail_unknown_option", TargetShell::Bash, "unknown run option: nope");
     assert_codegen_panics_target("run_allow_fail_unknown_option", TargetShell::Posix, "unknown run option: nope");
