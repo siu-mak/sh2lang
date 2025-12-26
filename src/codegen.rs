@@ -819,23 +819,26 @@ fn emit_cmd(cmd: &Cmd, out: &mut String, indent: usize, target: TargetShell) {
         }
         Cmd::Spawn(cmd) => {
              // Wrap the entire spawned command in a subshell so & applies to the whole unit.
-             // Pattern: ( <body>; exit $? ) &
              // This ensures $! refers to the subshell running the actual work.
-             // Note: We emit the inner command WITHOUT the status-preserving tail,
-             // since the subshell's exit status will be the command's status.
+             // For Cmd::Exec, emit just the raw command without status tracking.
              out.push_str(&pad);
              out.push_str("( ");
              
-             // Emit inner command to a temp buffer
-             let mut inner_out = String::new();
-             emit_cmd_for_spawn(cmd, &mut inner_out, 0, target);
-             
-             // Trim trailing newline/whitespace
-             let inner_trimmed = inner_out.trim_end();
-             out.push_str(inner_trimmed);
-             
-             // Exit with the command's status
-             out.push_str(" ) &\n");
+             match cmd.as_ref() {
+                 Cmd::Exec { args, allow_fail: _ } => {
+                     // Simple command: emit inline
+                     let shell_cmd = args.iter().map(|a| emit_word(a, target)).collect::<Vec<_>>().join(" ");
+                     out.push_str(&shell_cmd);
+                     out.push_str(" ) &\n");
+                 }
+                 _ => {
+                     // Complex command (block, group, etc): emit with increased indent
+                     out.push('\n');
+                     emit_cmd(cmd, out, indent + 2, target);
+                     out.push_str(&pad);
+                     out.push_str(") &\n");
+                 }
+             }
         }
         Cmd::Wait(opt) => {
              // Wait must update __sh2_status to the exit status of the waited process
@@ -938,25 +941,6 @@ fn is_boolean_expr(v: &Val) -> bool {
     matches!(v, Val::Compare { .. } | Val::And(..) | Val::Or(..) | Val::Not(..) | Val::Exists(..) | Val::IsDir(..) | Val::IsFile(..) | Val::IsSymlink(..) | Val::IsExec(..) | Val::IsReadable(..) | Val::IsWritable(..) | Val::IsNonEmpty(..) | Val::Bool(..))
 }
 
-/// Emit a command for use inside a spawn subshell (without status-preserving tail).
-/// This emits the raw command without `; __sh2_status=$?; (exit $__sh2_status)`.
-fn emit_cmd_for_spawn(cmd: &Cmd, out: &mut String, indent: usize, target: TargetShell) {
-    let pad = " ".repeat(indent);
-    
-    match cmd {
-        Cmd::Exec { args, allow_fail: _ } => {
-            // For spawn, emit just the command without status tracking
-            out.push_str(&pad);
-            let shell_cmd = args.iter().map(|a| emit_word(a, target)).collect::<Vec<_>>().join(" ");
-            out.push_str(&shell_cmd);
-            out.push('\n');
-        }
-        // For other commands, delegate to the regular emit_cmd
-        // Note: Nested spawns would be unusual, but handle gracefully
-        _ => emit_cmd(cmd, out, indent, target),
-    }
-}
-
 fn emit_case_glob_pattern(glob: &str) -> String {
     let mut out = String::new();
     let mut literal_buf = String::new();
@@ -993,32 +977,19 @@ fn emit_posix_pipeline(
     // POSIX sh manual pipeline using FIFOs to simulate pipefail without deadlocks.
     // This implementation:
     // - Is errexit-safe: saves/restores set -e state
-    // - Saves/restores user traps: uses trap -p to capture prior handlers
+    // - Saves/restores user traps using POSIX-safe $(trap)
     // - Cleans up FIFOs on success or failure
     //
-    // Algorithm:
-    // 1. Save errexit state and user traps, then disable errexit.
-    // 2. Create FIFOs and set up cleanup traps.
-    // 3. Open keepalive FDs to avoid open() deadlocks.
-    // 4. Launch background processes.
-    // 5. Close keepalive FDs.
-    // 6. Wait and collect statuses.
-    // 7. Compute effective status.
-    // 8. Cleanup FIFOs, restore user traps, restore errexit.
-    // 9. Return status.
+    // Note: We use $(trap) to capture all current traps as a shell-re-evaluable string.
+    // This is POSIX-compliant (unlike trap -p which is not).
     
     out.push_str(pad);
     out.push_str("{\n");
     let indent_pad = format!("{}  ", pad);
     
-    // Save errexit state
+    // Save errexit state and user traps, then disable errexit
     out.push_str(&format!("{}case $- in *e*) __sh2_e=1;; *) __sh2_e=0;; esac; set +e;\n", indent_pad));
-    
-    // Save user traps (POSIX: trap -p outputs commands to restore traps)
-    out.push_str(&format!("{}__sh2_trap_exit=$(trap -p EXIT 2>/dev/null || true);\n", indent_pad));
-    out.push_str(&format!("{}__sh2_trap_int=$(trap -p INT 2>/dev/null || true);\n", indent_pad));
-    out.push_str(&format!("{}__sh2_trap_term=$(trap -p TERM 2>/dev/null || true);\n", indent_pad));
-    out.push_str(&format!("{}__sh2_trap_quit=$(trap -p QUIT 2>/dev/null || true);\n", indent_pad));
+    out.push_str(&format!("{}__sh2_saved_traps=$(trap);\n", indent_pad));
     
     let num_fifos = stages.len() - 1;
     out.push_str(&format!("{}__sh2_base=\"${{TMPDIR:-/tmp}}/sh2_fifo_$$\";\n", indent_pad));
@@ -1071,15 +1042,12 @@ fn emit_posix_pipeline(
         }
     }
     
-    // Cleanup FIFOs and reset traps to default first
+    // Cleanup FIFOs and reset traps to default
     out.push_str(&format!("{}trap - EXIT INT TERM QUIT;\n", indent_pad));
     out.push_str(&format!("{}rm -f \"${{__sh2_base}}_\"*;\n", indent_pad));
     
-    // Restore user traps (if they existed)
-    out.push_str(&format!("{}if [ -n \"$__sh2_trap_exit\" ]; then eval \"$__sh2_trap_exit\"; fi;\n", indent_pad));
-    out.push_str(&format!("{}if [ -n \"$__sh2_trap_int\" ]; then eval \"$__sh2_trap_int\"; fi;\n", indent_pad));
-    out.push_str(&format!("{}if [ -n \"$__sh2_trap_term\" ]; then eval \"$__sh2_trap_term\"; fi;\n", indent_pad));
-    out.push_str(&format!("{}if [ -n \"$__sh2_trap_quit\" ]; then eval \"$__sh2_trap_quit\"; fi;\n", indent_pad));
+    // Restore user traps (if any were saved)
+    out.push_str(&format!("{}if [ -n \"$__sh2_saved_traps\" ]; then eval \"$__sh2_saved_traps\"; fi;\n", indent_pad));
     
     // Restore errexit if it was set
     out.push_str(&format!("{}if [ \"$__sh2_e\" = 1 ]; then set -e; fi;\n", indent_pad));

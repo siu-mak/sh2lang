@@ -1,8 +1,10 @@
 main() {
   x='hi'
-  ( {
-  printf '%s\n' "$x"
-} ) &
+  ( 
+    {
+      printf '%s\n' "$x"
+    }
+  ) &
   wait; __sh2_status=$?
 }
 

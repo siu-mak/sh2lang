@@ -1,7 +1,9 @@
 main() {
-  ( {
-  'sh' '-c' 'sleep 0.05'; __sh2_status=$?; (exit $__sh2_status)
-} ) &
+  ( 
+    {
+      'sh' '-c' 'sleep 0.05'; __sh2_status=$?; (exit $__sh2_status)
+    }
+  ) &
   p="$!"
   wait "$p"; __sh2_status=$?
   printf '%s\n' 'done'
