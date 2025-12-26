@@ -166,11 +166,11 @@ fn parse_stmt_atom(tokens: &[Token], i: &mut usize) -> Stmt {
 
             // Additional run(...) segments separated by `|`
             while matches!(tokens.get(*i), Some(Token::Pipe)) {
-                if matches!(tokens.get(*i + 1), Some(Token::Run)) {
-                    *i += 1; // consume pipe
+                *i += 1; // consume pipe
+                if matches!(tokens.get(*i), Some(Token::Run)) {
                     segments.push(parse_run_call(tokens, i));
                 } else {
-                    break;
+                    panic!("expected run(...) after '|' in pipeline");
                 }
             }
 

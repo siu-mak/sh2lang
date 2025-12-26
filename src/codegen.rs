@@ -15,6 +15,8 @@ pub fn emit_with_target(funcs: &[Function], target: TargetShell) -> String {
     
     // Existing codegen didn't emit shebang or options, but tests might expect bare functions.
     // Preserving identical output for Bash target.
+    // Update: Enforce set -e semantics globally.
+    out.push_str("set -e\n");
     
     for (i, f) in funcs.iter().enumerate() {
         if i > 0 {
@@ -464,28 +466,234 @@ fn emit_cmd(cmd: &Cmd, out: &mut String, indent: usize, target: TargetShell) {
                 }
             }
 
-            if allow_fail_last {
-                 out.push_str(&format!(
-                    "case $- in *e*) __e=1;; *) __e=0;; esac; set +e; {} ; __sh2_status=$?; if [ \"$__e\" = 1 ]; then set -e; fi; :\n",
-                    pipe_str
-                 ));
-             } else {
-                 out.push_str(&pipe_str);
-                 out.push_str("; __sh2_status=$?; (exit $__sh2_status)\n");
-             }
+            match target {
+                TargetShell::Bash => {
+                    out.push_str(&format!(
+                        "case $- in *e*) __e=1;; *) __e=0;; esac; set +e; {} ; ",
+                        pipe_str
+                    ));
+                    
+                    // Capture PIPESTATUS
+                    for i in 0..segments.len() {
+                         out.push_str(&format!("__sh2_ps{}=${{PIPESTATUS[{}]}}; ", i, i));
+                    }
+                    
+                    // Compute effective status: rightmost non-zero wins
+                    out.push_str("__sh2_status=0; ");
+                    for (i, (_, allow_fail)) in segments.iter().enumerate() {
+                        if !allow_fail {
+                             out.push_str(&format!("if [ \"$__sh2_ps{}\" -ne 0 ]; then __sh2_status=$__sh2_ps{}; fi; ", i, i));
+                        }
+                    }
+
+                    // Restore set -e
+                    out.push_str("if [ \"$__e\" = 1 ]; then set -e; fi; ");
+
+                    // Return
+                    if allow_fail_last {
+                        out.push_str(":\n"); 
+                    } else {
+                        out.push_str("(exit $__sh2_status)\n");
+                    }
+                }
+                TargetShell::Posix => {
+                     // POSIX sh manual pipeline using FIFOs to simulate pipefail
+                     // Algorithm:
+                     // 1. Mkdir temp dir for fifos or just use $$.i names. Better to use simple names.
+                     // 2. mkfifo fifo_0, fifo_1, ...
+                     // 3. Start processes in background:
+                     //    Stage N-1: < fifo_(N-2) > stdout & pid_N-1=$!
+                     //    Stage i: < fifo_(i-1) > fifo_i & pid_i=$!
+                     //    Stage 0: > fifo_0 & pid_0=$!
+                     // 4. Wait for pids and collect exit codes.
+                     // 5. Cleanup fifos.
+                     // 6. Compute status.
+                     
+                     // Helper: unique-ish suffix for fifos.
+                     // We need to wrap in { ... } to handle cleanup trap.
+                     
+                     out.push_str(&pad);
+                     out.push_str("{\n");
+                     let indent_pad = format!("{}  ", pad);
+                     
+                     // Define FIFOs
+                     let num_fifos = segments.len() - 1;
+                     out.push_str(&format!("{}__sh2_base=\"/tmp/sh2_fifo_$$\";\n", indent_pad));
+                     for i in 0..num_fifos {
+                         out.push_str(&format!("{}mkfifo \"${{__sh2_base}}_{}\";\n", indent_pad, i));
+                     }
+                     
+                     // Trap for cleanup
+                     out.push_str(&format!("{}trap 'rm -f \"${{__sh2_base}}_\"*; exit 1' INT TERM QUIT;\n", indent_pad));
+                     
+                     // Launch stages in REVERSE order to avoid deadlock (readers first)
+                     // Stage N-1
+                     let last_idx = segments.len() - 1;
+                     let (last_args, _) = &segments[last_idx];
+                     let last_cmd = last_args.iter().map(|a| emit_word(a, target)).collect::<Vec<_>>().join(" ");
+                     // Input from last fifo
+                     if last_idx > 0 {
+                         out.push_str(&format!("{}{} < \"${{__sh2_base}}_{}\" &\n", indent_pad, last_cmd, last_idx - 1));
+                     } else {
+                         // trivial case N=1, should not happen in Pipe() generally but possible
+                         out.push_str(&format!("{}{} &\n", indent_pad, last_cmd));
+                     }
+                     out.push_str(&format!("{}__sh2_p{}=$!;\n", indent_pad, last_idx));
+
+                     // Stages N-2 down to 1
+                     for i in (1..last_idx).rev() {
+                         let (args, allow_fail) = &segments[i];
+                          let mut cmd = args.iter().map(|a| emit_word(a, target)).collect::<Vec<_>>().join(" ");
+                          if *allow_fail { cmd = format!("{{ {{ {}; }} || true; }}", cmd); }
+                          
+                          // < fifo_(i-1) > fifo_i
+                          out.push_str(&format!("{}{} < \"${{__sh2_base}}_{}\" > \"${{__sh2_base}}_{}\" &\n", indent_pad, cmd, i - 1, i));
+                          out.push_str(&format!("{}__sh2_p{}=$!;\n", indent_pad, i));
+                     }
+                     
+                     // Stage 0
+                     if last_idx > 0 {
+                         let (args, allow_fail) = &segments[0];
+                         let mut cmd = args.iter().map(|a| emit_word(a, target)).collect::<Vec<_>>().join(" ");
+                         if *allow_fail { cmd = format!("{{ {{ {}; }} || true; }}", cmd); }
+                         
+                         out.push_str(&format!("{}{} > \"${{__sh2_base}}_0\" &\n", indent_pad, cmd));
+                         out.push_str(&format!("{}__sh2_p0=$!;\n", indent_pad));
+                     }
+
+                     // Wait and collect statuses
+                     for i in 0..segments.len() {
+                         out.push_str(&format!("{}wait \"$__sh2_p{}\"; __sh2_s{}=$?;\n", indent_pad, i, i));
+                     }
+                     
+                     // Compute computed status
+                     out.push_str(&format!("{}__sh2_status=0;\n", indent_pad));
+                     for (i, (_, allow_fail)) in segments.iter().enumerate() {
+                         if !allow_fail {
+                             out.push_str(&format!("{}if [ \"$__sh2_s{}\" -ne 0 ]; then __sh2_status=\"$__sh2_s{}\"; fi;\n", indent_pad, i, i));
+                         }
+                     }
+                     
+                     // Cleanup
+                     out.push_str(&format!("{}rm -f \"${{__sh2_base}}_\"*;\n", indent_pad));
+                     
+                     // Return result
+                     if allow_fail_last {
+                         out.push_str(&format!("{}:\n", indent_pad));
+                     } else {
+                         out.push_str(&format!("{}(exit $__sh2_status)\n", indent_pad));
+                     }
+                     
+                     out.push_str(&format!("{}}} \n", pad));
+                }
+            }
         }
         Cmd::PipeBlocks(segments) => {
+            let mut pipe_str = String::new();
             for (i, seg) in segments.iter().enumerate() {
-                out.push_str(&pad);
-                out.push_str("{\n");
+                if i > 0 { pipe_str.push_str(" | "); }
+                pipe_str.push_str("{\n");
+                pipe_str.push_str("__sh2_status=0;\n");
                 for cmd in seg {
-                    emit_cmd(cmd, out, indent + 2, target);
+                    emit_cmd(cmd, &mut pipe_str, indent + 2, target);
                 }
-                out.push_str(&format!("{pad}}}"));
-                if i < segments.len() - 1 {
-                    out.push_str(" |\n");
-                } else {
-                    out.push('\n');
+                pipe_str.push_str(&format!("{pad}}}"));
+            }
+
+            match target {
+                TargetShell::Bash => {
+                    out.push_str(&pad);
+                    out.push_str(&format!(
+                        "case $- in *e*) __e=1;; *) __e=0;; esac; set +e; {} ; ",
+                        pipe_str
+                    ));
+                    
+                    // Capture PIPESTATUS
+                    for i in 0..segments.len() {
+                         out.push_str(&format!("__sh2_ps{}=${{PIPESTATUS[{}]}}; ", i, i));
+                    }
+                    
+                    // Compute effective status: rightmost non-zero wins
+                    out.push_str("__sh2_status=0; ");
+                    for i in 0..segments.len() {
+                         out.push_str(&format!("if [ \"$__sh2_ps{}\" -ne 0 ]; then __sh2_status=$__sh2_ps{}; fi; ", i, i));
+                    }
+
+                    // Restore set -e
+                    out.push_str("if [ \"$__e\" = 1 ]; then set -e; fi; ");
+                    out.push_str("(exit $__sh2_status)\n");
+                }
+                TargetShell::Posix => {
+                     // POSIX sh manual pipeline using FIFOs
+                     out.push_str(&pad);
+                     out.push_str("{\n");
+                     let indent_pad = format!("{}  ", pad);
+                     
+                     let num_fifos = segments.len() - 1;
+                     out.push_str(&format!("{}__sh2_base=\"/tmp/sh2_fifo_blocks_$$\";\n", indent_pad));
+                     for i in 0..num_fifos {
+                         out.push_str(&format!("{}mkfifo \"${{__sh2_base}}_{}\";\n", indent_pad, i));
+                     }
+                     out.push_str(&format!("{}trap 'rm -f \"${{__sh2_base}}_\"*; exit 1' INT TERM QUIT;\n", indent_pad));
+
+                     let last_idx = segments.len() - 1;
+        
+                     // Stage N-1
+                     // For blocks, we constructed the content via recursive emit_cmd into pure string buffers
+                     // segments[last_idx] is a Vec<Cmd>. We need to render it.
+                     // But wait, segments is Vec<Vec<Cmd>>. We can't easily re-use `pipe_str` logic because we need individual blocks.
+                     // We need to re-render each block.
+                     
+                     // Optimization: Loop and render each block content into variable first? 
+                     // Or just render in place.
+                     
+                     // Since we need to wrap each block in { ... } < fifo > fifo &
+                     // We'll iterate manually.
+                     
+                     // Stage N-1 (Reader)
+                     out.push_str(&format!("{{ {{ \n"));
+                     for c in &segments[last_idx] { emit_cmd(c, out, indent + 6, target); }
+                     out.push_str(&format!("    }}"));
+                     if last_idx > 0 {
+                         out.push_str(&format!(" < \"${{__sh2_base}}_{}\"", last_idx - 1));
+                     }
+                     out.push_str(" } &\n");
+                     out.push_str(&format!("{}__sh2_p{}=$!;\n", indent_pad, last_idx));
+
+                     // Stages N-2 down to 1
+                     for i in (1..last_idx).rev() {
+                         out.push_str(&format!("    {{ {{ \n"));
+                         for c in &segments[i] { emit_cmd(c, out, indent + 8, target); }
+                         out.push_str(&format!("        }}"));
+                         out.push_str(&format!(" < \"${{__sh2_base}}_{}\" > \"${{__sh2_base}}_{}\"", i - 1, i));
+                         out.push_str(" } &\n");
+                         out.push_str(&format!("{}__sh2_p{}=$!;\n", indent_pad, i));
+                     }
+
+                     // Stage 0
+                     if last_idx > 0 {
+                         out.push_str(&format!("    {{ {{ \n"));
+                         for c in &segments[0] { emit_cmd(c, out, indent + 8, target); }
+                         out.push_str(&format!("        }}"));
+                         out.push_str(&format!(" > \"${{__sh2_base}}_0\""));
+                         out.push_str(" } &\n");
+                         out.push_str(&format!("{}__sh2_p0=$!;\n", indent_pad));
+                     }
+
+                     // Wait
+                     for i in 0..segments.len() {
+                         out.push_str(&format!("{}wait \"$__sh2_p{}\"; __sh2_s{}=$?;\n", indent_pad, i, i));
+                     }
+
+                     // Compute (all allow_fail=false for blocks)
+                     out.push_str(&format!("{}__sh2_status=0;\n", indent_pad));
+                     for i in 0..segments.len() {
+                         out.push_str(&format!("{}if [ \"$__sh2_s{}\" -ne 0 ]; then __sh2_status=\"$__sh2_s{}\"; fi;\n", indent_pad, i, i));
+                     }
+
+                     out.push_str(&format!("{}rm -f \"${{__sh2_base}}_\"*;\n", indent_pad));
+                     out.push_str(&format!("{}(exit $__sh2_status)\n", indent_pad));
+                     out.push_str(&format!("{}}} \n", pad));
                 }
             }
         }
@@ -817,12 +1025,17 @@ fn emit_cmd(cmd: &Cmd, out: &mut String, indent: usize, target: TargetShell) {
              }
         }
         Cmd::TryCatch { try_body, catch_body } => {
-            // Use group { ...; } instead of subshell ( ... ) so variables (like __sh2_status) propagate
-            out.push_str(&format!("{pad}if ! {{\n"));
+            // Use a function wrapper to ensure set -e works correctly (aborts the function, returns status)
+            // if ! { ... } disables set -e, and restoring it inside doesn't always work as expected for aborts.
+            // Functions preserve variable propagation (no subshell).
+            out.push_str(&format!("{pad}__sh2_try_body() {{\n{pad}  set -e\n{pad}  __sh2_status=0\n"));
             for cmd in try_body {
                 emit_cmd(cmd, out, indent + 2, target);
+                // Explicit check using global status variable which is reliably set by failing commands
+                out.push_str(&format!("{pad}  if [ \"$__sh2_status\" -ne 0 ]; then return $__sh2_status; fi\n"));
             }
-            out.push_str(&format!("{pad}}}; then\n"));
+            out.push_str(&format!("{pad}}}\n"));
+            out.push_str(&format!("{pad}if ! __sh2_try_body; then\n"));
             for cmd in catch_body {
                 emit_cmd(cmd, out, indent + 2, target);
             }

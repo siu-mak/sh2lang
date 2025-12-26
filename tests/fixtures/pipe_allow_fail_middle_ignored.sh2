@@ -1,0 +1,9 @@
+func main() {
+    try {
+        run("sh","-c","printf hi") | run("sh","-c","cat; exit 7", allow_fail=true) | run("sh","-c","cat")
+        print("OK")
+    } catch {
+        print("CAUGHT")
+    }
+    print(status())
+}
