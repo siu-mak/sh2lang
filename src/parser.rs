@@ -531,8 +531,45 @@ fn parse_stmt_atom(tokens: &[Token], i: &mut usize) -> Stmt {
 
                 Stmt::WithRedirect { stdout, stderr, stdin, body }
 
+            } else if matches!(tokens.get(*i), Some(Token::Log)) {
+                 *i += 1;
+                 expect(tokens, i, Token::LParen);
+                 let path = parse_expr(tokens, i);
+                 let mut append = false;
+                 
+                 // Optional named args
+                 while matches!(tokens.get(*i), Some(Token::Comma)) {
+                     *i += 1;
+                     if matches!(tokens.get(*i), Some(Token::Append)) {
+                         *i += 1;
+                         expect(tokens, i, Token::Equals);
+                         match tokens.get(*i) {
+                             Some(Token::True) => { append = true; *i += 1; }
+                             Some(Token::False) => { append = false; *i += 1; }
+                             // Also allow identifier true/false if literal matching fails? 
+                             // existing code does this but let's stick to consistent strictness or pattern.
+                             // Run used strict. let's use strict.
+                             _ => panic!("append must be true/false literal"),
+                         }
+                     } else if let Some(Token::Ident(name)) = tokens.get(*i) {
+                         panic!("unknown log option: {}", name);
+                     } else {
+                         panic!("Expected option name (e.g. append) after comma");
+                     }
+                 }
+                 expect(tokens, i, Token::RParen);
+
+                 expect(tokens, i, Token::LBrace);
+                 let mut body = Vec::new();
+                 while !matches!(tokens[*i], Token::RBrace) {
+                     body.push(parse_stmt(tokens, i));
+                 }
+                 expect(tokens, i, Token::RBrace);
+
+                 Stmt::WithLog { path, append, body }
+
             } else {
-                panic!("Expected 'env', 'cwd', or 'redirect' after 'with'");
+                panic!("Expected 'env', 'cwd', 'redirect', or 'log' after 'with'");
             }
         }
 

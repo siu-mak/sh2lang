@@ -582,6 +582,37 @@ fn emit_cmd(cmd: &Cmd, out: &mut String, indent: usize, target: TargetShell) {
             }
             out.push_str(&format!("{pad})\n"));
         }
+        Cmd::WithLog { path, append, body } => {
+            if target == TargetShell::Posix {
+                panic!("with log(...) is not supported in POSIX sh target");
+            }
+            
+            // Bash implementation using process substitution
+            let path_val = emit_val(path, target);
+            
+            out.push_str(&format!("{pad}(\n"));
+            out.push_str(&format!("{pad}  __sh2_log_path={}\n", path_val));
+            
+            if !append {
+                // Truncate file once
+                out.push_str(&format!("{pad}  : > \"$__sh2_log_path\"\n"));
+            }
+
+            // Always use append for tee to avoid race conditions between stdout/stderr tees 
+            // overwriting each other (they have separate fds/offsets otherwise).
+            // Users want interleaved output.
+            
+            // Ensure we wait for tee to finish even if the block exits early
+            out.push_str(&format!("{pad}  trap 'exec >&-; exec 2>&-; wait' EXIT\n"));
+
+            out.push_str(&format!("{pad}  exec > >(tee -a \"$__sh2_log_path\")\n"));
+            out.push_str(&format!("{pad}  exec 2> >(tee -a \"$__sh2_log_path\" >&2)\n"));
+            
+            for cmd in body {
+                emit_cmd(cmd, out, indent + 2, target);
+            }
+            out.push_str(&format!("{pad})\n"));
+        }
         Cmd::WithCwd { path, body } => {
             out.push_str(&format!("{pad}(\n"));
             out.push_str(&format!("{pad}  cd {}\n", emit_val(path, target)));

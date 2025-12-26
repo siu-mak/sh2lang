@@ -97,6 +97,7 @@ pub enum Token {
     Dot,
     Set,
     PipeKw,
+    Log,
 }
 
 pub fn lex(input: &str) -> Vec<Token> {
@@ -325,6 +326,7 @@ pub fn lex(input: &str) -> Vec<Token> {
 
                     "pipe" => tokens.push(Token::PipeKw),
                     "len" => tokens.push(Token::Len),
+                    "log" => tokens.push(Token::Log),
                     _ => tokens.push(Token::Ident(ident)),
                 }
             }

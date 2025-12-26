@@ -101,6 +101,11 @@ pub enum Cmd {
         bindings: Vec<(String, Val)>,
         body: Vec<Cmd>,
     },
+    WithLog {
+        path: Val,
+        append: bool,
+        body: Vec<Cmd>,
+    },
     WithCwd {
         path: Val,
         body: Vec<Cmd>,

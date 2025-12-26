@@ -1,0 +1,5 @@
+func main() {
+    with log("out.log") { print("A") }
+    with log("out.log", append=true) { print("B") }
+    run("cat", "out.log")
+}

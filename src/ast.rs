@@ -113,6 +113,11 @@ pub enum Stmt {
     Continue,
     Return(Option<Expr>),
     Exit(Option<Expr>),
+    WithLog {
+        path: Expr,
+        append: bool,
+        body: Vec<Stmt>,
+    },
     WithEnv {
         bindings: Vec<(String, Expr)>,
         body: Vec<Stmt>,

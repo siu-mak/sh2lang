@@ -1,0 +1,8 @@
+func main() {
+    with log("out.log") {
+        print("A")
+        print_err("ERR")
+    }
+    // Read and sort to ensure deterministic order (race between stdout/stderr tees)
+    run("sh", "-c", "sort out.log")
+}

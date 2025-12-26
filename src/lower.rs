@@ -179,6 +179,18 @@ fn lower_stmt(stmt: ast::Stmt, out: &mut Vec<ir::Cmd>) {
                 body: lower_body,
             });
         }
+        ast::Stmt::WithLog { path, append, body } => {
+            let lowered_path = lower_expr(path);
+            let mut lower_body = Vec::new();
+            for s in body {
+                lower_stmt(s, &mut lower_body);
+            }
+            out.push(ir::Cmd::WithLog {
+                path: lowered_path,
+                append,
+                body: lower_body,
+            });
+        }
         ast::Stmt::Cd { path } => {
             out.push(ir::Cmd::Cd(lower_expr(path)));
         }
