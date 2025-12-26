@@ -95,39 +95,80 @@ fn parse_stmt_atom(tokens: &[Token], i: &mut usize) -> Stmt {
         }
 
         Token::Run => {
+            // Helper to parse individual run(...) call with named args
+            fn parse_run_call(tokens: &[Token], i: &mut usize) -> RunCall {
+                 expect(tokens, i, Token::Run);
+                 expect(tokens, i, Token::LParen);
+                 
+                 let mut args = Vec::new();
+                 let mut allow_fail = false;
+                 
+                 loop {
+                     if matches!(tokens.get(*i), Some(Token::RParen)) { break; }
+                     
+                     // Check for named arg: Ident("allow_fail") = Bool | ...
+                     let is_named_arg = if let Some(Token::Ident(_)) = tokens.get(*i) {
+                         matches!(tokens.get(*i + 1), Some(Token::Equals))
+                     } else {
+                         false
+                     };
+                     
+                     if is_named_arg {
+                         let name = match &tokens[*i] {
+                             Token::Ident(s) => s.clone(),
+                             _ => unreachable!(),
+                         };
+                         *i += 2; // skip name and =
+                         
+                         if name == "allow_fail" {
+                             if allow_fail {
+                                 panic!("allow_fail specified more than once");
+                             }
+                             if matches!(tokens.get(*i), Some(Token::True)) {
+                                 allow_fail = true;
+                                 *i += 1;
+                             } else if matches!(tokens.get(*i), Some(Token::False)) {
+                                 allow_fail = false;
+                                 *i += 1;
+                             } else {
+                                 panic!("allow_fail must be true/false literal");
+                             }
+                         } else {
+                             panic!("unknown run option: {}", name);
+                         }
+                     } else {
+                         args.push(parse_expr(tokens, i));
+                     }
+                     
+                     if matches!(tokens.get(*i), Some(Token::Comma)) { *i += 1; } else { break; }
+                 }
+                 expect(tokens, i, Token::RParen);
+                 RunCall { args, allow_fail }
+            }
+
             let mut segments = Vec::new();
             
-            // First run(...)
-            *i += 1;
-            expect(tokens, i, Token::LParen);
-
-            let mut args = Vec::new();
-            loop {
-                if matches!(tokens.get(*i), Some(Token::RParen)) { break; }
-                args.push(parse_expr(tokens, i));
-                if matches!(tokens.get(*i), Some(Token::Comma)) { *i += 1; } else { break; }
-            }
-            expect(tokens, i, Token::RParen);
-            segments.push(args);
+            // First run(...) - we already consumed Token::Run at call site? No, *i points to Token::Run
+            // Wait, previous code was:
+            // Token::Run => { *i += 1; expect(..., LParen); ... }
+            // So we are at Token::Run.
+            // But parse_run_call expects to consume Token::Run.
+            // Let's adjust.
+            // Actually, the main loop dispatched on Token::Run, so *i points to it.
+            // But parse_stmt_atom calls us.
+            // In parse_stmt_atom: match &tokens[*i] { Token::Run => { ... } }
+            // So yes, tokens[*i] is Run.
+            
+            segments.push(parse_run_call(tokens, i));
 
             // Additional run(...) segments separated by `|`
             while matches!(tokens.get(*i), Some(Token::Pipe)) {
                 if matches!(tokens.get(*i + 1), Some(Token::Run)) {
-                    *i += 1;
-                    expect(tokens, i, Token::Run);
-                    expect(tokens, i, Token::LParen);
+                    *i += 1; // consume pipe
+                    segments.push(parse_run_call(tokens, i));
                 } else {
                     break;
                 }
-                
-                let mut next_args = Vec::new();
-                loop {
-                    if matches!(tokens.get(*i), Some(Token::RParen)) { break; }
-                    next_args.push(parse_expr(tokens, i));
-                    if matches!(tokens.get(*i), Some(Token::Comma)) { *i += 1; } else { break; }
-                }
-                expect(tokens, i, Token::RParen);
-                segments.push(next_args);
             }
 
             if segments.len() == 1 {

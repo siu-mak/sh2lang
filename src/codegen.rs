@@ -33,7 +33,7 @@ pub fn emit_with_target(funcs: &[Function], target: TargetShell) -> String {
         out.push_str("}\n");
     }
 
-    out.push_str("\nmain \"$@\"\n");
+    out.push_str("\n__sh2_status=0\nmain \"$@\"\n");
     out
 }
 
@@ -132,7 +132,7 @@ fn emit_val(v: &Val, target: TargetShell) -> String {
         },
         Val::Bool(_) => panic!("Cannot emit boolean value as string/word; booleans are only valid in conditions"),
         Val::Number(n) => format!("\"{}\"", n),
-        Val::Status => "\"$?\"".to_string(),
+        Val::Status => "\"$__sh2_status\"".to_string(),
         Val::Pid => "\"$!\"".to_string(),
         Val::Env(inner) => match &**inner {
             Val::Literal(s) => format!("\"${{{}}}\"", s),
@@ -357,11 +357,21 @@ fn emit_cmd(cmd: &Cmd, out: &mut String, indent: usize, target: TargetShell) {
                 out.push('\n');
             }
         }
-        Cmd::Exec(args) => {
+        Cmd::Exec { args, allow_fail } => {
             out.push_str(&pad);
-            let shell_args: Vec<String> = args.iter().map(|a| emit_word(a, target)).collect();
-            out.push_str(&shell_args.join(" "));
-            out.push('\n');
+            let shell_cmd = args.iter().map(|a| emit_word(a, target)).collect::<Vec<_>>().join(" ");
+            
+            if *allow_fail {
+                // allow_fail: suppresses script failure (returns 0), captures real status in __sh2_status
+                out.push_str(&format!(
+                    "case $- in *e*) __e=1;; *) __e=0;; esac; set +e; {} ; __sh2_status=$?; if [ \"$__e\" = 1 ]; then set -e; fi; :\n",
+                    shell_cmd
+                ));
+            } else {
+                // Normal: capture status in __sh2_status, then restore $? so try/set-e works
+                out.push_str(&shell_cmd);
+                out.push_str("; __sh2_status=$?; (exit $__sh2_status)\n");
+            }
         }
         Cmd::ExecReplace(args) => {
             out.push_str(&pad);
@@ -414,12 +424,33 @@ fn emit_cmd(cmd: &Cmd, out: &mut String, indent: usize, target: TargetShell) {
         }
         Cmd::Pipe(segments) => {
              out.push_str(&pad);
-             let cmds: Vec<String> = segments.iter().map(|args| {
-                 let parts: Vec<String> = args.iter().map(|a| emit_word(a, target)).collect();
-                 parts.join(" ")
-             }).collect();
-             out.push_str(&cmds.join(" | "));
-             out.push('\n');
+             
+             let mut pipe_str = String::new();
+             let last_idx = segments.len() - 1;
+             let allow_fail_last = segments[last_idx].1;
+             
+             for (i, (args, allow_fail)) in segments.iter().enumerate() {
+                 if i > 0 { pipe_str.push_str(" | "); }
+                 
+                 let cmd_str = args.iter().map(|a| emit_word(a, target)).collect::<Vec<_>>().join(" ");
+                 
+                 if *allow_fail && i < last_idx {
+                     // Non-final segment: suppress failure
+                     pipe_str.push_str(&format!("{{ {}; }} || true", cmd_str));
+                 } else {
+                     pipe_str.push_str(&cmd_str);
+                 }
+             }
+
+             if allow_fail_last {
+                 out.push_str(&format!(
+                    "case $- in *e*) __e=1;; *) __e=0;; esac; set +e; {} ; __sh2_status=$?; if [ \"$__e\" = 1 ]; then set -e; fi; :\n",
+                    pipe_str
+                 ));
+             } else {
+                 out.push_str(&pipe_str);
+                 out.push_str("; __sh2_status=$?; (exit $__sh2_status)\n");
+             }
         }
         Cmd::PipeBlocks(segments) => {
             for (i, seg) in segments.iter().enumerate() {
@@ -529,7 +560,7 @@ fn emit_cmd(cmd: &Cmd, out: &mut String, indent: usize, target: TargetShell) {
         Cmd::WithEnv { bindings, body } => {
             // Check for single Exec optimization
             if body.len() == 1 {
-                if let Cmd::Exec(args) = &body[0] {
+                if let Cmd::Exec { args, .. } = &body[0] {
                     out.push_str(&pad);
                     for (k, v) in bindings {
                         out.push_str(&format!("{}={} ", k, emit_val(v, target)));
@@ -635,7 +666,7 @@ fn emit_cmd(cmd: &Cmd, out: &mut String, indent: usize, target: TargetShell) {
                 }
             }
 
-            let mut emit_stdout = |out: &mut String| {
+            let emit_stdout = |out: &mut String| {
                 if let Some(target_redir) = &stdout {
                     match target_redir {
                         RedirectTarget::File { path, append } => {
@@ -653,7 +684,7 @@ fn emit_cmd(cmd: &Cmd, out: &mut String, indent: usize, target: TargetShell) {
                 }
             };
 
-            let mut emit_stderr = |out: &mut String| {
+            let emit_stderr = |out: &mut String| {
                 if let Some(target_redir) = &stderr {
                     match target_redir {
                         RedirectTarget::File { path, append } => {

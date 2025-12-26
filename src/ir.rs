@@ -69,7 +69,7 @@ pub enum CompareOp {
 #[derive(Debug)]
 pub enum Cmd {
     Assign(String, Val),
-    Exec(Vec<Val>),
+    Exec { args: Vec<Val>, allow_fail: bool },
     Print(Val),
     PrintErr(Val),
     If {
@@ -78,7 +78,7 @@ pub enum Cmd {
         elifs: Vec<(Val, Vec<Cmd>)>,
         else_body: Vec<Cmd>,
     },
-    Pipe(Vec<Vec<Val>>),
+    Pipe(Vec<(Vec<Val>, bool)>),
     PipeBlocks(Vec<Vec<Cmd>>),
     Case {
         expr: Val,

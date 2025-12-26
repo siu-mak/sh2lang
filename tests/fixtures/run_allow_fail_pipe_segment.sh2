@@ -1,0 +1,13 @@
+func main() {
+    try {
+        // First segment fails, but allow_fail=true should prevent pipeline failure
+        // Assuming pipefail might disrupt this if check is strict, but our implementation masks it.
+        // We test that 'try' is NOT triggered.
+        run("sh", "-c", "exit 7", allow_fail=true) | run("cat")
+        print("AFTER_PIPE")
+    } catch {
+        print("CAUGHT_PIPE")
+    }
+    // Status might be 0 because cat succeeded, and first segment failure was masked/ignored.
+    print($"DONE")
+}

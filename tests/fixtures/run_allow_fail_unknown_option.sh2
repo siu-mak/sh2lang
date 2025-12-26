@@ -1,0 +1,1 @@
+func main() { run("echo", "hi", nope=true) }

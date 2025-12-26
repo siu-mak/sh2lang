@@ -1,0 +1,8 @@
+func main() {
+    try {
+        print("BEFORE")
+        run("sh", "-c", "exit 7")
+    } catch {
+        print("CAUGHT")
+    }
+}

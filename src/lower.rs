@@ -31,9 +31,9 @@ fn lower_stmt(stmt: ast::Stmt, out: &mut Vec<ir::Cmd>) {
             out.push(ir::Cmd::Assign(name, lower_expr(value)));
         }
 
-        ast::Stmt::Run(args) => {
-            let ir_args = args.into_iter().map(lower_expr).collect();
-            out.push(ir::Cmd::Exec(ir_args));
+        ast::Stmt::Run(run_call) => {
+            let ir_args = run_call.args.into_iter().map(lower_expr).collect();
+            out.push(ir::Cmd::Exec { args: ir_args, allow_fail: run_call.allow_fail });
         }
 
         ast::Stmt::Print(e) => {
@@ -117,9 +117,9 @@ fn lower_stmt(stmt: ast::Stmt, out: &mut Vec<ir::Cmd>) {
         }
         ast::Stmt::Pipe(segments) => {
             let mut lowered_segments = Vec::new();
-            for args in segments {
-                let lowered_args = args.into_iter().map(lower_expr).collect();
-                lowered_segments.push(lowered_args);
+            for run_call in segments {
+                let lowered_args = run_call.args.into_iter().map(lower_expr).collect();
+                lowered_segments.push((lowered_args, run_call.allow_fail));
             }
             out.push(ir::Cmd::Pipe(lowered_segments));
         }

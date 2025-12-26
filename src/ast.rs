@@ -78,9 +78,15 @@ pub enum Expr {
 }
 
 #[derive(Debug, Clone, PartialEq)]
+pub struct RunCall {
+    pub args: Vec<Expr>,
+    pub allow_fail: bool,
+}
+
+#[derive(Debug, Clone, PartialEq)]
 pub enum Stmt {
     Let { name: String, value: Expr },
-    Run(Vec<Expr>),
+    Run(RunCall),
     Print(Expr),
     PrintErr(Expr),
     If {
@@ -89,7 +95,7 @@ pub enum Stmt {
         elifs: Vec<Elif>,
         else_body: Option<Vec<Stmt>>,
     },
-    Pipe(Vec<Vec<Expr>>),
+    Pipe(Vec<RunCall>),
     Case {
         expr: Expr,
         arms: Vec<CaseArm>,
