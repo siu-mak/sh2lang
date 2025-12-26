@@ -439,11 +439,19 @@ fn parse_stmt_atom(tokens: &[Token], i: &mut usize) -> Stmt {
                     match next_tok {
                          Some(Token::Stdout) => {
                              expect(tokens, i, Token::Colon);
-                             stdout = Some(parse_redirect_target(tokens, i));
+                             let target = parse_redirect_target(tokens, i);
+                             if let RedirectTarget::HereDoc { .. } = target {
+                                 panic!("heredoc only allowed for stdin; cannot use for stdout");
+                             }
+                             stdout = Some(target);
                          }
                          Some(Token::Stderr) => {
                              expect(tokens, i, Token::Colon);
-                             stderr = Some(parse_redirect_target(tokens, i));
+                             let target = parse_redirect_target(tokens, i);
+                             if let RedirectTarget::HereDoc { .. } = target {
+                                 panic!("heredoc only allowed for stdin; cannot use for stderr");
+                             }
+                             stderr = Some(target);
                          }
                          Some(Token::Stdin) => {
                              expect(tokens, i, Token::Colon);

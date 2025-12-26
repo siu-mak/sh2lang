@@ -1,0 +1,7 @@
+func main() {
+    // Tests that these characters are NOT expanded:
+    // $HOME, *, backticks, backslashes
+    with redirect { stdin: heredoc("a $HOME \\ * `cmd`\n") } {
+        run("cat")
+    }
+}

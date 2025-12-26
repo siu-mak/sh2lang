@@ -1,0 +1,5 @@
+func main() {
+    with redirect { stdin: heredoc("before __SH2_EOF__ after\n") } {
+        run("cat")
+    }
+}

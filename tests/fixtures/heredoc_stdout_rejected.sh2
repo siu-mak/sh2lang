@@ -1,0 +1,5 @@
+func main() {
+    with redirect { stdout: heredoc("FAIL") } {
+        run("echo", "hi")
+    }
+}
