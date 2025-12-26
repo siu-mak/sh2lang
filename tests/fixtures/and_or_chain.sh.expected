@@ -1,15 +1,15 @@
 main() {
   {
-    'true'
+    'true'; __sh2_status=$?; (exit $__sh2_status)
   } && {
     printf '%s\n' 'ok'
   }
   {
-    'false'
+    'false'; __sh2_status=$?; (exit $__sh2_status)
   } || {
     printf '%s\n' 'fallback'
   }
 }
 
+__sh2_status=0
 main "$@"
-

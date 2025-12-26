@@ -1,10 +1,10 @@
 main() {
-  if ! (
-    'false'
-  ); then
+  if ! {
+    'false'; __sh2_status=$?; (exit $__sh2_status)
+  }; then
     printf '%s\n' 'failed' >&2
   fi
 }
 
+__sh2_status=0
 main "$@"
-

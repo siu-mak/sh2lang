@@ -4,5 +4,5 @@ main() {
   printf '%s\n' 'dollar: $'
 }
 
+__sh2_status=0
 main "$@"
-

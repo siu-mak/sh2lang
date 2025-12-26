@@ -2,5 +2,5 @@ main() {
   wait "$( 'sh' '-c' 'echo 1234' )" '567'
 }
 
+__sh2_status=0
 main "$@"
-

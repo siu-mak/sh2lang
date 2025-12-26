@@ -1,4 +1,4 @@
-use sh2c::ast::{Stmt, Expr};
+use sh2c::ast::{Stmt, Expr, RunCall};
 mod common;
 use common::*;
 
@@ -15,7 +15,7 @@ fn parse_string_quote_escape() {
     } else { panic!("Expected Print"); }
 
     // stmt1: run("sh","-c","echo \"hi\"") => third arg contains quote chars
-    if let Stmt::Run(args) = &func.body[1] {
+    if let Stmt::Run(RunCall { args, .. }) = &func.body[1] {
         assert_eq!(args.len(), 3);
         if let Expr::Literal(s) = &args[2] {
             assert_eq!(s, "echo \"hi\"");

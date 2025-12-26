@@ -1,25 +1,25 @@
 main() {
   {
-    'sh' '-c' 'exit 0'
+    'sh' '-c' 'exit 0'; __sh2_status=$?; (exit $__sh2_status)
   } && {
     printf '%s\n' 'and_ok'
   }
   {
-    'sh' '-c' 'exit 1'
+    'sh' '-c' 'exit 1'; __sh2_status=$?; (exit $__sh2_status)
   } && {
     printf '%s\n' 'and_bad'
   }
   {
-    'sh' '-c' 'exit 1'
+    'sh' '-c' 'exit 1'; __sh2_status=$?; (exit $__sh2_status)
   } || {
     printf '%s\n' 'or_ok'
   }
   {
-    'sh' '-c' 'exit 0'
+    'sh' '-c' 'exit 0'; __sh2_status=$?; (exit $__sh2_status)
   } || {
     printf '%s\n' 'or_bad'
   }
 }
 
+__sh2_status=0
 main "$@"
-

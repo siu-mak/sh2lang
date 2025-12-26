@@ -1,7 +1,7 @@
 main() {
-  'sh' '-c' 'exit 7'
-  printf '%s\n' "$?"
+  'sh' '-c' 'exit 7'; __sh2_status=$?; (exit $__sh2_status)
+  printf '%s\n' "$__sh2_status"
 }
 
+__sh2_status=0
 main "$@"
-

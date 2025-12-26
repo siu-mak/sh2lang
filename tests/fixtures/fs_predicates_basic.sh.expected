@@ -1,5 +1,5 @@
 main() {
-  'sh' '-c' 'rm -rf tfile tlink; echo hi > tfile; chmod 600 tfile; chmod +x tfile; ln -s tfile tlink'
+  'sh' '-c' 'rm -rf tfile tlink; echo hi > tfile; chmod 600 tfile; chmod +x tfile; ln -s tfile tlink'; __sh2_status=$?; (exit $__sh2_status)
   if [ -L 'tlink' ] && [ -x 'tfile' ] && [ -r 'tfile' ] && [ -w 'tfile' ]; then
     printf '%s\n' 'ok'
   else
@@ -7,5 +7,5 @@ main() {
   fi
 }
 
+__sh2_status=0
 main "$@"
-

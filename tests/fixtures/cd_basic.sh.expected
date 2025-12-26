@@ -1,9 +1,9 @@
 main() {
   cd 'tmp'
-  'pwd'
+  'pwd'; __sh2_status=$?; (exit $__sh2_status)
   cd "$( 'pwd' )"
-  'echo' 'done'
+  'echo' 'done'; __sh2_status=$?; (exit $__sh2_status)
 }
 
+__sh2_status=0
 main "$@"
-

@@ -5,5 +5,5 @@ main() {
   printf '%s\n' "$( IFS=','; printf "%s" "${xs[*]}" )"
 }
 
+__sh2_status=0
 main "$@"
-

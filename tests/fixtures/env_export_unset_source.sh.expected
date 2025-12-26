@@ -1,16 +1,16 @@
 main() {
   export X='hello'
-  'sh' '-c' 'echo $X'
+  'sh' '-c' 'echo $X'; __sh2_status=$?; (exit $__sh2_status)
   y='yo'
   export y
-  'sh' '-c' 'echo $y'
+  'sh' '-c' 'echo $y'; __sh2_status=$?; (exit $__sh2_status)
   unset X
-  'sh' '-c' 'test -z "$X" && echo unset_ok || echo unset_bad'
+  'sh' '-c' 'test -z "$X" && echo unset_ok || echo unset_bad'; __sh2_status=$?; (exit $__sh2_status)
   f="$( 'mktemp' )"
   echo 'echo sourced_ok' > $f
   . "$f"
-  'rm' '-f' "$f"
+  'rm' '-f' "$f"; __sh2_status=$?; (exit $__sh2_status)
 }
 
+__sh2_status=0
 main "$@"
-

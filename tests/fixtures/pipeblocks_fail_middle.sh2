@@ -1,7 +1,6 @@
 func main() {
     try {
-        run("sh","-c","echo hi")
-        pipe { run("sh","-c","exit 7") } | { run("sh","-c","cat") }
+        pipe { run("sh","-c","echo hi") } | { run("sh","-c","exit 7") } | { run("sh","-c","cat") }
         print("NO")
     } catch {
         print("CAUGHT")

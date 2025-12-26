@@ -1,8 +1,8 @@
 main() {
   {
-    'echo' 'hi'
+    'echo' 'hi'; __sh2_status=$?; (exit $__sh2_status)
   } >> 'out.log'
 }
 
+__sh2_status=0
 main "$@"
-

@@ -1,13 +1,13 @@
 main() {
-  'sh' '-c' 'exit 0' &
+  'sh' '-c' 'exit 0'; __sh2_status=$?; (exit $__sh2_status) &
   p="$!"
   wait "$p"
-  if [ "$?" = "0" ]; then
+  if [ "$__sh2_status" = "0" ]; then
     printf '%s\n' 'wait_ok'
   else
     printf '%s\n' 'wait_bad'
   fi
 }
 
+__sh2_status=0
 main "$@"
-

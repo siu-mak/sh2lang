@@ -2,5 +2,5 @@ main() {
   return "7"
 }
 
+__sh2_status=0
 main "$@"
-

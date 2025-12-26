@@ -1,15 +1,15 @@
 main() {
   {
-    'sh' '-c' 'sleep 0.05'
+    'sh' '-c' 'sleep 0.05'; __sh2_status=$?; (exit $__sh2_status)
   } &
   p1="$!"
   {
-    'sh' '-c' 'sleep 0.05'
+    'sh' '-c' 'sleep 0.05'; __sh2_status=$?; (exit $__sh2_status)
   } &
   p2="$!"
   wait "$p1" "$p2"
   printf '%s\n' 'done'
 }
 
+__sh2_status=0
 main "$@"
-

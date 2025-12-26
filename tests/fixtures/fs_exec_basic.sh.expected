@@ -1,5 +1,5 @@
 main() {
-  'sh' '-c' 'rm -f exe noexe; echo '\''echo hi'\'' > exe; chmod +x exe; echo '\''echo hi'\'' > noexe; chmod 644 noexe'
+  'sh' '-c' 'rm -f exe noexe; echo '\''echo hi'\'' > exe; chmod +x exe; echo '\''echo hi'\'' > noexe; chmod 644 noexe'; __sh2_status=$?; (exit $__sh2_status)
   if [ -x 'exe' ] && ! [ -x 'noexe' ]; then
     printf '%s\n' 'ok'
   else
@@ -7,5 +7,5 @@ main() {
   fi
 }
 
+__sh2_status=0
 main "$@"
-

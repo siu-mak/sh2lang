@@ -4,4 +4,5 @@ main() {
   printf '%s\n' 'after'
 }
 
+__sh2_status=0
 main "$@"

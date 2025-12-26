@@ -1,8 +1,8 @@
 main() {
   export FOO='bar'
   printf '%s\n' "${FOO}"
-  'sh' '-c' 'test "'"$FOO"'" = bar && echo child_ok'
+  'sh' '-c' 'test "'"$FOO"'" = bar && echo child_ok'; __sh2_status=$?; (exit $__sh2_status)
 }
 
+__sh2_status=0
 main "$@"
-

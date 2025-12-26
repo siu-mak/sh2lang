@@ -2,4 +2,5 @@ main() {
   printf '%s\n' 'can'\''t'
 }
 
+__sh2_status=0
 main "$@"

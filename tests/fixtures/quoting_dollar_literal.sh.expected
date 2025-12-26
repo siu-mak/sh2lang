@@ -1,6 +1,7 @@
 main() {
   printf '%s\n' '$HOME'
-  'sh' '-c' 'printf '\''%s\n'\'' "$1"' '_' '$HOME'
+  'sh' '-c' 'printf '\''%s\n'\'' "$1"' '_' '$HOME'; __sh2_status=$?; (exit $__sh2_status)
 }
 
+__sh2_status=0
 main "$@"

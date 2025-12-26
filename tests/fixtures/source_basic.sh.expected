@@ -4,5 +4,5 @@ main() {
   . 'lib.sh'
 }
 
+__sh2_status=0
 main "$@"
-

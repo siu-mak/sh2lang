@@ -1,7 +1,7 @@
 main() {
   out="$( 'echo' 'a b' )"
-  'echo' "$out"
+  'echo' "$out"; __sh2_status=$?; (exit $__sh2_status)
 }
 
+__sh2_status=0
 main "$@"
-

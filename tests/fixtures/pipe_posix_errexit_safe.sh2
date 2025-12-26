@@ -1,0 +1,4 @@
+func main() {
+    run("sh", "-c", "exit 5") | run("sh", "-c", "cat")
+    print("UNREACHABLE")
+}

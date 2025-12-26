@@ -1,6 +1,7 @@
 main() {
   x='world'
-  'echo' 'hello' "$x"
+  'echo' 'hello' "$x"; __sh2_status=$?; (exit $__sh2_status)
 }
 
+__sh2_status=0
 main "$@"

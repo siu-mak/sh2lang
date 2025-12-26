@@ -1,5 +1,5 @@
 main() {
-  'sh' '-c' 'rm -f ro rw; : > ro; : > rw; chmod 444 ro; chmod 644 rw'
+  'sh' '-c' 'rm -f ro rw; : > ro; : > rw; chmod 444 ro; chmod 644 rw'; __sh2_status=$?; (exit $__sh2_status)
   if [ -r 'ro' ] && ! [ -w 'ro' ] && [ -r 'rw' ] && [ -w 'rw' ]; then
     printf '%s\n' 'ok'
   else
@@ -7,5 +7,5 @@ main() {
   fi
 }
 
+__sh2_status=0
 main "$@"
-

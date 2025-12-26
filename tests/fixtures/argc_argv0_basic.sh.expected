@@ -17,5 +17,5 @@ main() {
   f 'x' 'y'
 }
 
+__sh2_status=0
 main "$@"
-

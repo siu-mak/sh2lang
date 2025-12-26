@@ -1,6 +1,6 @@
 mod common;
 use common::*;
-use sh2c::ast::{Stmt, Expr};
+use sh2c::ast::{Stmt, Expr, RunCall};
 
 #[test]
 fn parse_bool_str_as_arg() {
@@ -8,10 +8,10 @@ fn parse_bool_str_as_arg() {
     let func = &program.functions[0];
     // run("printf", "%s\n", bool_str(is_non_empty("empty")))
     // func body: [run, run(...)]
-    if let Stmt::Run(args) = &func.body[1] {
+    if let Stmt::Run(RunCall { args, .. }) = &func.body[1] {
          // args: [printf, %s\n, bool_str(...)]
          if let Expr::BoolStr(inner) = &args[2] {
-             if let Expr::IsNonEmpty(_) = &**inner {
+             if let Expr::IsNonEmpty(_) = inner.as_ref() {
                  // ok
              } else { panic!("Expected IsNonEmpty"); }
          } else { panic!("Expected BoolStr third arg"); }
@@ -27,3 +27,4 @@ fn codegen_bool_str_as_arg() {
 fn exec_bool_str_as_arg() {
     assert_exec_matches_fixture("bool_str_as_arg");
 }
+

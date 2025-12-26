@@ -1,7 +1,7 @@
 main() {
   'echo' 'line1
-line2'
+line2'; __sh2_status=$?; (exit $__sh2_status)
 }
 
+__sh2_status=0
 main "$@"
-

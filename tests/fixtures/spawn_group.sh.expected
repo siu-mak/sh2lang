@@ -6,5 +6,5 @@ main() {
   wait
 }
 
+__sh2_status=0
 main "$@"
-

@@ -1,10 +1,10 @@
 main() {
-  if ! (
+  if ! {
     printf '%s\n' 'ok'
-  ); then
+  }; then
     printf '%s\n' 'no' >&2
   fi
 }
 
+__sh2_status=0
 main "$@"
-

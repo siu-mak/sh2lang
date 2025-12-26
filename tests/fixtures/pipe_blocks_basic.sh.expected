@@ -1,12 +1,11 @@
 main() {
-  {
+  if [[ -o pipefail ]]; then __p=1; else __p=0; fi; set -o pipefail; case $- in *e*) __e=1;; *) __e=0;; esac; set +e; {
     printf '%s\n' 'a'
     printf '%s\n' 'b'
-  } |
-  {
-    'grep' 'b'
-  }
+  } | {
+    'grep' 'b'; __sh2_status=$?; (exit $__sh2_status)
+  } ; __sh2_status=$?; if [ "$__e" = 1 ]; then set -e; fi; if [ "$__p" = 0 ]; then set +o pipefail; fi; (exit $__sh2_status)
 }
 
+__sh2_status=0
 main "$@"
-

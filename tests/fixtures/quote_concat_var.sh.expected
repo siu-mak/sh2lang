@@ -1,7 +1,8 @@
 main() {
   x='X'
   'printf' '%s
-' 'a'"$x"'b'
+' 'a'"$x"'b'; __sh2_status=$?; (exit $__sh2_status)
 }
 
+__sh2_status=0
 main "$@"

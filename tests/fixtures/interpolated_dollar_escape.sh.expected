@@ -5,5 +5,5 @@ main() {
   printf '%s\n' 'interp: '"$name"
 }
 
+__sh2_status=0
 main "$@"
-

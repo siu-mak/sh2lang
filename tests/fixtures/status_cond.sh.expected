@@ -1,11 +1,11 @@
 main() {
-  'bash' '-c' 'exit 7'
-  if [ "$?" = "7" ]; then
+  'bash' '-c' 'exit 7'; __sh2_status=$?; (exit $__sh2_status)
+  if [ "$__sh2_status" = "7" ]; then
     printf '%s\n' 'ok'
   else
     printf '%s\n' 'bad'
   fi
 }
 
+__sh2_status=0
 main "$@"
-

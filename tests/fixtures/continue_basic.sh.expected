@@ -8,5 +8,5 @@ main() {
   done
 }
 
+__sh2_status=0
 main "$@"
-

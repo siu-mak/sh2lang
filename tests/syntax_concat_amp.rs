@@ -1,4 +1,4 @@
-use sh2c::ast::{Stmt, Expr, ArithOp};
+use sh2c::ast::{Stmt, Expr, RunCall};
 mod common;
 use common::*;
 
@@ -14,8 +14,8 @@ fn parse_concat_amp_basic() {
     } else { panic!("Expected Let"); }
 
     // run("echo", "c" & "d") => second arg is Concat
-    if let Stmt::Run(args) = &func.body[2] {
-        assert!(matches!(args[1], Expr::Concat(_, _)));
+    if let Stmt::Run(RunCall { args, .. }) = &func.body[2] {
+        assert!(matches!(&args[1], Expr::Concat(_, _)));
     } else { panic!("Expected Run"); }
 }
 
@@ -28,3 +28,4 @@ fn codegen_concat_amp_basic() {
 fn exec_concat_amp_basic() {
     assert_exec_matches_fixture("concat_amp_basic");
 }
+

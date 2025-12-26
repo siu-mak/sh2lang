@@ -1,6 +1,6 @@
 main() {
-  'echo' 'a b  c'
+  'echo' 'a b  c'; __sh2_status=$?; (exit $__sh2_status)
 }
 
+__sh2_status=0
 main "$@"
-

@@ -1,6 +1,6 @@
 main() {
   {
-    'cat'
+    'cat'; __sh2_status=$?; (exit $__sh2_status)
   } <<'__SH2_EOF__'
 a b
 cost $5
@@ -9,4 +9,5 @@ cost $5
 __SH2_EOF__
 }
 
+__sh2_status=0
 main "$@"

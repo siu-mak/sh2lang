@@ -964,18 +964,27 @@ fn emit_posix_pipeline(
     allow_fail_last: bool,
 ) {
     // POSIX sh manual pipeline using FIFOs to simulate pipefail without deadlocks.
+    // This implementation is errexit-safe: it saves/restores set -e state and ensures
+    // all waits and cleanup run even when the surrounding script has set -e enabled.
+    //
     // Algorithm:
-    // 1. Create FIFOs.
-    // 2. Open keepalive FDs (read+write) in parent to ensure FIFOs are open on 'both' ends (effectively)
-    //    so that subsequent opens don't block.
-    // 3. Launch background processes.
-    // 4. Close keepalive FDs.
-    // 5. Wait and collect statuses.
-    // 6. Compute effective status.
+    // 1. Save errexit state and disable it.
+    // 2. Create FIFOs and set up traps.
+    // 3. Open keepalive FDs (read+write) in parent to avoid open() deadlocks.
+    // 4. Launch background processes (each closes keepalive FDs before running).
+    // 5. Close keepalive FDs in parent.
+    // 6. Wait and collect statuses (with set +e to avoid abort on non-zero).
+    // 7. Compute effective status.
+    // 8. Cleanup FIFOs and reset traps.
+    // 9. Restore errexit state.
+    // 10. Return status.
     
     out.push_str(pad);
     out.push_str("{\n");
     let indent_pad = format!("{}  ", pad);
+    
+    // Save and disable errexit
+    out.push_str(&format!("{}case $- in *e*) __sh2_e=1;; *) __sh2_e=0;; esac; set +e;\n", indent_pad));
     
     let num_fifos = stages.len() - 1;
     out.push_str(&format!("{}__sh2_base=\"${{TMPDIR:-/tmp}}/sh2_fifo_$$\";\n", indent_pad));
@@ -985,13 +994,11 @@ fn emit_posix_pipeline(
         out.push_str(&format!("{}mkfifo \"${{__sh2_base}}_{}\";\n", indent_pad, i));
     }
     
-    // Trap for cleanup
-    out.push_str(&format!("{}trap 'rm -f \"${{__sh2_base}}_\"*; exit 1' EXIT INT TERM QUIT;\n", indent_pad));
+    // Traps: EXIT only cleans up (no exit 1), INT/TERM/QUIT clean up and exit 1
+    out.push_str(&format!("{}trap 'rm -f \"${{__sh2_base}}_\"*' EXIT;\n", indent_pad));
+    out.push_str(&format!("{}trap 'rm -f \"${{__sh2_base}}_\"*; exit 1' INT TERM QUIT;\n", indent_pad));
     
     // Open keepalive FDs (fd 3+)
-    // We use 'eval' to manage dynamic fd numbers if needed, but since we just need N fifos, 
-    // we can generate the exec strings.
-    // Note: Use > 2 for safety (3, 4, ...).
     out.push_str(&format!("{}__sh2_fd=3;\n", indent_pad));
     out.push_str(&format!("{}__sh2_fds=\"\";\n", indent_pad));
     for i in 0..num_fifos {
@@ -1002,14 +1009,6 @@ fn emit_posix_pipeline(
 
     // Launch stages
     for (i, cmd) in stages.iter().enumerate() {
-        // We use ( ... ) & to background.
-        // Input: if i > 0, from fifo_(i-1)
-        // Output: if i < N-1, to fifo_i
-        
-        // Note: cmd is already a valid shell command string (possibly a block or simple command).
-        // We wrap it in { ...; } to ensure redirection applies to the whole thing if it's complex,
-        // but ( ... ) already does that.
-        
         let mut redir = String::new();
         if i > 0 {
             redir.push_str(&format!(" < \"${{__sh2_base}}_{}\"", i - 1));
@@ -1018,18 +1017,19 @@ fn emit_posix_pipeline(
             redir.push_str(&format!(" > \"${{__sh2_base}}_{}\"", i));
         }
         
+        // Child closes keepalive FDs before running command
         out.push_str(&format!("{}( for fd in $__sh2_fds; do eval \"exec $fd>&-\"; done; {} ) {} & __sh2_p{}=$!;\n", indent_pad, cmd, redir, i));
     }
     
-    // Close keepalive FDs
+    // Close keepalive FDs in parent
     out.push_str(&format!("{}for fd in $__sh2_fds; do eval \"exec $fd>&-\"; done;\n", indent_pad));
     
-    // Wait and collect statuses
+    // Wait and collect statuses (set +e already active, so non-zero won't abort)
     for i in 0..stages.len() {
         out.push_str(&format!("{}wait \"$__sh2_p{}\"; __sh2_s{}=$?;\n", indent_pad, i, i));
     }
     
-    // Compute effective status
+    // Compute effective status (rightmost non-zero wins, ignoring allow_fail stages)
     out.push_str(&format!("{}__sh2_status=0;\n", indent_pad));
     for i in 0..stages.len() {
         if !allow_fails[i] {
@@ -1037,11 +1037,14 @@ fn emit_posix_pipeline(
         }
     }
     
-    // Cleanup
-    out.push_str(&format!("{}trap - EXIT;\n", indent_pad));
+    // Cleanup: reset traps and remove FIFOs
+    out.push_str(&format!("{}trap - EXIT INT TERM QUIT;\n", indent_pad));
     out.push_str(&format!("{}rm -f \"${{__sh2_base}}_\"*;\n", indent_pad));
     
-    // Return
+    // Restore errexit if it was set
+    out.push_str(&format!("{}if [ \"$__sh2_e\" = 1 ]; then set -e; fi;\n", indent_pad));
+    
+    // Return status
     if allow_fail_last {
         out.push_str(&format!("{}:\n", indent_pad));
     } else {

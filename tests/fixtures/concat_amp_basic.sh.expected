@@ -1,8 +1,8 @@
 main() {
   x='a''b'
   printf '%s\n' "$x"
-  'echo' 'c''d'
+  'echo' 'c''d'; __sh2_status=$?; (exit $__sh2_status)
 }
 
+__sh2_status=0
 main "$@"
-

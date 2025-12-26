@@ -31,3 +31,15 @@ fn exec_pipeblocks_fail_middle() {
     assert_exec_matches_fixture_target("pipeblocks_fail_middle", TargetShell::Bash);
     assert_exec_matches_fixture_target("pipeblocks_fail_middle", TargetShell::Posix);
 }
+
+/// Test that POSIX pipelines work correctly even when the shell has `set -e` enabled.
+/// The pipeline helper must shield errexit during waits/status collection.
+/// We only test POSIX with -e flag because Bash doesn't have errexit enabled by default.
+#[test]
+fn exec_pipe_posix_errexit_safe() {
+    // Posix target: run with -e flag to verify errexit-safe behavior
+    // The pipeline itself should succeed (wait + collect status), and then
+    // (exit $__sh2_status) should trigger errexit abort, preventing UNREACHABLE.
+    assert_exec_matches_fixture_target_with_flags("pipe_posix_errexit_safe", TargetShell::Posix, &["-e"]);
+}
+

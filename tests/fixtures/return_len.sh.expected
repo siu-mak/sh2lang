@@ -2,5 +2,5 @@ main() {
   return "$( printf "%s" 'abc' | awk '{ print length($0) }' )"
 }
 
+__sh2_status=0
 main "$@"
-

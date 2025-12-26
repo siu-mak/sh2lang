@@ -2,5 +2,5 @@ main() {
   printf '%s\n' "$( IFS=','; printf "%s" "$*" )"
 }
 
+__sh2_status=0
 main "$@"
-

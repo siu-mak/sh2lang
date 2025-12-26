@@ -4,5 +4,5 @@ main() {
   printf '%s\n' "${xs[( i + 2 )]}"
 }
 
+__sh2_status=0
 main "$@"
-

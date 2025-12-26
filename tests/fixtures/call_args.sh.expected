@@ -6,5 +6,5 @@ main() {
   show "$@"
 }
 
+__sh2_status=0
 main "$@"
-

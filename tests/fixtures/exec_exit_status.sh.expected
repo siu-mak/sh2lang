@@ -1,7 +1,7 @@
 main() {
-  exec 'bash' '-c' 'printf '%s\n' ok; exit 7'
+  exec 'bash' '-c' 'echo ok; exit 7'
   printf '%s\n' 'after'
 }
 
+__sh2_status=0
 main "$@"
-

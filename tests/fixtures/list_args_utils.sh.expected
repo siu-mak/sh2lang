@@ -22,5 +22,5 @@ main() {
   test 'x' 'y' 'z'
 }
 
+__sh2_status=0
 main "$@"
-

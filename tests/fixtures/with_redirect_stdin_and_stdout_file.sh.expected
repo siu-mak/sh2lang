@@ -1,8 +1,8 @@
 main() {
   {
-    'cat'
+    'cat'; __sh2_status=$?; (exit $__sh2_status)
   } < 'in.txt' > 'out.txt'
 }
 
+__sh2_status=0
 main "$@"
-

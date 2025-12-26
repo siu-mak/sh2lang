@@ -1,10 +1,10 @@
 main() {
   {
-    'false'
+    'false'; __sh2_status=$?; (exit $__sh2_status)
   } && {
     printf '%s\n' 'WRONG'
   }
 }
 
+__sh2_status=0
 main "$@"
-

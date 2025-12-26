@@ -3,5 +3,5 @@ main() {
   printf '%s\n' "${#xs[@]}"
 }
 
+__sh2_status=0
 main "$@"
-

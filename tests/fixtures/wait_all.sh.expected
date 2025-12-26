@@ -1,9 +1,9 @@
 main() {
-  'sleep' '1' &
-  'sleep' '1' &
+  'sleep' '1'; __sh2_status=$?; (exit $__sh2_status) &
+  'sleep' '1'; __sh2_status=$?; (exit $__sh2_status) &
   wait
   printf '%s\n' 'done'
 }
 
+__sh2_status=0
 main "$@"
-

@@ -1,7 +1,7 @@
 main() {
   set -euo pipefail
-  'echo' 'hi'
+  'echo' 'hi'; __sh2_status=$?; (exit $__sh2_status)
 }
 
+__sh2_status=0
 main "$@"
-

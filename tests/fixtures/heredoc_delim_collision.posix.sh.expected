@@ -1,9 +1,10 @@
 main() {
   {
-    'cat'
+    'cat'; __sh2_status=$?; (exit $__sh2_status)
   } <<'__SH2_EOF__1__'
 before __SH2_EOF__ after
 __SH2_EOF__1__
 }
 
+__sh2_status=0
 main "$@"

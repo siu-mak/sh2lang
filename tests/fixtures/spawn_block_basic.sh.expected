@@ -1,9 +1,9 @@
 main() {
   {
-    'sh' '-c' 'echo hi'
+    'sh' '-c' 'echo hi'; __sh2_status=$?; (exit $__sh2_status)
   } &
   wait
 }
 
+__sh2_status=0
 main "$@"
-

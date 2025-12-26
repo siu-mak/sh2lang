@@ -16,8 +16,8 @@ main() {
   else
     printf '%s\n' 'cd_bad'
   fi
-  'rm' '-rf' "$d"
+  'rm' '-rf' "$d"; __sh2_status=$?; (exit $__sh2_status)
 }
 
+__sh2_status=0
 main "$@"
-

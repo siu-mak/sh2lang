@@ -4,5 +4,5 @@ main() {
   printf '%s\n' 'never'
 }
 
+__sh2_status=0
 main "$@"
-

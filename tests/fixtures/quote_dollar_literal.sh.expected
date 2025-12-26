@@ -2,4 +2,5 @@ main() {
   printf '%s\n' 'cost $5'
 }
 
+__sh2_status=0
 main "$@"

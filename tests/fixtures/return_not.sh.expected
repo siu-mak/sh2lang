@@ -2,5 +2,5 @@ main() {
   if ! false; then return 0; else return 1; fi
 }
 
+__sh2_status=0
 main "$@"
-

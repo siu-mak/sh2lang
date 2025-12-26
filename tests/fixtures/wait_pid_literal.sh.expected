@@ -2,5 +2,5 @@ main() {
   wait '1234'
 }
 
+__sh2_status=0
 main "$@"
-

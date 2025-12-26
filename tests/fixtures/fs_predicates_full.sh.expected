@@ -1,17 +1,17 @@
 main() {
-  'mkdir' '-p' 'sandbox'
+  'mkdir' '-p' 'sandbox'; __sh2_status=$?; (exit $__sh2_status)
   (
     cd 'sandbox'
-    'touch' 'f_empty'
-    'touch' 'f_full'
-    'sh' '-c' 'echo x > f_full'
-    'ln' '-s' 'f_empty' 'link'
-    'touch' 'f_exec'
-    'chmod' '+x' 'f_exec'
-    'touch' 'f_ro'
-    'chmod' '444' 'f_ro'
-    'touch' 'f_noread'
-    'chmod' '000' 'f_noread'
+    'touch' 'f_empty'; __sh2_status=$?; (exit $__sh2_status)
+    'touch' 'f_full'; __sh2_status=$?; (exit $__sh2_status)
+    'sh' '-c' 'echo x > f_full'; __sh2_status=$?; (exit $__sh2_status)
+    'ln' '-s' 'f_empty' 'link'; __sh2_status=$?; (exit $__sh2_status)
+    'touch' 'f_exec'; __sh2_status=$?; (exit $__sh2_status)
+    'chmod' '+x' 'f_exec'; __sh2_status=$?; (exit $__sh2_status)
+    'touch' 'f_ro'; __sh2_status=$?; (exit $__sh2_status)
+    'chmod' '444' 'f_ro'; __sh2_status=$?; (exit $__sh2_status)
+    'touch' 'f_noread'; __sh2_status=$?; (exit $__sh2_status)
+    'chmod' '000' 'f_noread'; __sh2_status=$?; (exit $__sh2_status)
     if [ -L 'link' ]; then
       printf '%s\n' 'link is symlink'
     fi
@@ -45,4 +45,5 @@ main() {
   )
 }
 
+__sh2_status=0
 main "$@"

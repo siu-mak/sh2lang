@@ -1,8 +1,8 @@
 main() {
   export FOO='bar'
   printf '%s\n' "$( ( typeset +x FOO; printenv FOO ) 2>/dev/null || printenv FOO 2>/dev/null || true )"
-  'sh' '-c' 'echo '"$FOO"
+  'sh' '-c' 'echo '"$FOO"; __sh2_status=$?; (exit $__sh2_status)
 }
 
+__sh2_status=0
 main "$@"
-

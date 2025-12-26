@@ -1,7 +1,7 @@
 main() {
-  'sh' '-c' 'rm -f empty; : > empty'
-  'printf' '%s\n' "$( if [ -s 'empty' ]; then printf "%s" "true"; else printf "%s" "false"; fi )"
+  'sh' '-c' 'rm -f empty; : > empty'; __sh2_status=$?; (exit $__sh2_status)
+  'printf' '%s\n' "$( if [ -s 'empty' ]; then printf "%s" "true"; else printf "%s" "false"; fi )"; __sh2_status=$?; (exit $__sh2_status)
 }
 
+__sh2_status=0
 main "$@"
-

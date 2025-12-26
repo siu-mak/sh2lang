@@ -3,5 +3,5 @@ main() {
   printf '%s\n' "$( printf "%s" "$s" | awk '{ print length($0) }' )"
 }
 
+__sh2_status=0
 main "$@"
-

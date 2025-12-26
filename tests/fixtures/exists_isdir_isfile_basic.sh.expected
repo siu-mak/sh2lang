@@ -1,5 +1,5 @@
 main() {
-  'sh' '-c' 'rm -rf tdir tfile; mkdir tdir; echo hi > tfile'
+  'sh' '-c' 'rm -rf tdir tfile; mkdir tdir; echo hi > tfile'; __sh2_status=$?; (exit $__sh2_status)
   if [ -e 'tfile' ] && [ -f 'tfile' ] && [ -d 'tdir' ]; then
     printf '%s\n' 'ok'
   else
@@ -7,5 +7,5 @@ main() {
   fi
 }
 
+__sh2_status=0
 main "$@"
-

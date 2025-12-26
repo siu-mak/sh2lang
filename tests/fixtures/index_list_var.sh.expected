@@ -3,5 +3,5 @@ main() {
   printf '%s\n' "${xs[2]}"
 }
 
+__sh2_status=0
 main "$@"
-

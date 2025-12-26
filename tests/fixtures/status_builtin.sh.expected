@@ -1,17 +1,17 @@
 main() {
-  'true'
-  if [ "$?" = "0" ]; then
+  'true'; __sh2_status=$?; (exit $__sh2_status)
+  if [ "$__sh2_status" = "0" ]; then
     printf '%s\n' 'true_ok'
   else
     printf '%s\n' 'true_bad'
   fi
-  'false'
-  if [ "$?" != "0" ]; then
+  'false'; __sh2_status=$?; (exit $__sh2_status)
+  if [ "$__sh2_status" != "0" ]; then
     printf '%s\n' 'false_ok'
   else
     printf '%s\n' 'false_bad'
   fi
 }
 
+__sh2_status=0
 main "$@"
-
