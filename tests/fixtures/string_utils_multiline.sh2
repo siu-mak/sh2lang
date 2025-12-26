@@ -1,0 +1,11 @@
+func main() {
+    let s = """one
+two
+three"""
+    let r = replace(s, "\n", "|")
+    print(r)
+    
+    let t = """  line1
+  line2  """
+    print(">" + trim(t) + "<")
+}

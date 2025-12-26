@@ -15,6 +15,7 @@ pub fn emit_with_target(funcs: &[Function], target: TargetShell) -> String {
     
     // Existing codegen didn't emit shebang or options, but tests might expect bare functions.
     // Preserving identical output for Bash target.
+    out.push_str(&emit_prelude());
     
     for (i, f) in funcs.iter().enumerate() {
         if i > 0 {
@@ -174,6 +175,10 @@ fn emit_val(v: &Val, target: TargetShell) -> String {
              TargetShell::Posix => panic!("input(...) is not supported in POSIX sh target"),
         },
         Val::Args => panic!("args cannot be embedded/concatenated inside a word"),
+        Val::Call { name, args } => {
+            let arg_strs: Vec<String> = args.iter().map(|a| emit_word(a, target)).collect();
+            format!("\"$( __sh2_{} {} )\"", name, arg_strs.join(" "))
+        },
         Val::Compare { .. } | Val::And(..) | Val::Or(..) | Val::Not(..) | Val::Exists(..) | Val::IsDir(..) | Val::IsFile(..) | Val::IsSymlink(..) | Val::IsExec(..) | Val::IsReadable(..) | Val::IsWritable(..) | Val::IsNonEmpty(..) | Val::List(..) | Val::Confirm(..) => panic!("Cannot emit boolean/list value as string"),
     }
 }
@@ -1060,5 +1065,17 @@ fn emit_posix_pipeline(
     }
     
     out.push_str(&format!("{}}}\n", pad));
+}
+
+fn emit_prelude() -> String {
+    let mut s = String::new();
+    s.push_str(r#"
+__sh2_coalesce() { if [ -n "$1" ]; then printf '%s' "$1"; else printf '%s' "$2"; fi; }
+__sh2_trim() { awk -v s="$1" 'BEGIN { sub(/^[[:space:]]+/, "", s); sub(/[[:space:]]+$/, "", s); printf "%s", s }'; }
+__sh2_before() { awk -v s="$1" -v sep="$2" 'BEGIN { n=index(s, sep); if(n==0) printf "%s", s; else printf "%s", substr(s, 1, n-1) }'; }
+__sh2_after() { awk -v s="$1" -v sep="$2" 'BEGIN { n=index(s, sep); if(n==0) printf ""; else printf "%s", substr(s, n+length(sep)) }'; }
+__sh2_replace() { awk -v s="$1" -v old="$2" -v new="$3" 'BEGIN { if(old=="") { printf "%s", s; exit } len=length(old); while(i=index(s, old)) { printf "%s%s", substr(s, 1, i-1), new; s=substr(s, i+len) } printf "%s", s }'; }
+"#);
+    s
 }
 

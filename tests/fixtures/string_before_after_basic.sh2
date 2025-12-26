@@ -1,0 +1,11 @@
+func main() {
+    let s = "a--b--c"
+    print("b:" + before(s, "--"))
+    print("a:" + after(s, "--"))
+    
+    print("b_missing:" + before(s, "ZZ"))
+    print("a_missing:" + after(s, "ZZ"))
+    
+    print("b_empty:" + before(s, ""))
+    print("a_empty:" + after(s, ""))
+}

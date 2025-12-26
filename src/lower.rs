@@ -442,5 +442,9 @@ fn lower_expr(e: ast::Expr) -> ir::Val {
         ast::Expr::EnvDot(name) => ir::Val::EnvDot(name),
         ast::Expr::Input(e) => ir::Val::Input(Box::new(lower_expr(*e))),
         ast::Expr::Confirm(e) => ir::Val::Confirm(Box::new(lower_expr(*e))),
+        ast::Expr::Call { name, args } => {
+            let lowered_args = args.into_iter().map(lower_expr).collect();
+            ir::Val::Call { name, args: lowered_args }
+        }
     }
 }

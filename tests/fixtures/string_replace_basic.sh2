@@ -1,0 +1,5 @@
+func main() {
+    print(replace("a-b-a", "a", "X"))
+    print(replace("abc", "", "Z"))
+    print(replace("abc", "b", ""))
+}

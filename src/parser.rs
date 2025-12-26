@@ -1027,7 +1027,45 @@ fn parse_primary(tokens: &[Token], i: &mut usize) -> Expr {
         }
         Token::Ident(s) => {
             *i += 1;
-            Expr::Var(s.clone())
+            if matches!(tokens.get(*i), Some(Token::LParen)) {
+                *i += 1;
+                let mut args = Vec::new();
+                if !matches!(tokens.get(*i), Some(Token::RParen)) {
+                    loop {
+                        args.push(parse_expr(tokens, i));
+                        if matches!(tokens.get(*i), Some(Token::Comma)) {
+                            *i += 1;
+                        } else {
+                            break;
+                        }
+                    }
+                }
+                expect(tokens, i, Token::RParen);
+
+                // Arity validation for string builtins
+                match s.as_str() {
+                    "before" | "after" | "coalesce" => {
+                        if args.len() != 2 {
+                             panic!("{} requires exactly 2 arguments", s);
+                        }
+                    }
+                    "replace" => {
+                        if args.len() != 3 {
+                             panic!("{} requires exactly 3 arguments", s);
+                        }
+                    }
+                    "trim" => {
+                        if args.len() != 1 {
+                             panic!("{} requires exactly 1 argument", s);
+                        }
+                    }
+                    _ => {}
+                }
+
+                Expr::Call { name: s.clone(), args }
+            } else {
+                Expr::Var(s.clone())
+            }
         }
         Token::Dollar => {
             *i += 1;

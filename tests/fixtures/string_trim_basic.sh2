@@ -1,0 +1,4 @@
+func main() {
+    print(">" + trim("  hi\t") + "<")
+    print(">" + trim(" \n\t ") + "<")
+}

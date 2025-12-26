@@ -1,0 +1,8 @@
+func main() {
+    let a = ""
+    let b = "fallback"
+    print(coalesce(a, b))
+    
+    let c = "x"
+    print(coalesce(c, b))
+}

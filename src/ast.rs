@@ -77,6 +77,7 @@ pub enum Expr {
     EnvDot(String),
     Input(Box<Expr>),
     Confirm(Box<Expr>),
+    Call { name: String, args: Vec<Expr> },
 }
 
 #[derive(Debug, Clone, PartialEq)]
