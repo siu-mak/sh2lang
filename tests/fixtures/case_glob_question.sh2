@@ -1,0 +1,8 @@
+func main() {
+    let x = "ab"
+    case x {
+        glob("a?") => { print("hit_q") }
+        glob("a??") => { print("miss_qq") }
+        _ => { print("miss") }
+    }
+}

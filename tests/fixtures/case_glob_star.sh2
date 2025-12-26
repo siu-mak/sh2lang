@@ -1,0 +1,7 @@
+func main() {
+    let x = "foo123"
+    case x {
+        glob("foo*") => { print("hit") }
+        _ => { print("miss") }
+    }
+}

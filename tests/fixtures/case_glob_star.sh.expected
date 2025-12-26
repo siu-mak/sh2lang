@@ -1,0 +1,13 @@
+main() {
+  x='foo123'
+  case "$x" in
+    'foo'*)
+      printf '%s\n' 'hit'
+    ;;
+    *)
+      printf '%s\n' 'miss'
+    ;;
+  esac
+}
+
+main "$@"

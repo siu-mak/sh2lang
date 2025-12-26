@@ -159,6 +159,7 @@ pub struct CaseArm {
 #[derive(Debug, Clone, PartialEq)]
 pub enum Pattern {
     Literal(String),
+    Glob(String),
     Wildcard,
 }
 

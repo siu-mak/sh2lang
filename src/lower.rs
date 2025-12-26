@@ -82,6 +82,7 @@ fn lower_stmt(stmt: ast::Stmt, out: &mut Vec<ir::Cmd>) {
                 
                 let patterns = arm.patterns.into_iter().map(|p| match p {
                     ast::Pattern::Literal(s) => ir::Pattern::Literal(s),
+                    ast::Pattern::Glob(s) => ir::Pattern::Glob(s),
                     ast::Pattern::Wildcard => ir::Pattern::Wildcard,
                 }).collect();
                 

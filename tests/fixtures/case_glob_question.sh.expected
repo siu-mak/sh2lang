@@ -1,0 +1,16 @@
+main() {
+  x='ab'
+  case "$x" in
+    'a'?)
+      printf '%s\n' 'hit_q'
+    ;;
+    'a'??)
+      printf '%s\n' 'miss_qq'
+    ;;
+    *)
+      printf '%s\n' 'miss'
+    ;;
+  esac
+}
+
+main "$@"

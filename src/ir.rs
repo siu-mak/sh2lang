@@ -140,5 +140,6 @@ pub enum RedirectTarget {
 #[derive(Debug, Clone, PartialEq)]
 pub enum Pattern {
     Literal(String),
+    Glob(String),
     Wildcard,
 }

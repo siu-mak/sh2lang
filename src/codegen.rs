@@ -498,6 +498,7 @@ fn emit_cmd(cmd: &Cmd, out: &mut String, indent: usize, target: TargetShell) {
                 out.push_str("  ");
                 let pat_strs: Vec<String> = patterns.iter().map(|p| match p {
                     crate::ir::Pattern::Literal(s) => sh_single_quote(s),
+                    crate::ir::Pattern::Glob(s) => emit_case_glob_pattern(s),
                     crate::ir::Pattern::Wildcard => "*".to_string(),
                 }).collect();
                 out.push_str(&pat_strs.join("|"));
@@ -816,4 +817,29 @@ fn emit_cmd(cmd: &Cmd, out: &mut String, indent: usize, target: TargetShell) {
 
 fn is_boolean_expr(v: &Val) -> bool {
     matches!(v, Val::Compare { .. } | Val::And(..) | Val::Or(..) | Val::Not(..) | Val::Exists(..) | Val::IsDir(..) | Val::IsFile(..) | Val::IsSymlink(..) | Val::IsExec(..) | Val::IsReadable(..) | Val::IsWritable(..) | Val::IsNonEmpty(..) | Val::Bool(..))
+}
+
+fn emit_case_glob_pattern(glob: &str) -> String {
+    let mut out = String::new();
+    let mut literal_buf = String::new();
+
+    for c in glob.chars() {
+        if c == '*' || c == '?' {
+            if !literal_buf.is_empty() {
+                out.push_str(&sh_single_quote(&literal_buf));
+                literal_buf.clear();
+            }
+            out.push(c);
+        } else {
+            literal_buf.push(c);
+        }
+    }
+    if !literal_buf.is_empty() {
+        out.push_str(&sh_single_quote(&literal_buf));
+    }
+
+    if out.is_empty() {
+        return "''".to_string();
+    }
+    out
 }

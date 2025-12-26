@@ -1,0 +1,13 @@
+main() {
+  x='cost $5\done'
+  case "$x" in
+    'cost $'*'\done')
+      printf '%s\n' 'hit_safe'
+    ;;
+    *)
+      printf '%s\n' 'miss'
+    ;;
+  esac
+}
+
+main "$@"

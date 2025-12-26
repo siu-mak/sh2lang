@@ -1,0 +1,7 @@
+func main() {
+    let x = "cost $5\\done"
+    case x {
+        glob("cost $*\\done") => { print("hit_safe") }
+        _ => { print("miss") }
+    }
+}

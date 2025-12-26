@@ -247,11 +247,22 @@ fn parse_stmt_atom(tokens: &[Token], i: &mut usize) -> Stmt {
                             patterns.push(Pattern::Literal(s.clone()));
                             *i += 1;
                         }
+                        Token::Ident(s) if s == "glob" => {
+                            *i += 1;
+                            expect(tokens, i, Token::LParen);
+                            let s = match &tokens[*i] {
+                                Token::String(s) => s.clone(),
+                                _ => panic!("Expected string literal for glob pattern"),
+                            };
+                            *i += 1;
+                            expect(tokens, i, Token::RParen);
+                            patterns.push(Pattern::Glob(s));
+                        }
                         Token::Underscore => {
                             patterns.push(Pattern::Wildcard);
                             *i += 1;
                         }
-                        _ => panic!("Expected string or _ pattern"),
+                        _ => panic!("Expected string, glob(\"...\"), or _ pattern"),
                     }
                     
                     if matches!(tokens.get(*i), Some(Token::Pipe)) {

@@ -1,0 +1,13 @@
+main() {
+  x='a bZ'
+  case "$x" in
+    'a b'*)
+      printf '%s\n' 'hit_space'
+    ;;
+    *)
+      printf '%s\n' 'miss'
+    ;;
+  esac
+}
+
+main "$@"

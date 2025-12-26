@@ -1,0 +1,7 @@
+func main() {
+    let x = "a bZ"
+    case x {
+        glob("a b*") => { print("hit_space") }
+        _ => { print("miss") }
+    }
+}
