@@ -176,8 +176,9 @@ fn emit_val(v: &Val, target: TargetShell) -> String {
         },
         Val::Args => panic!("args cannot be embedded/concatenated inside a word"),
         Val::Call { name, args } => {
+            let func_name = if name == "default" { "coalesce" } else { name };
             let arg_strs: Vec<String> = args.iter().map(|a| emit_word(a, target)).collect();
-            format!("\"$( __sh2_{} {} )\"", name, arg_strs.join(" "))
+            format!("\"$( __sh2_{} {} )\"", func_name, arg_strs.join(" "))
         },
         Val::Compare { .. } | Val::And(..) | Val::Or(..) | Val::Not(..) | Val::Exists(..) | Val::IsDir(..) | Val::IsFile(..) | Val::IsSymlink(..) | Val::IsExec(..) | Val::IsReadable(..) | Val::IsWritable(..) | Val::IsNonEmpty(..) | Val::List(..) | Val::Confirm(..) => panic!("Cannot emit boolean/list value as string"),
     }
@@ -700,7 +701,7 @@ fn emit_cmd(cmd: &Cmd, out: &mut String, indent: usize, target: TargetShell) {
                 out.push(' ');
                 out.push_str(&emit_word(arg, target));
             }
-            out.push('\n');
+            out.push_str("; __sh2_status=$?; (exit $__sh2_status)\n");
         }
         Cmd::Subshell { body } => {
             out.push_str(&format!("{pad}(\n"));
@@ -1075,6 +1076,7 @@ __sh2_trim() { awk -v s="$1" 'BEGIN { sub(/^[[:space:]]+/, "", s); sub(/[[:space
 __sh2_before() { awk -v s="$1" -v sep="$2" 'BEGIN { n=index(s, sep); if(n==0) printf "%s", s; else printf "%s", substr(s, 1, n-1) }'; }
 __sh2_after() { awk -v s="$1" -v sep="$2" 'BEGIN { n=index(s, sep); if(n==0) printf ""; else printf "%s", substr(s, n+length(sep)) }'; }
 __sh2_replace() { awk -v s="$1" -v old="$2" -v new="$3" 'BEGIN { if(old=="") { printf "%s", s; exit } len=length(old); while(i=index(s, old)) { printf "%s%s", substr(s, 1, i-1), new; s=substr(s, i+len) } printf "%s", s }'; }
+__sh2_split() { awk -v s="$1" -v sep="$2" 'BEGIN { if(sep=="") { printf "%s", s; exit } len=length(sep); while(i=index(s, sep)) { printf "%s\n", substr(s, 1, i-1); s=substr(s, i+len) } printf "%s", s }'; }
 "#);
     s
 }

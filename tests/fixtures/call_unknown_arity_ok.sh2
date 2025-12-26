@@ -1,0 +1,4 @@
+func main() {
+    sh("__sh2_myfoo() { printf ok; }")
+    print(myfoo(1, 2, 3))
+}

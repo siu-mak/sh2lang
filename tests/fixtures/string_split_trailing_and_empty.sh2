@@ -1,0 +1,5 @@
+func main() {
+    print(split("a,", ","))
+    print("---")
+    print(split("", ","))
+}

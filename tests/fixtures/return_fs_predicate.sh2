@@ -3,7 +3,7 @@ func check(path) {
 }
 
 func main() {
-  run("sh", "-c", "rm -f empty nonempty; : > empty; echo hi > nonempty")
+  run("sh", "-c", "rm -f empty nonempty; printf '' > empty; echo hi > nonempty")
   check("nonempty")
   if status() == 0 {
     print("nonempty: ok")
