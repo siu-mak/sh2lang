@@ -3,31 +3,64 @@ use common::*;
 use sh2c::codegen::TargetShell;
 
 #[test]
-fn codegen_quoting_glob_run() { assert_codegen_matches_snapshot("quoting_glob_run"); }
+fn codegen_quote_literal_spaces_bash() {
+    assert_codegen_matches_snapshot_target("quote_literal_spaces", TargetShell::Bash);
+}
 #[test]
-fn exec_quoting_glob_run() { assert_exec_matches_fixture("quoting_glob_run"); }
+fn exec_quote_literal_spaces_bash() {
+    assert_exec_matches_fixture_target("quote_literal_spaces", TargetShell::Bash);
+}
 
 #[test]
-fn codegen_quoting_space_argv_count() { assert_codegen_matches_snapshot("quoting_space_argv_count"); }
+fn codegen_quote_literal_dollar_backslash_star_bash() {
+    assert_codegen_matches_snapshot_target("quote_literal_dollar_backslash_star", TargetShell::Bash);
+}
 #[test]
-fn exec_quoting_space_argv_count() { assert_exec_matches_fixture("quoting_space_argv_count"); }
+fn exec_quote_literal_dollar_backslash_star_bash() {
+    assert_exec_matches_fixture_target("quote_literal_dollar_backslash_star", TargetShell::Bash);
+}
 
 #[test]
-fn codegen_quoting_dollar_literal() { assert_codegen_matches_snapshot("quoting_dollar_literal"); }
+fn codegen_quote_literal_newline_bash() {
+    assert_codegen_matches_snapshot_target("quote_literal_newline", TargetShell::Bash);
+}
 #[test]
-fn exec_quoting_dollar_literal() { assert_exec_matches_fixture("quoting_dollar_literal"); }
+fn exec_quote_literal_newline_bash() {
+    assert_exec_matches_fixture_target("quote_literal_newline", TargetShell::Bash);
+}
 
 #[test]
-fn codegen_quoting_backslash_literal() { assert_codegen_matches_snapshot("quoting_backslash_literal"); }
+fn codegen_quote_concat_var_bash() {
+    assert_codegen_matches_snapshot_target("quote_concat_var", TargetShell::Bash);
+}
 #[test]
-fn exec_quoting_backslash_literal() { assert_exec_matches_fixture("quoting_backslash_literal"); }
+fn exec_quote_concat_var_bash() {
+    assert_exec_matches_fixture_target("quote_concat_var", TargetShell::Bash);
+}
 
 #[test]
-fn codegen_quoting_single_quote() { assert_codegen_matches_snapshot("quoting_single_quote"); }
+fn codegen_quote_args_splice_bash() {
+    assert_codegen_matches_snapshot_target("quote_args_splice", TargetShell::Bash);
+}
 #[test]
-fn exec_quoting_single_quote() { assert_exec_matches_fixture("quoting_single_quote"); }
+fn exec_quote_args_splice_bash() {
+    assert_exec_matches_fixture_target("quote_args_splice", TargetShell::Bash);
+}
 
 #[test]
-fn codegen_quoting_newline_literal() { assert_codegen_matches_snapshot("quoting_newline_literal"); }
+fn codegen_quote_args_disallowed_concat_fail() {
+    assert_codegen_panics_target(
+        "quote_args_disallowed_concat", 
+        TargetShell::Bash, 
+        "Cannot emit boolean/list"
+    );
+}
+
 #[test]
-fn exec_quoting_newline_literal() { assert_exec_matches_fixture("quoting_newline_literal"); }
+fn codegen_quote_args_splice_posix() {
+    assert_codegen_matches_snapshot_target("quote_args_splice", TargetShell::Posix);
+}
+#[test]
+fn exec_quote_args_splice_posix() {
+    assert_exec_matches_fixture_target("quote_args_splice", TargetShell::Posix);
+}

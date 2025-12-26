@@ -1,0 +1,7 @@
+main() {
+  'printf' '%s
+' 'a
+b'
+}
+
+main "$@"

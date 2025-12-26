@@ -165,71 +165,16 @@ fn emit_val(v: &Val, target: TargetShell) -> String {
         Val::BoolStr(inner) => {
              format!("\"$( if {}; then printf \"%s\" \"true\"; else printf \"%s\" \"false\"; fi )\"", emit_cond(inner, target))
         },
-        Val::Compare { .. } | Val::And(..) | Val::Or(..) | Val::Not(..) | Val::Exists(..) | Val::IsDir(..) | Val::IsFile(..) | Val::IsSymlink(..) | Val::IsExec(..) | Val::IsReadable(..) | Val::IsWritable(..) | Val::IsNonEmpty(..) | Val::List(..) | Val::Args => panic!("Cannot emit boolean/list/args value as string"),
+        Val::Args => panic!("args cannot be embedded/concatenated inside a word"),
+        Val::Compare { .. } | Val::And(..) | Val::Or(..) | Val::Not(..) | Val::Exists(..) | Val::IsDir(..) | Val::IsFile(..) | Val::IsSymlink(..) | Val::IsExec(..) | Val::IsReadable(..) | Val::IsWritable(..) | Val::IsNonEmpty(..) | Val::List(..) => panic!("Cannot emit boolean/list value as string"),
     }
 }
 
 fn emit_word(v: &Val, target: TargetShell) -> String {
-    match v {
-        Val::Literal(s) => sh_single_quote(s),
-        Val::Var(s) => format!("\"${}\"", s),
-        Val::Concat(l, r) => format!("{}{}", emit_word(l, target), emit_word(r, target)),
-        Val::Command(args) => {
-            let parts: Vec<String> = args.iter().map(|a| emit_word(a, target)).collect();
-            format!("\"$( {} )\"", parts.join(" "))
-        }
-        Val::CommandPipe(segments) => {
-             let seg_strs: Vec<String> = segments.iter().map(|seg| {
-                 let words: Vec<String> = seg.iter().map(|w| emit_word(w, target)).collect();
-                 words.join(" ")
-             }).collect();
-             format!("\"$( {} )\"", seg_strs.join(" | "))
-        }
-        Val::Len(inner) => {
-             format!("\"$( printf \"%s\" {} | awk '{{ print length($0) }}' )\"", emit_val(inner, target))
-        }
-        Val::Arg(n) => format!("\"${}\"", n),
-        Val::Index { list, index } => emit_val(&Val::Index { list: list.clone(), index: index.clone() }, target),
-        Val::Join { list, sep } => emit_val(&Val::Join { list: list.clone(), sep: sep.clone() }, target),
-        Val::Count(inner) => emit_val(&Val::Count(inner.clone()), target),
-        Val::Bool(_) => panic!("Cannot emit boolean value as string/word; booleans are only valid in conditions"),
-        Val::Number(n) => format!("\"{}\"", n),
-        Val::Status => "\"$?\"".to_string(),
-        Val::Pid => "\"$!\"".to_string(),
-        Val::Env(inner) => match &**inner {
-            Val::Literal(s) => format!("\"${{{}}}\"", s),
-            Val::Var(name) => match target {
-                TargetShell::Bash => format!("\"${{!{}}}\"", name),
-                TargetShell::Posix => panic!("env(var_name) is not supported in POSIX sh target; use env(\"NAME\") or env.NAME"),
-            },
-            _ => panic!("env(...) requires a string literal name or variable name"),
-        },
-        Val::EnvDot(name) => match target {
-            TargetShell::Bash => format!("\"$( ( typeset +x {0}; printenv {0} ) 2>/dev/null || printenv {0} 2>/dev/null || true )\"", name),
-            TargetShell::Posix => format!("\"${{{}-}}\"", name),
-        },
-        Val::Uid => match target { 
-            TargetShell::Bash => "\"$UID\"".to_string(), 
-            TargetShell::Posix => panic!("uid() is not supported in POSIX sh target") 
-        },
-        Val::Ppid => match target { 
-            TargetShell::Bash => "\"$PPID\"".to_string(), 
-            TargetShell::Posix => panic!("ppid() is not supported in POSIX sh target") 
-        },
-        Val::Pwd => match target { 
-            TargetShell::Bash => "\"$PWD\"".to_string(), 
-            TargetShell::Posix => panic!("pwd() is not supported in POSIX sh target") 
-        },
-        Val::SelfPid => "\"$$\"".to_string(),
-        Val::Argv0 => "\"$0\"".to_string(),
-        Val::Argc => "\"$#\"".to_string(),
-        Val::Arith { .. } => format!("\"$(( {} ))\"", emit_arith_expr(v, target)),
-        Val::BoolStr(inner) => {
-             format!("\"$( if {}; then printf \"%s\" \"true\"; else printf \"%s\" \"false\"; fi )\"", emit_cond(inner, target))
-        },
-        Val::Args => "\"$@\"".into(),
-        Val::Compare { .. } | Val::And(..) | Val::Or(..) | Val::Not(..) | Val::Exists(..) | Val::IsDir(..) | Val::IsFile(..) | Val::IsSymlink(..) | Val::IsExec(..) | Val::IsReadable(..) | Val::IsWritable(..) | Val::IsNonEmpty(..) | Val::List(..) => panic!("Cannot emit boolean/list value as command word"),
+    if let Val::Args = v {
+        return "\"$@\"".to_string();
     }
+    emit_val(v, target)
 }
 
 fn emit_cond(v: &Val, target: TargetShell) -> String {

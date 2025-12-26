@@ -1,0 +1,4 @@
+func main() {
+  set x = "X"
+  run("printf", "%s\n", "a" + x + "b")
+}

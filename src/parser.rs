@@ -1351,7 +1351,11 @@ fn parse_brace_interpolated_string(raw: &str) -> Expr {
                       if !buf.is_empty() {
                           parts.push(Expr::Literal(std::mem::take(&mut buf)));
                       }
-                      parts.push(Expr::Var(ident.to_string()));
+                      if ident == "args" {
+                          parts.push(Expr::Args);
+                      } else {
+                          parts.push(Expr::Var(ident.to_string()));
+                      }
                       i = end + 1;
                       continue;
                  }

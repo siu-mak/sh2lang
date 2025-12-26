@@ -208,8 +208,10 @@ pub fn assert_exec_matches_fixture_target(fixture_name: &str, target: TargetShel
     let mut args = Vec::new();
     if Path::new(&args_path).exists() {
         let args_content = fs::read_to_string(&args_path).expect("Failed to read args fixture");
-        for arg in args_content.split_whitespace() {
-            args.push(arg.to_string());
+        for arg in args_content.lines() {
+            if !arg.trim().is_empty() {
+                args.push(arg.to_string());
+            }
         }
     }
     let args_refs: Vec<&str> = args.iter().map(|s| s.as_str()).collect();
