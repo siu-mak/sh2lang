@@ -102,6 +102,7 @@ fn parse_stmt_atom(tokens: &[Token], i: &mut usize) -> Stmt {
                  
                  let mut args = Vec::new();
                  let mut allow_fail = false;
+                 let mut seen_allow_fail = false;
                  
                  loop {
                      if matches!(tokens.get(*i), Some(Token::RParen)) { break; }
@@ -121,9 +122,11 @@ fn parse_stmt_atom(tokens: &[Token], i: &mut usize) -> Stmt {
                          *i += 2; // skip name and =
                          
                          if name == "allow_fail" {
-                             if allow_fail {
+                             if seen_allow_fail {
                                  panic!("allow_fail specified more than once");
                              }
+                             seen_allow_fail = true;
+
                              if matches!(tokens.get(*i), Some(Token::True)) {
                                  allow_fail = true;
                                  *i += 1;
@@ -1196,6 +1199,14 @@ fn parse_command_substitution(tokens: &[Token], i: &mut usize) -> Expr {
             // parse arguments inside run()
             loop {
                 if matches!(tokens.get(*i), Some(Token::RParen)) { break; }
+                
+                // Check if it looks like a named argument: Ident = ...
+                if let Some(Token::Ident(_)) = tokens.get(*i) {
+                    if matches!(tokens.get(*i+1), Some(Token::Equals)) {
+                         panic!("run options like allow_fail=... are not supported inside command substitution");
+                    }
+                }
+
                 args.push(parse_expr(tokens, i));
                 if matches!(tokens.get(*i), Some(Token::Comma)) { *i += 1; } else { break; }
             }
