@@ -1,0 +1,10 @@
+func main(msg) {
+  run("echo", msg)
+  with env { VAR = "set_via_env" } {
+    run("print_env")
+  }
+}
+
+func print_env() {
+  run("echo", env("VAR"))
+}

@@ -60,3 +60,26 @@ fn codegen_target_posix_env_indirect_fail() {
         "env(var_name) is not supported in POSIX"
     );
 }
+#[test]
+fn codegen_target_posix_basic_bash_snapshot() {
+    assert_codegen_matches_snapshot_target("target_posix_basic", TargetShell::Bash);
+}
+
+#[test]
+fn codegen_target_posix_basic_posix_snapshot() {
+    assert_codegen_matches_snapshot_target("target_posix_basic", TargetShell::Posix);
+}
+
+#[test]
+fn exec_target_posix_basic_under_posix_shell() {
+    assert_exec_matches_fixture_target("target_posix_basic", TargetShell::Posix);
+}
+
+#[test]
+fn posix_rejects_indexing() {
+    assert_codegen_panics_target(
+        "target_posix_rejects_index",
+        TargetShell::Posix,
+        "supported in POSIX"
+    );
+}

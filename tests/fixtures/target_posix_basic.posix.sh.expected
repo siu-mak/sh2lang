@@ -1,0 +1,11 @@
+main() {
+  msg="${1}"
+  'echo' "$msg"
+  VAR='set_via_env' 'print_env'
+}
+
+print_env() {
+  'echo' "${VAR}"
+}
+
+main "$@"

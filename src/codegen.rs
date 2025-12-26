@@ -587,7 +587,7 @@ fn emit_cmd(cmd: &Cmd, out: &mut String, indent: usize, target: TargetShell) {
                 if let Cmd::Exec(args) = &body[0] {
                     out.push_str(&pad);
                     for (k, v) in bindings {
-                        out.push_str(&format!("export {}={} ", k, emit_val(v, target)));
+                        out.push_str(&format!("{}={} ", k, emit_val(v, target)));
                     }
                     let shell_args: Vec<String> = args.iter().map(|a| emit_word(a, target)).collect();
                     out.push_str(&shell_args.join(" "));
