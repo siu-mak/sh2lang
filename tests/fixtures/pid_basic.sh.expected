@@ -1,7 +1,7 @@
 main() {
-  'bash' '-c' 'exit 7'; __sh2_status=$?; (exit $__sh2_status) &
+  ( 'bash' '-c' 'exit 7' ) &
   p="$!"
-  wait "$p"
+  wait "$p"; __sh2_status=$?
   printf '%s\n' "$__sh2_status"
 }
 

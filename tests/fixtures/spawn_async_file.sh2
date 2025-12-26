@@ -1,0 +1,16 @@
+func main() {
+    set f = "flag.txt"
+    run("rm", "-f", f)
+    spawn run("sh", "-c", "sleep 0.05; echo x > flag.txt")
+    if exists(f) {
+        print("WRONG_EARLY")
+    } else {
+        print("notyet")
+    }
+    wait()
+    if exists(f) {
+        print("done")
+    } else {
+        print("WRONG_LATE")
+    }
+}

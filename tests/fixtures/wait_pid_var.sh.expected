@@ -1,6 +1,6 @@
 main() {
   p='1234'
-  wait "$p"
+  wait "$p"; __sh2_status=$?
 }
 
 __sh2_status=0

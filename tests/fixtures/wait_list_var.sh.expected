@@ -1,7 +1,7 @@
 main() {
   a='123'
   b='456'
-  wait "$a" "$b"
+  wait "$a" "$b"; __sh2_status=$?
 }
 
 __sh2_status=0

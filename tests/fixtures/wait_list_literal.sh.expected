@@ -1,5 +1,5 @@
 main() {
-  wait '123' '456'
+  wait '123' '456'; __sh2_status=$?
 }
 
 __sh2_status=0

@@ -1,11 +1,11 @@
 main() {
-  'sh' '-c' 'exit 7'; __sh2_status=$?; (exit $__sh2_status) &
+  ( 'sh' '-c' 'exit 7' ) &
   if [ "$!" -gt "0" ]; then
     printf '%s\n' 'pid_ok'
   else
     printf '%s\n' 'pid_bad'
   fi
-  wait "$!"
+  wait "$!"; __sh2_status=$?
   if [ "$__sh2_status" = "7" ]; then
     printf '%s\n' 'status_ok'
   else

@@ -1,6 +1,6 @@
 main() {
   local x="${1}"
-  wait "$1"
+  wait "$1"; __sh2_status=$?
 }
 
 __sh2_status=0

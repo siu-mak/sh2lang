@@ -41,3 +41,12 @@ fn codegen_spawn_wait_status_pid() {
 fn exec_spawn_wait_status_pid() {
     assert_exec_matches_fixture("spawn_wait_status_pid");
 }
+
+/// Test that spawn correctly backgrounds the command - the flag file should
+/// NOT exist immediately after spawn (command runs async), but SHOULD exist
+/// after wait() completes.
+#[test]
+fn exec_spawn_async_file() {
+    assert_exec_matches_fixture_target("spawn_async_file", TargetShell::Bash);
+    assert_exec_matches_fixture_target("spawn_async_file", TargetShell::Posix);
+}

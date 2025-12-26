@@ -1,9 +1,9 @@
 main() {
-  {
-    echo one
-    echo two
-  } &
-  wait
+  ( {
+  echo one
+  echo two
+} ) &
+  wait; __sh2_status=$?
 }
 
 __sh2_status=0
