@@ -11,7 +11,7 @@ check() {
 }
 
 main() {
-  'sh' '-c' 'rm -f empty nonempty; printf '\'''\'' > empty; echo hi > nonempty'; __sh2_status=$?; (exit $__sh2_status)
+  'sh' '-c' 'rm -f empty nonempty; printf '\'''\'' > empty; echo hi > nonempty'
   check 'nonempty'; __sh2_status=$?; (exit $__sh2_status)
   if [ "$__sh2_status" = "0" ]; then
     printf '%s\n' 'nonempty: ok'

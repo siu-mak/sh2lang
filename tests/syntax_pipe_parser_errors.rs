@@ -16,7 +16,7 @@ fn test_pipe_parser_error() {
     assert!(result.is_err(), "Parser should panic on non-run pipe segment");
     
     let err = result.err().unwrap();
-    let expected = "Expected statement";
+    let expected = "expected run(...) after '|' in pipeline";
     
     if let Some(msg) = err.downcast_ref::<&str>() {
         assert_eq!(*msg, expected);

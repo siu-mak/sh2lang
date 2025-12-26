@@ -396,7 +396,7 @@ fn emit_cmd(cmd: &Cmd, out: &mut String, indent: usize, target: TargetShell) {
             } else {
                 // Normal: capture status in __sh2_status, then restore $? so try/set-e works
                 out.push_str(&shell_cmd);
-                out.push_str("; __sh2_status=$?; (exit $__sh2_status)\n");
+                out.push('\n');
             }
         }
         Cmd::ExecReplace(args) => {
@@ -882,7 +882,13 @@ fn emit_cmd(cmd: &Cmd, out: &mut String, indent: usize, target: TargetShell) {
                     if i > 0 {
                          out.push_str(" &&\n");
                     }
-                    out.push_str(cmd_str);
+                    let needs_wrapper = matches!(cmd, Cmd::Exec { allow_fail: false, .. });
+                    
+                    if needs_wrapper {
+                        out.push_str(&format!("{{ {}; __sh2_status=$?; (exit $__sh2_status); }}", cmd_str));
+                    } else {
+                        out.push_str(cmd_str);
+                    }
                 }
                 out.push('\n');
             }
@@ -901,10 +907,12 @@ fn emit_cmd(cmd: &Cmd, out: &mut String, indent: usize, target: TargetShell) {
             for cmd in left {
                 emit_cmd(cmd, out, indent + 2, target);
             }
+            out.push_str(&format!("{}  __sh2_status=$?; (exit $__sh2_status)\n", pad));
             out.push_str(&format!("{pad}}} && {{\n"));
             for cmd in right {
                 emit_cmd(cmd, out, indent + 2, target);
             }
+            out.push_str(&format!("{}  __sh2_status=$?; (exit $__sh2_status)\n", pad));
             out.push_str(&format!("{pad}}}\n"));
         }
         Cmd::OrElse { left, right } => {
@@ -912,10 +920,12 @@ fn emit_cmd(cmd: &Cmd, out: &mut String, indent: usize, target: TargetShell) {
             for cmd in left {
                 emit_cmd(cmd, out, indent + 2, target);
             }
+            out.push_str(&format!("{}  __sh2_status=$?; (exit $__sh2_status)\n", pad));
             out.push_str(&format!("{pad}}} || {{\n"));
             for cmd in right {
                 emit_cmd(cmd, out, indent + 2, target);
             }
+            out.push_str(&format!("{}  __sh2_status=$?; (exit $__sh2_status)\n", pad));
             out.push_str(&format!("{pad}}}\n"));
         }
         Cmd::Export { name, value } => {

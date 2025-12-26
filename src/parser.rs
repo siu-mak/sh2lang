@@ -167,13 +167,11 @@ fn parse_stmt_atom(tokens: &[Token], i: &mut usize) -> Stmt {
             // Additional run(...) segments separated by `|`
             // Additional run(...) segments separated by `|`
             while matches!(tokens.get(*i), Some(Token::Pipe)) {
-                // Check if the pipe is followed by Run. If so, it's a standard pipeline.
-                // If not (e.g. followed by `{`), it might be part of `pipe` block syntax.
-                if matches!(tokens.get(*i + 1), Some(Token::Run)) {
-                    *i += 1; // consume pipe
+                *i += 1; // consume pipe
+                if matches!(tokens.get(*i), Some(Token::Run)) {
                     segments.push(parse_run_call(tokens, i));
                 } else {
-                    break;
+                    panic!("expected run(...) after '|' in pipeline");
                 }
             }
 

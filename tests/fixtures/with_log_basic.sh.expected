@@ -15,7 +15,7 @@ main() {
     printf '%s\n' 'A'
     printf '%s\n' 'ERR' >&2
   )
-  'sh' '-c' 'sort out.log'; __sh2_status=$?; (exit $__sh2_status)
+  'sh' '-c' 'sort out.log'
 }
 
 __sh2_status=0
