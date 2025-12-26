@@ -195,54 +195,109 @@ pub fn lex(input: &str) -> Vec<Token> {
                 }
             }
             '"' => {
-                chars.next(); // consume opening quote
-                let mut s = String::new();
-                while let Some(&ch) = chars.peek() {
-                    if ch == '"' { break; }
-                    if ch == '\\' {
-                        chars.next(); // consume backslash
-                        if let Some(&escaped) = chars.peek() {
-                            match escaped {
-                                'n' => {
-                                    s.push('\n');
-                                    chars.next();
-                                }
-                                't' => {
-                                    s.push('\t');
-                                    chars.next();
-                                }
-                                'r' => {
-                                    s.push('\r');
-                                    chars.next();
-                                }
-                                '\\' => {
-                                    s.push('\\');
-                                    chars.next();
-                                }
-                                '"' => {
-                                    s.push('"');
-                                    chars.next();
-                                }
-                                '$' => {
-                                    s.push('\\');
-                                    s.push('$');
-                                    chars.next();
-                                }
-                                _ => {
-                                    s.push(escaped);
-                                    chars.next();
-                                }
-                            }
-                        }
-                    } else {
-                        s.push(ch);
-                        chars.next();
+                // Check for triple quote start """
+                let mut is_triple = false;
+                {
+                    let mut la = chars.clone();
+                    la.next(); // skip current "
+                    if la.next() == Some('"') && la.next() == Some('"') {
+                        is_triple = true;
                     }
                 }
-                if chars.peek() == Some(&'"') {
-                    chars.next(); // consume closing quote
+
+                if is_triple {
+                    chars.next(); // "
+                    chars.next(); // "
+                    chars.next(); // "
+                    
+                    let mut s = String::new();
+                    loop {
+                        // Check for triple quote end """
+                        {
+                            let mut la = chars.clone();
+                            if la.next() == Some('"') && la.next() == Some('"') && la.next() == Some('"') {
+                                chars.next(); chars.next(); chars.next();
+                                break;
+                            }
+                        }
+
+                        if let Some(ch) = chars.next() {
+                            if ch == '\\' {
+                                if let Some(escaped) = chars.next() {
+                                    match escaped {
+                                        'n' => s.push('\n'),
+                                        't' => s.push('\t'),
+                                        'r' => s.push('\r'),
+                                        '\\' => s.push('\\'),
+                                        '"' => s.push('"'),
+                                        '$' => {
+                                            s.push('\\');
+                                            s.push('$');
+                                        }
+                                        _ => s.push(escaped),
+                                    }
+                                } else {
+                                    panic!("Unexpected EOF in string escape");
+                                }
+                            } else {
+                                s.push(ch);
+                            }
+                        } else {
+                            panic!("Unterminated triple-quoted string");
+                        }
+                    }
+                    tokens.push(Token::String(s));
+                } else {
+                    // Regular string
+                    chars.next(); // consume opening quote
+                    let mut s = String::new();
+                    while let Some(&ch) = chars.peek() {
+                        if ch == '"' { break; }
+                        if ch == '\\' {
+                            chars.next(); // consume backslash
+                            if let Some(&escaped) = chars.peek() {
+                                match escaped {
+                                    'n' => {
+                                        s.push('\n');
+                                        chars.next();
+                                    }
+                                    't' => {
+                                        s.push('\t');
+                                        chars.next();
+                                    }
+                                    'r' => {
+                                        s.push('\r');
+                                        chars.next();
+                                    }
+                                    '\\' => {
+                                        s.push('\\');
+                                        chars.next();
+                                    }
+                                    '"' => {
+                                        s.push('"');
+                                        chars.next();
+                                    }
+                                    '$' => {
+                                        s.push('\\');
+                                        s.push('$');
+                                        chars.next();
+                                    }
+                                    _ => {
+                                        s.push(escaped);
+                                        chars.next();
+                                    }
+                                }
+                            }
+                        } else {
+                            s.push(ch);
+                            chars.next();
+                        }
+                    }
+                    if chars.peek() == Some(&'"') {
+                        chars.next(); // consume closing quote
+                    }
+                    tokens.push(Token::String(s));
                 }
-                tokens.push(Token::String(s));
             }
             _ if c.is_ascii_digit() => {
                 let mut num_str = String::new();
@@ -255,6 +310,41 @@ pub fn lex(input: &str) -> Vec<Token> {
                 tokens.push(Token::Number(n));
             }
             _ if c.is_alphabetic() => {
+                if c == 'r' {
+                    let mut is_raw = false;
+                    {
+                        let mut la = chars.clone();
+                        la.next(); // r
+                        if la.next() == Some('"') && la.next() == Some('"') && la.next() == Some('"') {
+                            is_raw = true;
+                        }
+                    }
+                    
+                    if is_raw {
+                         chars.next(); // r
+                         chars.next(); chars.next(); chars.next(); // """
+                         let mut s = String::new();
+                         loop {
+                             // Check for triple quote end """
+                             {
+                                 let mut la = chars.clone();
+                                 if la.next() == Some('"') && la.next() == Some('"') && la.next() == Some('"') {
+                                     chars.next(); chars.next(); chars.next();
+                                     break;
+                                 }
+                             }
+                             
+                             if let Some(ch) = chars.next() {
+                                 s.push(ch);
+                             } else {
+                                 panic!("Unterminated raw triple-quoted string");
+                             }
+                         }
+                         tokens.push(Token::String(s));
+                         continue;
+                    }
+                }
+
                 let mut ident = String::new();
                 while let Some(&ch) = chars.peek() {
                     if !ch.is_alphanumeric() && ch != '_' { break; }

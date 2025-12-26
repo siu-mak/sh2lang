@@ -1,0 +1,8 @@
+main() {
+  s='a'\''b"c\
+next'
+  printf '%s\n' "$s"
+}
+
+__sh2_status=0
+main "$@"

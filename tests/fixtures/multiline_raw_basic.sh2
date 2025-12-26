@@ -1,0 +1,4 @@
+func main() {
+    set s = r"""one\ntwo"""
+    print(s)
+}

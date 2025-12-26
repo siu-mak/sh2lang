@@ -1,0 +1,4 @@
+func main() {
+    set s = """a'b"c\\\nnext"""
+    print(s)
+}
