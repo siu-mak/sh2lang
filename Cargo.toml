@@ -12,3 +12,6 @@ name = "sh2c"
 path = "src/main.rs"
 
 [dependencies]
+
+[dev-dependencies]
+lazy_static = "1.5.0"
