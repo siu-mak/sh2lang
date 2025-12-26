@@ -441,7 +441,7 @@ fn parse_stmt_atom(tokens: &[Token], i: &mut usize) -> Stmt {
                              expect(tokens, i, Token::Colon);
                              let target = parse_redirect_target(tokens, i);
                              if let RedirectTarget::HereDoc { .. } = target {
-                                 panic!("heredoc only allowed for stdin; cannot use for stdout");
+                                 panic!("heredoc only allowed for stdin (got stdout)");
                              }
                              stdout = Some(target);
                          }
@@ -449,7 +449,7 @@ fn parse_stmt_atom(tokens: &[Token], i: &mut usize) -> Stmt {
                              expect(tokens, i, Token::Colon);
                              let target = parse_redirect_target(tokens, i);
                              if let RedirectTarget::HereDoc { .. } = target {
-                                 panic!("heredoc only allowed for stdin; cannot use for stderr");
+                                 panic!("heredoc only allowed for stdin (got stderr)");
                              }
                              stderr = Some(target);
                          }
