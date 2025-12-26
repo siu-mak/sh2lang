@@ -98,6 +98,8 @@ pub enum Token {
     Set,
     PipeKw,
     Log,
+    Input,
+    Confirm,
 }
 
 pub fn lex(input: &str) -> Vec<Token> {
@@ -327,6 +329,8 @@ pub fn lex(input: &str) -> Vec<Token> {
                     "pipe" => tokens.push(Token::PipeKw),
                     "len" => tokens.push(Token::Len),
                     "log" => tokens.push(Token::Log),
+                    "input" => tokens.push(Token::Input),
+                    "confirm" => tokens.push(Token::Confirm),
                     _ => tokens.push(Token::Ident(ident)),
                 }
             }

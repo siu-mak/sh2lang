@@ -75,6 +75,8 @@ pub enum Expr {
     Argv0,
     Argc,
     EnvDot(String),
+    Input(Box<Expr>),
+    Confirm(Box<Expr>),
 }
 
 #[derive(Debug, Clone, PartialEq)]

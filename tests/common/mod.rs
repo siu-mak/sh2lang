@@ -105,10 +105,10 @@ pub fn assert_codegen_panics_target(fixture_name: &str, target: TargetShell, exp
 
 
 pub fn run_bash_script(bash: &str, env: &[(&str, &str)], args: &[&str]) -> (String, String, i32) {
-    run_shell_script(bash, "bash", env, args)
+    run_shell_script(bash, "bash", env, args, None)
 }
 
-pub fn run_shell_script(script: &str, shell: &str, env: &[(&str, &str)], args: &[&str]) -> (String, String, i32) {
+pub fn run_shell_script(script: &str, shell: &str, env: &[(&str, &str)], args: &[&str], input: Option<&str>) -> (String, String, i32) {
     let pid = std::process::id();
     let nanos = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_nanos();
     let dir_name = format!("sh2_test_{}_{}", pid, nanos);
@@ -129,8 +129,23 @@ pub fn run_shell_script(script: &str, shell: &str, env: &[(&str, &str)], args: &
     for arg in args {
         cmd.arg(arg);
     }
+    cmd.stdout(std::process::Stdio::piped());
+    cmd.stderr(std::process::Stdio::piped());
 
-    let output = match cmd.output() {
+    if input.is_some() {
+        cmd.stdin(std::process::Stdio::piped());
+    }
+
+    let mut child = cmd.spawn().expect("Failed to spawn shell");
+
+    if let Some(input_str) = input {
+        if let Some(mut stdin) = child.stdin.take() {
+            use std::io::Write;
+            stdin.write_all(input_str.as_bytes()).expect("Failed to write to stdin");
+        }
+    }
+
+    let output = match child.wait_with_output() {
         Ok(o) => o,
         Err(_) => {
              // If shell is missing (e.g. dash), return fake error or handle gracefully
@@ -165,6 +180,7 @@ pub fn assert_exec_matches_fixture_target(fixture_name: &str, target: TargetShel
     let status_path = format!("tests/fixtures/{}.status", fixture_name);
     let args_path = format!("tests/fixtures/{}.args", fixture_name);
     let env_path = format!("tests/fixtures/{}.env", fixture_name);
+    let stdin_path = format!("tests/fixtures/{}.stdin", fixture_name);
 
     if !Path::new(&sh2_path).exists() {
         panic!("Fixture {} does not exist", sh2_path);
@@ -243,7 +259,13 @@ pub fn assert_exec_matches_fixture_target(fixture_name: &str, target: TargetShel
     }
     let args_refs: Vec<&str> = args.iter().map(|s| s.as_str()).collect();
 
-    let (stdout, stderr, status) = run_shell_script(&shell_script, &shell_bin, &env_refs, &args_refs);
+    let stdin_content = if Path::new(&stdin_path).exists() {
+        Some(fs::read_to_string(&stdin_path).expect("Failed to read stdin fixture"))
+    } else {
+        None
+    };
+
+    let (stdout, stderr, status) = run_shell_script(&shell_script, &shell_bin, &env_refs, &args_refs, stdin_content.as_deref());
 
     if Path::new(&stdout_path).exists() {
         let expected_stdout = fs::read_to_string(&stdout_path).expect("Failed to read stdout fixture")

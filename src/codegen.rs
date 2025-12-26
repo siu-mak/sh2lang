@@ -165,8 +165,16 @@ fn emit_val(v: &Val, target: TargetShell) -> String {
         Val::BoolStr(inner) => {
              format!("\"$( if {}; then printf \"%s\" \"true\"; else printf \"%s\" \"false\"; fi )\"", emit_cond(inner, target))
         },
+        Val::Input(prompt) => match target {
+             TargetShell::Bash => {
+                 let p = emit_val(prompt, target);
+                 // $( printf '%s' "Prompt" >&2; IFS= read -r __sh2_in; printf '%s' "$__sh2_in" )
+                 format!("\"$( printf '%s' {} >&2; IFS= read -r __sh2_in; printf '%s' \"$__sh2_in\" )\"", p)
+             }
+             TargetShell::Posix => panic!("input(...) is not supported in POSIX sh target"),
+        },
         Val::Args => panic!("args cannot be embedded/concatenated inside a word"),
-        Val::Compare { .. } | Val::And(..) | Val::Or(..) | Val::Not(..) | Val::Exists(..) | Val::IsDir(..) | Val::IsFile(..) | Val::IsSymlink(..) | Val::IsExec(..) | Val::IsReadable(..) | Val::IsWritable(..) | Val::IsNonEmpty(..) | Val::List(..) => panic!("Cannot emit boolean/list value as string"),
+        Val::Compare { .. } | Val::And(..) | Val::Or(..) | Val::Not(..) | Val::Exists(..) | Val::IsDir(..) | Val::IsFile(..) | Val::IsSymlink(..) | Val::IsExec(..) | Val::IsReadable(..) | Val::IsWritable(..) | Val::IsNonEmpty(..) | Val::List(..) | Val::Confirm(..) => panic!("Cannot emit boolean/list value as string"),
     }
 }
 
@@ -254,6 +262,18 @@ fn emit_cond(v: &Val, target: TargetShell) -> String {
         Val::IsNonEmpty(path) => {
             format!("[ -s {} ]", emit_val(path, target))
         }
+        Val::Confirm(prompt) => match target {
+            TargetShell::Bash => {
+                let p = emit_val(prompt, target);
+                // Subshell that loops until valid input
+                // Returns 0 for true, 1 for false
+                format!(
+                    "( while true; do printf '%s' {} >&2; if ! IFS= read -r __sh2_ans; then exit 1; fi; case \"${{__sh2_ans,,}}\" in y|yes|true|1) exit 0 ;; n|no|false|0|\"\") exit 1 ;; esac; done )",
+                    p
+                )
+            }
+            TargetShell::Posix => panic!("confirm(...) is not supported in POSIX sh target"),
+        },
         Val::Bool(true) => "true".to_string(),
         Val::Bool(false) => "false".to_string(),
         Val::List(_) | Val::Args => panic!("args/list is not a valid condition; use count(...) > 0"),

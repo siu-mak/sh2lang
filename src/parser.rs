@@ -859,6 +859,8 @@ fn is_expr_start(t: Option<&Token>) -> bool {
            | Token::Number(_)
            | Token::Minus
            | Token::Bang
+           | Token::Input
+           | Token::Confirm
         )
     )
 }
@@ -999,6 +1001,20 @@ fn parse_unary(tokens: &[Token], i: &mut usize) -> Expr {
 
 fn parse_primary(tokens: &[Token], i: &mut usize) -> Expr {
     match &tokens[*i] {
+        Token::Input => {
+            *i += 1;
+            expect(tokens, i, Token::LParen);
+            let prompt = parse_expr(tokens, i);
+            expect(tokens, i, Token::RParen);
+            Expr::Input(Box::new(prompt))
+        }
+        Token::Confirm => {
+            *i += 1;
+            expect(tokens, i, Token::LParen);
+            let prompt = parse_expr(tokens, i);
+            expect(tokens, i, Token::RParen);
+            Expr::Confirm(Box::new(prompt))
+        }
         Token::LParen => {
             *i += 1;
             let e = parse_expr(tokens, i);

@@ -45,6 +45,8 @@ pub enum Val {
     SelfPid,
     Argv0,
     Argc,
+    Input(Box<Val>),
+    Confirm(Box<Val>),
 }
 
 #[derive(Debug, Clone, PartialEq)]
