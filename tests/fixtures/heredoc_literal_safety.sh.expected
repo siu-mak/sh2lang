@@ -1,0 +1,12 @@
+main() {
+  {
+    'cat'
+  } <<'__SH2_EOF__'
+a b
+cost $5
+*
+\\done
+__SH2_EOF__
+}
+
+main "$@"

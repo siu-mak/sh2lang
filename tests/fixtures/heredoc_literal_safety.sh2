@@ -1,0 +1,5 @@
+func main() {
+    with redirect { stdin: heredoc("a b\ncost $5\n*\n\\\\done\n") } {
+        run("cat")
+    }
+}

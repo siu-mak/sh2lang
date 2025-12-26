@@ -146,6 +146,7 @@ pub enum Stmt {
 #[derive(Debug, Clone, PartialEq)]
 pub enum RedirectTarget {
     File { path: Expr, append: bool },
+    HereDoc { content: String },
     Stdout,
     Stderr,
 }

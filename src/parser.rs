@@ -449,12 +449,13 @@ fn parse_stmt_atom(tokens: &[Token], i: &mut usize) -> Stmt {
                              expect(tokens, i, Token::Colon);
                              let target = parse_redirect_target(tokens, i);
                                 match target {
+                                    RedirectTarget::HereDoc { .. } => {}
                                     RedirectTarget::File { append, .. } => {
                                         if append {
                                             panic!("Cannot append to stdin (use 'file' without append for input)");
                                         }
                                     }
-                                    _ => panic!("stdin can only be redirected from a file currently"),
+                                    _ => panic!("stdin can only be redirected from a file or heredoc"),
                                 }
                              stdin = Some(target);
                          }
@@ -1222,8 +1223,22 @@ fn parse_redirect_target(tokens: &[Token], i: &mut usize) -> crate::ast::Redirec
     } else if matches!(tokens.get(*i), Some(Token::Stderr)) {
         *i += 1;
         crate::ast::RedirectTarget::Stderr
+    } else if let Some(Token::Ident(s)) = tokens.get(*i) {
+        if s == "heredoc" {
+            *i += 1;
+            expect(tokens, i, Token::LParen);
+            let content = match &tokens[*i] {
+                Token::String(s) => s.clone(),
+                _ => panic!("Expected string literal in heredoc(...)"),
+            };
+            *i += 1;
+            expect(tokens, i, Token::RParen);
+            crate::ast::RedirectTarget::HereDoc { content }
+        } else {
+            panic!("Expected file(...), stdout, stderr, or heredoc(...) as redirect target");
+        }
     } else {
-        panic!("Expected file(...), stdout, or stderr as redirect target");
+        panic!("Expected file(...), stdout, stderr, or heredoc(...) as redirect target");
     }
 }
 

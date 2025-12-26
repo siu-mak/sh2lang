@@ -216,6 +216,7 @@ fn lower_stmt(stmt: ast::Stmt, out: &mut Vec<ir::Cmd>) {
              
              let lower_target = |t: ast::RedirectTarget| match t {
                  ast::RedirectTarget::File { path, append } => ir::RedirectTarget::File { path: lower_expr(path), append },
+                 ast::RedirectTarget::HereDoc { content } => ir::RedirectTarget::HereDoc { content },
                  ast::RedirectTarget::Stdout => ir::RedirectTarget::Stdout,
                  ast::RedirectTarget::Stderr => ir::RedirectTarget::Stderr,
              };

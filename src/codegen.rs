@@ -655,12 +655,21 @@ fn emit_cmd(cmd: &Cmd, out: &mut String, indent: usize, target: TargetShell) {
             }
             out.push_str(&format!("{pad}}}")); // No newline yet, redirections follow
             
+            // Handle regular stdin file redirection (before others, or order doesn't matter much for inputs vs outputs)
+            // But preserving existing behavior: currently it emits stdin first.
+            // Plan said: "Keep existing stdin handling position, but since heredoc is not a < redirection, emit heredoc operator after stdout/stderr redirections"
+            
+            let mut heredoc_content = None;
+
             if let Some(target_redir) = stdin {
                 match target_redir {
                     RedirectTarget::File { path, .. } => {
                         out.push_str(&format!(" < {}", emit_val(path, target)));
                     }
-                    _ => panic!("stdin redirected to something invalid (only file supported)"),
+                    RedirectTarget::HereDoc { content } => {
+                        heredoc_content = Some(content);
+                    }
+                    _ => panic!("stdin redirected to something invalid"),
                 }
             }
 
@@ -694,6 +703,7 @@ fn emit_cmd(cmd: &Cmd, out: &mut String, indent: usize, target: TargetShell) {
                         RedirectTarget::Stdout => {
                             // no-op
                         }
+                        RedirectTarget::HereDoc { .. } => panic!("Heredoc not valid for stdout"),
                     }
                 }
             };
@@ -711,6 +721,7 @@ fn emit_cmd(cmd: &Cmd, out: &mut String, indent: usize, target: TargetShell) {
                         RedirectTarget::Stderr => {
                             // no-op
                         }
+                        RedirectTarget::HereDoc { .. } => panic!("Heredoc not valid for stderr"),
                     }
                 }
             };
@@ -722,6 +733,25 @@ fn emit_cmd(cmd: &Cmd, out: &mut String, indent: usize, target: TargetShell) {
                 emit_stderr(out);
                 emit_stdout(out);
             }
+
+            // Emit heredoc operator and content if present
+            if let Some(content) = heredoc_content {
+                // Find safe delimiter
+                let mut delim = "__SH2_EOF__".to_string();
+                let mut counter = 1;
+                while content.contains(&delim) {
+                    delim = format!("__SH2_EOF__{}__", counter);
+                    counter += 1;
+                }
+
+                out.push_str(&format!(" <<'{}'\n", delim));
+                out.push_str(content);
+                if !content.ends_with('\n') {
+                    out.push('\n');
+                }
+                out.push_str(&delim);
+            }
+            
             out.push('\n');
         }
         Cmd::Spawn(cmd) => {
