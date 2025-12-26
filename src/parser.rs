@@ -536,6 +536,7 @@ fn parse_stmt_atom(tokens: &[Token], i: &mut usize) -> Stmt {
                  expect(tokens, i, Token::LParen);
                  let path = parse_expr(tokens, i);
                  let mut append = false;
+                 let mut seen_append = false;
                  
                  // Optional named args
                  while matches!(tokens.get(*i), Some(Token::Comma)) {
@@ -543,12 +544,15 @@ fn parse_stmt_atom(tokens: &[Token], i: &mut usize) -> Stmt {
                      if matches!(tokens.get(*i), Some(Token::Append)) {
                          *i += 1;
                          expect(tokens, i, Token::Equals);
+                         
+                         if seen_append {
+                             panic!("append specified more than once");
+                         }
+                         seen_append = true;
+
                          match tokens.get(*i) {
                              Some(Token::True) => { append = true; *i += 1; }
                              Some(Token::False) => { append = false; *i += 1; }
-                             // Also allow identifier true/false if literal matching fails? 
-                             // existing code does this but let's stick to consistent strictness or pattern.
-                             // Run used strict. let's use strict.
                              _ => panic!("append must be true/false literal"),
                          }
                      } else if let Some(Token::Ident(name)) = tokens.get(*i) {
