@@ -184,20 +184,28 @@ pub fn assert_exec_matches_fixture_target(fixture_name: &str, target: TargetShel
         TargetShell::Bash => "bash".to_string(),
         TargetShell::Posix => {
             // CI Support: Allow strict enforcement of a specific POSIX shell via env var.
-            // If SH2C_POSIX_SHELL is set, we use it and PANIC if it fails (no silent skip).
+            // If SH2C_POSIX_SHELL is set, we use it. Allowed values: "dash", "sh".
+            // If set to anything else, or if the requested shell is missing, we PANIC.
             // If unset, we fall back to auto-detection (dash -> sh -> skip).
             if let Ok(strict_shell) = std::env::var("SH2C_POSIX_SHELL") {
-                if Command::new(&strict_shell).arg("-c").arg("true").status().map(|s| s.success()).unwrap_or(false) {
-                    // It works, but we can't return a reference to a temporary String here easily without lifetime hell.
-                    // So we must rely on a known static string or leak memory?
-                    // Or change return type?
-                    // Actually, let's keep it simple: we reconstruct logic to return a String or &str.
-                    // Since existing code returns &str literals ("bash", "sh"), we can't return strict_shell from here safely
-                    // if strict_shell is a String.
-                    // REFACTOR: We'll change `shell_bin` to be String to support dynamic shell names.
-                    strict_shell
-                } else {
-                     panic!("SH2C_POSIX_SHELL is set to '{}' but it is not available or failed to execute!", strict_shell);
+                match strict_shell.as_str() {
+                    "dash" => {
+                        if Command::new("dash").arg("-c").arg("true").status().map(|s| s.success()).unwrap_or(false) {
+                            "dash".to_string()
+                        } else {
+                            panic!("SH2C_POSIX_SHELL=dash but dash is not available");
+                        }
+                    }
+                    "sh" => {
+                        if Command::new("sh").arg("-c").arg("true").status().map(|s| s.success()).unwrap_or(false) {
+                            "sh".to_string()
+                        } else {
+                            panic!("SH2C_POSIX_SHELL=sh but sh is not available");
+                        }
+                    }
+                    other => {
+                        panic!("Invalid SH2C_POSIX_SHELL='{}'; expected 'dash' or 'sh'", other);
+                    }
                 }
             } else {
                 // Auto-detection
