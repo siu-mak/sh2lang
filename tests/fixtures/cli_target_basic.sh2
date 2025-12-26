@@ -1,0 +1,4 @@
+func main() {
+  set x = "world"
+  run("echo", "hello", x)
+}

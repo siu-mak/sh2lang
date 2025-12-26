@@ -1,0 +1,4 @@
+func main() {
+  set arr = ["a", "b"]
+  run("echo", arr)
+}

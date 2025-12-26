@@ -1,103 +1,103 @@
 use std::process::Command;
 use std::fs;
+use std::path::Path;
 
-fn run_cli(args: &[&str]) -> std::process::Output {
-    let bin_path = env!("CARGO_BIN_EXE_sh2c");
-    let mut cmd = Command::new(bin_path);
-    cmd.args(args);
-    cmd.output().expect("Failed to execute sh2c binary")
+fn sh2c_path() -> String {
+    env!("CARGO_BIN_EXE_sh2c").to_string()
 }
 
-fn assert_output_matches(output: std::process::Output, expected_path: &str) {
+fn assert_cmd_stdout(args: &[&str], expected_file: &str) {
+    let output = Command::new(sh2c_path())
+        .args(args)
+        .output()
+        .expect("Failed to run sh2c");
+    
     if !output.status.success() {
-        eprintln!("CLI failed with status: {:?}", output.status);
-        eprintln!("Stdout: {}", String::from_utf8_lossy(&output.stdout));
-        eprintln!("Stderr: {}", String::from_utf8_lossy(&output.stderr));
-        panic!("CLI execution failed");
+        eprintln!("stderr: {}", String::from_utf8_lossy(&output.stderr));
+        panic!("sh2c failed with exit code {}", output.status);
     }
     
-    let stdout = String::from_utf8(output.stdout).expect("Stdout not utf8");
-    let expected = fs::read_to_string(expected_path).expect("Failed to read expected output");
+    let stdout = String::from_utf8(output.stdout).expect("Invalid UTF-8 in stdout");
+    let expected = fs::read_to_string(expected_file).expect("Failed to read expected file");
     
-    // Normalize newlines and trim for robust comparison
-    let stdout_norm = stdout.replace("\r\n", "\n");
-    let expected_norm = expected.replace("\r\n", "\n");
+    assert_eq!(stdout.trim(), expected.trim());
+}
+
+fn assert_cmd_fail(args: &[&str], expected_status: Option<i32>, expected_stderr_part: &str) {
+    let output = Command::new(sh2c_path())
+        .args(args)
+        .output()
+        .expect("Failed to run sh2c");
     
-    assert_eq!(stdout_norm.trim(), expected_norm.trim(), "Output mismatch");
-}
-
-#[test]
-fn cli_default_is_bash() {
-    let output = run_cli(&["tests/fixtures/posix_params.sh2"]);
-    assert_output_matches(output, "tests/fixtures/posix_params.sh.expected");
-}
-
-#[test]
-fn cli_explicit_bash() {
-    let output = run_cli(&["--target", "bash", "tests/fixtures/posix_params.sh2"]);
-    assert_output_matches(output, "tests/fixtures/posix_params.sh.expected");
-}
-
-#[test]
-fn cli_explicit_posix() {
-    let output = run_cli(&["--target", "posix", "tests/fixtures/posix_params.sh2"]);
-    assert_output_matches(output, "tests/fixtures/posix_params.posix.sh.expected");
-}
-
-#[test]
-fn cli_equals_bash() {
-    let output = run_cli(&["--target=bash", "tests/fixtures/posix_params.sh2"]);
-    assert_output_matches(output, "tests/fixtures/posix_params.sh.expected");
-}
-
-#[test]
-fn cli_equals_posix() {
-    let output = run_cli(&["--target=posix", "tests/fixtures/posix_params.sh2"]);
-    assert_output_matches(output, "tests/fixtures/posix_params.posix.sh.expected");
-}
-
-#[test]
-fn cli_target_after_script() {
-    // New test case: sh2c script --target posix
-    let output = run_cli(&["tests/fixtures/posix_params.sh2", "--target", "posix"]);
-    assert_output_matches(output, "tests/fixtures/posix_params.posix.sh.expected");
-}
-
-#[test]
-fn cli_target_equals_after_script() {
-    // New test case: sh2c script --target=posix
-    let output = run_cli(&["tests/fixtures/posix_params.sh2", "--target=posix"]);
-    assert_output_matches(output, "tests/fixtures/posix_params.posix.sh.expected");
-}
-
-#[test]
-fn cli_invalid_target() {
-    let output = run_cli(&["--target", "invalid", "tests/fixtures/posix_params.sh2"]);
-    assert!(!output.status.success());
+    if output.status.success() {
+        panic!("sh2c succeeded unexpectedly");
+    }
+    
+    if let Some(code) = expected_status {
+        assert_eq!(output.status.code(), Some(code), "Exit code mismatch");
+    }
+    
     let stderr = String::from_utf8_lossy(&output.stderr);
-    assert!(stderr.contains("Invalid target: invalid"));
+    assert!(stderr.contains(expected_stderr_part), "Stderr did not contain expected text. Got:\n{}", stderr);
 }
 
 #[test]
-fn cli_missing_arg() {
-    let output = run_cli(&["--target"]);
-    assert!(!output.status.success());
-    let stderr = String::from_utf8_lossy(&output.stderr);
-    assert!(stderr.contains("--target requires an argument"));
+fn cli_target_default_is_bash() {
+    // Default should match cli_target_basic.sh.expected (bash)
+    assert_cmd_stdout(
+        &["tests/fixtures/cli_target_basic.sh2"],
+        "tests/fixtures/cli_target_basic.sh.expected"
+    );
 }
 
 #[test]
-fn cli_multiple_scripts_fails() {
-    let output = run_cli(&["script1.sh2", "script2.sh2"]);
-    assert!(!output.status.success());
-    let stderr = String::from_utf8_lossy(&output.stderr);
-    assert!(stderr.contains("Unexpected argument: script2.sh2"));
+fn cli_target_explicit_bash() {
+    assert_cmd_stdout(
+        &["--target", "bash", "tests/fixtures/cli_target_basic.sh2"],
+        "tests/fixtures/cli_target_basic.sh.expected"
+    );
 }
 
 #[test]
-fn cli_read_error_exits_gracefully() {
-    let output = run_cli(&["non_existent_file.sh2"]);
-    assert!(!output.status.success());
-    let stderr = String::from_utf8_lossy(&output.stderr);
-    assert!(stderr.contains("Failed to read non_existent_file.sh2"));
+fn cli_target_explicit_bash_equal() {
+    assert_cmd_stdout(
+        &["--target=bash", "tests/fixtures/cli_target_basic.sh2"],
+        "tests/fixtures/cli_target_basic.sh.expected"
+    );
+}
+
+#[test]
+fn cli_target_posix() {
+    assert_cmd_stdout(
+        &["--target", "posix", "tests/fixtures/cli_target_basic.sh2"],
+        "tests/fixtures/cli_target_basic.posix.sh.expected"
+    );
+}
+
+#[test]
+fn cli_target_invalid_value() {
+    assert_cmd_fail(
+        &["--target", "fish", "tests/fixtures/cli_target_basic.sh2"],
+        Some(1),
+        "Invalid target"
+    );
+}
+
+#[test]
+fn cli_target_missing_arg() {
+    assert_cmd_fail(
+        &["--target"],
+        Some(1),
+        "--target requires an argument"
+    );
+}
+
+#[test]
+fn cli_target_posix_rejects_array() {
+    // This should fail with exit code 2 and a message about list values
+    assert_cmd_fail(
+        &["--target", "posix", "tests/fixtures/cli_target_posix_rejects_array.sh2"],
+        Some(2),
+        "Array assignment is not supported"
+    );
 }

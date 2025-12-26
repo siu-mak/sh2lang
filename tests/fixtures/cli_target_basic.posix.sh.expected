@@ -1,0 +1,6 @@
+main() {
+  x='world'
+  'echo' 'hello' "$x"
+}
+
+main "$@"

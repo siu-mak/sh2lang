@@ -64,12 +64,27 @@ fn main() {
         }
     };
 
-    let tokens = lexer::lex(&src);
-    let ast = parser::parse(&tokens);
-    let ir = lower::lower(ast);
-    let out = codegen::emit_with_target(&ir, target);
+    let result = std::panic::catch_unwind(|| {
+        let tokens = lexer::lex(&src);
+        let ast = parser::parse(&tokens);
+        let ir = lower::lower(ast);
+        codegen::emit_with_target(&ir, target)
+    });
 
-    print!("{}", out);
+    match result {
+        Ok(out) => print!("{}", out),
+        Err(e) => {
+            let msg = if let Some(s) = e.downcast_ref::<&str>() {
+                format!("Error: {}", s)
+            } else if let Some(s) = e.downcast_ref::<String>() {
+                format!("Error: {}", s)
+            } else {
+                "Error: Unknown compiler error".to_string()
+            };
+            eprintln!("{}", msg);
+            process::exit(2);
+        }
+    }
 }
 
 fn parse_target(s: &str) -> TargetShell {
