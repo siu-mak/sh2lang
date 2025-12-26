@@ -1,0 +1,12 @@
+func main() {
+    if "0" {
+        print("T_STR_0")
+    } else {
+        print("F_STR_0")
+    }
+    if 0 {
+        print("T_NUM_0")
+    } else {
+        print("F_NUM_0")
+    }
+}

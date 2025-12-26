@@ -1,0 +1,12 @@
+func main() {
+    if !"x" {
+        print("T_NOT_X")
+    } else {
+        print("F_NOT_X")
+    }
+    if !"" {
+        print("T_NOT_EMPTY")
+    } else {
+        print("F_NOT_EMPTY")
+    }
+}

@@ -1,0 +1,7 @@
+func main() {
+    if "" {
+        print("T")
+    } else {
+        print("F")
+    }
+}

@@ -1,0 +1,12 @@
+func main() {
+    if " " {
+        print("T_SPACE")
+    } else {
+        print("F_SPACE")
+    }
+    if "\n" {
+        print("T_NEWLINE")
+    } else {
+        print("F_NEWLINE")
+    }
+}

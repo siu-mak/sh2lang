@@ -1,0 +1,15 @@
+func main() {
+    let empty = capture("printf", "%s", "")
+    if empty {
+        print("T_EMPTY")
+    } else {
+        print("F_EMPTY")
+    }
+
+    let full = capture("printf", "%s", "hi")
+    if full {
+        print("T_FULL")
+    } else {
+        print("F_FULL")
+    }
+}

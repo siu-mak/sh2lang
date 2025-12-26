@@ -1,53 +1,60 @@
 mod common;
-use sh2c::ast::{Stmt, Expr};
-use common::{parse_fixture, assert_codegen_matches_snapshot, assert_exec_matches_fixture};
+use common::*;
+use sh2c::codegen::TargetShell;
 
 #[test]
-fn parse_truthiness_empty_literal() {
-    let program = parse_fixture("truthiness_empty_literal");
-    let func = &program.functions[0];
-    if let Stmt::If { cond, .. } = &func.body[0] {
-        if let Expr::Literal(s) = cond {
-            assert_eq!(s, "");
-        } else {
-            panic!("Expected Literal condition");
-        }
-    } else {
-        panic!("Expected If statement");
-    }
+fn exec_truthy_empty_string() {
+    assert_codegen_matches_snapshot("truthy_empty_string");
+    assert_exec_matches_fixture_target("truthy_empty_string", TargetShell::Bash);
+    assert_exec_matches_fixture_target("truthy_empty_string", TargetShell::Posix);
 }
 
 #[test]
-fn codegen_truthiness_empty_literal() { assert_codegen_matches_snapshot("truthiness_empty_literal"); }
-#[test]
-fn exec_truthiness_empty_literal() { assert_exec_matches_fixture("truthiness_empty_literal"); }
+fn exec_truthy_nonempty_string() {
+    assert_exec_matches_fixture_target("truthy_nonempty_string", TargetShell::Bash);
+    assert_exec_matches_fixture_target("truthy_nonempty_string", TargetShell::Posix);
+}
 
 #[test]
-fn codegen_truthiness_string_zero_true() { assert_codegen_matches_snapshot("truthiness_string_zero_true"); }
-#[test]
-fn exec_truthiness_string_zero_true() { assert_exec_matches_fixture("truthiness_string_zero_true"); }
+fn exec_truthy_whitespace_newline() {
+    assert_exec_matches_fixture_target("truthy_whitespace_newline", TargetShell::Bash);
+    assert_exec_matches_fixture_target("truthy_whitespace_newline", TargetShell::Posix);
+}
 
 #[test]
-fn codegen_truthiness_unset_var() { assert_codegen_matches_snapshot("truthiness_unset_var"); }
-#[test]
-fn exec_truthiness_unset_var() { assert_exec_matches_fixture("truthiness_unset_var"); }
+fn exec_truthy_zero() {
+    assert_exec_matches_fixture_target("truthy_zero", TargetShell::Bash);
+    assert_exec_matches_fixture_target("truthy_zero", TargetShell::Posix);
+}
 
 #[test]
-fn codegen_truthiness_empty_var() { assert_codegen_matches_snapshot("truthiness_empty_var"); }
-#[test]
-fn exec_truthiness_empty_var() { assert_exec_matches_fixture("truthiness_empty_var"); }
+fn exec_truthy_capture() {
+    assert_exec_matches_fixture_target("truthy_capture", TargetShell::Bash);
+    assert_exec_matches_fixture_target("truthy_capture", TargetShell::Posix);
+}
 
 #[test]
-fn codegen_truthiness_cmdsub_empty() { assert_codegen_matches_snapshot("truthiness_cmdsub_empty"); }
-#[test]
-fn exec_truthiness_cmdsub_empty() { assert_exec_matches_fixture("truthiness_cmdsub_empty"); }
+fn exec_truthy_not_scalar() {
+    assert_exec_matches_fixture_target("truthy_not_scalar", TargetShell::Bash);
+    assert_exec_matches_fixture_target("truthy_not_scalar", TargetShell::Posix);
+}
 
 #[test]
-fn codegen_truthiness_cmdsub_nonempty() { assert_codegen_matches_snapshot("truthiness_cmdsub_nonempty"); }
-#[test]
-fn exec_truthiness_cmdsub_nonempty() { assert_exec_matches_fixture("truthiness_cmdsub_nonempty"); }
+fn codegen_panic_truthy_args_disallowed_bash() {
+    assert_codegen_panics_target("truthy_args_disallowed", TargetShell::Bash, "args/list is not a valid condition");
+}
 
 #[test]
-fn codegen_truthiness_while_scalar() { assert_codegen_matches_snapshot("truthiness_while_scalar"); }
+fn codegen_panic_truthy_args_disallowed_posix() {
+    assert_codegen_panics_target("truthy_args_disallowed", TargetShell::Posix, "args/list is not a valid condition");
+}
+
 #[test]
-fn exec_truthiness_while_scalar() { assert_exec_matches_fixture("truthiness_while_scalar"); }
+fn codegen_panic_truthy_list_disallowed_bash() {
+    assert_codegen_panics_target("truthy_list_disallowed", TargetShell::Bash, "args/list is not a valid condition");
+}
+
+#[test]
+fn codegen_panic_truthy_list_disallowed_posix() {
+    assert_codegen_panics_target("truthy_list_disallowed", TargetShell::Posix, "args/list is not a valid condition");
+}
