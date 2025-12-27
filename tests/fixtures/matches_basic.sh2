@@ -1,0 +1,7 @@
+func main() {
+    let s = "hello"
+    if matches(s, "h.*o") { print("yes") } else { print("no") }
+    if matches(s, "^x") { print("bad") } else { print("ok") }
+    print(matches(s, "h.*o"))
+    print(matches(s, "^x"))
+}

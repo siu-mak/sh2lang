@@ -47,6 +47,7 @@ pub enum Val {
     Argc,
     Input(Box<Val>),
     Confirm(Box<Val>),
+    Matches(Box<Val>, Box<Val>),
     Call { name: String, args: Vec<Val> },
 }
 

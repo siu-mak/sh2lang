@@ -443,8 +443,18 @@ fn lower_expr(e: ast::Expr) -> ir::Val {
         ast::Expr::Input(e) => ir::Val::Input(Box::new(lower_expr(*e))),
         ast::Expr::Confirm(e) => ir::Val::Confirm(Box::new(lower_expr(*e))),
         ast::Expr::Call { name, args } => {
-            let lowered_args = args.into_iter().map(lower_expr).collect();
-            ir::Val::Call { name, args: lowered_args }
+            if name == "matches" {
+                if args.len() != 2 {
+                    panic!("matches() requires exactly 2 arguments (text, regex)");
+                }
+                let mut iter = args.into_iter();
+                let text = Box::new(lower_expr(iter.next().unwrap()));
+                let regex = Box::new(lower_expr(iter.next().unwrap()));
+                ir::Val::Matches(text, regex)
+            } else {
+                let lowered_args = args.into_iter().map(lower_expr).collect();
+                ir::Val::Call { name, args: lowered_args }
+            }
         }
     }
 }

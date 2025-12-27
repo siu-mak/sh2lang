@@ -15,7 +15,7 @@ pub fn emit_with_target(funcs: &[Function], target: TargetShell) -> String {
     
     // Existing codegen didn't emit shebang or options, but tests might expect bare functions.
     // Preserving identical output for Bash target.
-    out.push_str(&emit_prelude());
+    out.push_str(&emit_prelude(target));
     
     for (i, f) in funcs.iter().enumerate() {
         if i > 0 {
@@ -180,6 +180,9 @@ fn emit_val(v: &Val, target: TargetShell) -> String {
             let arg_strs: Vec<String> = args.iter().map(|a| emit_word(a, target)).collect();
             format!("\"$( __sh2_{} {} )\"", func_name, arg_strs.join(" "))
         },
+        Val::Matches(..) => {
+             format!("\"$( if {}; then printf \"%s\" \"true\"; else printf \"%s\" \"false\"; fi )\"", emit_cond(v, target))
+        },
         Val::Compare { .. } | Val::And(..) | Val::Or(..) | Val::Not(..) | Val::Exists(..) | Val::IsDir(..) | Val::IsFile(..) | Val::IsSymlink(..) | Val::IsExec(..) | Val::IsReadable(..) | Val::IsWritable(..) | Val::IsNonEmpty(..) | Val::List(..) | Val::Confirm(..) => panic!("Cannot emit boolean/list value as string"),
     }
 }
@@ -283,6 +286,9 @@ fn emit_cond(v: &Val, target: TargetShell) -> String {
         Val::Bool(true) => "true".to_string(),
         Val::Bool(false) => "false".to_string(),
         Val::List(_) | Val::Args => panic!("args/list is not a valid condition; use count(...) > 0"),
+        Val::Matches(text, regex) => {
+            format!("__sh2_matches {} {}", emit_val(text, target), emit_val(regex, target))
+        }
         // "Truthiness" fallback for scalar values: check if non-empty string.
         v => format!("[ -n {} ]", emit_val(v, target)),
     }
@@ -945,7 +951,7 @@ fn emit_cmd(cmd: &Cmd, out: &mut String, indent: usize, target: TargetShell) {
 }
 
 fn is_boolean_expr(v: &Val) -> bool {
-    matches!(v, Val::Compare { .. } | Val::And(..) | Val::Or(..) | Val::Not(..) | Val::Exists(..) | Val::IsDir(..) | Val::IsFile(..) | Val::IsSymlink(..) | Val::IsExec(..) | Val::IsReadable(..) | Val::IsWritable(..) | Val::IsNonEmpty(..) | Val::Bool(..))
+    matches!(v, Val::Compare { .. } | Val::And(..) | Val::Or(..) | Val::Not(..) | Val::Exists(..) | Val::IsDir(..) | Val::IsFile(..) | Val::IsSymlink(..) | Val::IsExec(..) | Val::IsReadable(..) | Val::IsWritable(..) | Val::IsNonEmpty(..) | Val::Bool(..) | Val::Matches(..))
 }
 
 fn emit_case_glob_pattern(glob: &str) -> String {
@@ -1069,7 +1075,7 @@ fn emit_posix_pipeline(
     out.push_str(&format!("{}}}\n", pad));
 }
 
-fn emit_prelude() -> String {
+fn emit_prelude(target: TargetShell) -> String {
     let mut s = String::new();
     s.push_str(r#"
 __sh2_coalesce() { if [ -n "$1" ]; then printf '%s' "$1"; else printf '%s' "$2"; fi; }
@@ -1079,6 +1085,10 @@ __sh2_after() { awk -v s="$1" -v sep="$2" 'BEGIN { n=index(s, sep); if(n==0) pri
 __sh2_replace() { awk -v s="$1" -v old="$2" -v new="$3" 'BEGIN { if(old=="") { printf "%s", s; exit } len=length(old); while(i=index(s, old)) { printf "%s%s", substr(s, 1, i-1), new; s=substr(s, i+len) } printf "%s", s }'; }
 __sh2_split() { awk -v s="$1" -v sep="$2" 'BEGIN { if(sep=="") { printf "%s", s; exit } len=length(sep); while(i=index(s, sep)) { printf "%s\n", substr(s, 1, i-1); s=substr(s, i+len) } printf "%s", s }'; }
 "#);
+    match target {
+        TargetShell::Bash => s.push_str("__sh2_matches() { [[ \"$1\" =~ $2 ]]; }\n"),
+        TargetShell::Posix => s.push_str("__sh2_matches() { printf '%s\\n' \"$1\" | grep -Eq -- \"$2\"; }\n"),
+    }
     s
 }
 
