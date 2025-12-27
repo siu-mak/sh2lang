@@ -1,0 +1,4 @@
+
+func main() {
+    for(k, v) in m { print(k) }
+}

@@ -1070,20 +1070,25 @@ fn parse_primary(tokens: &[Token], i: &mut usize) -> Expr {
                 }
             }
             Some(Token::LBracket) => {
-                *i += 1;
-                let index = parse_expr(tokens, i);
-                expect(tokens, i, Token::RBracket);
-
-                // Check for v1 map index: ident["literal"]
+                // Strict v1 map detection: check if next token is exactly String("...") followed by CloseBracket
                 let mut is_map = false;
                 if let Expr::Var(ref name) = expr {
-                    if let Expr::Literal(ref key) = index {
-                        expr = Expr::MapIndex { map: name.clone(), key: key.clone() };
-                        is_map = true;
-                    }
+                     if let Some(Token::String(key)) = tokens.get(*i + 1) {
+                         if matches!(tokens.get(*i+2), Some(Token::RBracket)) {
+                             // Match! ident [ "string" ]
+                             *i += 1; // [
+                             *i += 1; // string
+                             expect(tokens, i, Token::RBracket);
+                             expr = Expr::MapIndex { map: name.clone(), key: key.clone() };
+                             is_map = true;
+                         }
+                     }
                 }
-                
+
                 if !is_map {
+                    *i += 1;
+                    let index = parse_expr(tokens, i);
+                    expect(tokens, i, Token::RBracket);
                     expr = Expr::Index { list: Box::new(expr), index: Box::new(index) };
                 }
             }

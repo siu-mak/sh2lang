@@ -413,8 +413,11 @@ fn emit_cmd(cmd: &Cmd, out: &mut String, indent: usize, target: TargetShell) {
     match cmd {
         Cmd::Assign(name, val) => {
             if target == TargetShell::Posix {
-                if matches!(val, Val::List(_) | Val::Args | Val::MapLiteral(_)) {
-                    panic!("Array/Map assignment is not supported in POSIX sh target");
+                if matches!(val, Val::MapLiteral(_)) {
+                    panic!("map/dict is only supported in Bash target");
+                }
+                if matches!(val, Val::List(_) | Val::Args) {
+                    panic!("Array assignment is not supported in POSIX sh target");
                 }
             } else if let Val::MapLiteral(entries) = val {
                 // Bash Map Assignment
@@ -1248,6 +1251,6 @@ __sh2_json_kv() { printf '%s' "$1" | awk -F '\t' 'function esc(s) { gsub(/\\/, "
 fn is_prelude_helper(name: &str) -> bool {
     matches!(
         name,
-        "trim" | "before" | "after" | "replace" | "split"
+        "trim" | "before" | "after" | "replace" | "split" | "coalesce"
     )
 }

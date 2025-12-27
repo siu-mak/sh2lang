@@ -28,18 +28,25 @@ fn exec_map_duplicate_keys() {
 
 #[test]
 fn compile_map_posix_is_error() {
-    assert_codegen_panics_target("map_posix_is_error", TargetShell::Posix, "Array/Map assignment is not supported in POSIX sh target");
+    assert_codegen_panics_target("map_posix_is_error", TargetShell::Posix, "map/dict is only supported in Bash target");
 }
 
 #[test]
-fn compile_map_literal_posix_is_error() {
-    // Also test map indexing
-    let src = "
-let m = { \"a\": \"1\" }
-print(m[\"a\"])
-";
-    // We expect failure at assignment first, but if we skip assignment check, indexing fails.
-    // Let's rely on map_posix_is_error.sh2 which covers assignment.
-    // Let's creating a test strictly for indexing/ForMap to ensure they panic too if map existed.
-    // But since we can't create map in POSIX, we check if they panic on syntax usage.
+fn compile_map_posix_index_only_is_error() {
+    assert_codegen_panics_target("map_posix_index_only_is_error", TargetShell::Posix, "map/dict is only supported in Bash target");
+}
+
+#[test]
+fn compile_map_posix_for_only_is_error() {
+    assert_codegen_panics_target("map_posix_for_only_is_error", TargetShell::Posix, "map/dict is only supported in Bash target");
+}
+
+#[test]
+fn compile_list_index_numeric() {
+    assert_codegen_matches_snapshot("list_index_numeric");
+}
+
+#[test]
+fn exec_list_index_numeric() {
+    assert_exec_matches_fixture("list_index_numeric");
 }
