@@ -5,10 +5,34 @@ __sh2_before() { awk -v s="$1" -v sep="$2" 'BEGIN { n=index(s, sep); if(n==0) pr
 __sh2_after() { awk -v s="$1" -v sep="$2" 'BEGIN { n=index(s, sep); if(n==0) printf ""; else printf "%s", substr(s, n+length(sep)) }'; }
 __sh2_replace() { awk -v s="$1" -v old="$2" -v new="$3" 'BEGIN { if(old=="") { printf "%s", s; exit } len=length(old); while(i=index(s, old)) { printf "%s%s", substr(s, 1, i-1), new; s=substr(s, i+len) } printf "%s", s }'; }
 __sh2_split() { awk -v s="$1" -v sep="$2" 'BEGIN { if(sep=="") { printf "%s", s; exit } len=length(sep); while(i=index(s, sep)) { printf "%s\n", substr(s, 1, i-1); s=substr(s, i+len) } printf "%s", s }'; }
+__sh2_matches() { [[ "$1" =~ $2 ]]; }
+__sh2_parse_args() {
+  local out="" key val
+  while [ "$#" -gt 0 ]; do
+    case "$1" in
+      --) shift; while [ "$#" -gt 0 ]; do out="${out}P	${1}
+"; shift; done; break ;;
+      --*=*) key="${1%%=*}"; val="${1#*=}"; out="${out}F	${key}	${val}
+" ;;
+      --*) key="$1"; if [ "$#" -gt 1 ] && [ "${2}" != "--" ] && [[ ! "$2" =~ ^-- ]]; then val="$2"; shift; else val="true"; fi; out="${out}F	${key}	${val}
+" ;;
+      *) out="${out}P	${1}
+" ;;
+    esac
+    shift
+  done
+  printf '%s' "$out"
+}
+
+__sh2_args_flags() { printf '%s' "$1" | awk '/^F\t/ { sub(/^F\t/, ""); print }'; }
+__sh2_args_positionals() { printf '%s' "$1" | awk '/^P\t/ { sub(/^P\t/, ""); print }'; }
+__sh2_args_flag_get() { printf '%s' "$1" | awk -v k="$2" -F '\t' '{ if (sub(/^F\t/, "")) { if ($1==k) v=$2 } else if ($1==k) v=$2 } END { printf "%s", v }'; }
+__sh2_list_get() { printf '%s' "$1" | awk -v i="$2" 'NR==i+1 { printf "%s", $0; exit }'; }
 main() {
   out="$( 'printf' '%s' "$@" )"
   printf '%s\n' "$out"
 }
 
+__sh2_parsed_args="$(__sh2_parse_args "$@")"
 __sh2_status=0
 main "$@"

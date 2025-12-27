@@ -1103,43 +1103,43 @@ __sh2_split() { awk -v s="$1" -v sep="$2" 'BEGIN { if(sep=="") { printf "%s", s;
         TargetShell::Bash => {
             s.push_str("__sh2_matches() { [[ \"$1\" =~ $2 ]]; }\n");
             s.push_str("__sh2_parse_args() {\n");
-            s.push_str("  local flags=\"\" pos=\"\" key val\n");
+            s.push_str("  local out=\"\" key val\n");
             s.push_str("  while [ \"$#\" -gt 0 ]; do\n");
             s.push_str("    case \"$1\" in\n");
-            s.push_str("      --) shift; while [ \"$#\" -gt 0 ]; do pos=\"${pos}${1}\n\"; shift; done; break ;;\n");
-            s.push_str("      --*=*) key=\"${1%%=*}\"; val=\"${1#*=}\"; flags=\"${flags}${key}\t${val}\n\" ;;\n");
-            s.push_str("      --*) key=\"$1\"; if [ \"$#\" -gt 1 ] && [ \"${2}\" != \"--\" ] && [[ ! \"$2\" =~ ^-- ]]; then val=\"$2\"; shift; else val=\"true\"; fi; flags=\"${flags}${key}\t${val}\n\" ;;\n");
-            s.push_str("      *) pos=\"${pos}${1}\n\" ;;\n");
+            s.push_str("      --) shift; while [ \"$#\" -gt 0 ]; do out=\"${out}P\t${1}\n\"; shift; done; break ;;\n");
+            s.push_str("      --*=*) key=\"${1%%=*}\"; val=\"${1#*=}\"; out=\"${out}F\t${key}\t${val}\n\" ;;\n");
+            s.push_str("      --*) key=\"$1\"; if [ \"$#\" -gt 1 ] && [ \"${2}\" != \"--\" ] && [[ ! \"$2\" =~ ^-- ]]; then val=\"$2\"; shift; else val=\"true\"; fi; out=\"${out}F\t${key}\t${val}\n\" ;;\n");
+            s.push_str("      *) out=\"${out}P\t${1}\n\" ;;\n");
             s.push_str("    esac\n");
             s.push_str("    shift\n");
             s.push_str("  done\n");
-            s.push_str("  printf '%s\\n__SH2_SPLIT__\\n%s' \"$flags\" \"$pos\"\n");
+            s.push_str("  printf '%s' \"$out\"\n");
             s.push_str("}\n");
         }
         TargetShell::Posix => {
             s.push_str("__sh2_matches() { printf '%s\\n' \"$1\" | grep -Eq -- \"$2\"; }\n");
             s.push_str("__sh2_parse_args() {\n");
-            s.push_str("  __flags=\"\" __pos=\"\" \n");
+            s.push_str("  __out=\"\" \n");
             s.push_str("  while [ \"$#\" -gt 0 ]; do\n");
             s.push_str("    case \"$1\" in\n");
-            s.push_str("      --) shift; while [ \"$#\" -gt 0 ]; do __pos=\"${__pos}${1}\n\"; shift; done; break ;;\n");
-            s.push_str("      --*=*) __key=\"${1%%=*}\"; __val=\"${1#*=}\"; __flags=\"${__flags}${__key}\t${__val}\n\" ;;\n");
+            s.push_str("      --) shift; while [ \"$#\" -gt 0 ]; do __out=\"${__out}P\t${1}\n\"; shift; done; break ;;\n");
+            s.push_str("      --*=*) __key=\"${1%%=*}\"; __val=\"${1#*=}\"; __out=\"${__out}F\t${__key}\t${__val}\n\" ;;\n");
             s.push_str("      --*) __key=\"$1\"; __f=0; case \"$2\" in --*) __f=1;; esac\n");
             s.push_str("           if [ \"$#\" -gt 1 ] && [ \"${2}\" != \"--\" ] && [ \"$__f\" = 0 ]; then __val=\"$2\"; shift; else __val=\"true\"; fi\n");
-            s.push_str("           __flags=\"${__flags}${__key}\t${__val}\n\" ;;\n");
-            s.push_str("      *) __pos=\"${__pos}${1}\n\" ;;\n");
+            s.push_str("           __out=\"${__out}F\t${__key}\t${__val}\n\" ;;\n");
+            s.push_str("      *) __out=\"${__out}P\t${1}\n\" ;;\n");
             s.push_str("    esac\n");
             s.push_str("    shift\n");
             s.push_str("  done\n");
-            s.push_str("  printf '%s\\n__SH2_SPLIT__\\n%s' \"$__flags\" \"$__pos\"\n");
+            s.push_str("  printf '%s' \"$__out\"\n");
             s.push_str("}\n");
         }
     }
     s.push_str(r#"
-__sh2_args_flags() { printf '%s' "$1" | awk '/^__SH2_SPLIT__$/ { exit } { print }'; }
-__sh2_args_positionals() { printf '%s' "$1" | awk '/^__SH2_SPLIT__$/ { body=1; next } body { print }'; }
-__sh2_args_flag_get() { printf '%s' "$1" | awk -v k="$2" -F '\t' '/^__SH2_SPLIT__$/ { exit } $1 == k { v = $2 } END { printf "%s", v }'; }
-__sh2_list_get() { printf '%s' "$1" | awk -v i="$2" '{ a[NR]=$0 } /^__SH2_SPLIT__$/ { split_line=NR } END { start=1; if (split_line) start=split_line+1; target=start+i; if (target <= NR) printf "%s", a[target] }'; }
+__sh2_args_flags() { printf '%s' "$1" | awk '/^F\t/ { sub(/^F\t/, ""); print }'; }
+__sh2_args_positionals() { printf '%s' "$1" | awk '/^P\t/ { sub(/^P\t/, ""); print }'; }
+__sh2_args_flag_get() { printf '%s' "$1" | awk -v k="$2" -F '\t' '{ if (sub(/^F\t/, "")) { if ($1==k) v=$2 } else if ($1==k) v=$2 } END { printf "%s", v }'; }
+__sh2_list_get() { printf '%s' "$1" | awk -v i="$2" 'NR==i+1 { printf "%s", $0; exit }'; }
 "#);
     s
 }

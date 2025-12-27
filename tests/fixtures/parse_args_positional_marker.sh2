@@ -1,0 +1,6 @@
+func main() {
+  let a = parse_args()
+  print("p0=" & a.positionals[0])
+  print("p1=" & a.positionals[1])
+  print("p2=" & a.positionals[2])
+}

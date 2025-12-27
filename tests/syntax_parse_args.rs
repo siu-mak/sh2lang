@@ -39,3 +39,9 @@ fn exec_parse_args_in_helper() {
     assert_exec_matches_fixture("parse_args_in_helper");
     assert_exec_matches_fixture_target("parse_args_in_helper", TargetShell::Posix);
 }
+
+#[test]
+fn exec_parse_args_positional_marker() {
+    assert_exec_matches_fixture("parse_args_positional_marker");
+    assert_exec_matches_fixture_target("parse_args_positional_marker", TargetShell::Posix);
+}
