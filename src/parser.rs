@@ -369,39 +369,75 @@ fn parse_stmt_atom(tokens: &[Token], i: &mut usize) -> Stmt {
 
         Token::For => {
             *i += 1;
-            let var = match &tokens[*i] {
-                Token::Ident(s) => s.clone(),
-                _ => panic!("Expected identifier for loop variable"),
-            };
-            *i += 1;
             
-            expect(tokens, i, Token::In);
+            // Check for map iteration: for (k, v) in m
+             if matches!(tokens.get(*i), Some(Token::LParen)) {
+                 *i += 1;
+                 let key_var = match &tokens[*i] {
+                     Token::Ident(s) => s.clone(),
+                     _ => panic!("Expected identifier for key variable"),
+                 };
+                 *i += 1;
+                 expect(tokens, i, Token::Comma);
+                 let val_var = match &tokens[*i] {
+                     Token::Ident(s) => s.clone(),
+                     _ => panic!("Expected identifier for value variable"),
+                 };
+                 *i += 1;
+                 expect(tokens, i, Token::RParen);
+                 expect(tokens, i, Token::In);
+                 
+                 let map = match &tokens[*i] {
+                     Token::Ident(s) => s.clone(),
+                     _ => panic!("Expected map identifier for iteration"),
+                 };
+                 *i += 1;
+                 
+                 expect(tokens, i, Token::LBrace);
+                 let mut body = Vec::new();
+                 while !matches!(tokens[*i], Token::RBrace) {
+                     body.push(parse_stmt(tokens, i));
+                 }
+                 expect(tokens, i, Token::RBrace);
+                 
+                 Stmt::ForMap { key_var, val_var, map, body }
 
-            let items = if matches!(tokens.get(*i), Some(Token::LParen)) {
-                // Legacy: (e1, e2, ...)
+             } else {
+                 // Standard list iteration
+                let var = match &tokens[*i] {
+                    Token::Ident(s) => s.clone(),
+                    _ => panic!("Expected identifier for loop variable"),
+                };
                 *i += 1;
-                let mut items = Vec::new();
-                loop {
-                    if matches!(tokens.get(*i), Some(Token::RParen)) { break; }
-                    items.push(parse_expr(tokens, i));
-                    if matches!(tokens.get(*i), Some(Token::Comma)) { *i += 1; } else { break; }
+                
+                expect(tokens, i, Token::In);
+    
+                let items = if matches!(tokens.get(*i), Some(Token::LParen)) {
+                    // Legacy: (e1, e2, ...)
+                    *i += 1;
+                    let mut items = Vec::new();
+                    loop {
+                        if matches!(tokens.get(*i), Some(Token::RParen)) { break; }
+                        items.push(parse_expr(tokens, i));
+                        if matches!(tokens.get(*i), Some(Token::Comma)) { *i += 1; } else { break; }
+                    }
+                    expect(tokens, i, Token::RParen);
+                    items
+                } else {
+                    // New: single expression (e.g., list literal)
+                    vec![parse_expr(tokens, i)]
+                };
+    
+                expect(tokens, i, Token::LBrace);
+                
+                let mut body = Vec::new();
+                while !matches!(tokens[*i], Token::RBrace) {
+                    body.push(parse_stmt(tokens, i));
                 }
-                expect(tokens, i, Token::RParen);
-                items
-            } else {
-                // New: single expression (e.g., list literal)
-                vec![parse_expr(tokens, i)]
-            };
-
-            expect(tokens, i, Token::LBrace);
-            
-            let mut body = Vec::new();
-            while !matches!(tokens[*i], Token::RBrace) {
-                body.push(parse_stmt(tokens, i));
-            }
-            expect(tokens, i, Token::RBrace);
-            
-            Stmt::For { var, items, body }
+                expect(tokens, i, Token::RBrace);
+                
+                Stmt::For { var, items, body }
+             }
         }
 
         Token::Break => {
@@ -1037,7 +1073,19 @@ fn parse_primary(tokens: &[Token], i: &mut usize) -> Expr {
                 *i += 1;
                 let index = parse_expr(tokens, i);
                 expect(tokens, i, Token::RBracket);
-                expr = Expr::Index { list: Box::new(expr), index: Box::new(index) };
+
+                // Check for v1 map index: ident["literal"]
+                let mut is_map = false;
+                if let Expr::Var(ref name) = expr {
+                    if let Expr::Literal(ref key) = index {
+                        expr = Expr::MapIndex { map: name.clone(), key: key.clone() };
+                        is_map = true;
+                    }
+                }
+                
+                if !is_map {
+                    expr = Expr::Index { list: Box::new(expr), index: Box::new(index) };
+                }
             }
             _ => break,
         }
@@ -1060,6 +1108,28 @@ fn parse_atom(tokens: &[Token], i: &mut usize) -> Expr {
             let prompt = parse_expr(tokens, i);
             expect(tokens, i, Token::RParen);
             Expr::Confirm(Box::new(prompt))
+        }
+        Token::LBrace => {
+            *i += 1;
+            let mut entries = Vec::new();
+            while !matches!(tokens.get(*i), Some(Token::RBrace)) {
+                let key = match tokens.get(*i) {
+                    Some(Token::String(s)) => s.clone(),
+                    _ => panic!("Expected string literal key in map literal"),
+                };
+                *i += 1;
+                expect(tokens, i, Token::Colon);
+                let value = parse_expr(tokens, i);
+                entries.push((key, value));
+                
+                if matches!(tokens.get(*i), Some(Token::Comma)) {
+                    *i += 1;
+                } else {
+                    break;
+                }
+            }
+            expect(tokens, i, Token::RBrace);
+            Expr::MapLiteral(entries)
         }
         Token::LParen => {
             *i += 1;

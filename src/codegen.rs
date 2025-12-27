@@ -214,6 +214,20 @@ fn emit_val(v: &Val, target: TargetShell) -> String {
         Val::Matches(..) => {
              format!("\"$( if {}; then printf \"%s\" \"true\"; else printf \"%s\" \"false\"; fi )\"", emit_cond(v, target))
         },
+        Val::MapIndex { map, key } => {
+            if target == TargetShell::Posix {
+                panic!("map/dict is only supported in Bash target");
+            }
+            // Emit ${map["key"]} with safe quoting
+            // We use simple double quotes because we control the key handling or use single quotes if key allows
+            // Actually, best is: "${map['key_escaped']}"
+            let escaped_key = sh_single_quote(key); // e.g. 'foo'
+            // The expansion: "${map['foo']}"
+            // Note: sh_single_quote wraps in '...', so escaped_key includes them. 
+            // Bash associative array index handles quotes.
+            format!("\"${{{}[{}]}}\"", map, escaped_key)
+        },
+        Val::MapLiteral(_) => panic!("Map literal is only allowed in 'let' assignment"),
         Val::Compare { .. } | Val::And(..) | Val::Or(..) | Val::Not(..) | Val::Exists(..) | Val::IsDir(..) | Val::IsFile(..) | Val::IsSymlink(..) | Val::IsExec(..) | Val::IsReadable(..) | Val::IsWritable(..) | Val::IsNonEmpty(..) | Val::List(..) | Val::Confirm(..) => panic!("Cannot emit boolean/list value as string"),
     }
 }
@@ -398,9 +412,48 @@ fn emit_cmd(cmd: &Cmd, out: &mut String, indent: usize, target: TargetShell) {
 
     match cmd {
         Cmd::Assign(name, val) => {
-            if target == TargetShell::Posix && matches!(val, Val::List(_) | Val::Args) {
-                panic!("Array assignment is not supported in POSIX sh target");
+            if target == TargetShell::Posix {
+                if matches!(val, Val::List(_) | Val::Args | Val::MapLiteral(_)) {
+                    panic!("Array/Map assignment is not supported in POSIX sh target");
+                }
+            } else if let Val::MapLiteral(entries) = val {
+                // Bash Map Assignment
+                out.push_str(&pad);
+                
+                // 1. Emit associative array
+                // local -A map=( ['k']="v" ... )
+                out.push_str("local -A ");
+                out.push_str(name);
+                out.push_str("=(");
+                
+                // Track usage for keys array
+                let mut keys_seen = std::collections::HashSet::new();
+                let mut ordered_keys = Vec::new();
+
+                for (key, value) in entries {
+                    out.push(' ');
+                    out.push_str(&format!("[{}]=", sh_single_quote(key)));
+                    out.push_str(&emit_word(value, target));
+                    
+                    if !keys_seen.contains(key) {
+                        keys_seen.insert(key.clone());
+                        ordered_keys.push(key);
+                    }
+                }
+                out.push_str(" )\n");
+
+                // 2. Emit keys array for deterministic iteration
+                out.push_str(&pad);
+                out.push_str(&format!("local -a __sh2_keys_{}=(", name));
+                for key in ordered_keys {
+                     out.push(' ');
+                     out.push_str(&sh_single_quote(key));
+                }
+                out.push_str(" )\n");
+                return;
             }
+
+            // Normal assignment
             out.push_str(&pad);
             if let Val::List(elems) = val {
                 out.push_str(name);
@@ -625,6 +678,25 @@ fn emit_cmd(cmd: &Cmd, out: &mut String, indent: usize, target: TargetShell) {
                  emit_cmd(c, out, indent + 2, target);
              }
              out.push_str(&format!("{}done\n", pad));
+        }
+        Cmd::ForMap { key_var, val_var, map, body } => {
+            if target == TargetShell::Posix {
+                panic!("map/dict is only supported in Bash target");
+            }
+            // Iterate over keys array for deterministic order
+            // for __sh2_k in "${__sh2_keys_map[@]}"; do
+            //   local key="$__sh2_k"
+            //   local val="${map[$__sh2_k]}"
+            //   ...
+            out.push_str(&format!("{pad}for __sh2_k in \"${{__sh2_keys_{}[@]}}\"; do\n", map));
+            out.push_str(&format!("{pad}  local {}=\"$__sh2_k\"\n", key_var));
+            out.push_str(&format!("{pad}  local {}=\"${{{}[$__sh2_k]}}\"\n", val_var, map));
+            
+            for c in body {
+                emit_cmd(c, out, indent + 2, target);
+            }
+            
+            out.push_str(&format!("{pad}done\n"));
         }
         Cmd::Break => {
             out.push_str(&format!("{pad}break\n"));

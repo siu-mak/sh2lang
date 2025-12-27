@@ -54,6 +54,8 @@ pub enum Val {
     Call { name: String, args: Vec<Val> },
     LoadEnvfile(Box<Val>),
     JsonKv(Box<Val>),
+    MapLiteral(Vec<(String, Val)>),
+    MapIndex { map: String, key: String },
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -96,6 +98,12 @@ pub enum Cmd {
     For {
         var: String,
         items: Vec<Val>,
+        body: Vec<Cmd>,
+    },
+    ForMap {
+        key_var: String,
+        val_var: String,
+        map: String,
         body: Vec<Cmd>,
     },
     While {

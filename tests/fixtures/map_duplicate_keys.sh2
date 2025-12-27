@@ -1,0 +1,7 @@
+
+let m = { "a": "1", "a": "2", "b": "3" }
+for(k, v) in m {
+    print(k)
+    print(v)
+}
+print(m["a"])

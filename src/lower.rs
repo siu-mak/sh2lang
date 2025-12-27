@@ -347,6 +347,18 @@ fn lower_stmt(stmt: ast::Stmt, out: &mut Vec<ir::Cmd>) {
             }
             out.push(ir::Cmd::PipeBlocks(lower_segments));
         }
+        ast::Stmt::ForMap { key_var, val_var, map, body } => {
+            let mut lower_body = Vec::new();
+            for s in body {
+                lower_stmt(s, &mut lower_body);
+            }
+            out.push(ir::Cmd::ForMap {
+                key_var,
+                val_var,
+                map,
+                body: lower_body,
+            });
+        }
     }
 }
 
@@ -512,6 +524,13 @@ fn lower_expr(e: ast::Expr) -> ir::Val {
                 let lowered_args = args.into_iter().map(lower_expr).collect();
                 ir::Val::Call { name, args: lowered_args }
             }
+        }
+        ast::Expr::MapLiteral(entries) => {
+            let lowered_entries = entries.into_iter().map(|(k, v)| (k, lower_expr(v))).collect();
+            ir::Val::MapLiteral(lowered_entries)
+        }
+        ast::Expr::MapIndex { map, key } => {
+            ir::Val::MapIndex { map, key }
         }
     }
 }

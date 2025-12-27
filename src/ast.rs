@@ -81,6 +81,8 @@ pub enum Expr {
     Input(Box<Expr>),
     Confirm(Box<Expr>),
     Call { name: String, args: Vec<Expr> },
+    MapLiteral(Vec<(String, Expr)>),
+    MapIndex { map: String, key: String },
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -113,6 +115,12 @@ pub enum Stmt {
     For {
         var: String,
         items: Vec<Expr>,
+        body: Vec<Stmt>,
+    },
+    ForMap {
+        key_var: String,
+        val_var: String,
+        map: String,
         body: Vec<Stmt>,
     },
     Break,
