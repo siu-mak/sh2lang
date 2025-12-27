@@ -1,0 +1,4 @@
+func main() {
+  let m = load_envfile("does_not_exist.env")
+  print(m)
+}

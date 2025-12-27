@@ -212,11 +212,7 @@ fn lower_stmt(stmt: ast::Stmt, out: &mut Vec<ir::Cmd>) {
                  let env = lower_expr(iter.next().unwrap());
                  out.push(ir::Cmd::SaveEnvfile { path, env });
             } else if name == "load_envfile" {
-                 if args.len() != 1 {
-                     panic!("load_envfile() requires exactly 1 argument (path)");
-                 }
-                 let path = lower_expr(args.into_iter().next().unwrap());
-                 out.push(ir::Cmd::Call { name: "__sh2_load_envfile".to_string(), args: vec![path] });
+                 panic!("load_envfile() returns a value; use it in an expression (e.g., let m = load_envfile(\"env.meta\"))");
             } else {
                 let args = args.iter().map(|e| lower_expr(e.clone())).collect();
                 out.push(ir::Cmd::Call { name: name.clone(), args });

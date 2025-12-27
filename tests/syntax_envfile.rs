@@ -30,3 +30,18 @@ fn exec_envfile_roundtrip() {
 fn exec_envfile_roundtrip_posix() {
     assert_exec_matches_fixture_target("envfile_roundtrip", TargetShell::Posix);
 }
+
+#[test]
+fn compile_envfile_load_as_statement() {
+    assert_codegen_panics("envfile_load_as_statement", "load_envfile() returns a value; use it in an expression");
+}
+
+#[test]
+fn exec_envfile_missing_file() {
+    assert_exec_matches_fixture("envfile_missing_file");
+}
+
+#[test]
+fn exec_envfile_missing_file_posix() {
+    assert_exec_matches_fixture_target("envfile_missing_file", TargetShell::Posix);
+}
