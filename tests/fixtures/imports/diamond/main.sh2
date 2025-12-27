@@ -1,0 +1,7 @@
+
+import "B.sh2"
+import "C.sh2"
+
+func main() {
+    d_func()
+}

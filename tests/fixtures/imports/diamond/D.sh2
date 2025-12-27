@@ -1,0 +1,4 @@
+
+func d_func() {
+    print("D")
+}

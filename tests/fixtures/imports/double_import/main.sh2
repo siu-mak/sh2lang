@@ -1,0 +1,7 @@
+
+import "lib.sh2"
+import "lib.sh2"
+
+func main() {
+    print(hello())
+}

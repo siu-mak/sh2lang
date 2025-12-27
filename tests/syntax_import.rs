@@ -51,3 +51,23 @@ fn compile_import_missing() {
 fn compile_import_not_top_level() {
     assert_codegen_panics("imports/not_top_level/main", "import is only allowed at top-level");
 }
+
+#[test]
+fn compile_import_double_import() {
+    assert_codegen_matches_snapshot("imports/double_import/main");
+}
+
+#[test]
+fn exec_import_double_import() {
+    assert_exec_matches_fixture("imports/double_import/main");
+}
+
+#[test]
+fn compile_import_diamond() {
+    assert_codegen_matches_snapshot("imports/diamond/main");
+}
+
+#[test]
+fn exec_import_diamond() {
+    assert_exec_matches_fixture("imports/diamond/main");
+}

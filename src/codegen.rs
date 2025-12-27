@@ -192,7 +192,7 @@ fn emit_val(v: &Val, target: TargetShell) -> String {
         Val::Call { name, args } => {
             let (func_name, needs_prefix) = if name == "default" { 
                 ("coalesce", true)
-            } else if matches!(name.as_str(), "trim" | "before" | "after" | "replace" | "split") {
+            } else if is_prelude_helper(name) {
                 (name.as_str(), true)
             } else {
                 (name.as_str(), false)
@@ -1172,3 +1172,10 @@ __sh2_json_kv() { printf '%s' "$1" | awk -F '\t' 'function esc(s) { gsub(/\\/, "
     s
 }
 
+
+fn is_prelude_helper(name: &str) -> bool {
+    matches!(
+        name,
+        "trim" | "before" | "after" | "replace" | "split" | "json_kv" | "load_envfile" | "save_envfile"
+    )
+}

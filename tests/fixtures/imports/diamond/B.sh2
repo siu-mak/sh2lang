@@ -1,0 +1,5 @@
+
+import "D.sh2"
+func b() {
+    print("B")
+}

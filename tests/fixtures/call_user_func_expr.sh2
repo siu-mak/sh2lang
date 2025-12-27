@@ -1,0 +1,8 @@
+
+func hello() {
+    print("hi")
+}
+
+func main() {
+    print(hello())
+}
