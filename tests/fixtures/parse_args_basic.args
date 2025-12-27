@@ -1,0 +1,6 @@
+--registry
+ghcr.io
+foo
+--dry-run
+--tag=v1
+bar

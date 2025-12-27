@@ -1,0 +1,6 @@
+func main() {
+  let parsed = parse_args()
+  print("k=" & parsed.flags["--k"])
+  print("missing=" & parsed.flags["--missing"])
+  print("oob=" & parsed.positionals[9])
+}

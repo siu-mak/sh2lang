@@ -75,25 +75,38 @@ fn emit_val(v: &Val, target: TargetShell) -> String {
              format!("\"$( printf \"%s\" {} | awk '{{ print length($0) }}' )\"", emit_val(inner, target))
         }
         Val::Arg(n) => format!("\"${}\"", n),
+        Val::ParseArgs => "\"$( __sh2_parse_args \"$@\" )\"".to_string(),
+        Val::ArgsFlags(inner) => format!("\"$( __sh2_args_flags {} )\"", emit_val(inner, target)),
+        Val::ArgsPositionals(inner) => format!("\"$( __sh2_args_positionals {} )\"", emit_val(inner, target)),
         Val::Index { list, index } => {
-            if target == TargetShell::Posix {
-                panic!("List indexing is not supported in POSIX sh target");
-            }
             match &**list {
-                 Val::Var(name) => format!("\"${{{}[{}]}}\"", name, emit_index_expr(index, target)),
-                 Val::List(elems) => {
-                     let mut arr_str = String::new();
-                     for (i, elem) in elems.iter().enumerate() {
-                         if i > 0 { arr_str.push(' '); }
-                         arr_str.push_str(&emit_word(elem, target));
-                     }
-                     // Force evaluation of index
-                     format!("\"$( arr=({}); idx=$(( {} )); printf \"%s\" \"${{arr[idx]}}\" )\"", arr_str, emit_index_expr(index, target))
-                 }
-                 Val::Args => {
-                     format!("\"$( arr=(\"$@\"); idx=$(( {} )); printf \"%s\" \"${{arr[idx]}}\" )\"", emit_index_expr(index, target))
-                 }
-                 _ => panic!("Index implemented only for variables and list literals"),
+                Val::ArgsFlags(inner) => {
+                    format!("\"$( __sh2_args_flag_get {} {} )\"", emit_val(inner, target), emit_val(index, target))
+                }
+                Val::ArgsPositionals(inner) => {
+                    format!("\"$( __sh2_list_get {} $(( {} )) )\"", emit_val(inner, target), emit_index_expr(index, target))
+                }
+                _ => {
+                    if target == TargetShell::Posix {
+                        panic!("List indexing is not supported in POSIX sh target");
+                    }
+                    match &**list {
+                        Val::Var(name) => format!("\"${{{}[{}]}}\"", name, emit_index_expr(index, target)),
+                        Val::List(elems) => {
+                            let mut arr_str = String::new();
+                            for (i, elem) in elems.iter().enumerate() {
+                                if i > 0 { arr_str.push(' '); }
+                                arr_str.push_str(&emit_word(elem, target));
+                            }
+                            // Force evaluation of index
+                            format!("\"$( arr=({}); idx=$(( {} )); printf \"%s\" \"${{arr[idx]}}\" )\"", arr_str, emit_index_expr(index, target))
+                        }
+                        Val::Args => {
+                            format!("\"$( arr=(\"$@\"); idx=$(( {} )); printf \"%s\" \"${{arr[idx]}}\" )\"", emit_index_expr(index, target))
+                        }
+                        _ => panic!("Index implemented only for variables and list literals"),
+                    }
+                }
             }
         }
         Val::Join { list, sep } => {
@@ -1086,9 +1099,47 @@ __sh2_replace() { awk -v s="$1" -v old="$2" -v new="$3" 'BEGIN { if(old=="") { p
 __sh2_split() { awk -v s="$1" -v sep="$2" 'BEGIN { if(sep=="") { printf "%s", s; exit } len=length(sep); while(i=index(s, sep)) { printf "%s\n", substr(s, 1, i-1); s=substr(s, i+len) } printf "%s", s }'; }
 "#);
     match target {
-        TargetShell::Bash => s.push_str("__sh2_matches() { [[ \"$1\" =~ $2 ]]; }\n"),
-        TargetShell::Posix => s.push_str("__sh2_matches() { printf '%s\\n' \"$1\" | grep -Eq -- \"$2\"; }\n"),
+        TargetShell::Bash => {
+            s.push_str("__sh2_matches() { [[ \"$1\" =~ $2 ]]; }\n");
+            s.push_str("__sh2_parse_args() {\n");
+            s.push_str("  local flags=\"\" pos=\"\" key val\n");
+            s.push_str("  while [ \"$#\" -gt 0 ]; do\n");
+            s.push_str("    case \"$1\" in\n");
+            s.push_str("      --) shift; while [ \"$#\" -gt 0 ]; do pos=\"${pos}${1}\n\"; shift; done; break ;;\n");
+            s.push_str("      --*=*) key=\"${1%%=*}\"; val=\"${1#*=}\"; flags=\"${flags}${key}\t${val}\n\" ;;\n");
+            s.push_str("      --*) key=\"$1\"; if [ \"$#\" -gt 1 ] && [ \"${2}\" != \"--\" ] && [[ ! \"$2\" =~ ^-- ]]; then val=\"$2\"; shift; else val=\"true\"; fi; flags=\"${flags}${key}\t${val}\n\" ;;\n");
+            s.push_str("      *) pos=\"${pos}${1}\n\" ;;\n");
+            s.push_str("    esac\n");
+            s.push_str("    shift\n");
+            s.push_str("  done\n");
+            s.push_str("  printf '%s\\n__SH2_SPLIT__\\n%s' \"$flags\" \"$pos\"\n");
+            s.push_str("}\n");
+        }
+        TargetShell::Posix => {
+            s.push_str("__sh2_matches() { printf '%s\\n' \"$1\" | grep -Eq -- \"$2\"; }\n");
+            s.push_str("__sh2_parse_args() {\n");
+            s.push_str("  __flags=\"\" __pos=\"\" \n");
+            s.push_str("  while [ \"$#\" -gt 0 ]; do\n");
+            s.push_str("    case \"$1\" in\n");
+            s.push_str("      --) shift; while [ \"$#\" -gt 0 ]; do __pos=\"${__pos}${1}\n\"; shift; done; break ;;\n");
+            s.push_str("      --*=*) __key=\"${1%%=*}\"; __val=\"${1#*=}\"; __flags=\"${__flags}${__key}\t${__val}\n\" ;;\n");
+            s.push_str("      --*) __key=\"$1\"; __f=0; case \"$2\" in --*) __f=1;; esac\n");
+            s.push_str("           if [ \"$#\" -gt 1 ] && [ \"${2}\" != \"--\" ] && [ \"$__f\" = 0 ]; then __val=\"$2\"; shift; else __val=\"true\"; fi\n");
+            s.push_str("           __flags=\"${__flags}${__key}\t${__val}\n\" ;;\n");
+            s.push_str("      *) __pos=\"${__pos}${1}\n\" ;;\n");
+            s.push_str("    esac\n");
+            s.push_str("    shift\n");
+            s.push_str("  done\n");
+            s.push_str("  printf '%s\\n__SH2_SPLIT__\\n%s' \"$__flags\" \"$__pos\"\n");
+            s.push_str("}\n");
+        }
     }
+    s.push_str(r#"
+__sh2_args_flags() { printf '%s' "$1" | awk '/^__SH2_SPLIT__$/ { exit } { print }'; }
+__sh2_args_positionals() { printf '%s' "$1" | awk '/^__SH2_SPLIT__$/ { body=1; next } body { print }'; }
+__sh2_args_flag_get() { printf '%s' "$1" | awk -v k="$2" -F '\t' '/^__SH2_SPLIT__$/ { exit } $1 == k { v = $2 } END { printf "%s", v }'; }
+__sh2_list_get() { printf '%s' "$1" | awk -v i="$2" '/^__SH2_SPLIT__$/ { body=1; next } body { if (idx++ == i) { printf "%s", $0; exit } }'; }
+"#);
     s
 }
 

@@ -1001,6 +1001,31 @@ fn parse_unary(tokens: &[Token], i: &mut usize) -> Expr {
 }
 
 fn parse_primary(tokens: &[Token], i: &mut usize) -> Expr {
+    let mut expr = parse_atom(tokens, i);
+    loop {
+        match tokens.get(*i) {
+            Some(Token::Dot) => {
+                *i += 1;
+                if let Some(Token::Ident(name)) = tokens.get(*i) {
+                    *i += 1;
+                    expr = Expr::Field { base: Box::new(expr), name: name.clone() };
+                } else {
+                    panic!("Expected identifier after dot");
+                }
+            }
+            Some(Token::LBracket) => {
+                *i += 1;
+                let index = parse_expr(tokens, i);
+                expect(tokens, i, Token::RBracket);
+                expr = Expr::Index { list: Box::new(expr), index: Box::new(index) };
+            }
+            _ => break,
+        }
+    }
+    expr
+}
+
+fn parse_atom(tokens: &[Token], i: &mut usize) -> Expr {
     match &tokens[*i] {
         Token::Input => {
             *i += 1;

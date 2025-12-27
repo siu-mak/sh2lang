@@ -59,6 +59,7 @@ pub enum Expr {
     Len(Box<Expr>),
     Arg(u32),
     Index { list: Box<Expr>, index: Box<Expr> },
+    Field { base: Box<Expr>, name: String },
     Join { list: Box<Expr>, sep: Box<Expr> },
     Count(Box<Expr>),
     Bool(bool),

@@ -1,0 +1,6 @@
+func main() {
+  let parsed = parse_args()
+  print("x=" & parsed.flags["--x"])
+  print("p0=" & parsed.positionals[0])
+  print("p1=" & parsed.positionals[1])
+}

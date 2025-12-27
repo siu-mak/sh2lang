@@ -48,6 +48,9 @@ pub enum Val {
     Input(Box<Val>),
     Confirm(Box<Val>),
     Matches(Box<Val>, Box<Val>),
+    ParseArgs,
+    ArgsFlags(Box<Val>),
+    ArgsPositionals(Box<Val>),
     Call { name: String, args: Vec<Val> },
 }
 

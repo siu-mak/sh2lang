@@ -1,0 +1,8 @@
+func main() {
+  let parsed = parse_args()
+  print("reg=" & parsed.flags["--registry"])
+  print("tag=" & parsed.flags["--tag"])
+  print("dry=" & parsed.flags["--dry-run"])
+  print("p0=" & parsed.positionals[0])
+  print("p1=" & parsed.positionals[1])
+}

@@ -1,0 +1,5 @@
+reg=ghcr.io
+tag=v1
+dry=true
+p0=foo
+p1=bar

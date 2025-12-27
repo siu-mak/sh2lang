@@ -408,6 +408,14 @@ fn lower_expr(e: ast::Expr) -> ir::Val {
             list: Box::new(lower_expr(*list)),
             index: Box::new(lower_expr(*index)),
         },
+        ast::Expr::Field { base, name } => {
+            let b = lower_expr(*base);
+            match name.as_str() {
+                "flags" => ir::Val::ArgsFlags(Box::new(b)),
+                "positionals" => ir::Val::ArgsPositionals(Box::new(b)),
+                _ => panic!("Unknown field '{}'. Only 'flags' and 'positionals' are supported on args object.", name),
+            }
+        },
         ast::Expr::Join { list, sep } => ir::Val::Join {
             list: Box::new(lower_expr(*list)),
             sep: Box::new(lower_expr(*sep)),
@@ -451,6 +459,11 @@ fn lower_expr(e: ast::Expr) -> ir::Val {
                 let text = Box::new(lower_expr(iter.next().unwrap()));
                 let regex = Box::new(lower_expr(iter.next().unwrap()));
                 ir::Val::Matches(text, regex)
+            } else if name == "parse_args" {
+                if !args.is_empty() {
+                    panic!("parse_args() takes no arguments");
+                }
+                ir::Val::ParseArgs
             } else {
                 let lowered_args = args.into_iter().map(lower_expr).collect();
                 ir::Val::Call { name, args: lowered_args }
