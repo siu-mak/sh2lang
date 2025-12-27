@@ -13,23 +13,23 @@ main() {
   {
     printf '%s\n' 'err' >&2
   } 2>> "$f"
-  'cat' "$f"
+  'cat' "$f"; __sh2_status=$?; (exit $__sh2_status)
   {
     printf '%s\n' 'e2s' >&2
   } 2>&1
   infile="$( 'mktemp' )"
   echo hello > $infile
   {
-    'cat'
+    'cat'; __sh2_status=$?; (exit $__sh2_status)
   } < "$infile"
   f2="$( 'mktemp' )"
   {
     printf '%s\n' 'swap_ok'
   } 2> "$f2" 1>&2
-  'cat' "$f2"
-  'rm' '-f' "$f"
-  'rm' '-f' "$infile"
-  'rm' '-f' "$f2"
+  'cat' "$f2"; __sh2_status=$?; (exit $__sh2_status)
+  'rm' '-f' "$f"; __sh2_status=$?; (exit $__sh2_status)
+  'rm' '-f' "$infile"; __sh2_status=$?; (exit $__sh2_status)
+  'rm' '-f' "$f2"; __sh2_status=$?; (exit $__sh2_status)
 }
 
 __sh2_status=0

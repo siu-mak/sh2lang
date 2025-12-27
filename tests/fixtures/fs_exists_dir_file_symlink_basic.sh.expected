@@ -6,7 +6,7 @@ __sh2_after() { awk -v s="$1" -v sep="$2" 'BEGIN { n=index(s, sep); if(n==0) pri
 __sh2_replace() { awk -v s="$1" -v old="$2" -v new="$3" 'BEGIN { if(old=="") { printf "%s", s; exit } len=length(old); while(i=index(s, old)) { printf "%s%s", substr(s, 1, i-1), new; s=substr(s, i+len) } printf "%s", s }'; }
 __sh2_split() { awk -v s="$1" -v sep="$2" 'BEGIN { if(sep=="") { printf "%s", s; exit } len=length(sep); while(i=index(s, sep)) { printf "%s\n", substr(s, 1, i-1); s=substr(s, i+len) } printf "%s", s }'; }
 main() {
-  'sh' '-c' 'rm -rf tmp; mkdir -p tmp/dir; : > tmp/file; ln -s file tmp/link'
+  'sh' '-c' 'rm -rf tmp; mkdir -p tmp/dir; : > tmp/file; ln -s file tmp/link'; __sh2_status=$?; (exit $__sh2_status)
   if [ -e 'tmp/file' ] && [ -f 'tmp/file' ] && [ -d 'tmp/dir' ] && [ -L 'tmp/link' ]; then
     printf '%s\n' 'ok'
   else

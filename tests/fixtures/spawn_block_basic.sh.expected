@@ -8,7 +8,7 @@ __sh2_split() { awk -v s="$1" -v sep="$2" 'BEGIN { if(sep=="") { printf "%s", s;
 main() {
   ( 
     {
-      'sh' '-c' 'echo hi'
+      'sh' '-c' 'echo hi'; __sh2_status=$?; (exit $__sh2_status)
     }
   ) &
   wait; __sh2_status=$?

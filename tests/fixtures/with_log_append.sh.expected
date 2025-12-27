@@ -21,7 +21,7 @@ main() {
     exec 2> >(tee -a "$__sh2_log_path" >&2)
     printf '%s\n' 'B'
   )
-  'cat' 'out.log'
+  'cat' 'out.log'; __sh2_status=$?; (exit $__sh2_status)
 }
 
 __sh2_status=0

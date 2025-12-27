@@ -13,7 +13,7 @@ main() {
     printf '%s\n' 'pid_bad'
   fi
   wait "$!"; __sh2_status=$?; (exit $__sh2_status)
-  if [ "${?}" = "7" ]; then
+  if [ "$__sh2_status" = "7" ]; then
     printf '%s\n' 'status_ok'
   else
     printf '%s\n' 'status_bad'

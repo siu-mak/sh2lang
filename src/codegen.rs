@@ -133,7 +133,7 @@ fn emit_val(v: &Val, target: TargetShell) -> String {
         },
         Val::Bool(_) => panic!("Cannot emit boolean value as string/word; booleans are only valid in conditions"),
         Val::Number(n) => format!("\"{}\"", n),
-        Val::Status => "\"${?}\"".to_string(),
+        Val::Status => "\"$__sh2_status\"".to_string(),
         Val::Pid => "\"$!\"".to_string(),
         Val::Env(inner) => match &**inner {
             Val::Literal(s) => format!("\"${{{}}}\"", s),
@@ -312,7 +312,7 @@ fn emit_arith_expr(v: &Val, target: TargetShell) -> String {
         Val::Number(n) => n.to_string(),
         Val::Var(s) => s.clone(), // Bare variable for arithmetic context
         Val::Arg(n) => format!("${}", n), // $1 etc
-        Val::Status => "${?}".to_string(),
+        Val::Status => "$__sh2_status".to_string(),
         Val::Pid => "$!".to_string(),
         Val::Uid => match target {
             TargetShell::Bash => "$UID".to_string(),
@@ -396,7 +396,7 @@ fn emit_cmd(cmd: &Cmd, out: &mut String, indent: usize, target: TargetShell) {
             } else {
                 // Normal: capture status in __sh2_status, then restore $? so try/set-e works
                 out.push_str(&shell_cmd);
-                out.push('\n');
+                out.push_str("; __sh2_status=$?; (exit $__sh2_status)\n");
             }
         }
         Cmd::ExecReplace(args) => {
@@ -1044,7 +1044,7 @@ fn emit_posix_pipeline(
     // Compute effective status (rightmost non-zero wins, ignoring allow_fail stages)
     out.push_str(&format!("{}__sh2_status=0;\n", indent_pad));
     for i in 0..stages.len() {
-        if !allow_fails[i] {
+        if !allow_fails[i] || i == stages.len() - 1 {
             out.push_str(&format!("{}if [ \"$__sh2_s{}\" -ne 0 ]; then __sh2_status=\"$__sh2_s{}\"; fi;\n", indent_pad, i, i));
         }
     }

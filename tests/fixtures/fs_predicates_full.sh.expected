@@ -6,19 +6,19 @@ __sh2_after() { awk -v s="$1" -v sep="$2" 'BEGIN { n=index(s, sep); if(n==0) pri
 __sh2_replace() { awk -v s="$1" -v old="$2" -v new="$3" 'BEGIN { if(old=="") { printf "%s", s; exit } len=length(old); while(i=index(s, old)) { printf "%s%s", substr(s, 1, i-1), new; s=substr(s, i+len) } printf "%s", s }'; }
 __sh2_split() { awk -v s="$1" -v sep="$2" 'BEGIN { if(sep=="") { printf "%s", s; exit } len=length(sep); while(i=index(s, sep)) { printf "%s\n", substr(s, 1, i-1); s=substr(s, i+len) } printf "%s", s }'; }
 main() {
-  'mkdir' '-p' 'sandbox'
+  'mkdir' '-p' 'sandbox'; __sh2_status=$?; (exit $__sh2_status)
   (
     cd 'sandbox'
-    'touch' 'f_empty'
-    'touch' 'f_full'
-    'sh' '-c' 'echo x > f_full'
-    'ln' '-s' 'f_empty' 'link'
-    'touch' 'f_exec'
-    'chmod' '+x' 'f_exec'
-    'touch' 'f_ro'
-    'chmod' '444' 'f_ro'
-    'touch' 'f_noread'
-    'chmod' '000' 'f_noread'
+    'touch' 'f_empty'; __sh2_status=$?; (exit $__sh2_status)
+    'touch' 'f_full'; __sh2_status=$?; (exit $__sh2_status)
+    'sh' '-c' 'echo x > f_full'; __sh2_status=$?; (exit $__sh2_status)
+    'ln' '-s' 'f_empty' 'link'; __sh2_status=$?; (exit $__sh2_status)
+    'touch' 'f_exec'; __sh2_status=$?; (exit $__sh2_status)
+    'chmod' '+x' 'f_exec'; __sh2_status=$?; (exit $__sh2_status)
+    'touch' 'f_ro'; __sh2_status=$?; (exit $__sh2_status)
+    'chmod' '444' 'f_ro'; __sh2_status=$?; (exit $__sh2_status)
+    'touch' 'f_noread'; __sh2_status=$?; (exit $__sh2_status)
+    'chmod' '000' 'f_noread'; __sh2_status=$?; (exit $__sh2_status)
     if [ -L 'link' ]; then
       printf '%s\n' 'link is symlink'
     fi

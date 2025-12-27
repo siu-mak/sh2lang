@@ -9,7 +9,7 @@ main() {
   ( 'sh' '-c' 'exit 0' ) &
   p="$!"
   wait "$p"; __sh2_status=$?; (exit $__sh2_status)
-  if [ "${?}" = "0" ]; then
+  if [ "$__sh2_status" = "0" ]; then
     printf '%s\n' 'wait_ok'
   else
     printf '%s\n' 'wait_bad'
