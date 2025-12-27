@@ -5,23 +5,25 @@ __sh2_before() { awk -v s="$1" -v sep="$2" 'BEGIN { n=index(s, sep); if(n==0) pr
 __sh2_after() { awk -v s="$1" -v sep="$2" 'BEGIN { n=index(s, sep); if(n==0) printf ""; else printf "%s", substr(s, n+length(sep)) }'; }
 __sh2_replace() { awk -v s="$1" -v old="$2" -v new="$3" 'BEGIN { if(old=="") { printf "%s", s; exit } len=length(old); while(i=index(s, old)) { printf "%s%s", substr(s, 1, i-1), new; s=substr(s, i+len) } printf "%s", s }'; }
 __sh2_split() { awk -v s="$1" -v sep="$2" 'BEGIN { if(sep=="") { printf "%s", s; exit } len=length(sep); while(i=index(s, sep)) { printf "%s\n", substr(s, 1, i-1); s=substr(s, i+len) } printf "%s", s }'; }
-__sh2_matches() { [[ "$1" =~ $2 ]]; }
+__sh2_matches() { printf '%s\n' "$1" | grep -Eq -- "$2"; }
 __sh2_parse_args() {
-  local out="" key val
+  __out="" 
   while [ "$#" -gt 0 ]; do
     case "$1" in
-      --) shift; while [ "$#" -gt 0 ]; do out="${out}P	${1}
+      --) shift; while [ "$#" -gt 0 ]; do __out="${__out}P	${1}
 "; shift; done; break ;;
-      --*=*) key="${1%%=*}"; val="${1#*=}"; out="${out}F	${key}	${val}
+      --*=*) __key="${1%%=*}"; __val="${1#*=}"; __out="${__out}F	${__key}	${__val}
 " ;;
-      --*) key="$1"; if [ "$#" -gt 1 ] && [ "${2}" != "--" ] && [[ ! "$2" =~ ^-- ]]; then val="$2"; shift; else val="true"; fi; out="${out}F	${key}	${val}
+      --*) __key="$1"; __f=0; case "$2" in --*) __f=1;; esac
+           if [ "$#" -gt 1 ] && [ "${2}" != "--" ] && [ "$__f" = 0 ]; then __val="$2"; shift; else __val="true"; fi
+           __out="${__out}F	${__key}	${__val}
 " ;;
-      *) out="${out}P	${1}
+      *) __out="${__out}P	${1}
 " ;;
     esac
     shift
   done
-  printf '%s' "$out"
+  printf '%s' "$__out"
 }
 
 __sh2_args_flags() { printf '%s' "$1" | awk '/^F\t/ { sub(/^F\t/, ""); print }'; }
@@ -32,8 +34,8 @@ __sh2_load_envfile() { if [ -r "$1" ]; then awk '{ sub(/^[[:space:]]+/, ""); sub
 __sh2_save_envfile() { printf '%s' "$2" | awk -F '\t' 'NF>=1{ print $1 "=" $2 }' > "$1"; }
 __sh2_json_kv() { printf '%s' "$1" | awk -F '\t' 'function esc(s) { gsub(/\\/, "\\\\", s); gsub(/"/, "\\\"", s); gsub(/\t/, "\\t", s); gsub(/\r/, "\\r", s); gsub(/\n/, "\\n", s); return s; } { k=$1; v=$2; if (k == "") next; if (!(k in seen)) { ord[++n] = k; seen[k] = 1; } val[k] = v; } END { printf "{"; for (i=1; i<=n; i++) { k = ord[i]; v = val[k]; printf "%s\"%s\":\"%s\"", (i==1?"":","), esc(k), esc(v); } printf "}"; }'; }
 main() {
-  x='world'
-  'echo' 'hello' "$x"; __sh2_status=$?; (exit $__sh2_status)
+  m="$( __sh2_load_envfile 'missing.env' )"
+  printf '%s\n' "$( __sh2_json_kv "$m" )"
 }
 
 __sh2_parsed_args="$(__sh2_parse_args "$@")"

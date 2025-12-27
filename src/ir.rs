@@ -53,6 +53,7 @@ pub enum Val {
     ArgsPositionals(Box<Val>),
     Call { name: String, args: Vec<Val> },
     LoadEnvfile(Box<Val>),
+    JsonKv(Box<Val>),
 }
 
 #[derive(Debug, Clone, PartialEq)]

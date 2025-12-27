@@ -1,0 +1,4 @@
+func main() {
+  let m = load_envfile("env.meta")
+  print(json_kv(m))
+}

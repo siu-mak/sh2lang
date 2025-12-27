@@ -482,6 +482,12 @@ fn lower_expr(e: ast::Expr) -> ir::Val {
                 }
                 let path = lower_expr(args.into_iter().next().unwrap());
                 ir::Val::LoadEnvfile(Box::new(path))
+            } else if name == "json_kv" {
+                if args.len() != 1 {
+                    panic!("json_kv() requires exactly 1 argument (pairs_blob)");
+                }
+                let blob = lower_expr(args.into_iter().next().unwrap());
+                ir::Val::JsonKv(Box::new(blob))
             } else if name == "save_envfile" {
                  panic!("save_envfile() is a statement; use it as a standalone call");
             } else {
