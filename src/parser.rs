@@ -5,6 +5,7 @@ pub fn parse(tokens: &[Token]) -> Program {
     let mut i = 0;
     let mut imports = Vec::new();
     let mut functions = Vec::new();
+    let mut top_level = Vec::new();
 
     while i < tokens.len() {
         if matches!(tokens[i], Token::Import) {
@@ -15,9 +16,9 @@ pub fn parse(tokens: &[Token]) -> Program {
             };
             i += 1;
             imports.push(path);
-        } else {
+        } else if matches!(tokens[i], Token::Func) {
             // Function definition
-            expect(tokens, &mut i, Token::Func);
+            i += 1; // skip 'func'
 
             let name = match &tokens[i] {
                 Token::Ident(s) => s.clone(),
@@ -60,10 +61,14 @@ pub fn parse(tokens: &[Token]) -> Program {
             expect(tokens, &mut i, Token::RBrace);
 
             functions.push(Function { name, params, body });
+        } else {
+            // Top-level statement
+            let stmt = parse_stmt(tokens, &mut i);
+            top_level.push(stmt);
         }
     }
 
-    Program { imports, functions }
+    Program { imports, functions, top_level }
 }
 
 fn parse_stmt(tokens: &[Token], i: &mut usize) -> Stmt {

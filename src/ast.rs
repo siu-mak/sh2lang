@@ -2,6 +2,7 @@
 pub struct Program {
     pub imports: Vec<String>,
     pub functions: Vec<Function>,
+    pub top_level: Vec<Stmt>,
 }
 
 #[derive(Debug, PartialEq, Clone)]

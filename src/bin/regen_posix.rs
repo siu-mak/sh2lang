@@ -10,6 +10,8 @@ fn main() {
         "tests/fixtures/call_user_func_expr",
         "tests/fixtures/imports/double_import/main",
         "tests/fixtures/imports/diamond/main",
+        "tests/fixtures/toplevel_print",
+        "tests/fixtures/toplevel_let_and_run",
     ];
 
     for fixture_base in fixtures {

@@ -2,7 +2,25 @@ use crate::ast;
 use crate::ir;
 
 /// Lower a whole program (AST) into IR
-pub fn lower(p: ast::Program) -> Vec<ir::Function> {
+pub fn lower(mut p: ast::Program) -> Vec<ir::Function> {
+    let has_main = p.functions.iter().any(|f| f.name == "main");
+    let has_top_level = !p.top_level.is_empty();
+
+    if has_top_level {
+        if has_main {
+            panic!("Top-level statements are not allowed when `func main` is defined; move statements into main or remove main to use implicit main.");
+        }
+        // Synthesize main
+        let main_func = ast::Function {
+             name: "main".to_string(),
+             params: vec![],
+             body: p.top_level, // Move checks out
+        };
+        p.functions.push(main_func);
+    } else if !has_main {
+         panic!("No entrypoint: define `func main()` or add top-level statements.");
+    }
+
     p.functions
         .into_iter()
         .map(lower_function)

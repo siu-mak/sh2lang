@@ -1,0 +1,5 @@
+
+print("oops")
+func main() {
+    print("main")
+}

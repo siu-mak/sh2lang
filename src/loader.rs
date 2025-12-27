@@ -21,6 +21,8 @@ struct Loader {
     functions: HashMap<String, (Function, PathBuf)>,
     // To preserve deterministic order of functions: store names in order of definition/loading
     function_order: Vec<String>,
+    // Top level statements from the entry file
+    entry_top_level: Vec<crate::ast::Stmt>,
 }
 
 impl Loader {
@@ -31,6 +33,7 @@ impl Loader {
             loaded: HashSet::new(),
             functions: HashMap::new(),
             function_order: Vec::new(),
+            entry_top_level: Vec::new(),
         }
     }
 }
@@ -41,7 +44,7 @@ impl Loader {
 }
 
 // Re-write load_program_with_imports to separate the recursive updating from final construction
-fn load_program_with_imports_impl(loader: &mut Loader, entry_path: &Path) {
+fn load_program_with_imports_impl(loader: &mut Loader, entry_path: &Path, is_entry: bool) {
     let canonical_path = match fs::canonicalize(entry_path) {
         Ok(p) => p,
         Err(e) => panic!("Failed to resolve path {}: {}", entry_path.display(), e),
@@ -81,7 +84,7 @@ fn load_program_with_imports_impl(loader: &mut Loader, entry_path: &Path) {
         if import_path.extension().is_none() {
             import_path.set_extension("sh2");
         }
-        load_program_with_imports_impl(loader, &import_path);
+        load_program_with_imports_impl(loader, &import_path, false);
     }
 
     for func in program.functions {
@@ -93,10 +96,18 @@ fn load_program_with_imports_impl(loader: &mut Loader, entry_path: &Path) {
         if let Some((_, defined_at)) = loader.functions.get(&func.name) {
             panic!("Function '{}' is already defined in {}", func.name, defined_at.display());
         }
-        // Extract function to own it
+    // Extract function to own it
         let name = func.name.clone();
         loader.function_order.push(name.clone());
         loader.functions.insert(name, (func, canonical_path.clone()));
+    }
+
+    if is_entry {
+        loader.entry_top_level = program.top_level;
+    } else {
+        if !program.top_level.is_empty() {
+             panic!("Top-level statements are only allowed in the entry file (found in {})", canonical_path.display());
+        }
     }
     
     loader.visiting.remove(&canonical_path);
@@ -107,7 +118,7 @@ fn load_program_with_imports_impl(loader: &mut Loader, entry_path: &Path) {
 // Final wrapper
 pub fn load(entry_path: &Path) -> Program {
     let mut loader = Loader::new();
-    load_program_with_imports_impl(&mut loader, entry_path);
+    load_program_with_imports_impl(&mut loader, entry_path, true);
     
     // Construct final program in deterministic order
     let mut functions = Vec::new();
@@ -116,5 +127,5 @@ pub fn load(entry_path: &Path) -> Program {
         functions.push(func);
     }
     
-    Program { imports: vec![], functions }
+    Program { imports: vec![], functions, top_level: loader.entry_top_level }
 }
