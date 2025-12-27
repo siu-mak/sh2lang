@@ -71,3 +71,13 @@ fn compile_import_diamond() {
 fn exec_import_diamond() {
     assert_exec_matches_fixture("imports/diamond/main");
 }
+
+#[test]
+fn exec_import_double_import_posix() {
+    assert_exec_matches_fixture_target("imports/double_import/main", TargetShell::Posix);
+}
+
+#[test]
+fn exec_import_diamond_posix() {
+    assert_exec_matches_fixture_target("imports/diamond/main", TargetShell::Posix);
+}

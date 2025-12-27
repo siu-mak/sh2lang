@@ -1176,6 +1176,6 @@ __sh2_json_kv() { printf '%s' "$1" | awk -F '\t' 'function esc(s) { gsub(/\\/, "
 fn is_prelude_helper(name: &str) -> bool {
     matches!(
         name,
-        "trim" | "before" | "after" | "replace" | "split" | "json_kv" | "load_envfile" | "save_envfile"
+        "trim" | "before" | "after" | "replace" | "split"
     )
 }

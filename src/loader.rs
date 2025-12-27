@@ -85,6 +85,11 @@ fn load_program_with_imports_impl(loader: &mut Loader, entry_path: &Path) {
     }
 
     for func in program.functions {
+        // Reserved name check
+        if matches!(func.name.as_str(), "trim" | "before" | "after" | "replace" | "split") {
+             panic!("Function name '{}' is reserved (prelude helper); choose a different name.", func.name);
+        }
+
         if let Some((_, defined_at)) = loader.functions.get(&func.name) {
             panic!("Function '{}' is already defined in {}", func.name, defined_at.display());
         }
