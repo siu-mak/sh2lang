@@ -27,3 +27,15 @@ fn exec_parse_args_repeated_and_missing() {
     assert_exec_matches_fixture("parse_args_repeated_and_missing");
     assert_exec_matches_fixture_target("parse_args_repeated_and_missing", TargetShell::Posix);
 }
+
+#[test]
+fn exec_parse_args_fields_materialize() {
+    assert_exec_matches_fixture("parse_args_fields_materialize");
+    assert_exec_matches_fixture_target("parse_args_fields_materialize", TargetShell::Posix);
+}
+
+#[test]
+fn exec_parse_args_in_helper() {
+    assert_exec_matches_fixture("parse_args_in_helper");
+    assert_exec_matches_fixture_target("parse_args_in_helper", TargetShell::Posix);
+}

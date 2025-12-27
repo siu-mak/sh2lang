@@ -31,10 +31,11 @@ __sh2_args_positionals() { printf '%s' "$1" | awk '/^__SH2_SPLIT__$/ { body=1; n
 __sh2_args_flag_get() { printf '%s' "$1" | awk -v k="$2" -F '\t' '/^__SH2_SPLIT__$/ { exit } $1 == k { v = $2 } END { printf "%s", v }'; }
 __sh2_list_get() { printf '%s' "$1" | awk -v i="$2" '{ a[NR]=$0 } /^__SH2_SPLIT__$/ { split_line=NR } END { start=1; if (split_line) start=split_line+1; target=start+i; if (target <= NR) printf "%s", a[target] }'; }
 main() {
-  parsed="${__sh2_parsed_args}"
-  printf '%s\n' 'x='"$( __sh2_args_flag_get "$( __sh2_args_flags "$parsed" )" '--x' )"
-  printf '%s\n' 'p0='"$( __sh2_list_get "$( __sh2_args_positionals "$parsed" )" $(( 0 )) )"
-  printf '%s\n' 'p1='"$( __sh2_list_get "$( __sh2_args_positionals "$parsed" )" $(( 1 )) )"
+  a="${__sh2_parsed_args}"
+  f="$( __sh2_args_flags "$a" )"
+  p="$( __sh2_args_positionals "$a" )"
+  printf '%s\n' 'k='"$( __sh2_args_flag_get "$( __sh2_args_flags "$a" )" '--k' )"
+  printf '%s\n' 'p0='"$( __sh2_list_get "$( __sh2_args_positionals "$a" )" $(( 0 )) )"
 }
 
 __sh2_parsed_args="$(__sh2_parse_args "$@")"

@@ -1,0 +1,6 @@
+func show() {
+  let a = parse_args()
+  print("k=" & a.flags["--k"])
+  print("p0=" & a.positionals[0])
+}
+func main() { show() }

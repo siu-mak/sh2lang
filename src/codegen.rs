@@ -34,7 +34,8 @@ pub fn emit_with_target(funcs: &[Function], target: TargetShell) -> String {
         out.push_str("}\n");
     }
 
-    out.push_str("\n__sh2_status=0\nmain \"$@\"\n");
+    out.push_str("\n__sh2_parsed_args=\"$(__sh2_parse_args \"$@\")\"\n");
+    out.push_str("__sh2_status=0\nmain \"$@\"\n");
     out
 }
 
@@ -75,16 +76,16 @@ fn emit_val(v: &Val, target: TargetShell) -> String {
              format!("\"$( printf \"%s\" {} | awk '{{ print length($0) }}' )\"", emit_val(inner, target))
         }
         Val::Arg(n) => format!("\"${}\"", n),
-        Val::ParseArgs => "\"$( __sh2_parse_args \"$@\" )\"".to_string(),
+        Val::ParseArgs => "\"${__sh2_parsed_args}\"".to_string(),
         Val::ArgsFlags(inner) => format!("\"$( __sh2_args_flags {} )\"", emit_val(inner, target)),
         Val::ArgsPositionals(inner) => format!("\"$( __sh2_args_positionals {} )\"", emit_val(inner, target)),
         Val::Index { list, index } => {
             match &**list {
-                Val::ArgsFlags(inner) => {
-                    format!("\"$( __sh2_args_flag_get {} {} )\"", emit_val(inner, target), emit_val(index, target))
+                Val::ArgsFlags(_) => {
+                    format!("\"$( __sh2_args_flag_get {} {} )\"", emit_val(list, target), emit_val(index, target))
                 }
-                Val::ArgsPositionals(inner) => {
-                    format!("\"$( __sh2_list_get {} $(( {} )) )\"", emit_val(inner, target), emit_index_expr(index, target))
+                Val::ArgsPositionals(_) => {
+                    format!("\"$( __sh2_list_get {} $(( {} )) )\"", emit_val(list, target), emit_index_expr(index, target))
                 }
                 _ => {
                     if target == TargetShell::Posix {
@@ -1138,7 +1139,7 @@ __sh2_split() { awk -v s="$1" -v sep="$2" 'BEGIN { if(sep=="") { printf "%s", s;
 __sh2_args_flags() { printf '%s' "$1" | awk '/^__SH2_SPLIT__$/ { exit } { print }'; }
 __sh2_args_positionals() { printf '%s' "$1" | awk '/^__SH2_SPLIT__$/ { body=1; next } body { print }'; }
 __sh2_args_flag_get() { printf '%s' "$1" | awk -v k="$2" -F '\t' '/^__SH2_SPLIT__$/ { exit } $1 == k { v = $2 } END { printf "%s", v }'; }
-__sh2_list_get() { printf '%s' "$1" | awk -v i="$2" '/^__SH2_SPLIT__$/ { body=1; next } body { if (idx++ == i) { printf "%s", $0; exit } }'; }
+__sh2_list_get() { printf '%s' "$1" | awk -v i="$2" '{ a[NR]=$0 } /^__SH2_SPLIT__$/ { split_line=NR } END { start=1; if (split_line) start=split_line+1; target=start+i; if (target <= NR) printf "%s", a[target] }'; }
 "#);
     s
 }
