@@ -203,8 +203,24 @@ fn lower_stmt(stmt: ast::Stmt, out: &mut Vec<ir::Cmd>) {
             }
         }
         ast::Stmt::Call { name, args } => {
-            let args = args.iter().map(|e| lower_expr(e.clone())).collect();
-            out.push(ir::Cmd::Call { name: name.clone(), args });
+            if name == "save_envfile" {
+                 if args.len() != 2 {
+                     panic!("save_envfile() requires exactly 2 arguments (path, env_blob)");
+                 }
+                 let mut iter = args.into_iter();
+                 let path = lower_expr(iter.next().unwrap());
+                 let env = lower_expr(iter.next().unwrap());
+                 out.push(ir::Cmd::SaveEnvfile { path, env });
+            } else if name == "load_envfile" {
+                 if args.len() != 1 {
+                     panic!("load_envfile() requires exactly 1 argument (path)");
+                 }
+                 let path = lower_expr(args.into_iter().next().unwrap());
+                 out.push(ir::Cmd::Call { name: "__sh2_load_envfile".to_string(), args: vec![path] });
+            } else {
+                let args = args.iter().map(|e| lower_expr(e.clone())).collect();
+                out.push(ir::Cmd::Call { name: name.clone(), args });
+            }
         }
         ast::Stmt::Subshell { body } => {
             let mut lowered = Vec::new();
@@ -464,6 +480,14 @@ fn lower_expr(e: ast::Expr) -> ir::Val {
                     panic!("parse_args() takes no arguments");
                 }
                 ir::Val::ParseArgs
+            } else if name == "load_envfile" {
+                if args.len() != 1 {
+                    panic!("load_envfile() requires exactly 1 argument (path)");
+                }
+                let path = lower_expr(args.into_iter().next().unwrap());
+                ir::Val::LoadEnvfile(Box::new(path))
+            } else if name == "save_envfile" {
+                 panic!("save_envfile() is a statement; use it as a standalone call");
             } else {
                 let lowered_args = args.into_iter().map(lower_expr).collect();
                 ir::Val::Call { name, args: lowered_args }

@@ -5,25 +5,23 @@ __sh2_before() { awk -v s="$1" -v sep="$2" 'BEGIN { n=index(s, sep); if(n==0) pr
 __sh2_after() { awk -v s="$1" -v sep="$2" 'BEGIN { n=index(s, sep); if(n==0) printf ""; else printf "%s", substr(s, n+length(sep)) }'; }
 __sh2_replace() { awk -v s="$1" -v old="$2" -v new="$3" 'BEGIN { if(old=="") { printf "%s", s; exit } len=length(old); while(i=index(s, old)) { printf "%s%s", substr(s, 1, i-1), new; s=substr(s, i+len) } printf "%s", s }'; }
 __sh2_split() { awk -v s="$1" -v sep="$2" 'BEGIN { if(sep=="") { printf "%s", s; exit } len=length(sep); while(i=index(s, sep)) { printf "%s\n", substr(s, 1, i-1); s=substr(s, i+len) } printf "%s", s }'; }
-__sh2_matches() { printf '%s\n' "$1" | grep -Eq -- "$2"; }
+__sh2_matches() { [[ "$1" =~ $2 ]]; }
 __sh2_parse_args() {
-  __out="" 
+  local out="" key val
   while [ "$#" -gt 0 ]; do
     case "$1" in
-      --) shift; while [ "$#" -gt 0 ]; do __out="${__out}P	${1}
+      --) shift; while [ "$#" -gt 0 ]; do out="${out}P	${1}
 "; shift; done; break ;;
-      --*=*) __key="${1%%=*}"; __val="${1#*=}"; __out="${__out}F	${__key}	${__val}
+      --*=*) key="${1%%=*}"; val="${1#*=}"; out="${out}F	${key}	${val}
 " ;;
-      --*) __key="$1"; __f=0; case "$2" in --*) __f=1;; esac
-           if [ "$#" -gt 1 ] && [ "${2}" != "--" ] && [ "$__f" = 0 ]; then __val="$2"; shift; else __val="true"; fi
-           __out="${__out}F	${__key}	${__val}
+      --*) key="$1"; if [ "$#" -gt 1 ] && [ "${2}" != "--" ] && [[ ! "$2" =~ ^-- ]]; then val="$2"; shift; else val="true"; fi; out="${out}F	${key}	${val}
 " ;;
-      *) __out="${__out}P	${1}
+      *) out="${out}P	${1}
 " ;;
     esac
     shift
   done
-  printf '%s' "$__out"
+  printf '%s' "$out"
 }
 
 __sh2_args_flags() { printf '%s' "$1" | awk '/^F\t/ { sub(/^F\t/, ""); print }'; }
@@ -33,8 +31,10 @@ __sh2_list_get() { printf '%s' "$1" | awk -v i="$2" 'NR==i+1 { printf "%s", $0; 
 __sh2_load_envfile() { if [ -f "$1" ]; then awk '{ sub(/^[[:space:]]+/, ""); sub(/[[:space:]]+$/, ""); if($0=="" || substr($0,1,1)=="#") next; if(substr($0,1,7)=="export ") sub(/^export[[:space:]]+/, ""); idx=index($0,"="); if(idx==0) next; k=substr($0,1,idx-1); v=substr($0,idx+1); sub(/^[[:space:]]+/, "", k); sub(/[[:space:]]+$/, "", k); sub(/^[[:space:]]+/, "", v); sub(/[[:space:]]+$/, "", v); len=length(v); if(len>=2){ f=substr(v,1,1); l=substr(v,len,1); if((f=="\047" && l=="\047") || (f=="\"" && l=="\"")){ v=substr(v,2,len-2) } } printf "%s\t%s\n", k, v }' "$1"; fi; }
 __sh2_save_envfile() { printf '%s' "$2" | awk -F '\t' 'NF>=1{ print $1 "=" $2 }' > "$1"; }
 main() {
-  x='world'
-  'echo' 'hello' "$x"; __sh2_status=$?; (exit $__sh2_status)
+  m="$( __sh2_load_envfile 'env.meta' )"
+  __sh2_save_envfile 'out.meta' "$m"; __sh2_status=$?; (exit $__sh2_status)
+  m2="$( __sh2_load_envfile 'out.meta' )"
+  printf '%s\n' "$m2"
 }
 
 __sh2_parsed_args="$(__sh2_parse_args "$@")"

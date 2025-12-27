@@ -1,6 +1,6 @@
 use std::process::Command;
 use std::fs;
-use std::path::Path;
+
 
 fn sh2c_path() -> String {
     env!("CARGO_BIN_EXE_sh2c").to_string()

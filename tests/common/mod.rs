@@ -105,10 +105,26 @@ pub fn assert_codegen_panics_target(fixture_name: &str, target: TargetShell, exp
 
 
 pub fn run_bash_script(bash: &str, env: &[(&str, &str)], args: &[&str]) -> (String, String, i32) {
-    run_shell_script(bash, "bash", env, args, None)
+    run_shell_script(bash, "bash", env, args, None, None)
 }
 
-pub fn run_shell_script(script: &str, shell: &str, env: &[(&str, &str)], args: &[&str], input: Option<&str>) -> (String, String, i32) {
+fn copy_dir_all(src: &Path, dst: &Path) {
+    if !dst.exists() {
+        fs::create_dir_all(dst).expect("Failed to create dst dir");
+    }
+    for entry in fs::read_dir(src).expect("Failed to read src dir") {
+        let entry = entry.expect("Failed to read entry");
+        let ty = entry.file_type().expect("Failed to get file type");
+        let dst_path = dst.join(entry.file_name());
+        if ty.is_dir() {
+            copy_dir_all(&entry.path(), &dst_path);
+        } else {
+            fs::copy(entry.path(), &dst_path).expect("Failed to copy file");
+        }
+    }
+}
+
+pub fn run_shell_script(script: &str, shell: &str, env: &[(&str, &str)], args: &[&str], input: Option<&str>, fs_setup: Option<&Path>) -> (String, String, i32) {
     let pid = std::process::id();
     let nanos = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_nanos();
     let dir_name = format!("sh2_test_{}_{}", pid, nanos);
@@ -116,6 +132,10 @@ pub fn run_shell_script(script: &str, shell: &str, env: &[(&str, &str)], args: &
     temp_dir.push(dir_name);
     
     fs::create_dir(&temp_dir).expect("Failed to create temp dir");
+
+    if let Some(src) = fs_setup {
+        copy_dir_all(src, &temp_dir);
+    }
 
     let script_path = temp_dir.join("script.sh");
     fs::write(&script_path, script).expect("Failed to write temp script");
@@ -181,6 +201,7 @@ pub fn assert_exec_matches_fixture_target(fixture_name: &str, target: TargetShel
     let args_path = format!("tests/fixtures/{}.args", fixture_name);
     let env_path = format!("tests/fixtures/{}.env", fixture_name);
     let stdin_path = format!("tests/fixtures/{}.stdin", fixture_name);
+    let fs_path = format!("tests/fixtures/{}.fs", fixture_name);
 
     if !Path::new(&sh2_path).exists() {
         panic!("Fixture {} does not exist", sh2_path);
@@ -264,8 +285,14 @@ pub fn assert_exec_matches_fixture_target(fixture_name: &str, target: TargetShel
     } else {
         None
     };
+    
+    let fs_setup = if Path::new(&fs_path).exists() {
+        Some(Path::new(&fs_path))
+    } else {
+        None
+    };
 
-    let (stdout, stderr, status) = run_shell_script(&shell_script, &shell_bin, &env_refs, &args_refs, stdin_content.as_deref());
+    let (stdout, stderr, status) = run_shell_script(&shell_script, &shell_bin, &env_refs, &args_refs, stdin_content.as_deref(), fs_setup);
 
     if Path::new(&stdout_path).exists() {
         let expected_stdout = fs::read_to_string(&stdout_path).expect("Failed to read stdout fixture")
@@ -287,7 +314,7 @@ pub fn assert_exec_matches_fixture_target(fixture_name: &str, target: TargetShel
 }
 
 /// Run shell script with additional shell flags (e.g., "-e" for errexit)
-pub fn run_shell_script_with_flags(script: &str, shell: &str, flags: &[&str], env: &[(&str, &str)], args: &[&str], input: Option<&str>) -> (String, String, i32) {
+pub fn run_shell_script_with_flags(script: &str, shell: &str, flags: &[&str], env: &[(&str, &str)], args: &[&str], input: Option<&str>, fs_setup: Option<&Path>) -> (String, String, i32) {
     let pid = std::process::id();
     let nanos = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_nanos();
     let dir_name = format!("sh2_test_{}_{}", pid, nanos);
@@ -295,6 +322,10 @@ pub fn run_shell_script_with_flags(script: &str, shell: &str, flags: &[&str], en
     temp_dir.push(dir_name);
     
     fs::create_dir(&temp_dir).expect("Failed to create temp dir");
+
+    if let Some(src) = fs_setup {
+        copy_dir_all(src, &temp_dir);
+    }
 
     let script_path = temp_dir.join("script.sh");
     fs::write(&script_path, script).expect("Failed to write temp script");
@@ -353,6 +384,7 @@ pub fn assert_exec_matches_fixture_target_with_flags(fixture_name: &str, target:
     let args_path = format!("tests/fixtures/{}.args", fixture_name);
     let env_path = format!("tests/fixtures/{}.env", fixture_name);
     let stdin_path = format!("tests/fixtures/{}.stdin", fixture_name);
+    let fs_path = format!("tests/fixtures/{}.fs", fixture_name);
 
     if !Path::new(&sh2_path).exists() {
         panic!("Fixture {} does not exist", sh2_path);
@@ -431,7 +463,7 @@ pub fn assert_exec_matches_fixture_target_with_flags(fixture_name: &str, target:
         None
     };
 
-    let (stdout, stderr, status) = run_shell_script_with_flags(&shell_script, &shell_bin, shell_flags, &env_refs, &args_refs, stdin_content.as_deref());
+    let (stdout, stderr, status) = run_shell_script_with_flags(&shell_script, &shell_bin, shell_flags, &env_refs, &args_refs, stdin_content.as_deref(), if Path::new(&fs_path).exists() { Some(Path::new(&fs_path)) } else { None });
 
     if Path::new(&stdout_path).exists() {
         let expected_stdout = fs::read_to_string(&stdout_path).expect("Failed to read stdout fixture")

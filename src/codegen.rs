@@ -194,6 +194,9 @@ fn emit_val(v: &Val, target: TargetShell) -> String {
             let arg_strs: Vec<String> = args.iter().map(|a| emit_word(a, target)).collect();
             format!("\"$( __sh2_{} {} )\"", func_name, arg_strs.join(" "))
         },
+        Val::LoadEnvfile(path) => {
+             format!("\"$( __sh2_load_envfile {} )\"", emit_word(path, target))
+        },
         Val::Matches(..) => {
              format!("\"$( if {}; then printf \"%s\" \"true\"; else printf \"%s\" \"false\"; fi )\"", emit_cond(v, target))
         },
@@ -961,6 +964,14 @@ fn emit_cmd(cmd: &Cmd, out: &mut String, indent: usize, target: TargetShell) {
             out.push_str(&emit_word(path, target));
             out.push('\n');
         }
+        Cmd::SaveEnvfile { path, env } => {
+            out.push_str(&pad);
+            out.push_str("__sh2_save_envfile ");
+            out.push_str(&emit_word(path, target));
+            out.push(' ');
+            out.push_str(&emit_val(env, target));
+            out.push_str("; __sh2_status=$?; (exit $__sh2_status)\n");
+        }
     }
 }
 
@@ -1135,12 +1146,14 @@ __sh2_split() { awk -v s="$1" -v sep="$2" 'BEGIN { if(sep=="") { printf "%s", s;
             s.push_str("}\n");
         }
     }
-    s.push_str(r#"
+    s.push_str(r##"
 __sh2_args_flags() { printf '%s' "$1" | awk '/^F\t/ { sub(/^F\t/, ""); print }'; }
 __sh2_args_positionals() { printf '%s' "$1" | awk '/^P\t/ { sub(/^P\t/, ""); print }'; }
 __sh2_args_flag_get() { printf '%s' "$1" | awk -v k="$2" -F '\t' '{ if (sub(/^F\t/, "")) { if ($1==k) v=$2 } else if ($1==k) v=$2 } END { printf "%s", v }'; }
 __sh2_list_get() { printf '%s' "$1" | awk -v i="$2" 'NR==i+1 { printf "%s", $0; exit }'; }
-"#);
+__sh2_load_envfile() { if [ -f "$1" ]; then awk '{ sub(/^[[:space:]]+/, ""); sub(/[[:space:]]+$/, ""); if($0=="" || substr($0,1,1)=="#") next; if(substr($0,1,7)=="export ") sub(/^export[[:space:]]+/, ""); idx=index($0,"="); if(idx==0) next; k=substr($0,1,idx-1); v=substr($0,idx+1); sub(/^[[:space:]]+/, "", k); sub(/[[:space:]]+$/, "", k); sub(/^[[:space:]]+/, "", v); sub(/[[:space:]]+$/, "", v); len=length(v); if(len>=2){ f=substr(v,1,1); l=substr(v,len,1); if((f=="\047" && l=="\047") || (f=="\"" && l=="\"")){ v=substr(v,2,len-2) } } printf "%s\t%s\n", k, v }' "$1"; fi; }
+__sh2_save_envfile() { printf '%s' "$2" | awk -F '\t' 'NF>=1{ print $1 "=" $2 }' > "$1"; }
+"##);
     s
 }
 

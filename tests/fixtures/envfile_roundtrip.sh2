@@ -1,0 +1,6 @@
+func main() {
+  let m = load_envfile("env.meta")
+  save_envfile("out.meta", m)
+  let m2 = load_envfile("out.meta")
+  print(m2)
+}

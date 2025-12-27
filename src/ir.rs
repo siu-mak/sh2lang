@@ -52,6 +52,7 @@ pub enum Val {
     ArgsFlags(Box<Val>),
     ArgsPositionals(Box<Val>),
     Call { name: String, args: Vec<Val> },
+    LoadEnvfile(Box<Val>),
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -140,6 +141,7 @@ pub enum Cmd {
     Unset(String),
     Source(Val),
     ExecReplace(Vec<Val>),
+    SaveEnvfile { path: Val, env: Val },
 }
 
 #[derive(Debug, Clone, PartialEq)]
