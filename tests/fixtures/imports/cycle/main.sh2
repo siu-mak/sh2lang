@@ -1,0 +1,2 @@
+import "B.sh2"
+func main() {}

@@ -1,0 +1,5 @@
+import "subdir/lib.sh2"
+
+func main() {
+    print(hello())
+}

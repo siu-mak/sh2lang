@@ -4,6 +4,7 @@ use sh2c::lexer;
 use sh2c::parser;
 use sh2c::lower;
 use sh2c::codegen;
+use sh2c::loader;
 use sh2c::codegen::TargetShell;
 
 fn main() {
@@ -65,8 +66,9 @@ fn main() {
     };
 
     let result = std::panic::catch_unwind(|| {
-        let tokens = lexer::lex(&src);
-        let ast = parser::parse(&tokens);
+        // Loader handles reading, lexing, parsing, and resolving imports recursively
+        let path = std::path::Path::new(&filename);
+        let ast = loader::load_program_with_imports(path);
         let ir = lower::lower(ast);
         codegen::emit_with_target(&ir, target)
     });

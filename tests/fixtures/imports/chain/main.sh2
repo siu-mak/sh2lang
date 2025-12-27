@@ -1,0 +1,5 @@
+import "B"
+
+func main() {
+    c_func()
+}

@@ -190,9 +190,20 @@ fn emit_val(v: &Val, target: TargetShell) -> String {
         },
         Val::Args => panic!("args cannot be embedded/concatenated inside a word"),
         Val::Call { name, args } => {
-            let func_name = if name == "default" { "coalesce" } else { name };
+            let (func_name, needs_prefix) = if name == "default" { 
+                ("coalesce", true)
+            } else if matches!(name.as_str(), "trim" | "before" | "after" | "replace" | "split") {
+                (name.as_str(), true)
+            } else {
+                (name.as_str(), false)
+            };
+
             let arg_strs: Vec<String> = args.iter().map(|a| emit_word(a, target)).collect();
-            format!("\"$( __sh2_{} {} )\"", func_name, arg_strs.join(" "))
+            if needs_prefix {
+                format!("\"$( __sh2_{} {} )\"", func_name, arg_strs.join(" "))
+            } else {
+                format!("\"$( {} {} )\"", func_name, arg_strs.join(" "))
+            }
         },
         Val::LoadEnvfile(path) => {
              format!("\"$( __sh2_load_envfile {} )\"", emit_word(path, target))

@@ -1,0 +1,3 @@
+import "lib.sh2"
+func dup() {}
+func main() {}

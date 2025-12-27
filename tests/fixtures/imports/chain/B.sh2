@@ -1,0 +1,5 @@
+import "C.sh2"
+
+func b_func() {
+    print("B")
+}

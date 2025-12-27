@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 use std::fs;
 use std::path::Path;
 use std::process::Command;
@@ -6,7 +7,20 @@ use sh2c::{lexer, parser, lower, codegen};
 use sh2c::ast;
 pub use sh2c::codegen::TargetShell;
 
+// Replaces existing compile_to_shell which took string.
+// Note: verify if any tests strictly rely on string-only compilation without files.
+// Most tests in common/mod.rs read from fixtures.
+use sh2c::loader;
+
+pub fn compile_path_to_shell(path: &Path, target: TargetShell) -> String {
+    let program = loader::load_program_with_imports(path);
+    let ir = lower::lower(program);
+    codegen::emit_with_target(&ir, target)
+}
+
 pub fn compile_to_bash(src: &str) -> String {
+    // Legacy support for string-based tests if any exist (e.g. unit tests not from fixtures)
+    // But they won't support imports.
     compile_to_shell(src, TargetShell::Bash)
 }
 
@@ -28,20 +42,18 @@ pub fn assert_codegen_matches_snapshot(fixture_name: &str) {
     let sh2_path = format!("tests/fixtures/{}.sh2", fixture_name);
     let expected_path = format!("tests/fixtures/{}.sh.expected", fixture_name);
     
-    let src = fs::read_to_string(&sh2_path).expect("Failed to read source fixture");
     let expected = fs::read_to_string(&expected_path).expect("Failed to read expected codegen fixture");
     
-    let output = compile_to_bash(&src);
+    let output = compile_path_to_shell(Path::new(&sh2_path), TargetShell::Bash);
     assert_eq!(output.trim(), expected.trim(), "Codegen mismatch for {}", fixture_name);
 }
 
 pub fn assert_codegen_panics(fixture_name: &str, expected_msg_part: &str) {
     let sh2_path = format!("tests/fixtures/{}.sh2", fixture_name);
-    let src = fs::read_to_string(&sh2_path).expect("Failed to read source fixture");
     
     // We need to catch unwind, so we can verify the panic message
     let result = std::panic::catch_unwind(|| {
-        compile_to_bash(&src)
+        compile_path_to_shell(Path::new(&sh2_path), TargetShell::Bash)
     });
 
     match result {
@@ -73,19 +85,17 @@ pub fn assert_codegen_matches_snapshot_target(fixture_name: &str, target: Target
         default_expected_path
     };
 
-    let src = fs::read_to_string(&sh2_path).expect("Failed to read source fixture");
     let expected = fs::read_to_string(&expected_path).expect("Failed to read expected codegen fixture");
     
-    let output = compile_to_shell(&src, target);
-    assert_eq!(output.trim(), expected.trim(), "Codegen mismatch for {} (target={:?})", fixture_name, target);
+    let shell_script = compile_path_to_shell(Path::new(&sh2_path), target);
+    assert_eq!(shell_script.trim(), expected.trim(), "Codegen mismatch for {} (target={:?})", fixture_name, target);
 }
 
 pub fn assert_codegen_panics_target(fixture_name: &str, target: TargetShell, expected_msg_part: &str) {
     let sh2_path = format!("tests/fixtures/{}.sh2", fixture_name);
-    let src = fs::read_to_string(&sh2_path).expect("Failed to read source fixture");
     
     let result = std::panic::catch_unwind(|| {
-        compile_to_shell(&src, target)
+        compile_path_to_shell(Path::new(&sh2_path), target)
     });
 
     match result {
@@ -214,8 +224,8 @@ pub fn assert_exec_matches_fixture_target(fixture_name: &str, target: TargetShel
         return; 
     }
 
-    let src = fs::read_to_string(&sh2_path).expect("Failed to read fixture");
-    let shell_script = compile_to_shell(&src, target);
+    //     let src = fs::read_to_string(&sh2_path).expect("Failed to read fixture");
+    let shell_script = compile_path_to_shell(Path::new(&sh2_path), target);
     
     let shell_bin = match target {
         TargetShell::Bash => "bash".to_string(),

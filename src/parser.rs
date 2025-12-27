@@ -3,52 +3,67 @@ use crate::ast::*;
 
 pub fn parse(tokens: &[Token]) -> Program {
     let mut i = 0;
-
+    let mut imports = Vec::new();
     let mut functions = Vec::new();
 
     while i < tokens.len() {
-        expect(tokens, &mut i, Token::Func);
+        if matches!(tokens[i], Token::Import) {
+            i += 1;
+            let path = match &tokens[i] {
+                Token::String(s) => s.clone(),
+                _ => panic!("Expected string literal after import"),
+            };
+            i += 1;
+            imports.push(path);
+        } else {
+            // Function definition
+            expect(tokens, &mut i, Token::Func);
 
-        let name = match &tokens[i] {
-            Token::Ident(s) => s.clone(),
-            _ => panic!("Expected function name"),
-        };
-        i += 1;
+            let name = match &tokens[i] {
+                Token::Ident(s) => s.clone(),
+                _ => panic!("Expected function name"),
+            };
+            i += 1;
 
-        expect(tokens, &mut i, Token::LParen);
-        
-        let mut params = Vec::new();
-        if !matches!(tokens.get(i), Some(Token::RParen)) {
-             loop {
-                 let param_name = match &tokens[i] {
-                     Token::Ident(s) => s.clone(),
-                     _ => panic!("Expected parameter name"),
-                 };
-                 i += 1;
-                 params.push(param_name);
-                 
-                 if matches!(tokens.get(i), Some(Token::Comma)) {
+            expect(tokens, &mut i, Token::LParen);
+            
+            let mut params = Vec::new();
+            if !matches!(tokens.get(i), Some(Token::RParen)) {
+                 loop {
+                     let param_name = match &tokens[i] {
+                         Token::Ident(s) => s.clone(),
+                         _ => panic!("Expected parameter name"),
+                     };
                      i += 1;
-                 } else {
-                     break;
+                     params.push(param_name);
+                     
+                     if matches!(tokens.get(i), Some(Token::Comma)) {
+                         i += 1;
+                     } else {
+                         break;
+                     }
                  }
-             }
+            }
+
+            expect(tokens, &mut i, Token::RParen);
+            expect(tokens, &mut i, Token::LBrace);
+
+            let mut body = Vec::new();
+            while !matches!(tokens[i], Token::RBrace) {
+                // Ensure no import inside function
+                if matches!(tokens[i], Token::Import) {
+                    panic!("import is only allowed at top-level");
+                }
+                body.push(parse_stmt(tokens, &mut i));
+            }
+
+            expect(tokens, &mut i, Token::RBrace);
+
+            functions.push(Function { name, params, body });
         }
-
-        expect(tokens, &mut i, Token::RParen);
-        expect(tokens, &mut i, Token::LBrace);
-
-        let mut body = Vec::new();
-        while !matches!(tokens[i], Token::RBrace) {
-            body.push(parse_stmt(tokens, &mut i));
-        }
-
-        expect(tokens, &mut i, Token::RBrace);
-
-        functions.push(Function { name, params, body });
     }
 
-    Program { functions }
+    Program { imports, functions }
 }
 
 fn parse_stmt(tokens: &[Token], i: &mut usize) -> Stmt {
@@ -812,7 +827,7 @@ fn parse_stmt_atom(tokens: &[Token], i: &mut usize) -> Stmt {
         }
 
         
-        _ => panic!("Expected statement"),
+        t => panic!("Expected statement, got {:?}", t),
     }
 }
 
