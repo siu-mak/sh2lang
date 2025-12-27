@@ -8,31 +8,23 @@ __sh2_split() { awk -v s="$1" -v sep="$2" 'BEGIN { if(sep=="") { printf "%s", s;
 main() {
   {
     'sh' '-c' 'exit 0'
-    __sh2_status=$?; (exit $__sh2_status)
   } && {
     printf '%s\n' 'and_ok'
-    __sh2_status=$?; (exit $__sh2_status)
   }
   {
     'sh' '-c' 'exit 1'
-    __sh2_status=$?; (exit $__sh2_status)
   } && {
     printf '%s\n' 'and_bad'
-    __sh2_status=$?; (exit $__sh2_status)
   }
   {
     'sh' '-c' 'exit 1'
-    __sh2_status=$?; (exit $__sh2_status)
   } || {
     printf '%s\n' 'or_ok'
-    __sh2_status=$?; (exit $__sh2_status)
   }
   {
     'sh' '-c' 'exit 0'
-    __sh2_status=$?; (exit $__sh2_status)
   } || {
     printf '%s\n' 'or_bad'
-    __sh2_status=$?; (exit $__sh2_status)
   }
 }
 

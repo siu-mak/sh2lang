@@ -1,0 +1,6 @@
+func main() {
+    run("sh", "-c", "exit 9")
+    print(status())
+    run("echo", "hi")
+    print(status())
+}

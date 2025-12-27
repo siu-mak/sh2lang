@@ -12,7 +12,7 @@ main() {
     }
   ) &
   p="$!"
-  wait "$p"; __sh2_status=$?
+  wait "$p"; __sh2_status=$?; (exit $__sh2_status)
   printf '%s\n' 'done'
 }
 

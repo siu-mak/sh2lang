@@ -3,7 +3,8 @@ func main() {
         run("sh","-c","exit 5") | run("sh","-c","echo cont")
         print("NO")
     } catch {
+        let s = status()
         print("CAUGHT")
+        print(s)
     }
-    print(status())
 }

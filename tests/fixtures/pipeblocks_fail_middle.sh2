@@ -3,7 +3,8 @@ func main() {
         pipe { run("sh","-c","echo hi") } | { run("sh","-c","exit 7") } | { run("sh","-c","cat") }
         print("NO")
     } catch {
+        let s = status()
         print("CAUGHT")
+        print(s)
     }
-    print(status())
 }

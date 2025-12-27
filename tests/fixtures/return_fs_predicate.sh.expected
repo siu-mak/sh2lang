@@ -13,11 +13,11 @@ check() {
 main() {
   'sh' '-c' 'rm -f empty nonempty; printf '\'''\'' > empty; echo hi > nonempty'
   check 'nonempty'; __sh2_status=$?; (exit $__sh2_status)
-  if [ "$__sh2_status" = "0" ]; then
+  if [ "${?}" = "0" ]; then
     printf '%s\n' 'nonempty: ok'
   fi
   check 'empty'; __sh2_status=$?; (exit $__sh2_status)
-  if [ "$__sh2_status" = "1" ]; then
+  if [ "${?}" = "1" ]; then
     printf '%s\n' 'empty: ok'
   fi
 }

@@ -8,8 +8,8 @@ __sh2_split() { awk -v s="$1" -v sep="$2" 'BEGIN { if(sep=="") { printf "%s", s;
 main() {
   ( 'bash' '-c' 'exit 7' ) &
   p="$!"
-  wait "$p"; __sh2_status=$?
-  printf '%s\n' "$__sh2_status"
+  wait "$p"; __sh2_status=$?; (exit $__sh2_status)
+  printf '%s\n' "${?}"
 }
 
 __sh2_status=0

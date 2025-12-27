@@ -133,7 +133,7 @@ fn emit_val(v: &Val, target: TargetShell) -> String {
         },
         Val::Bool(_) => panic!("Cannot emit boolean value as string/word; booleans are only valid in conditions"),
         Val::Number(n) => format!("\"{}\"", n),
-        Val::Status => "\"$__sh2_status\"".to_string(),
+        Val::Status => "\"${?}\"".to_string(),
         Val::Pid => "\"$!\"".to_string(),
         Val::Env(inner) => match &**inner {
             Val::Literal(s) => format!("\"${{{}}}\"", s),
@@ -312,7 +312,7 @@ fn emit_arith_expr(v: &Val, target: TargetShell) -> String {
         Val::Number(n) => n.to_string(),
         Val::Var(s) => s.clone(), // Bare variable for arithmetic context
         Val::Arg(n) => format!("${}", n), // $1 etc
-        Val::Status => "$__sh2_status".to_string(),
+        Val::Status => "${?}".to_string(),
         Val::Pid => "$!".to_string(),
         Val::Uid => match target {
             TargetShell::Bash => "$UID".to_string(),
@@ -857,10 +857,10 @@ fn emit_cmd(cmd: &Cmd, out: &mut String, indent: usize, target: TargetShell) {
                                  out.push(' ');
                                  out.push_str(&emit_word(elem, target));
                              }
-                             out.push_str("; __sh2_status=$?\n");
+                             out.push_str("; __sh2_status=$?; (exit $__sh2_status)\n");
                           }
                          _ => {
-                             out.push_str(&format!("{pad}wait {}; __sh2_status=$?\n", emit_word(val, target)));
+                             out.push_str(&format!("{pad}wait {}; __sh2_status=$?; (exit $__sh2_status)\n", emit_word(val, target)));
                          }
                      }
                  }
@@ -868,9 +868,8 @@ fn emit_cmd(cmd: &Cmd, out: &mut String, indent: usize, target: TargetShell) {
              }
         }
         Cmd::TryCatch { try_body, catch_body } => {
-            // Use group { ...; } instead of subshell ( ... ) so variables (like __sh2_status) propagate
-            // Use && chaining for try_body to ensure we abort on failure (mimicking set -e which doesn't work in if)
-            out.push_str(&format!("{pad}if ! {{\n"));
+            // Use if { try } then : else catch fi to preserve $? in catch block
+            out.push_str(&format!("{pad}if {{\n"));
             if try_body.is_empty() {
                 out.push_str(&format!("{pad}  :\n"));
             } else {
@@ -882,17 +881,13 @@ fn emit_cmd(cmd: &Cmd, out: &mut String, indent: usize, target: TargetShell) {
                     if i > 0 {
                          out.push_str(" &&\n");
                     }
-                    let needs_wrapper = matches!(cmd, Cmd::Exec { allow_fail: false, .. });
-                    
-                    if needs_wrapper {
-                        out.push_str(&format!("{{ {}; __sh2_status=$?; (exit $__sh2_status); }}", cmd_str));
-                    } else {
-                        out.push_str(cmd_str);
-                    }
+                    out.push_str(cmd_str);
                 }
                 out.push('\n');
             }
             out.push_str(&format!("{pad}}}; then\n"));
+            out.push_str(&format!("{pad}  :\n"));
+            out.push_str(&format!("{pad}else\n"));
             
             if catch_body.is_empty() {
                 out.push_str(&format!("{pad}  :\n"));
@@ -907,12 +902,10 @@ fn emit_cmd(cmd: &Cmd, out: &mut String, indent: usize, target: TargetShell) {
             for cmd in left {
                 emit_cmd(cmd, out, indent + 2, target);
             }
-            out.push_str(&format!("{}  __sh2_status=$?; (exit $__sh2_status)\n", pad));
             out.push_str(&format!("{pad}}} && {{\n"));
             for cmd in right {
                 emit_cmd(cmd, out, indent + 2, target);
             }
-            out.push_str(&format!("{}  __sh2_status=$?; (exit $__sh2_status)\n", pad));
             out.push_str(&format!("{pad}}}\n"));
         }
         Cmd::OrElse { left, right } => {
@@ -920,12 +913,10 @@ fn emit_cmd(cmd: &Cmd, out: &mut String, indent: usize, target: TargetShell) {
             for cmd in left {
                 emit_cmd(cmd, out, indent + 2, target);
             }
-            out.push_str(&format!("{}  __sh2_status=$?; (exit $__sh2_status)\n", pad));
             out.push_str(&format!("{pad}}} || {{\n"));
             for cmd in right {
                 emit_cmd(cmd, out, indent + 2, target);
             }
-            out.push_str(&format!("{}  __sh2_status=$?; (exit $__sh2_status)\n", pad));
             out.push_str(&format!("{pad}}}\n"));
         }
         Cmd::Export { name, value } => {

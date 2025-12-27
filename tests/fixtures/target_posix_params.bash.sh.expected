@@ -1,8 +1,0 @@
-main() {
-  local a="${1}"
-  local b="${2}"
-  printf '%s\n' "$a"
-  printf '%s\n' "$b"
-}
-
-main "$@"
