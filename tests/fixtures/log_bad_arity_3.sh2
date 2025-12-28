@@ -1,0 +1,4 @@
+
+func main() {
+    log_info("a", false, true)
+}

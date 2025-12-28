@@ -1,4 +1,4 @@
-use crate::ir::{Function, Cmd, Val, RedirectTarget};
+use crate::ir::{Function, Cmd, Val, RedirectTarget, LogLevel};
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum TargetShell {
@@ -662,6 +662,22 @@ fn emit_cmd(cmd: &Cmd, out: &mut String, indent: usize, target: TargetShell) {
              }
              out.push('\n');
         }
+        Cmd::Log { level, msg, timestamp } => {
+            out.push_str(&pad);
+            out.push_str("__sh2_log ");
+            match level {
+                LogLevel::Info => out.push_str("'INFO' "),
+                LogLevel::Warn => out.push_str("'WARN' "),
+                LogLevel::Error => out.push_str("'ERROR' "),
+            }
+            out.push_str(&emit_word(msg, target));
+            out.push(' ');
+            if *timestamp {
+                out.push_str("'true'\n");
+            } else {
+                out.push_str("'false'\n");
+            }
+        }
         Cmd::WriteFile { path, content, append } => {
             out.push_str(&pad);
             out.push_str("__sh2_write_file ");
@@ -1272,6 +1288,8 @@ __sh2_which() { command -v -- "$1" 2>/dev/null || true; }
 __sh2_require() { for c in "$@"; do if ! command -v -- "$c" >/dev/null 2>&1; then printf '%s\n' "missing required command: $c" >&2; exit 127; fi; done; }
 __sh2_read_file() { cat "$1" 2>/dev/null || true; }
 __sh2_write_file() { if [ "$3" = "true" ]; then printf '%s' "$2" >> "$1"; else printf '%s' "$2" > "$1"; fi; }
+__sh2_log_now() { if [ -n "${SH2_LOG_TS:-}" ]; then printf '%s' "$SH2_LOG_TS"; return 0; fi; date '+%Y-%m-%dT%H:%M:%S%z' 2>/dev/null || date 2>/dev/null || printf '%s' 'unknown-time'; }
+__sh2_log() { if [ "$3" = "true" ]; then printf '%s\t%s\t%s\n' "$(__sh2_log_now)" "$1" "$2" >&2; else printf '%s\t%s\n' "$1" "$2" >&2; fi; }
 "##);
     s
 }

@@ -270,6 +270,28 @@ fn lower_stmt(stmt: ast::Stmt, out: &mut Vec<ir::Cmd>) {
                  out.push(ir::Cmd::WriteFile { path, content, append });
             } else if name == "read_file" {
                  panic!("read_file() returns a value; use it in an expression (e.g., let s = read_file(\"foo.txt\"))");
+            } else if matches!(name.as_str(), "log_info" | "log_warn" | "log_error") {
+                 let level = match name.as_str() {
+                     "log_info" => ir::LogLevel::Info,
+                     "log_warn" => ir::LogLevel::Warn,
+                     "log_error" => ir::LogLevel::Error,
+                     _ => unreachable!(),
+                 };
+                 if args.is_empty() || args.len() > 2 {
+                     panic!("{}() requires 1 or 2 arguments (msg, [timestamp])", name);
+                 }
+                 let mut iter = args.into_iter();
+                 let msg = lower_expr(iter.next().unwrap());
+                 let timestamp = if iter.len() > 0 {
+                     if let ast::Expr::Bool(b) = iter.next().unwrap() {
+                         b
+                     } else {
+                         panic!("{}() second argument must be a boolean literal", name);
+                     }
+                 } else {
+                     false
+                 };
+                 out.push(ir::Cmd::Log { level, msg, timestamp });
             } else {
                 let args = args.iter().map(|e| lower_expr(e.clone())).collect();
                 out.push(ir::Cmd::Call { name: name.clone(), args });
@@ -573,6 +595,8 @@ fn lower_expr(e: ast::Expr) -> ir::Val {
                  ir::Val::ReadFile(Box::new(arg))
             } else if name == "write_file" {
                  panic!("write_file() is a statement, not an expression");
+            } else if matches!(name.as_str(), "log_info" | "log_warn" | "log_error") {
+                 panic!("{}() is a statement, not an expression", name);
             } else if name == "save_envfile" {
                  panic!("save_envfile() is a statement; use it as a standalone call");
             } else {

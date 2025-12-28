@@ -61,6 +61,13 @@ pub enum Val {
 }
 
 #[derive(Debug, Clone, PartialEq)]
+pub enum LogLevel {
+    Info,
+    Warn,
+    Error,
+}
+
+#[derive(Debug, Clone, PartialEq)]
 pub enum ArithOp {
     Add,
     Sub,
@@ -134,6 +141,11 @@ pub enum Cmd {
         path: Val,
         content: Val,
         append: bool,
+    },
+    Log {
+        level: LogLevel,
+        msg: Val,
+        timestamp: bool,
     },
     Cd(Val),
     Raw(String),

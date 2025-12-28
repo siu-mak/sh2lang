@@ -1,0 +1,5 @@
+
+func main() {
+    log_warn("w")
+    log_error("e")
+}
