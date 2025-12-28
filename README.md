@@ -1,15 +1,17 @@
 ## sh2 — A Semantic Shell Language
 
-**Project Status:** Active / Language-defined
-**Language Version:** 1.0 (Draft)
+**Project Status:** Prototype / WIP (spec-first, implementation evolving)  
+**Language Version:** 0.1 (Draft)
+
 **Audience:** Compiler implementers, contributors, reviewers
+
+`sh2` is the *language/spec*. `sh2c` is this repository’s *reference compiler* that compiles `.sh2` programs to shell scripts.
 
 ---
 
 ## 1. Project Overview
 
-**sh2** is a **compiled shell language** designed to express shell programs using
-**explicit, semantic constructs**, compiling them into **portable POSIX shell** or **Bash**.
+**sh2** is a spec-first language with an evolving formal definition.
 
 sh2 exists to solve long-standing problems with traditional shell scripting:
 
@@ -43,24 +45,21 @@ sh2 replaces symbolic shell syntax with **structured language constructs** while
 
 ## 3. Language Definition Status
 
-sh2 is a **formally defined language**.
-
 The authoritative definitions are:
 
 | Document              | Purpose                           |
 | --------------------- | --------------------------------- |
 | `docs/language.md`    | Normative language specification  |
 | `docs/grammar.ebnf`   | Formal grammar                    |
-| `docs/conformance.md` | Conformance and test requirements |
+| `docs/sh2_vs_shell.md`| rationale / comparison with traditional shell |
 
-The compiler implementation is **not** the language definition; it is one possible implementation.
+**Note:** The compiler implementation (`sh2c`) is not the language definition; it is one implementation that should track the spec and tests.
 
 ---
 
-## 4. Language Scope (v1.0)
+## 4. Language Scope (v0.1 Draft) 
 
-sh2 v1.0 can express the **entire Bash scripting space**, either:
-
+Bash completeness policy: any Bash can be expressed via `sh(...)` / `raw { ... }` even if not all constructs are first-class yet:
 * **Structurally**, using first-class constructs (`if`, `case`, `with`, pipes, redirects, loops), or
 * **Explicitly**, using escape hatches (`sh("...")`, `raw { ... }`)
 
@@ -112,57 +111,27 @@ POSIX shell / Bash
 The repository is organized to reflect compiler phases and language boundaries:
 
 ```
-src/
-├── lexer.rs
-├── parser.rs
-├── ast.rs
-├── ir.rs
-├── lower.rs
-├── codegen.rs
-├── lib.rs
-└── main.rs
-
-docs/
-├── language.md
-├── grammar.ebnf
-├── conformance.md
-└── rationale.md
-
+.github/workflows/   CI
+.vscode/             editor tasks (optional)
+docs/                spec + grammar
+src/                 compiler implementation
+  parser/            parser modules
+  bin/               (misc bin helpers, if any)
 tests/
-├── conformance/
-│   ├── core/
-│   ├── posix/
-│   └── bash/
+  common/            shared test helpers
+  fixtures/          golden fixtures / test inputs
+  *.rs               integration test suites
 ```
 
-This structure is **normative** for new implementations.
+Rust implementation files live in `src/`:
+- `lexer.rs`, `parser/`, `ast.rs`, `lower.rs`, `ir.rs`, `codegen.rs`
+- `span.rs` for diagnostics/spans
+- `loader.rs` for file/module loading
+- `main.rs` / `lib.rs` for CLI + library entrypoints
 
 ---
 
-## 7. Conformance Model
-
-sh2 defines **formal conformance levels**:
-
-| Level   | Description             |
-| ------- | ----------------------- |
-| `core`  | Mandatory language core |
-| `posix` | POSIX shell emission    |
-| `bash`  | Bash extensions         |
-
-An implementation must declare which levels it supports and pass the corresponding test suites.
-
-### Conformance Authority
-
-If there is disagreement between:
-
-* the implementation, and
-* the language specification or tests
-
-→ **The specification and conformance tests win.**
-
----
-
-## 8. Testing Philosophy
+## 7. Testing Philosophy
 
 sh2 uses **language-level testing**, not just unit tests.
 
@@ -180,9 +149,9 @@ Golden-file testing is mandatory for code generation.
 
 ---
 
-## 9. Bash Completeness Policy
+## 8. Bash Completeness Policy
 
-sh2 guarantees **Bash completeness** via:
+Bash completeness policy: any Bash can be expressed via `sh(...)` / `raw { ... }` even if not all constructs are first-class yet:
 
 * Structured language constructs for common shell behavior
 * Mandatory escape hatch support (`sh(...)` or `raw {}`)
@@ -194,7 +163,7 @@ This ensures:
 
 ---
 
-## 10. Contribution Model
+## 9. Contribution Model
 
 ### Who Should Contribute
 
@@ -208,25 +177,25 @@ This ensures:
 * All language changes require:
 
   * specification updates
-  * conformance tests
+  * fixtures + integration tests
 * Implementation changes without spec updates are discouraged
 * Design discussion precedes implementation
 
 ---
 
-## 11. Language Evolution Policy
+## 10. Language Evolution Policy
 
 * sh2 follows **spec-first development**
 * New syntax requires:
 
   * a spec proposal
   * grammar update
-  * conformance tests
+  * fixtures + integration tests
 * Breaking changes require a version bump
 
 ---
 
-## 12. Success Criteria
+## 11. Success Criteria
 
 The project is considered successful if:
 
@@ -237,13 +206,12 @@ The project is considered successful if:
 
 ---
 
-## 13. Project Status Summary
+## 12. Project Status Summary
 
 | Area               | Status      |
 | ------------------ | ----------- |
 | Language Spec      | Defined     |
 | Grammar            | Defined     |
-| Conformance        | Defined     |
 | Reference Compiler | Prototype   |
 | CI Integration     | In progress |
 
