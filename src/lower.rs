@@ -46,6 +46,18 @@ fn lower_function(f: ast::Function) -> ir::Function {
 fn lower_stmt(stmt: ast::Stmt, out: &mut Vec<ir::Cmd>) {
     match stmt {
         ast::Stmt::Let { name, value } => {
+            // Special handling for try_run to allow it ONLY during strict let-binding lowering.
+            // This prevents "let x = 1 + try_run(...)" but allows "let x = try_run(...)".
+            if let ast::Expr::Call { name: func_name, args } = &value {
+                if func_name == "try_run" {
+                    if args.is_empty() {
+                        panic!("try_run() requires at least 1 argument (cmd)");
+                    }
+                    let lowered_args = args.clone().into_iter().map(lower_expr).collect();
+                    out.push(ir::Cmd::Assign(name, ir::Val::TryRun(lowered_args)));
+                    return;
+                }
+            }
             out.push(ir::Cmd::Assign(name, lower_expr(value)));
         }
 
@@ -598,11 +610,7 @@ fn lower_expr(e: ast::Expr) -> ir::Val {
                 let arg = lower_expr(args.into_iter().next().unwrap());
                 ir::Val::Which(Box::new(arg))
             } else if name == "try_run" {
-                if args.is_empty() {
-                    panic!("try_run() requires at least 1 argument (cmd)");
-                }
-                let lowered_args = args.into_iter().map(lower_expr).collect();
-                ir::Val::TryRun(lowered_args)
+                 panic!("try_run() must be bound via let (e.g., let r = try_run(...))");
             } else if name == "require" {
                 panic!("require() is a statement, not an expression");
             } else if name == "read_file" {

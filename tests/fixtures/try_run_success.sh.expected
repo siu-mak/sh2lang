@@ -43,7 +43,7 @@ __sh2_path_join() { out=''; for p in "$@"; do [ -z "$p" ] && continue; case "$p"
 main() {
     r__tmp_out="$(__sh2_tmpfile)"
   r__tmp_err="$(__sh2_tmpfile)"
-  case $- in *e*) __e=1;; *) __e=0;; esac; set +e; 'echo' 'hello' >"$r__tmp_out" 2>"$r__tmp_err"; r__status=$?; if [ "$__e" = 1 ]; then set -e; fi;
+  case $- in *e*) __sh2__errexit_was_set=1;; *) __sh2__errexit_was_set=0;; esac; set +e; 'echo' 'hello' >"$r__tmp_out" 2>"$r__tmp_err"; r__status=$?; if [ "$__sh2__errexit_was_set" = 1 ]; then set -e; fi;
   r__stdout="$(__sh2_read_file "$r__tmp_out")"
   r__stderr="$(__sh2_read_file "$r__tmp_err")"
   rm -f "$r__tmp_out" "$r__tmp_err"

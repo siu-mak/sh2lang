@@ -481,7 +481,7 @@ fn emit_cmd(cmd: &Cmd, out: &mut String, indent: usize, target: TargetShell) {
                 out.push_str(&format!("{pad}{name}__tmp_err=\"$(__sh2_tmpfile)\"\n", pad=pad, name=name));
                 
                 // Run (allow fail semantics)
-                out.push_str(&format!("{pad}case $- in *e*) __e=1;; *) __e=0;; esac; set +e; {} >\"${name}__tmp_out\" 2>\"${name}__tmp_err\"; {name}__status=$?; if [ \"$__e\" = 1 ]; then set -e; fi;\n", cmd, name=name));
+                out.push_str(&format!("{pad}case $- in *e*) __sh2__errexit_was_set=1;; *) __sh2__errexit_was_set=0;; esac; set +e; {} >\"${name}__tmp_out\" 2>\"${name}__tmp_err\"; {name}__status=$?; if [ \"$__sh2__errexit_was_set\" = 1 ]; then set -e; fi;\n", cmd, name=name));
 
                 // Read output
                 out.push_str(&format!("{pad}{name}__stdout=\"$(__sh2_read_file \"${name}__tmp_out\")\"\n", pad=pad, name=name));

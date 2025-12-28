@@ -45,3 +45,8 @@ fn exec_try_run_success_posix() {
 fn compile_try_run_stmt_invalid() {
     assert_codegen_panics("try_run_stmt_invalid", "try_run() must be bound via let");
 }
+
+#[test]
+fn compile_try_run_expr_invalid() {
+    assert_codegen_panics("try_run_expr_invalid", "try_run() must be bound via let");
+}
