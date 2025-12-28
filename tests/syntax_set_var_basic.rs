@@ -1,6 +1,7 @@
+use sh2c::ast::StmtKind;
 mod common;
 use common::*;
-use sh2c::ast::{Stmt, LValue};
+use sh2c::ast::{ExprKind, Stmt, LValue};
 
 #[test]
 fn parse_set_var_basic() {
@@ -9,20 +10,20 @@ fn parse_set_var_basic() {
     assert_eq!(func.body.len(), 3);
 
     match &func.body[0] {
-        Stmt::Let { name, .. } => {
+        Stmt { kind: StmtKind::Let { name, .. }, .. } => {
              assert_eq!(name, "x");
         }
         _ => panic!("Expected Let"),
     }
 
     match &func.body[1] {
-        Stmt::Set { target, .. } => {
+        Stmt { kind: StmtKind::Set { target, .. }, .. } => {
             assert!(matches!(target, LValue::Var(name) if name == "x"));
         }
         _ => panic!("Expected Set"),
     }
 
-    if let Stmt::Print(_) = &func.body[2] {} else { panic!("Expected Print"); }
+    if let Stmt { kind: StmtKind::Print(_), .. } = &func.body[2] {} else { panic!("Expected Print"); }
 }
 
 #[test]

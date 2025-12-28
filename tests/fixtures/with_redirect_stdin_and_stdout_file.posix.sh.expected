@@ -44,7 +44,8 @@ __sh2_home() { printf '%s' "${HOME-}"; }
 __sh2_path_join() { out=''; for p in "$@"; do [ -z "$p" ] && continue; case "$p" in /*) out="$p";; *) if [ -z "$out" ]; then out="$p"; else while [ "${out%/}" != "$out" ]; do out="${out%/}"; done; while [ "${p#/}" != "$p" ]; do p="${p#/}"; done; out="${out}/${p}"; fi;; esac; done; printf '%s' "$out"; }
 main() {
   {
-    'cat'; __sh2_status=$?; (exit $__sh2_status)
+    __sh2_loc="/srv/repos/rust/sh2c/tests/fixtures/with_redirect_stdin_and_stdout_file.sh2:3"
+    'cat'; __sh2_status=$?; if [ $__sh2_status -ne 0 ]; then printf 'Error in %s\n' "$__sh2_loc" >&2; exit $__sh2_status; fi
   } < 'in.txt' > 'out.txt'
 }
 

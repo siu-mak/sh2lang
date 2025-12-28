@@ -1,6 +1,6 @@
 mod common;
 use common::*;
-use sh2c::ast::{Stmt, Expr};
+use sh2c::ast::{Stmt, StmtKind, Expr, ExprKind};
 
 #[test]
 fn parse_wait_pid_basic() {
@@ -8,14 +8,14 @@ fn parse_wait_pid_basic() {
     let func = &program.functions[0];
     
     // Check let p = pid()
-    if let Stmt::Let { name, value: Expr::Pid } = &func.body[1] {
+    if let Stmt { kind: StmtKind::Let { name, value: Expr { kind: ExprKind::Pid, .. } }, .. } = &func.body[1] {
         assert_eq!(name, "p");
     } else {
         panic!("Expected Let p = Pid");
     }
     
     // Check wait(p)
-    if let Stmt::Wait(Some(Expr::Var(name))) = &func.body[2] {
+    if let Stmt { kind: StmtKind::Wait(Some(Expr { kind: ExprKind::Var(name), .. })), .. } = &func.body[2] {
         assert_eq!(name, "p");
     } else {
         panic!("Expected Wait(Var(p))");

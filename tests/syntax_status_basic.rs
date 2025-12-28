@@ -1,6 +1,6 @@
 mod common;
 use common::*;
-use sh2c::ast::{Stmt, Expr};
+use sh2c::ast::{Stmt, StmtKind, Expr, ExprKind};
 
 #[test]
 fn parse_status_basic() {
@@ -8,7 +8,7 @@ fn parse_status_basic() {
     let func = &program.functions[0];
     
     // Check print(status())
-    if let Stmt::Print(Expr::Status) = &func.body[1] {
+    if let Stmt { kind: StmtKind::Print(Expr { kind: ExprKind::Status, .. }), .. } = &func.body[1] {
         // OK
     } else {
         panic!("Expected Print(Status)");

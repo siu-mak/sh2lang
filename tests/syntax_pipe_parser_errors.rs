@@ -9,9 +9,11 @@ fn test_pipe_parser_error() {
             run("sh", "-c", "true") | print("not a run")
         }
     "#;
-    let tokens = lex(code);
+    use sh2c::span::SourceMap;
+    let sm = SourceMap::new(code.to_string());
+    let tokens = lex(&sm, code);
     let result = std::panic::catch_unwind(move || {
-        parse(&tokens);
+        parse(&tokens, &sm, "test_pipe_parser_error.sh2");
     });
     assert!(result.is_err(), "Parser should panic on non-run pipe segment");
     

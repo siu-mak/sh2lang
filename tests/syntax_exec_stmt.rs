@@ -1,4 +1,4 @@
-use sh2c::ast::{Stmt, Expr};
+use sh2c::ast::{Stmt, StmtKind, Expr, ExprKind};
 mod common;
 use common::*;
 
@@ -8,11 +8,11 @@ fn parse_exec_stmt() {
     let func = &program.functions[0];
 
     // stmt0: exec("sh", "-c", "echo exec_ok")
-    if let Stmt::Exec(args) = &func.body[0] {
+    if let Stmt { kind: StmtKind::Exec(args), .. } = &func.body[0] {
         assert_eq!(args.len(), 3);
-        assert!(matches!(args[0], Expr::Literal(ref s) if s == "sh"));
-        assert!(matches!(args[1], Expr::Literal(ref s) if s == "-c"));
-        assert!(matches!(args[2], Expr::Literal(ref s) if s == "echo exec_ok"));
+        assert!(matches!(args[0], Expr { kind: ExprKind::Literal(ref s), .. } if s == "sh"));
+        assert!(matches!(args[1], Expr { kind: ExprKind::Literal(ref s), .. } if s == "-c"));
+        assert!(matches!(args[2], Expr { kind: ExprKind::Literal(ref s), .. } if s == "echo exec_ok"));
     } else {
         panic!("Expected Exec(...)");
     }

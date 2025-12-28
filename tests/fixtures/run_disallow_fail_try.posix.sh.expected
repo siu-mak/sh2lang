@@ -45,7 +45,8 @@ __sh2_path_join() { out=''; for p in "$@"; do [ -z "$p" ] && continue; case "$p"
 main() {
   if {
     printf '%s\n' 'BEFORE' &&
-    'sh' '-c' 'exit 7'; __sh2_status=$?; (exit $__sh2_status)
+    __sh2_loc="/srv/repos/rust/sh2c/tests/fixtures/run_disallow_fail_try.sh2:4"
+    'sh' '-c' 'exit 7'; __sh2_status=$?; if [ $__sh2_status -ne 0 ]; then printf 'Error in %s\n' "$__sh2_loc" >&2; exit $__sh2_status; fi
   }; then
     :
   else

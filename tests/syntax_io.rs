@@ -1,14 +1,14 @@
 mod common;
-use sh2c::ast::Expr;
-use sh2c::ast::Stmt;
+use sh2c::ast::{Expr, ExprKind};
+use sh2c::ast::{Stmt, StmtKind};
 use common::{parse_fixture, assert_codegen_matches_snapshot, assert_exec_matches_fixture};
 
 #[test]
 fn parse_print_args() {
     let program = parse_fixture("print_args");
     let func = &program.functions[0];
-    if let Stmt::Print(expr) = &func.body[0] {
-        assert!(matches!(expr, Expr::Args));
+    if let Stmt { kind: StmtKind::Print(expr), .. } = &func.body[0] {
+        assert!(matches!(expr, Expr { kind: ExprKind::Args, .. }));
     } else {
         panic!("Expected Print(Args)");
     }
@@ -53,10 +53,11 @@ fn parse_print_err_statement_inline() {
         }
     "#;
     use sh2c::{lexer, parser};
-    let tokens = lexer::lex(src);
-    let program = parser::parse(&tokens);
+let sm = sh2c::span::SourceMap::new(src.to_string());
+    let tokens = sh2c::lexer::lex(&sm, "test");
+    let program = parser::parse(&tokens, &sm, "test");
     match &program.functions[0].body[0] {
-        sh2c::ast::Stmt::PrintErr(sh2c::ast::Expr::Literal(s)) => {
+        sh2c::ast::Stmt { kind: StmtKind::PrintErr(sh2c::ast::Expr { kind: ExprKind::Literal(s), .. }), .. } => {
             assert_eq!(s, "fail");
         }
         _ => panic!("Expected PrintErr"),
@@ -77,10 +78,9 @@ fn codegen_with_redirect_stdout_to_stderr_and_stderr_file() { assert_codegen_mat
 fn codegen_with_redirect_cyclic() {
     let src = include_str!("fixtures/with_redirect_cyclic.sh2");
     use sh2c::{lexer, parser, lower, codegen};
-    let tokens = lexer::lex(src);
-    let ast = parser::parse(&tokens);
+let sm = sh2c::span::SourceMap::new(src.to_string());
+    let tokens = sh2c::lexer::lex(&sm, "test");
+    let ast = parser::parse(&tokens, &sm, "test");
     let ir = lower::lower(ast);
     codegen::emit(&ir);
 }
-
-

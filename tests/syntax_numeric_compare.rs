@@ -1,3 +1,5 @@
+use sh2c::ast::StmtKind;
+use sh2c::ast::ExprKind;
 use sh2c::ast::{Stmt, Expr, CompareOp};
 mod common;
 use common::*;
@@ -8,11 +10,11 @@ fn parse_numeric_compare() {
     let func = &program.functions[0];
 
     // if 1 < 2
-    if let Stmt::If { cond, .. } = &func.body[0] {
-        if let Expr::Compare { left, op, right } = cond {
-            assert!(matches!(**left, Expr::Number(1)));
+    if let Stmt { kind: StmtKind::If { cond, .. }, .. } = &func.body[0] {
+        if let Expr { kind: ExprKind::Compare { left, op, right }, .. } = cond {
+            assert!(matches!(**left, Expr { kind: ExprKind::Number(1), .. }));
             assert_eq!(*op, CompareOp::Lt);
-            assert!(matches!(**right, Expr::Number(2)));
+            assert!(matches!(**right, Expr { kind: ExprKind::Number(2), .. }));
         } else { panic!("Expected Compare"); }
     } else { panic!("Expected If"); }
 }

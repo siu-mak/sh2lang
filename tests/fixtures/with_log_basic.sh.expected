@@ -50,9 +50,11 @@ main() {
     printf '%s\n' 'A'
     printf '%s\n' 'ERR' >&2
   )
-  'sh' '-c' 'sort out.log'; __sh2_status=$?; (exit $__sh2_status)
+  __sh2_loc="/srv/repos/rust/sh2c/tests/fixtures/with_log_basic.sh2:7"
+  case $- in *e*) __e=1;; *) __e=0;; esac; set +e; 'sh' '-c' 'sort out.log'; __sh2_status=$?; if [ "$__e" = 1 ]; then set -e; fi; if [ $__sh2_status -ne 0 ]; then printf 'Error in %s\n' "$__sh2_loc" >&2; (exit $__sh2_status); fi
 }
 
 __sh2_parsed_args="$(__sh2_parse_args "$@")"
 __sh2_status=0
+set -e
 main "$@"

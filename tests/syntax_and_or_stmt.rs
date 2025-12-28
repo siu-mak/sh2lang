@@ -1,4 +1,4 @@
-use sh2c::ast::Stmt;
+use sh2c::ast::{ExprKind, Stmt, StmtKind};
 mod common;
 use common::*;
 
@@ -8,28 +8,28 @@ fn parse_and_or_stmt() {
     let func = &program.functions[0];
 
     // stmt0: run(...) && print(...)
-    if let Stmt::AndThen { .. } = &func.body[0] {
+    if let Stmt { kind: StmtKind::AndThen { .. }, .. } = &func.body[0] {
         // OK
     } else {
         panic!("Expected AndThen at index 0, got {:?}", func.body[0]);
     }
 
     // stmt1: run(...) && print(...)
-    if let Stmt::AndThen { .. } = &func.body[1] {
+    if let Stmt { kind: StmtKind::AndThen { .. }, .. } = &func.body[1] {
         // OK
     } else {
         panic!("Expected AndThen at index 1");
     }
 
     // stmt2: run(...) || print(...)
-    if let Stmt::OrElse { .. } = &func.body[2] {
+    if let Stmt { kind: StmtKind::OrElse { .. }, .. } = &func.body[2] {
         // OK
     } else {
         panic!("Expected OrElse at index 2, got {:?}", func.body[2]);
     }
 
     // stmt3: run(...) || print(...)
-    if let Stmt::OrElse { .. } = &func.body[3] {
+    if let Stmt { kind: StmtKind::OrElse { .. }, .. } = &func.body[3] {
         // OK
     } else {
         panic!("Expected OrElse at index 3");

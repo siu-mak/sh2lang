@@ -1,3 +1,5 @@
+use sh2c::ast::StmtKind;
+use sh2c::ast::ExprKind;
 mod common;
 use common::*;
 use sh2c::ast::{Stmt, Expr, LValue};
@@ -9,19 +11,19 @@ fn parse_set_env_basic() {
     assert_eq!(func.body.len(), 3);
 
     match &func.body[0] {
-        Stmt::Set { target, .. } => {
+        Stmt { kind: StmtKind::Set { target, .. }, .. } => {
             assert!(matches!(target, LValue::Env(name) if name == "FOO"));
         }
         _ => panic!("Expected Set env"),
     }
 
     match &func.body[1] {
-        Stmt::Print(e) => assert!(matches!(e, Expr::Env(_))),
+        Stmt { kind: StmtKind::Print(e), .. } => assert!(matches!(e, Expr { kind: ExprKind::Env(_), .. })),
         _ => panic!("Expected Print(env(\"FOO\"))"),
     }
 
     match &func.body[2] {
-        Stmt::Run(_) | Stmt::Pipe(_) => {},
+        Stmt { kind: StmtKind::Run(_), .. } | Stmt { kind: StmtKind::Pipe(_), .. } => {},
         _ => panic!("Expected Run or Pipe"),
     }
 }

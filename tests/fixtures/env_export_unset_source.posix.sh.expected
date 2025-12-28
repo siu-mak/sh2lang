@@ -44,16 +44,22 @@ __sh2_home() { printf '%s' "${HOME-}"; }
 __sh2_path_join() { out=''; for p in "$@"; do [ -z "$p" ] && continue; case "$p" in /*) out="$p";; *) if [ -z "$out" ]; then out="$p"; else while [ "${out%/}" != "$out" ]; do out="${out%/}"; done; while [ "${p#/}" != "$p" ]; do p="${p#/}"; done; out="${out}/${p}"; fi;; esac; done; printf '%s' "$out"; }
 main() {
   export X='hello'
-  'sh' '-c' 'echo $X'; __sh2_status=$?; (exit $__sh2_status)
+  __sh2_loc="/srv/repos/rust/sh2c/tests/fixtures/env_export_unset_source.sh2:4"
+  'sh' '-c' 'echo $X'; __sh2_status=$?; if [ $__sh2_status -ne 0 ]; then printf 'Error in %s\n' "$__sh2_loc" >&2; exit $__sh2_status; fi
+  __sh2_loc="/srv/repos/rust/sh2c/tests/fixtures/env_export_unset_source.sh2:7"
   y='yo'
   export y
-  'sh' '-c' 'echo $y'; __sh2_status=$?; (exit $__sh2_status)
+  __sh2_loc="/srv/repos/rust/sh2c/tests/fixtures/env_export_unset_source.sh2:9"
+  'sh' '-c' 'echo $y'; __sh2_status=$?; if [ $__sh2_status -ne 0 ]; then printf 'Error in %s\n' "$__sh2_loc" >&2; exit $__sh2_status; fi
   unset X
-  'sh' '-c' 'test -z "$X" && echo unset_ok || echo unset_bad'; __sh2_status=$?; (exit $__sh2_status)
+  __sh2_loc="/srv/repos/rust/sh2c/tests/fixtures/env_export_unset_source.sh2:13"
+  'sh' '-c' 'test -z "$X" && echo unset_ok || echo unset_bad'; __sh2_status=$?; if [ $__sh2_status -ne 0 ]; then printf 'Error in %s\n' "$__sh2_loc" >&2; exit $__sh2_status; fi
+  __sh2_loc="/srv/repos/rust/sh2c/tests/fixtures/env_export_unset_source.sh2:16"
   f="$( 'mktemp' )"
   echo 'echo sourced_ok' > $f
   . "$f"
-  'rm' '-f' "$f"; __sh2_status=$?; (exit $__sh2_status)
+  __sh2_loc="/srv/repos/rust/sh2c/tests/fixtures/env_export_unset_source.sh2:21"
+  'rm' '-f' "$f"; __sh2_status=$?; if [ $__sh2_status -ne 0 ]; then printf 'Error in %s\n' "$__sh2_loc" >&2; exit $__sh2_status; fi
 }
 
 __sh2_parsed_args="$(__sh2_parse_args "$@")"

@@ -43,19 +43,30 @@ __sh2_log() { if [ "$3" = "true" ]; then printf '%s\t%s\t%s\n' "$(__sh2_log_now)
 __sh2_home() { printf '%s' "${HOME-}"; }
 __sh2_path_join() { out=''; for p in "$@"; do [ -z "$p" ] && continue; case "$p" in /*) out="$p";; *) if [ -z "$out" ]; then out="$p"; else while [ "${out%/}" != "$out" ]; do out="${out%/}"; done; while [ "${p#/}" != "$p" ]; do p="${p#/}"; done; out="${out}/${p}"; fi;; esac; done; printf '%s' "$out"; }
 main() {
-  'mkdir' '-p' 'sandbox'; __sh2_status=$?; (exit $__sh2_status)
+  __sh2_loc="/srv/repos/rust/sh2c/tests/fixtures/fs_predicates_full.sh2:2"
+  'mkdir' '-p' 'sandbox'; __sh2_status=$?; if [ $__sh2_status -ne 0 ]; then printf 'Error in %s\n' "$__sh2_loc" >&2; exit $__sh2_status; fi
   (
     cd 'sandbox'
-    'touch' 'f_empty'; __sh2_status=$?; (exit $__sh2_status)
-    'touch' 'f_full'; __sh2_status=$?; (exit $__sh2_status)
-    'sh' '-c' 'echo x > f_full'; __sh2_status=$?; (exit $__sh2_status)
-    'ln' '-s' 'f_empty' 'link'; __sh2_status=$?; (exit $__sh2_status)
-    'touch' 'f_exec'; __sh2_status=$?; (exit $__sh2_status)
-    'chmod' '+x' 'f_exec'; __sh2_status=$?; (exit $__sh2_status)
-    'touch' 'f_ro'; __sh2_status=$?; (exit $__sh2_status)
-    'chmod' '444' 'f_ro'; __sh2_status=$?; (exit $__sh2_status)
-    'touch' 'f_noread'; __sh2_status=$?; (exit $__sh2_status)
-    'chmod' '000' 'f_noread'; __sh2_status=$?; (exit $__sh2_status)
+    __sh2_loc="/srv/repos/rust/sh2c/tests/fixtures/fs_predicates_full.sh2:4"
+    'touch' 'f_empty'; __sh2_status=$?; if [ $__sh2_status -ne 0 ]; then printf 'Error in %s\n' "$__sh2_loc" >&2; exit $__sh2_status; fi
+    __sh2_loc="/srv/repos/rust/sh2c/tests/fixtures/fs_predicates_full.sh2:5"
+    'touch' 'f_full'; __sh2_status=$?; if [ $__sh2_status -ne 0 ]; then printf 'Error in %s\n' "$__sh2_loc" >&2; exit $__sh2_status; fi
+    __sh2_loc="/srv/repos/rust/sh2c/tests/fixtures/fs_predicates_full.sh2:6"
+    'sh' '-c' 'echo x > f_full'; __sh2_status=$?; if [ $__sh2_status -ne 0 ]; then printf 'Error in %s\n' "$__sh2_loc" >&2; exit $__sh2_status; fi
+    __sh2_loc="/srv/repos/rust/sh2c/tests/fixtures/fs_predicates_full.sh2:7"
+    'ln' '-s' 'f_empty' 'link'; __sh2_status=$?; if [ $__sh2_status -ne 0 ]; then printf 'Error in %s\n' "$__sh2_loc" >&2; exit $__sh2_status; fi
+    __sh2_loc="/srv/repos/rust/sh2c/tests/fixtures/fs_predicates_full.sh2:9"
+    'touch' 'f_exec'; __sh2_status=$?; if [ $__sh2_status -ne 0 ]; then printf 'Error in %s\n' "$__sh2_loc" >&2; exit $__sh2_status; fi
+    __sh2_loc="/srv/repos/rust/sh2c/tests/fixtures/fs_predicates_full.sh2:10"
+    'chmod' '+x' 'f_exec'; __sh2_status=$?; if [ $__sh2_status -ne 0 ]; then printf 'Error in %s\n' "$__sh2_loc" >&2; exit $__sh2_status; fi
+    __sh2_loc="/srv/repos/rust/sh2c/tests/fixtures/fs_predicates_full.sh2:12"
+    'touch' 'f_ro'; __sh2_status=$?; if [ $__sh2_status -ne 0 ]; then printf 'Error in %s\n' "$__sh2_loc" >&2; exit $__sh2_status; fi
+    __sh2_loc="/srv/repos/rust/sh2c/tests/fixtures/fs_predicates_full.sh2:13"
+    'chmod' '444' 'f_ro'; __sh2_status=$?; if [ $__sh2_status -ne 0 ]; then printf 'Error in %s\n' "$__sh2_loc" >&2; exit $__sh2_status; fi
+    __sh2_loc="/srv/repos/rust/sh2c/tests/fixtures/fs_predicates_full.sh2:15"
+    'touch' 'f_noread'; __sh2_status=$?; if [ $__sh2_status -ne 0 ]; then printf 'Error in %s\n' "$__sh2_loc" >&2; exit $__sh2_status; fi
+    __sh2_loc="/srv/repos/rust/sh2c/tests/fixtures/fs_predicates_full.sh2:16"
+    'chmod' '000' 'f_noread'; __sh2_status=$?; if [ $__sh2_status -ne 0 ]; then printf 'Error in %s\n' "$__sh2_loc" >&2; exit $__sh2_status; fi
     if [ -L 'link' ]; then
       printf '%s\n' 'link is symlink'
     fi

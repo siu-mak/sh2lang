@@ -25,7 +25,9 @@ fn exec_multiline_mixed_quotes() {
 fn parse_unterminated_cooked() {
     // Just lexing should panic
     let src = std::fs::read_to_string("tests/fixtures/multiline_unterminated.sh2").unwrap();
-    let _ = lex(&src);
+    use sh2c::span::SourceMap;
+    let sm = SourceMap::new(src.clone());
+    let _ = lex(&sm, &src);
 }
 
 #[test]

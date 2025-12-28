@@ -42,4 +42,3 @@ fn exec_pipe_posix_errexit_safe() {
     // (exit $__sh2_status) should trigger errexit abort, preventing UNREACHABLE.
     assert_exec_matches_fixture_target_with_flags("pipe_posix_errexit_safe", TargetShell::Posix, &["-e"]);
 }
-

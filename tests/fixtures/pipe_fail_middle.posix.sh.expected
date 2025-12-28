@@ -44,7 +44,9 @@ __sh2_home() { printf '%s' "${HOME-}"; }
 __sh2_path_join() { out=''; for p in "$@"; do [ -z "$p" ] && continue; case "$p" in /*) out="$p";; *) if [ -z "$out" ]; then out="$p"; else while [ "${out%/}" != "$out" ]; do out="${out%/}"; done; while [ "${p#/}" != "$p" ]; do p="${p#/}"; done; out="${out}/${p}"; fi;; esac; done; printf '%s' "$out"; }
 main() {
   if {
-    'sh' '-c' 'printf hi'; __sh2_status=$?; (exit $__sh2_status) &&
+    __sh2_loc="/srv/repos/rust/sh2c/tests/fixtures/pipe_fail_middle.sh2:3"
+    'sh' '-c' 'printf hi'; __sh2_status=$?; if [ $__sh2_status -ne 0 ]; then printf 'Error in %s\n' "$__sh2_loc" >&2; exit $__sh2_status; fi &&
+    __sh2_loc="/srv/repos/rust/sh2c/tests/fixtures/pipe_fail_middle.sh2:4"
     {
       case $- in *e*) __sh2_e=1;; *) __sh2_e=0;; esac; set +e;
       __sh2_saved_traps=$(trap);
@@ -70,12 +72,13 @@ main() {
       rm -f "${__sh2_base}_"*;
       if [ -n "$__sh2_saved_traps" ]; then eval "$__sh2_saved_traps"; fi;
       if [ "$__sh2_e" = 1 ]; then set -e; fi;
-      (exit $__sh2_status)
+      if [ "$__sh2_status" -ne 0 ]; then printf 'Error in %s\n' "$__sh2_loc" >&2; exit $__sh2_status; fi
     } &&
     printf '%s\n' 'NO'
   }; then
     :
   else
+    __sh2_loc="/srv/repos/rust/sh2c/tests/fixtures/pipe_fail_middle.sh2:7"
     s="$__sh2_status"
     printf '%s\n' 'CAUGHT'
     printf '%s\n' "$s"

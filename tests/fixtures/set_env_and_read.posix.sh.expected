@@ -45,7 +45,8 @@ __sh2_path_join() { out=''; for p in "$@"; do [ -z "$p" ] && continue; case "$p"
 main() {
   export FOO='bar'
   printf '%s\n' "${FOO-}"
-  'sh' '-c' 'echo '"$FOO"; __sh2_status=$?; (exit $__sh2_status)
+  __sh2_loc="/srv/repos/rust/sh2c/tests/fixtures/set_env_and_read.sh2:4"
+  'sh' '-c' 'echo '"$FOO"; __sh2_status=$?; if [ $__sh2_status -ne 0 ]; then printf 'Error in %s\n' "$__sh2_loc" >&2; exit $__sh2_status; fi
 }
 
 __sh2_parsed_args="$(__sh2_parse_args "$@")"

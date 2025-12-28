@@ -41,10 +41,13 @@ __sh2_log() { if [ "$3" = "true" ]; then printf '%s\t%s\t%s\n' "$(__sh2_log_now)
 __sh2_home() { printf '%s' "${HOME-}"; }
 __sh2_path_join() { out=''; for p in "$@"; do [ -z "$p" ] && continue; case "$p" in /*) out="$p";; *) if [ -z "$out" ]; then out="$p"; else while [ "${out%/}" != "$out" ]; do out="${out%/}"; done; while [ "${p#/}" != "$p" ]; do p="${p#/}"; done; out="${out}/${p}"; fi;; esac; done; printf '%s' "$out"; }
 main() {
+  __sh2_loc="/srv/repos/rust/sh2c/tests/fixtures/target_posix_rejects_index.sh2:2"
   x="$( arr=('a' 'b'); idx=$(( 0 )); printf "%s" "${arr[idx]}" )"
-  'echo' "$x"; __sh2_status=$?; (exit $__sh2_status)
+  __sh2_loc="/srv/repos/rust/sh2c/tests/fixtures/target_posix_rejects_index.sh2:3"
+  case $- in *e*) __e=1;; *) __e=0;; esac; set +e; 'echo' "$x"; __sh2_status=$?; if [ "$__e" = 1 ]; then set -e; fi; if [ $__sh2_status -ne 0 ]; then printf 'Error in %s\n' "$__sh2_loc" >&2; (exit $__sh2_status); fi
 }
 
 __sh2_parsed_args="$(__sh2_parse_args "$@")"
 __sh2_status=0
+set -e
 main "$@"

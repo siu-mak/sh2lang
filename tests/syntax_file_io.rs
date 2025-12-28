@@ -1,6 +1,6 @@
 
 #[allow(unused_imports)]
-use sh2c::ast::{self, Stmt, Expr};
+use sh2c::ast::{StmtKind, ExprKind, self, Stmt, Expr};
 use sh2c::parser;
 use sh2c::lexer;
 use sh2c::lower;

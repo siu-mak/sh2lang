@@ -1,3 +1,5 @@
+use sh2c::ast::StmtKind;
+use sh2c::ast::ExprKind;
 mod common;
 use common::*;
 use sh2c::ast::{Stmt, LValue, Expr};
@@ -8,7 +10,7 @@ fn parse_set_env_and_read() {
     let func = &program.functions[0];
     
     // Check Set env.FOO
-    if let Stmt::Set { target, .. } = &func.body[0] {
+    if let Stmt { kind: StmtKind::Set { target, .. }, .. } = &func.body[0] {
         if let LValue::Env(name) = target {
             assert_eq!(name, "FOO");
         } else {
@@ -19,8 +21,8 @@ fn parse_set_env_and_read() {
     }
 
     // Check Print(env.FOO) -> Expr::EnvDot("FOO")
-    if let Stmt::Print(expr) = &func.body[1] {
-        if let Expr::EnvDot(name) = expr {
+    if let Stmt { kind: StmtKind::Print(expr), .. } = &func.body[1] {
+        if let Expr { kind: ExprKind::EnvDot(name), .. } = expr {
              assert_eq!(name, "FOO");
         } else {
              panic!("Expected Expr::EnvDot");

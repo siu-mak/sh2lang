@@ -47,6 +47,7 @@ show() {
 }
 
 main() {
+  __sh2_loc="/srv/repos/rust/sh2c/tests/fixtures/cmd_sub_call.sh2:6"
   out="$( 'show' )"
   printf '%s\n' "$out"
 }

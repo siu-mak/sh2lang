@@ -1,6 +1,6 @@
 mod common;
 use common::*;
-use sh2c::ast::{Stmt, Expr};
+use sh2c::ast::{Stmt, StmtKind, Expr, ExprKind};
 
 #[test]
 fn parse_envdot_shadow() {
@@ -10,14 +10,14 @@ fn parse_envdot_shadow() {
     
     // Check shadow function
     assert_eq!(func_shadow.name, "shadow");
-    if let Stmt::Print(Expr::EnvDot(name)) = &func_shadow.body[0] {
+    if let Stmt { kind: StmtKind::Print(Expr { kind: ExprKind::EnvDot(name), .. }), .. } = &func_shadow.body[0] {
          assert_eq!(name, "FOO");
     } else {
          panic!("Expected print(env.FOO)");
     }
     
     // Check main function has WithEnv
-    if let Stmt::WithEnv { .. } = &func_main.body[0] {
+    if let Stmt { kind: StmtKind::WithEnv { .. }, .. } = &func_main.body[0] {
     } else {
          panic!("Expected WithEnv in main");
     }

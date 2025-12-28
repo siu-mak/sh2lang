@@ -1,5 +1,5 @@
 mod common;
-use sh2c::ast::{Stmt, Expr};
+use sh2c::ast::{Stmt, StmtKind, Expr, ExprKind};
 use common::{parse_fixture, assert_codegen_matches_snapshot, assert_exec_matches_fixture};
 
 // --- Parsers ---
@@ -8,8 +8,8 @@ use common::{parse_fixture, assert_codegen_matches_snapshot, assert_exec_matches
 fn parse_if_bool_and() {
     let program = parse_fixture("if_bool_and");
     let func = &program.functions[0];
-    if let Stmt::If { cond, .. } = &func.body[0] {
-        assert!(matches!(cond, Expr::And(..)));
+    if let Stmt { kind: StmtKind::If { cond, .. }, .. } = &func.body[0] {
+        assert!(matches!(cond, Expr { kind: ExprKind::And(..), .. }));
     } else {
         panic!("Expected If");
     }
@@ -19,8 +19,8 @@ fn parse_if_bool_and() {
 fn parse_if_bool_literals() {
     let program = parse_fixture("if_true_literal");
     let func = &program.functions[0];
-    if let Stmt::If { cond, .. } = &func.body[0] {
-        assert!(matches!(cond, Expr::Bool(true)));
+    if let Stmt { kind: StmtKind::If { cond, .. }, .. } = &func.body[0] {
+        assert!(matches!(cond, Expr { kind: ExprKind::Bool(true), .. }));
     } else {
         panic!("Expected If(Bool(true))");
     }
@@ -30,7 +30,7 @@ fn parse_if_bool_literals() {
 fn parse_while_basic() {
     let program = parse_fixture("while_basic");
     let func = &program.functions[0];
-    assert!(matches!(func.body[1], Stmt::While { .. }));
+    assert!(matches!(func.body[1], Stmt { kind: StmtKind::While { .. }, .. }));
 }
 
 #[test]
@@ -40,7 +40,7 @@ fn parse_for_list_var() {
     // Check main structure roughly to ensure it parsed For
     assert_eq!(func.name, "main");
     match &func.body[1] {
-        Stmt::For { var, .. } => assert_eq!(var, "x"),
+        Stmt { kind: StmtKind::For { var, .. }, .. } => assert_eq!(var, "x"),
         _ => panic!("Expected For stmt"),
     }
 }
@@ -113,11 +113,12 @@ fn parse_if_statement_inline() {
         }
     "#;
     use sh2c::{lexer, parser};
-    let tokens = lexer::lex(src);
-    let ast = parser::parse(&tokens);
+let sm = sh2c::span::SourceMap::new(src.to_string());
+    let tokens = sh2c::lexer::lex(&sm, "test");
+    let ast = parser::parse(&tokens, &sm, "test");
     match &ast.functions[0].body[0] {
-        sh2c::ast::Stmt::If { cond, then_body, else_body, .. } => {
-            if let sh2c::ast::Expr::Var(name) = cond {
+        sh2c::ast::Stmt { kind: StmtKind::If { cond, then_body, else_body, .. }, .. } => {
+            if let sh2c::ast::Expr { kind: ExprKind::Var(name), .. } = cond {
                 assert_eq!(name, "registry");
             } else { panic!("Expected Var"); }
             assert_eq!(then_body.len(), 1);
@@ -139,11 +140,12 @@ fn parse_nested_if_inline() {
         }
     "#;
     use sh2c::{lexer, parser};
-    let tokens = lexer::lex(src);
-    let ast = parser::parse(&tokens);
+let sm = sh2c::span::SourceMap::new(src.to_string());
+    let tokens = sh2c::lexer::lex(&sm, "test");
+    let ast = parser::parse(&tokens, &sm, "test");
     match &ast.functions[0].body[0] {
-        sh2c::ast::Stmt::If { then_body, .. } => {
-            assert!(matches!(then_body[0], sh2c::ast::Stmt::If { .. }));
+        sh2c::ast::Stmt { kind: StmtKind::If { then_body, .. }, .. } => {
+            assert!(matches!(then_body[0], sh2c::ast::Stmt { kind: StmtKind::If { .. }, .. }));
         }
         _ => panic!("Expected outer if"),
     }
@@ -156,9 +158,9 @@ fn parse_break_basic() {
     let program = parse_fixture("break_basic");
     let func = &program.functions[0];
     // func main -> For -> If -> Break
-    if let Stmt::For { body, .. } = &func.body[1] {
-        if let Stmt::If { then_body, .. } = &body[0] {
-             assert!(matches!(then_body[0], Stmt::Break));
+    if let Stmt { kind: StmtKind::For { body, .. }, .. } = &func.body[1] {
+        if let Stmt { kind: StmtKind::If { then_body, .. }, .. } = &body[0] {
+             assert!(matches!(then_body[0], Stmt { kind: StmtKind::Break, .. }));
         } else { panic!("Expected If in loop"); }
     } else { panic!("Expected For loop"); }
 }
@@ -167,9 +169,9 @@ fn parse_break_basic() {
 fn parse_continue_basic() {
     let program = parse_fixture("continue_basic");
     let func = &program.functions[0];
-    if let Stmt::For { body, .. } = &func.body[1] {
-        if let Stmt::If { then_body, .. } = &body[0] {
-             assert!(matches!(then_body[0], Stmt::Continue));
+    if let Stmt { kind: StmtKind::For { body, .. }, .. } = &func.body[1] {
+        if let Stmt { kind: StmtKind::If { then_body, .. }, .. } = &body[0] {
+             assert!(matches!(then_body[0], Stmt { kind: StmtKind::Continue, .. }));
         } else { panic!("Expected If in loop"); }
     } else { panic!("Expected For loop"); }
 }
@@ -178,14 +180,14 @@ fn parse_continue_basic() {
 fn parse_andthen_short_circuit() {
     let program = parse_fixture("andthen_short_circuit");
     let func = &program.functions[0];
-    assert!(matches!(func.body[0], Stmt::AndThen { .. }));
+    assert!(matches!(func.body[0], Stmt { kind: StmtKind::AndThen { .. }, .. }));
 }
 
 #[test]
 fn parse_orelse_short_circuit() {
     let program = parse_fixture("orelse_short_circuit");
     let func = &program.functions[0];
-    assert!(matches!(func.body[0], Stmt::OrElse { .. }));
+    assert!(matches!(func.body[0], Stmt { kind: StmtKind::OrElse { .. }, .. }));
 }
 
 #[test]
@@ -222,8 +224,8 @@ fn codegen_compare() { assert_codegen_matches_snapshot("compare"); }
 fn parse_if_bool_or() {
     let program = parse_fixture("if_bool_or");
     let func = &program.functions[0];
-    if let Stmt::If { cond, .. } = &func.body[0] {
-        assert!(matches!(cond, Expr::Or(..)));
+    if let Stmt { kind: StmtKind::If { cond, .. }, .. } = &func.body[0] {
+        assert!(matches!(cond, Expr { kind: ExprKind::Or(..), .. }));
     } else {
         panic!("Expected If");
     }
@@ -237,11 +239,11 @@ fn exec_if_bool_or() { assert_exec_matches_fixture("if_bool_or"); }
 fn parse_if_bool_precedence_and_over_or() {
     let program = parse_fixture("if_bool_precedence_and_over_or");
     let func = &program.functions[0];
-    if let Stmt::If { cond, .. } = &func.body[0] {
+    if let Stmt { kind: StmtKind::If { cond, .. }, .. } = &func.body[0] {
         // A || B && C -> Or(A, And(B, C))
-        if let Expr::Or(left, right) = cond {
-             assert!(matches!(**left, Expr::Compare{..}));
-             assert!(matches!(**right, Expr::And(..)));
+        if let Expr { kind: ExprKind::Or(left, right), .. } = cond {
+             assert!(matches!(**left, Expr { kind: ExprKind::Compare{..}, .. }));
+             assert!(matches!(**right, Expr { kind: ExprKind::And(..), .. }));
         } else { panic!("Expected Or(Compare, And)"); }
     } else { panic!("Expected If"); }
 }
@@ -254,11 +256,11 @@ fn exec_if_bool_precedence_and_over_or() { assert_exec_matches_fixture("if_bool_
 fn parse_if_bool_paren_overrides_precedence() {
     let program = parse_fixture("if_bool_paren_overrides_precedence");
     let func = &program.functions[0];
-    if let Stmt::If { cond, .. } = &func.body[0] {
+    if let Stmt { kind: StmtKind::If { cond, .. }, .. } = &func.body[0] {
         // (A || B) && C -> And(Or(A, B), C)
-        if let Expr::And(left, right) = cond {
-             assert!(matches!(**left, Expr::Or(..)));
-             assert!(matches!(**right, Expr::Compare{..}));
+        if let Expr { kind: ExprKind::And(left, right), .. } = cond {
+             assert!(matches!(**left, Expr { kind: ExprKind::Or(..), .. }));
+             assert!(matches!(**right, Expr { kind: ExprKind::Compare{..}, .. }));
         } else { panic!("Expected And(Or, Compare)"); }
     } else { panic!("Expected If"); }
 }
@@ -270,8 +272,8 @@ fn exec_if_bool_paren_overrides_precedence() { assert_exec_matches_fixture("if_b
 #[test]
 fn parse_if_bool_not_basic() {
     let program = parse_fixture("if_bool_not_basic");
-    if let Stmt::If { cond, .. } = &program.functions[0].body[0] {
-        assert!(matches!(cond, Expr::Not(..)));
+    if let Stmt { kind: StmtKind::If { cond, .. }, .. } = &program.functions[0].body[0] {
+        assert!(matches!(cond, Expr { kind: ExprKind::Not(..), .. }));
     } else { panic!("Expected If"); }
 }
 #[test]
@@ -283,12 +285,12 @@ fn exec_if_bool_not_basic() { assert_exec_matches_fixture("if_bool_not_basic"); 
 fn parse_arith_comparison() {
     let program = parse_fixture("arith_comparison");
     let func = &program.functions[0];
-    if let Stmt::If { cond, .. } = &func.body[0] {
+    if let Stmt { kind: StmtKind::If { cond, .. }, .. } = &func.body[0] {
         // 5 > 3
-        if let Expr::Compare { left, op, right } = cond {
+        if let Expr { kind: ExprKind::Compare { left, op, right }, .. } = cond {
             assert_eq!(*op, sh2c::ast::CompareOp::Gt);
-            assert!(matches!(**left, Expr::Number(5)));
-            assert!(matches!(**right, Expr::Number(3)));
+            assert!(matches!(**left, Expr { kind: ExprKind::Number(5), .. }));
+            assert!(matches!(**right, Expr { kind: ExprKind::Number(3), .. }));
         } else { panic!("Expected Compare Gt"); }
     } else { panic!("Expected If"); }
 }

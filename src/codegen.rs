@@ -521,9 +521,22 @@ fn emit_cmd(cmd: &Cmd, out: &mut String, indent: usize, target: TargetShell) {
             } else {
                 // Normal: capture status in __sh2_status, then restore $? so try/set-e works
                 out.push_str(&shell_cmd);
-                out.push_str("; __sh2_status=$?; (exit $__sh2_status)\n");
+                out.push_str("; __sh2_status=$?; ");
+                match target {
+                    TargetShell::Bash => {
+                        out.push_str("(exit $__sh2_status)\n");
+                    }
+                    TargetShell::Posix => {
+                        out.push_str("if [ $__sh2_status -ne 0 ]; then ");
+                        if loc.is_some() {
+                            out.push_str("printf 'Error in %s\\n' \"$__sh2_loc\" >&2; ");
+                        }
+                        out.push_str("exit $__sh2_status; fi\n");
+                    }
+                }
             }
         }
+
         Cmd::ExecReplace(args, loc) => {
             if let Some(l) = loc {
                  out.push_str(&format!("{}__sh2_loc=\"{}\"\n", pad, l));
@@ -614,7 +627,16 @@ fn emit_cmd(cmd: &Cmd, out: &mut String, indent: usize, target: TargetShell) {
                      if allow_fail_last {
                          out.push_str(":\n"); 
                      } else {
-                         out.push_str("(exit $__sh2_status)\n");
+                         match target {
+                              TargetShell::Bash => out.push_str("(exit $__sh2_status)\n"),
+                              TargetShell::Posix => {
+                                  out.push_str("if [ $__sh2_status -ne 0 ]; then ");
+                                  if loc.is_some() {
+                                      out.push_str("printf 'Error in %s\\n' \"$__sh2_loc\" >&2; ");
+                                  }
+                                  out.push_str("exit $__sh2_status; fi\n");
+                              }
+                         }
                      }
                  }
                  TargetShell::Posix => {
@@ -623,7 +645,7 @@ fn emit_cmd(cmd: &Cmd, out: &mut String, indent: usize, target: TargetShell) {
                      }).collect();
                      let allow_fails: Vec<bool> = segments.iter().map(|(_, af)| *af).collect();
                      
-                     emit_posix_pipeline(out, &pad, target, &stages, &allow_fails, allow_fail_last);
+                     emit_posix_pipeline(out, &pad, target, &stages, &allow_fails, allow_fail_last, loc.is_some());
                  }
              }
         }
@@ -648,7 +670,24 @@ fn emit_cmd(cmd: &Cmd, out: &mut String, indent: usize, target: TargetShell) {
                         "if [[ -o pipefail ]]; then __p=1; else __p=0; fi; set -o pipefail; case $- in *e*) __e=1;; *) __e=0;; esac; set +e; {} ; __sh2_status=$?; if [ \"$__e\" = 1 ]; then set -e; fi; if [ \"$__p\" = 0 ]; then set +o pipefail; fi; ",
                         pipe_str
                     ));
-                    out.push_str("(exit $__sh2_status)\n");
+
+                    match target {
+                         TargetShell::Bash => out.push_str("(exit $__sh2_status)\n"),
+                         TargetShell::Posix => {
+                             // This path is usually not taken for Posix loop above?
+                             // Wait, AST StmtKind::Pipe is LOWERED to Cmd::Pipe. Use emit_posix_pipeline for posix target.
+                             // But this block is inside match target { Bash => ... }?
+                             // No, outer match is match target.
+                             // Wait, line 648 in diff block start...
+                             // Let me check the context content from my view_file.
+                             // In step 322 diff:
+                             // TargetShell::Bash -> ... out.push_str("(exit $__sh2_status)\n");
+                             // TargetShell::Posix -> ... emit_posix_pipeline ...
+                             // So strict Posix handled in other arm. But I should double check.
+                             // If I'm inside TargetShell::Bash arm, I don't need to change it.
+                             out.push_str("(exit $__sh2_status)\n");
+                         }
+                    }
                 }
                 TargetShell::Posix => {
                      let stages: Vec<String> = segments.iter().map(|seg| {
@@ -659,7 +698,7 @@ fn emit_cmd(cmd: &Cmd, out: &mut String, indent: usize, target: TargetShell) {
                          s
                      }).collect();
                      let allow_fails = vec![false; segments.len()];
-                     emit_posix_pipeline(out, &pad, target, &stages, &allow_fails, false);
+                     emit_posix_pipeline(out, &pad, target, &stages, &allow_fails, false, loc.is_some());
                 }
             }
         }
@@ -1180,10 +1219,11 @@ fn emit_case_glob_pattern(glob: &str) -> String {
 fn emit_posix_pipeline(
     out: &mut String,
     pad: &str,
-    _target: TargetShell,
+    target: TargetShell,
     stages: &[String],
     allow_fails: &[bool],
     allow_fail_last: bool,
+    has_loc: bool,
 ) {
     // POSIX sh manual pipeline using FIFOs to simulate pipefail without deadlocks.
     // This implementation:
@@ -1267,7 +1307,16 @@ fn emit_posix_pipeline(
     if allow_fail_last {
         out.push_str(&format!("{}:\n", indent_pad));
     } else {
-        out.push_str(&format!("{}(exit $__sh2_status)\n", indent_pad));
+        match target {
+            TargetShell::Bash => out.push_str(&format!("{}(exit $__sh2_status)\n", indent_pad)),
+            TargetShell::Posix => {
+                out.push_str(&format!("{}if [ \"$__sh2_status\" -ne 0 ]; then ", indent_pad));
+                if has_loc {
+                     out.push_str("printf 'Error in %s\\n' \"$__sh2_loc\" >&2; ");
+                }
+                out.push_str("exit $__sh2_status; fi\n");
+            }
+        }
     }
     
     out.push_str(&format!("{}}}\n", pad));
@@ -1282,11 +1331,11 @@ __sh2_before() { awk -v s="$1" -v sep="$2" 'BEGIN { n=index(s, sep); if(n==0) pr
 __sh2_after() { awk -v s="$1" -v sep="$2" 'BEGIN { n=index(s, sep); if(n==0) printf ""; else printf "%s", substr(s, n+length(sep)) }'; }
 __sh2_replace() { awk -v s="$1" -v old="$2" -v new="$3" 'BEGIN { if(old=="") { printf "%s", s; exit } len=length(old); while(i=index(s, old)) { printf "%s%s", substr(s, 1, i-1), new; s=substr(s, i+len) } printf "%s", s }'; }
 __sh2_split() { awk -v s="$1" -v sep="$2" 'BEGIN { if(sep=="") { printf "%s", s; exit } len=length(sep); while(i=index(s, sep)) { printf "%s\n", substr(s, 1, i-1); s=substr(s, i+len) } printf "%s", s }'; }
-__sh2_err_handler() { printf "Error in %s\n" "${__sh2_loc:-unknown}" >&2; }
-trap '__sh2_err_handler' ERR
 "#);
     match target {
         TargetShell::Bash => {
+            s.push_str("__sh2_err_handler() { printf \"Error in %s\\n\" \"${__sh2_loc:-unknown}\" >&2; }\n");
+            s.push_str("trap '__sh2_err_handler' ERR\n");
             s.push_str("__sh2_matches() { [[ \"$1\" =~ $2 ]]; }\n");
             s.push_str("__sh2_parse_args() {\n");
             s.push_str("  local out=\"\" key val\n");

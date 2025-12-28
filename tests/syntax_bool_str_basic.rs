@@ -1,6 +1,6 @@
 mod common;
 use common::*;
-use sh2c::ast::{Stmt, Expr};
+use sh2c::ast::{Stmt, StmtKind, Expr, ExprKind};
 
 #[test]
 fn parse_bool_str_basic() {
@@ -8,11 +8,11 @@ fn parse_bool_str_basic() {
     let func = &program.functions[0];
     // print(bool_str(is_non_empty("nonempty")))
     // func body: [run, print(...)]
-    if let Stmt::Print(expr) = &func.body[1] {
-        if let Expr::BoolStr(inner) = expr {
-             if let Expr::IsNonEmpty(path) = &**inner {
+    if let Stmt { kind: StmtKind::Print(expr), .. } = &func.body[1] {
+        if let Expr { kind: ExprKind::BoolStr(inner), .. } = expr {
+             if let Expr { kind: ExprKind::IsNonEmpty(path), .. } = &**inner {
                  match &**path {
-                     Expr::Literal(s) => assert_eq!(s, "nonempty"),
+                     Expr { kind: ExprKind::Literal(s), .. } => assert_eq!(s, "nonempty"),
                      _ => panic!("Expected literal"),
                  }
              } else { panic!("Expected IsNonEmpty"); }

@@ -1,5 +1,5 @@
 mod common;
-use sh2c::ast::{Stmt, Expr};
+use sh2c::ast::{Stmt, StmtKind, Expr, ExprKind};
 use common::{parse_fixture, assert_codegen_matches_snapshot, assert_exec_matches_fixture};
 
 #[test]
@@ -14,14 +14,14 @@ fn parse_simple_function() {
 fn parse_call_func() {
     let program = parse_fixture("call_func");
     let func = &program.functions[1]; // main is second
-    assert!(matches!(func.body[0], Stmt::Call { .. }));
+    assert!(matches!(func.body[0], Stmt { kind: StmtKind::Call { .. }, .. }));
 }
 
 #[test]
 fn parse_return_basic() {
     let program = parse_fixture("return_basic");
     let func = &program.functions[0];
-    assert!(matches!(func.body[1], Stmt::Return(_)));
+    assert!(matches!(func.body[1], Stmt { kind: StmtKind::Return(_), .. }));
 }
 
 #[test]
@@ -56,8 +56,9 @@ fn parse_simple_function_inline() {
         }
     "#;
     use sh2c::{lexer, parser};
-    let tokens = lexer::lex(src);
-    let ast = parser::parse(&tokens);
+let sm = sh2c::span::SourceMap::new(src.to_string());
+    let tokens = sh2c::lexer::lex(&sm, "test");
+    let ast = parser::parse(&tokens, &sm, "test");
     assert_eq!(ast.functions.len(), 1);
     assert_eq!(ast.functions[0].name, "hello");
 }
@@ -68,8 +69,8 @@ fn parse_simple_function_inline() {
 fn parse_return_status() {
     let program = parse_fixture("return_status");
     let func = &program.functions[0];
-    if let Stmt::Return(Some(val)) = &func.body[0] {
-        if let Expr::Number(n) = val {
+    if let Stmt { kind: StmtKind::Return(Some(val)), .. } = &func.body[0] {
+        if let Expr { kind: ExprKind::Number(n), .. } = val {
             assert_eq!(*n, 9);
         } else { panic!("Expected Return(Number)"); }
     } else { panic!("Expected Return(Some)"); }

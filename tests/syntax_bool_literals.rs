@@ -1,4 +1,4 @@
-use sh2c::ast::{Stmt, Expr};
+use sh2c::ast::{Stmt, StmtKind, Expr, ExprKind};
 mod common;
 use common::*;
 
@@ -8,13 +8,13 @@ fn parse_bool_literals() {
     let func = &program.functions[0];
 
     // stmt0: if true { ... }
-    if let Stmt::If { cond, .. } = &func.body[0] {
-        assert!(matches!(cond, Expr::Bool(true)));
+    if let Stmt { kind: StmtKind::If { cond, .. }, .. } = &func.body[0] {
+        assert!(matches!(cond, Expr { kind: ExprKind::Bool(true), .. }));
     } else { panic!("Expected first If"); }
 
     // stmt1: if false { ... }
-    if let Stmt::If { cond, .. } = &func.body[1] {
-        assert!(matches!(cond, Expr::Bool(false)));
+    if let Stmt { kind: StmtKind::If { cond, .. }, .. } = &func.body[1] {
+        assert!(matches!(cond, Expr { kind: ExprKind::Bool(false), .. }));
     } else { panic!("Expected second If"); }
 }
 

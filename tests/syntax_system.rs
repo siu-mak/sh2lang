@@ -1,63 +1,63 @@
 mod common;
-use sh2c::ast::{Stmt, Expr};
+use sh2c::ast::{Stmt, StmtKind, Expr, ExprKind};
 use common::{parse_fixture, assert_codegen_matches_snapshot, assert_exec_matches_fixture};
 
 #[test]
 fn parse_exit_basic() {
     let program = parse_fixture("exit_basic");
     let func = &program.functions[0];
-    assert!(matches!(func.body[1], Stmt::Exit(_)));
+    assert!(matches!(func.body[1], Stmt { kind: StmtKind::Exit(_), .. }));
 }
 
 #[test]
 fn parse_with_env() {
     let program = parse_fixture("with_env");
     let func = &program.functions[0];
-    assert!(matches!(func.body[0], Stmt::WithEnv { .. }));
+    assert!(matches!(func.body[0], Stmt { kind: StmtKind::WithEnv { .. }, .. }));
 }
 
 #[test]
 fn parse_cd_basic() {
     let program = parse_fixture("cd_basic");
     let func = &program.functions[0];
-    assert!(matches!(func.body[0], Stmt::Cd { .. }));
+    assert!(matches!(func.body[0], Stmt { kind: StmtKind::Cd { .. }, .. }));
 }
 
 #[test]
 fn parse_spawn_run() {
     let program = parse_fixture("spawn_run");
     let func = &program.functions[0];
-    assert!(matches!(func.body[0], Stmt::Spawn { .. }));
+    assert!(matches!(func.body[0], Stmt { kind: StmtKind::Spawn { .. }, .. }));
 }
 
 #[test]
 fn parse_wait_all() {
     let program = parse_fixture("wait_all");
     let func = &program.functions[0];
-    assert!(matches!(func.body[2], Stmt::Wait(_)));
+    assert!(matches!(func.body[2], Stmt { kind: StmtKind::Wait(_), .. }));
 }
 
 #[test]
 fn parse_export_unset() {
     let program = parse_fixture("export_unset");
     let func = &program.functions[0];
-    assert!(matches!(func.body[0], Stmt::Export { .. }));
-    assert!(matches!(func.body[2], Stmt::Unset { .. }));
+    assert!(matches!(func.body[0], Stmt { kind: StmtKind::Export { .. }, .. }));
+    assert!(matches!(func.body[2], Stmt { kind: StmtKind::Unset { .. }, .. }));
 }
 
 #[test]
 fn parse_source_basic() {
     let program = parse_fixture("source_basic");
     let func = &program.functions[0];
-    assert!(matches!(func.body[1], Stmt::Source { .. }));
+    assert!(matches!(func.body[1], Stmt { kind: StmtKind::Source { .. }, .. }));
 }
 
 #[test]
 fn parse_exists_check() {
     let program = parse_fixture("exists_check");
     let func = &program.functions[0];
-    if let Stmt::If { cond, .. } = &func.body[0] {
-        assert!(matches!(cond, Expr::Exists(..)));
+    if let Stmt { kind: StmtKind::If { cond, .. }, .. } = &func.body[0] {
+        assert!(matches!(cond, Expr { kind: ExprKind::Exists(..), .. }));
     } else { panic!("Expected If(Exists)"); }
 }
 
@@ -103,8 +103,8 @@ fn codegen_sh_block() { assert_codegen_matches_snapshot("sh_block"); }
 fn parse_exit_status() {
     let program = parse_fixture("exit_status");
     let func = &program.functions[0];
-    if let Stmt::Exit(Some(val)) = &func.body[0] {
-        if let Expr::Number(n) = val {
+    if let Stmt { kind: StmtKind::Exit(Some(val)), .. } = &func.body[0] {
+        if let Expr { kind: ExprKind::Number(n), .. } = val {
             assert_eq!(*n, 7);
         } else { panic!("Expected Exit(Number)"); }
     } else { panic!("Expected Exit(Some)"); }
@@ -156,7 +156,7 @@ fn exec_wait_list_literal() { assert_exec_matches_fixture("wait_list_literal"); 
 fn parse_subshell_basic() {
     let program = parse_fixture("subshell_basic");
     let func = &program.functions[0];
-    assert!(matches!(func.body[1], Stmt::Subshell { .. }));
+    assert!(matches!(func.body[1], Stmt { kind: StmtKind::Subshell { .. }, .. }));
 }
 
 #[test]
@@ -164,7 +164,7 @@ fn parse_wait_complex() {
     let program = parse_fixture("wait_complex");
     let func = &program.functions[0];
     // wait($(run...))
-    if let Stmt::Wait(Some(Expr::Command(_))) = &func.body[0] {
+    if let Stmt { kind: StmtKind::Wait(Some(Expr { kind: ExprKind::Command(_), .. })), .. } = &func.body[0] {
         // ok
     } else { panic!("Expected Wait(Command)"); }
 }

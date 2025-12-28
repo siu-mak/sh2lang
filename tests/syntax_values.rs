@@ -1,21 +1,21 @@
 mod common;
-use sh2c::ast::{Stmt, Expr};
+use sh2c::ast::{Stmt, StmtKind, Expr, ExprKind};
 use common::{parse_fixture, assert_codegen_matches_snapshot, assert_exec_matches_fixture};
 
 #[test]
 fn parse_let_args_functions() {
     let program = parse_fixture("let_args");
     let func = &program.functions[0];
-    if let Stmt::Print(expr) = &func.body[1] {
-        assert!(matches!(expr, Expr::Count(_)));
+    if let Stmt { kind: StmtKind::Print(expr), .. } = &func.body[1] {
+        assert!(matches!(expr, Expr { kind: ExprKind::Count(_), .. }));
     } else { panic!("Expected Print(Count)") }
 
-    if let Stmt::Print(expr) = &func.body[2] {
-        assert!(matches!(expr, Expr::Index { .. }));
+    if let Stmt { kind: StmtKind::Print(expr), .. } = &func.body[2] {
+        assert!(matches!(expr, Expr { kind: ExprKind::Index { .. }, .. }));
     } else { panic!("Expected Print(Index)") }
     
-    if let Stmt::Print(expr) = &func.body[3] {
-        assert!(matches!(expr, Expr::Join { .. }));
+    if let Stmt { kind: StmtKind::Print(expr), .. } = &func.body[3] {
+        assert!(matches!(expr, Expr { kind: ExprKind::Join { .. }, .. }));
     } else { panic!("Expected Print(Join)") }
 }
 
@@ -23,8 +23,8 @@ fn parse_let_args_functions() {
 fn parse_count_list() {
     let program = parse_fixture("count_list_literal");
     let func = &program.functions[0];
-    if let Stmt::Print(expr) = &func.body[0] {
-        assert!(matches!(expr, Expr::Count(_)));
+    if let Stmt { kind: StmtKind::Print(expr), .. } = &func.body[0] {
+        assert!(matches!(expr, Expr { kind: ExprKind::Count(_), .. }));
     } else {
         panic!("Expected Print(Count)");
     }
@@ -69,17 +69,18 @@ fn parses_comparison() {
         }
     "#;
 
-    let tokens = lexer::lex(src);
-    let program = parser::parse(&tokens);
+let sm = sh2c::span::SourceMap::new(src.to_string());
+    let tokens = sh2c::lexer::lex(&sm, "test");
+    let program = parser::parse(&tokens, &sm, "test");
     let func = &program.functions[0];
     
     match &func.body[0] {
-        ast::Stmt::If { cond, .. } => {
-            if let ast::Expr::Compare { left, op, right } = cond {
+        ast::Stmt { kind: StmtKind::If { cond, .. }, .. } => {
+            if let ast::Expr { kind: ExprKind::Compare { left, op, right }, .. } = cond {
                 assert_eq!(op, &ast::CompareOp::Eq);
                 // Check operands
-                matches!(**left, ast::Expr::Var(_));
-                matches!(**right, ast::Expr::Literal(_));
+                matches!(**left, ast::Expr { kind: ExprKind::Var(_), .. });
+                matches!(**right, ast::Expr { kind: ExprKind::Literal(_), .. });
             } else {
                 panic!("Expected Compare expr in If cond");
             }
@@ -99,14 +100,15 @@ fn precedence_compare_concat() {
     "#;
     
     // (("a" + b) == c)
-    let tokens = lexer::lex(src);
-    let program = parser::parse(&tokens);
+let sm = sh2c::span::SourceMap::new(src.to_string());
+    let tokens = sh2c::lexer::lex(&sm, "test");
+    let program = parser::parse(&tokens, &sm, "test");
     let func = &program.functions[0];
     
-    if let ast::Stmt::If { cond, .. } = &func.body[0] {
-        if let ast::Expr::Compare { left, .. } = cond {
+    if let ast::Stmt { kind: StmtKind::If { cond, .. }, .. } = &func.body[0] {
+        if let ast::Expr { kind: ExprKind::Compare { left, .. }, .. } = cond {
              match &**left {
-                 ast::Expr::Arith{op: ast::ArithOp::Add, ..} => {},
+                 ast::Expr { kind: ExprKind::Arith{op: ast::ArithOp::Add, ..}, .. } => {},
                  _ => panic!("Expected Arith(Add) on left of Compare"),
              }
         } else {
@@ -126,8 +128,9 @@ fn codegen_comparison() {
         }
     "#;
     use sh2c::{lower, codegen};
-    let tokens = lexer::lex(src);
-    let ast = parser::parse(&tokens);
+let sm = sh2c::span::SourceMap::new(src.to_string());
+    let tokens = sh2c::lexer::lex(&sm, "test");
+    let ast = parser::parse(&tokens, &sm, "test");
     let ir = lower::lower(ast);
     let out = codegen::emit(&ir);
     assert!(out.contains("[ \"$x\" != 'bar' ]"));
@@ -144,8 +147,9 @@ fn exec_comparison() {
         }
     "#;
     use sh2c::{lower, codegen};
-    let tokens = lexer::lex(src);
-    let ast = parser::parse(&tokens);
+let sm = sh2c::span::SourceMap::new(src.to_string());
+    let tokens = sh2c::lexer::lex(&sm, "test");
+    let ast = parser::parse(&tokens, &sm, "test");
     let ir = lower::lower(ast);
     let bash = codegen::emit(&ir);
     let (stdout, _, _) = common::run_bash_script(&bash, &[], &[]);
@@ -162,16 +166,17 @@ fn parses_concatenation() {
         }
     "#;
 
-    let tokens = lexer::lex(src);
-    let program = parser::parse(&tokens);
+let sm = sh2c::span::SourceMap::new(src.to_string());
+    let tokens = sh2c::lexer::lex(&sm, "test");
+    let program = parser::parse(&tokens, &sm, "test");
     let func = &program.functions[0];
     
     match &func.body[0] {
         // Concat is now parsed as Arith(Add)
-        ast::Stmt::Let { value: ast::Expr::Arith { left, op, right }, .. } => {
+        ast::Stmt { kind: StmtKind::Let { value: ast::Expr { kind: ExprKind::Arith { left, op, right }, .. }, .. }, .. } => {
             assert_eq!(*op, ast::ArithOp::Add);
             match (&**left, &**right) {
-                (ast::Expr::Literal(l), ast::Expr::Literal(r)) => {
+                (ast::Expr { kind: ExprKind::Literal(l), .. }, ast::Expr { kind: ExprKind::Literal(r), .. }) => {
                     assert_eq!(l, "a");
                     assert_eq!(r, "b");
                 }
@@ -189,19 +194,20 @@ fn parses_chained_concatenation() {
             print("a" + b + "c")
         }
     "#;
-    let tokens = lexer::lex(src);
-    let program = parser::parse(&tokens);
+let sm = sh2c::span::SourceMap::new(src.to_string());
+    let tokens = sh2c::lexer::lex(&sm, "test");
+    let program = parser::parse(&tokens, &sm, "test");
     let func = &program.functions[0];
     // "a" + b + "c" -> (("a" + b) + "c")
-    if let ast::Stmt::Print(ast::Expr::Arith{ left, op, right }) = &func.body[0] {
+    if let ast::Stmt { kind: StmtKind::Print(ast::Expr { kind: ExprKind::Arith{ left, op, right }, .. }), .. } = &func.body[0] {
         assert_eq!(*op, ast::ArithOp::Add);
-        if let ast::Expr::Literal(s) = &**right {
+        if let ast::Expr { kind: ExprKind::Literal(s), .. } = &**right {
             assert_eq!(s, "c");
         } else { panic!("Expected 'c' on right"); }
-        if let ast::Expr::Arith{ left: ll, op: lop, right: lr } = &**left {
+        if let ast::Expr { kind: ExprKind::Arith{ left: ll, op: lop, right: lr }, .. } = &**left {
              assert_eq!(*lop, ast::ArithOp::Add);
              match (&**ll, &**lr) {
-                 (ast::Expr::Literal(l), ast::Expr::Var(r)) => {
+                 (ast::Expr { kind: ExprKind::Literal(l), .. }, ast::Expr { kind: ExprKind::Var(r), .. }) => {
                      assert_eq!(l, "a");
                      assert_eq!(r, "b");
                  }
@@ -220,8 +226,9 @@ fn codegen_concatenation() {
         }
     "#;
     use sh2c::{lower, codegen};
-    let tokens = lexer::lex(src);
-    let ast = parser::parse(&tokens);
+let sm = sh2c::span::SourceMap::new(src.to_string());
+    let tokens = sh2c::lexer::lex(&sm, "test");
+    let ast = parser::parse(&tokens, &sm, "test");
     let ir = lower::lower(ast);
     let out = codegen::emit(&ir);
     assert!(out.contains("'hello '\"$name\""));
@@ -237,8 +244,9 @@ fn exec_concatenation() {
         }
     "#;
     use sh2c::{lower, codegen};
-    let tokens = lexer::lex(src);
-    let ast = parser::parse(&tokens);
+let sm = sh2c::span::SourceMap::new(src.to_string());
+    let tokens = sh2c::lexer::lex(&sm, "test");
+    let ast = parser::parse(&tokens, &sm, "test");
     let ir = lower::lower(ast);
     let bash = codegen::emit(&ir);
     let (stdout, _, _) = common::run_bash_script(&bash, &[], &[]);
@@ -255,11 +263,12 @@ fn parses_let_statement() {
         }
     "#;
     use sh2c::{lexer, parser, ast};
-    let tokens = lexer::lex(src);
-    let program = parser::parse(&tokens);
+let sm = sh2c::span::SourceMap::new(src.to_string());
+    let tokens = sh2c::lexer::lex(&sm, "test");
+    let program = parser::parse(&tokens, &sm, "test");
     let func = &program.functions[0];
     match &func.body[0] {
-        ast::Stmt::Let { name, value: ast::Expr::Literal(val) } => {
+        ast::Stmt { kind: StmtKind::Let { name, value: ast::Expr { kind: ExprKind::Literal(val), .. } }, .. } => {
             assert_eq!(name, "x");
             assert_eq!(val, "y");
         }
@@ -276,8 +285,9 @@ fn codegen_let_and_usage() {
         }
     "#;
     use sh2c::{lexer, parser, lower, codegen};
-    let tokens = lexer::lex(src);
-    let ast = parser::parse(&tokens);
+let sm = sh2c::span::SourceMap::new(src.to_string());
+    let tokens = sh2c::lexer::lex(&sm, "test");
+    let ast = parser::parse(&tokens, &sm, "test");
     let ir = lower::lower(ast);
     let out = codegen::emit(&ir);
     assert!(out.contains("msg='hello'"));
@@ -293,8 +303,9 @@ fn exec_let_variable() {
         }
     "#;
     use sh2c::{lexer, parser, lower, codegen};
-    let tokens = lexer::lex(src);
-    let ast = parser::parse(&tokens);
+let sm = sh2c::span::SourceMap::new(src.to_string());
+    let tokens = sh2c::lexer::lex(&sm, "test");
+    let ast = parser::parse(&tokens, &sm, "test");
     let ir = lower::lower(ast);
     let bash = codegen::emit(&ir);
     let (stdout, _, _) = common::run_bash_script(&bash, &[], &[]);
@@ -311,8 +322,9 @@ fn let_alias_variable() {
         }
     "#;
     use sh2c::{lexer, parser, lower, codegen};
-    let tokens = lexer::lex(src);
-    let ast = parser::parse(&tokens);
+let sm = sh2c::span::SourceMap::new(src.to_string());
+    let tokens = sh2c::lexer::lex(&sm, "test");
+    let ast = parser::parse(&tokens, &sm, "test");
     let ir = lower::lower(ast);
     let out = codegen::emit(&ir);
     assert!(out.contains("b=\"$a\""));
@@ -322,15 +334,15 @@ fn let_alias_variable() {
 fn parse_arith_precedence() {
     let program = parse_fixture("arith_precedence");
     let func = &program.functions[0];
-    if let Stmt::Let { value, .. } = &func.body[0] {
+    if let Stmt { kind: StmtKind::Let { value, .. }, .. } = &func.body[0] {
         // 1 + 2 * 3 -> Add(1, Mul(2, 3))
-        if let Expr::Arith { left, op, right } = value {
+        if let Expr { kind: ExprKind::Arith { left, op, right }, .. } = value {
             assert_eq!(*op, sh2c::ast::ArithOp::Add);
-            assert!(matches!(**left, Expr::Number(1)));
-            if let Expr::Arith { left: l2, op: op2, right: r2 } = &**right {
+            assert!(matches!(**left, Expr { kind: ExprKind::Number(1), .. }));
+            if let Expr { kind: ExprKind::Arith { left: l2, op: op2, right: r2 }, .. } = &**right {
                 assert_eq!(*op2, sh2c::ast::ArithOp::Mul);
-                assert!(matches!(**l2, Expr::Number(2)));
-                assert!(matches!(**r2, Expr::Number(3)));
+                assert!(matches!(**l2, Expr { kind: ExprKind::Number(2), .. }));
+                assert!(matches!(**r2, Expr { kind: ExprKind::Number(3), .. }));
             } else { panic!("Expected Mul on right"); }
         } else { panic!("Expected Arith expression"); }
     } else { panic!("Expected Let stmt"); }
@@ -344,8 +356,8 @@ fn exec_arith_precedence() { assert_exec_matches_fixture("arith_precedence"); }
 fn parse_index_var_index() {
     let program = parse_fixture("index_var_index");
     let func = &program.functions[0];
-    if let Stmt::Print(Expr::Index { index, .. }) = &func.body[2] {
-        if let Expr::Var(s) = &**index {
+    if let Stmt { kind: StmtKind::Print(Expr { kind: ExprKind::Index { index, .. }, .. }), .. } = &func.body[2] {
+        if let Expr { kind: ExprKind::Var(s), .. } = &**index {
             assert_eq!(s, "i");
         } else { panic!("Expected Var index"); }
     } else { panic!("Expected Print(Index)"); }
@@ -359,9 +371,9 @@ fn exec_index_var_index() { assert_exec_matches_fixture("index_var_index"); }
 fn parse_index_arith_index() {
     let program = parse_fixture("index_arith_index");
     let func = &program.functions[0];
-    if let Stmt::Print(Expr::Index { index, .. }) = &func.body[2] {
+    if let Stmt { kind: StmtKind::Print(Expr { kind: ExprKind::Index { index, .. }, .. }), .. } = &func.body[2] {
         // i + 2
-        if let Expr::Arith { left, op, right } = &**index {
+        if let Expr { kind: ExprKind::Arith { left, op, right }, .. } = &**index {
              assert_eq!(*op, sh2c::ast::ArithOp::Add);
              // check operands if needed
         } else { panic!("Expected Arith index"); }
@@ -381,14 +393,14 @@ fn exec_index_list_literal_expr() { assert_exec_matches_fixture("index_list_lite
 fn parse_arith_unary_minus() {
     let program = parse_fixture("arith_unary_minus");
     let func = &program.functions[0];
-    if let Stmt::Let { value, .. } = &func.body[0] {
+    if let Stmt { kind: StmtKind::Let { value, .. }, .. } = &func.body[0] {
         // -1 + 2 -> Add(Sub(0, 1), 2)
-        if let Expr::Arith { left, op, .. } = value {
+        if let Expr { kind: ExprKind::Arith { left, op, .. }, .. } = value {
              assert_eq!(*op, sh2c::ast::ArithOp::Add);
-             if let Expr::Arith { left, op, right } = &**left {
+             if let Expr { kind: ExprKind::Arith { left, op, right }, .. } = &**left {
                  assert_eq!(*op, sh2c::ast::ArithOp::Sub);
-                 assert!(matches!(**left, Expr::Number(0)));
-                 assert!(matches!(**right, Expr::Number(1)));
+                 assert!(matches!(**left, Expr { kind: ExprKind::Number(0), .. }));
+                 assert!(matches!(**right, Expr { kind: ExprKind::Number(1), .. }));
              } else { panic!("Expected Sub(0,1) on left"); }
         } else { panic!("Expected Arith"); }
     }
@@ -402,8 +414,8 @@ fn exec_arith_unary_minus() { assert_exec_matches_fixture("arith_unary_minus"); 
 fn parse_index_args() {
     let program = parse_fixture("index_args");
     let func = &program.functions[0];
-    if let Stmt::Print(Expr::Index { list, .. }) = &func.body[0] {
-        assert!(matches!(**list, Expr::Args));
+    if let Stmt { kind: StmtKind::Print(Expr { kind: ExprKind::Index { list, .. }, .. }), .. } = &func.body[0] {
+        assert!(matches!(**list, Expr { kind: ExprKind::Args, .. }));
     } else { panic!("Expected Print(Index(Args))"); }
 }
 #[test]
@@ -415,8 +427,8 @@ fn exec_index_args() { assert_exec_matches_fixture("index_args"); }
 fn parse_join_args() {
     let program = parse_fixture("join_args");
     let func = &program.functions[0];
-    if let Stmt::Print(Expr::Join { list, .. }) = &func.body[0] {
-        assert!(matches!(**list, Expr::Args));
+    if let Stmt { kind: StmtKind::Print(Expr { kind: ExprKind::Join { list, .. }, .. }), .. } = &func.body[0] {
+        assert!(matches!(**list, Expr { kind: ExprKind::Args, .. }));
     } else { panic!("Expected Print(Join(Args))"); }
 }
 #[test]

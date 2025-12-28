@@ -50,4 +50,5 @@ main() {
 
 __sh2_parsed_args="$(__sh2_parse_args "$@")"
 __sh2_status=0
+set -e
 main "$@"

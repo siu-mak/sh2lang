@@ -1,6 +1,6 @@
 mod common;
 use common::*;
-use sh2c::ast::{Stmt, Expr};
+use sh2c::ast::{Stmt, StmtKind, Expr, ExprKind};
 
 #[test]
 fn parse_fs_exists_dir_file_symlink_basic() {
@@ -8,21 +8,21 @@ fn parse_fs_exists_dir_file_symlink_basic() {
     let func = &program.functions[0];
     assert_eq!(func.body.len(), 2);
 
-    assert!(matches!(&func.body[0], Stmt::Run(_)));
+    assert!(matches!(&func.body[0], Stmt { kind: StmtKind::Run(_), .. }));
 
-    if let Stmt::If { cond, .. } = &func.body[1] {
+    if let Stmt { kind: StmtKind::If { cond, .. }, .. } = &func.body[1] {
         fn has_pred(e: &Expr) -> (bool,bool,bool,bool) {
             match e {
-                Expr::Exists(_) => (true,false,false,false),
-                Expr::IsFile(_) => (false,true,false,false),
-                Expr::IsDir(_) => (false,false,true,false),
-                Expr::IsSymlink(_) => (false,false,false,true),
-                Expr::And(a,b) | Expr::Or(a,b) => {
+                Expr { kind: ExprKind::Exists(_), .. } => (true,false,false,false),
+                Expr { kind: ExprKind::IsFile(_), .. } => (false,true,false,false),
+                Expr { kind: ExprKind::IsDir(_), .. } => (false,false,true,false),
+                Expr { kind: ExprKind::IsSymlink(_), .. } => (false,false,false,true),
+                Expr { kind: ExprKind::And(a,b), .. } | Expr { kind: ExprKind::Or(a,b), .. } => {
                     let (a1,a2,a3,a4) = has_pred(a);
                     let (b1,b2,b3,b4) = has_pred(b);
                     (a1||b1, a2||b2, a3||b3, a4||b4)
                 }
-                Expr::Not(x) => has_pred(x),
+                Expr { kind: ExprKind::Not(x), .. } => has_pred(x),
                 _ => (false,false,false,false),
             }
         }

@@ -1,27 +1,27 @@
 mod common;
 use common::*;
-use sh2c::ast::{Stmt, Expr};
+use sh2c::ast::{Stmt, StmtKind, Expr, ExprKind};
 
 #[test]
 fn parse_interpolated_dollar_escape() {
     let program = parse_fixture("interpolated_dollar_escape");
     let func = &program.functions[0];
     // First print: "literal: {name}"
-    if let Stmt::Print(Expr::Literal(s)) = &func.body[1] {
+    if let Stmt { kind: StmtKind::Print(Expr { kind: ExprKind::Literal(s), .. }), .. } = &func.body[1] {
         assert!(s.contains("{name}"));
     } else {
         panic!("Expected literal for first print, got {:?}", func.body[1]);
     }
     // Second print: "dollar: $"
-    if let Stmt::Print(Expr::Literal(s)) = &func.body[2] {
+    if let Stmt { kind: StmtKind::Print(Expr { kind: ExprKind::Literal(s), .. }), .. } = &func.body[2] {
          assert!(s.contains("$"));
     } else {
         panic!("Expected literal for second print");
     }
     // Third print: "interp: {name}" -> Concat or Var
-    if let Stmt::Print(expr) = &func.body[3] {
+    if let Stmt { kind: StmtKind::Print(expr), .. } = &func.body[3] {
         match expr {
-            Expr::Concat(..) | Expr::Var(_) => {}, // Good
+            Expr { kind: ExprKind::Concat(..), .. } | Expr { kind: ExprKind::Var(_), .. } => {}, // Good
             other => panic!("Expected complex expression for third print, got {:?}", other),
         }
     }

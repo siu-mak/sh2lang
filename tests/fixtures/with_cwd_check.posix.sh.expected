@@ -45,6 +45,7 @@ __sh2_path_join() { out=''; for p in "$@"; do [ -z "$p" ] && continue; case "$p"
 main() {
   (
     cd '/tmp'
+    __sh2_loc="/srv/repos/rust/sh2c/tests/fixtures/with_cwd_check.sh2:3"
     p="$( 'pwd' )"
     if [ "$p" = '/tmp' ]; then
       printf '%s\n' 'yes'

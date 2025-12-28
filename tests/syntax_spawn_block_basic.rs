@@ -1,6 +1,7 @@
+use sh2c::ast::StmtKind;
 mod common;
 use common::*;
-use sh2c::ast::{Stmt};
+use sh2c::ast::{ExprKind, Stmt};
 
 #[test]
 fn parse_spawn_block_basic() {
@@ -8,10 +9,10 @@ fn parse_spawn_block_basic() {
     let func = &program.functions[0];
     
     // Check Spawn { stmt: Group { ... } }
-    if let Stmt::Spawn { stmt } = &func.body[0] {
-        if let Stmt::Group { body } = &**stmt {
+    if let Stmt { kind: StmtKind::Spawn { stmt }, .. } = &func.body[0] {
+        if let Stmt { kind: StmtKind::Group { body }, .. } = &**stmt {
              assert_eq!(body.len(), 1);
-             if let Stmt::Run(..) = &body[0] {
+             if let Stmt { kind: StmtKind::Run(..), .. } = &body[0] {
                  // OK
              } else {
                  panic!("Expected Run inside Group");

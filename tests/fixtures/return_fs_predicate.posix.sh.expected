@@ -48,7 +48,8 @@ check() {
 }
 
 main() {
-  'sh' '-c' 'rm -f empty nonempty; printf '\'''\'' > empty; echo hi > nonempty'; __sh2_status=$?; (exit $__sh2_status)
+  __sh2_loc="/srv/repos/rust/sh2c/tests/fixtures/return_fs_predicate.sh2:6"
+  'sh' '-c' 'rm -f empty nonempty; printf '\'''\'' > empty; echo hi > nonempty'; __sh2_status=$?; if [ $__sh2_status -ne 0 ]; then printf 'Error in %s\n' "$__sh2_loc" >&2; exit $__sh2_status; fi
   check 'nonempty'; __sh2_status=$?; (exit $__sh2_status)
   if [ "$__sh2_status" = "0" ]; then
     printf '%s\n' 'nonempty: ok'

@@ -1,3 +1,5 @@
+use sh2c::ast::StmtKind;
+use sh2c::ast::ExprKind;
 use sh2c::ast::{self, Stmt, Expr};
 mod common;
 use common::*;
@@ -9,9 +11,9 @@ fn parse_pid_basic() {
     // spawn run(...), let p = pid(), wait(p), print(status())
     
     // Check 2nd stmt: let p = pid()
-    if let Stmt::Let { name, value } = &func.body[1] {
+    if let Stmt { kind: StmtKind::Let { name, value }, .. } = &func.body[1] {
         assert_eq!(name, "p");
-        assert!(matches!(value, Expr::Pid));
+        assert!(matches!(value, Expr { kind: ExprKind::Pid, .. }));
     } else { panic!("Expected Let p = Pid"); }
 }
 

@@ -56,9 +56,11 @@ main() {
     exec 2> >(tee -a "$__sh2_log_path" >&2)
     printf '%s\n' 'B'
   )
-  'cat' 'out.log'; __sh2_status=$?; (exit $__sh2_status)
+  __sh2_loc="/srv/repos/rust/sh2c/tests/fixtures/with_log_append.sh2:4"
+  case $- in *e*) __e=1;; *) __e=0;; esac; set +e; 'cat' 'out.log'; __sh2_status=$?; if [ "$__e" = 1 ]; then set -e; fi; if [ $__sh2_status -ne 0 ]; then printf 'Error in %s\n' "$__sh2_loc" >&2; (exit $__sh2_status); fi
 }
 
 __sh2_parsed_args="$(__sh2_parse_args "$@")"
 __sh2_status=0
+set -e
 main "$@"

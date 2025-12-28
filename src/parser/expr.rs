@@ -499,7 +499,14 @@ impl<'a> Parser<'a> {
             if self.match_kind(TokenKind::Run) {
                 self.expect(TokenKind::LParen);
                 loop {
-                    if self.match_kind(TokenKind::RParen) { break; }
+                    // Peek RParen to break without consuming, because we want to consume it EXPLICITLY after loop?
+                    // No, for run(...), we WANT to consume the RParen of run.
+                    // But if we use match_kind(RParen), we consume it.
+                    if self.peek_kind() == Some(&TokenKind::RParen) {
+                        self.advance();
+                        break;
+                    }
+
                      if let Some(TokenKind::Ident(_)) = self.peek_kind() {
                          // peek + 1
                          let next_t = self.tokens.get(self.pos + 1);
@@ -510,7 +517,10 @@ impl<'a> Parser<'a> {
                          }
                      }
                     args.push(self.parse_expr());
-                    if !self.match_kind(TokenKind::Comma) { break; }
+                    if !self.match_kind(TokenKind::Comma) {
+                        self.expect(TokenKind::RParen);
+                        break;
+                    }
                 }
                 // RParen consumed by loop break or match_kind?
                 // match_kind(RParen) already consumed it.
@@ -529,7 +539,15 @@ impl<'a> Parser<'a> {
                  let s_span = self.advance().unwrap().span;
                  args.push(Expr { kind: ExprKind::Literal(s), span: s_span });
                  loop {
-                    if self.match_kind(TokenKind::RParen) { break; }
+                    // For string shorthand $("cmd"), proper termination is RParen or Pipe.
+                    // But we MUST NOT consume RParen here, because correct syntax is $(cmd).
+                    // The outer loop handles RParen (end of capture) or Pipe (next segment).
+                    // Wait, $(cmd, arg). String branch parses args.
+                    // If we see RParen, it means end of capture. BREAK (do not consume).
+                    // If we see Pipe, it means end of segment. BREAK (do not consume).
+                    if self.peek_kind() == Some(&TokenKind::RParen) { break; }
+                    if self.peek_kind() == Some(&TokenKind::Pipe) { break; }
+                    
                     if self.match_kind(TokenKind::Comma) {}
                     args.push(self.parse_expr());
                  }

@@ -27,4 +27,3 @@ fn codegen_bool_str_as_arg() {
 fn exec_bool_str_as_arg() {
     assert_exec_matches_fixture("bool_str_as_arg");
 }
-
