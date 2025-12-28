@@ -57,6 +57,7 @@ pub enum Val {
     MapLiteral(Vec<(String, Val)>),
     MapIndex { map: String, key: String },
     Which(Box<Val>),
+    ReadFile(Box<Val>),
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -128,6 +129,11 @@ pub enum Cmd {
     WithCwd {
         path: Val,
         body: Vec<Cmd>,
+    },
+    WriteFile {
+        path: Val,
+        content: Val,
+        append: bool,
     },
     Cd(Val),
     Raw(String),

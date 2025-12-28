@@ -1,0 +1,7 @@
+
+func main() {
+    run("mkdir", "-p", "dir with spaces")
+    let p = "dir with spaces/file.txt"
+    write_file(p, "content")
+    print(read_file(p))
+}

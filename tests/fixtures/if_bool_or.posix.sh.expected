@@ -35,6 +35,8 @@ __sh2_save_envfile() { printf '%s' "$2" | awk -F '\t' 'NF>=1{ print $1 "=" $2 }'
 __sh2_json_kv() { printf '%s' "$1" | awk -F '\t' 'function esc(s) { gsub(/\\/, "\\\\", s); gsub(/"/, "\\\"", s); gsub(/\t/, "\\t", s); gsub(/\r/, "\\r", s); gsub(/\n/, "\\n", s); return s; } { k=$1; v=$2; if (k == "") next; if (!(k in seen)) { ord[++n] = k; seen[k] = 1; } val[k] = v; } END { printf "{"; for (i=1; i<=n; i++) { k = ord[i]; v = val[k]; printf "%s\"%s\":\"%s\"", (i==1?"":","), esc(k), esc(v); } printf "}"; }'; }
 __sh2_which() { command -v -- "$1" 2>/dev/null || true; }
 __sh2_require() { for c in "$@"; do if ! command -v -- "$c" >/dev/null 2>&1; then printf '%s\n' "missing required command: $c" >&2; exit 127; fi; done; }
+__sh2_read_file() { cat "$1" 2>/dev/null || true; }
+__sh2_write_file() { if [ "$3" = "true" ]; then printf '%s' "$2" >> "$1"; else printf '%s' "$2" > "$1"; fi; }
 main() {
   if [ "1" = "2" ] || [ "3" = "3" ]; then
     printf '%s\n' 'yes'

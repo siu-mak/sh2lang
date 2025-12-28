@@ -251,6 +251,25 @@ fn lower_stmt(stmt: ast::Stmt, out: &mut Vec<ir::Cmd>) {
                  } else {
                      panic!("require() expects a list literal of string literals");
                  }
+            } else if name == "write_file" {
+                 if args.len() < 2 || args.len() > 3 {
+                     panic!("write_file() requires 2 or 3 arguments (path, content, [append])");
+                 }
+                 let mut iter = args.into_iter();
+                 let path = lower_expr(iter.next().unwrap());
+                 let content = lower_expr(iter.next().unwrap());
+                 let append = if iter.len() > 0 {
+                     if let ast::Expr::Bool(b) = iter.next().unwrap() {
+                         b
+                     } else {
+                         panic!("write_file() third argument must be a boolean literal");
+                     }
+                 } else {
+                     false
+                 };
+                 out.push(ir::Cmd::WriteFile { path, content, append });
+            } else if name == "read_file" {
+                 panic!("read_file() returns a value; use it in an expression (e.g., let s = read_file(\"foo.txt\"))");
             } else {
                 let args = args.iter().map(|e| lower_expr(e.clone())).collect();
                 out.push(ir::Cmd::Call { name: name.clone(), args });
@@ -546,6 +565,14 @@ fn lower_expr(e: ast::Expr) -> ir::Val {
                 ir::Val::Which(Box::new(arg))
             } else if name == "require" {
                 panic!("require() is a statement, not an expression");
+            } else if name == "read_file" {
+                 if args.len() != 1 {
+                     panic!("read_file() requires exactly 1 argument (path)");
+                 }
+                 let arg = lower_expr(args.into_iter().next().unwrap());
+                 ir::Val::ReadFile(Box::new(arg))
+            } else if name == "write_file" {
+                 panic!("write_file() is a statement, not an expression");
             } else if name == "save_envfile" {
                  panic!("save_envfile() is a statement; use it as a standalone call");
             } else {

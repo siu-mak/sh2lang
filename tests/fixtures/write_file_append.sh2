@@ -1,0 +1,6 @@
+
+func main() {
+    write_file("tmp_append.txt", "first")
+    write_file("tmp_append.txt", "second", true)
+    print(read_file("tmp_append.txt"))
+}

@@ -1,0 +1,6 @@
+
+func main() {
+    write_file("tmp_overwrite.txt", "initial")
+    write_file("tmp_overwrite.txt", "final")
+    print(read_file("tmp_overwrite.txt"))
+}

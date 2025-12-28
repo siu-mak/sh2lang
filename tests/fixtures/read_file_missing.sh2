@@ -1,0 +1,9 @@
+
+func main() {
+    let s = read_file("does_not_exist_xyz.txt")
+    if s == "" {
+        print("empty")
+    } else {
+        print("not empty")
+    }
+}

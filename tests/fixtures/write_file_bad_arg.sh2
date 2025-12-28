@@ -1,0 +1,4 @@
+
+func main() {
+    write_file("foo.txt", "content", "true") 
+}

@@ -62,6 +62,7 @@ fn emit_val(v: &Val, target: TargetShell) -> String {
         Val::Var(s) => format!("\"${}\"", s),
         Val::Concat(l, r) => format!("{}{}", emit_val(l, target), emit_val(r, target)),
         Val::Which(arg) => format!("\"$( __sh2_which {} )\"", emit_word(arg, target)),
+        Val::ReadFile(arg) => format!("\"$( __sh2_read_file {} )\"", emit_word(arg, target)),
         Val::Command(args) => {
             let parts: Vec<String> = args.iter().map(|a| emit_word(a, target)).collect();
             format!("\"$( {} )\"", parts.join(" "))
@@ -661,6 +662,20 @@ fn emit_cmd(cmd: &Cmd, out: &mut String, indent: usize, target: TargetShell) {
              }
              out.push('\n');
         }
+        Cmd::WriteFile { path, content, append } => {
+            out.push_str(&pad);
+            out.push_str("__sh2_write_file ");
+            out.push_str(&emit_word(path, target));
+            out.push(' ');
+            out.push_str(&emit_word(content, target));
+            out.push(' ');
+            if *append {
+                out.push_str("'true'");
+            } else {
+                out.push_str("'false'");
+            }
+            out.push('\n');
+        }
         Cmd::For { var, items, body } => {
              out.push_str(&format!("{}for {} in", pad, var));
              for item in items {
@@ -1255,6 +1270,8 @@ __sh2_save_envfile() { printf '%s' "$2" | awk -F '\t' 'NF>=1{ print $1 "=" $2 }'
 __sh2_json_kv() { printf '%s' "$1" | awk -F '\t' 'function esc(s) { gsub(/\\/, "\\\\", s); gsub(/"/, "\\\"", s); gsub(/\t/, "\\t", s); gsub(/\r/, "\\r", s); gsub(/\n/, "\\n", s); return s; } { k=$1; v=$2; if (k == "") next; if (!(k in seen)) { ord[++n] = k; seen[k] = 1; } val[k] = v; } END { printf "{"; for (i=1; i<=n; i++) { k = ord[i]; v = val[k]; printf "%s\"%s\":\"%s\"", (i==1?"":","), esc(k), esc(v); } printf "}"; }'; }
 __sh2_which() { command -v -- "$1" 2>/dev/null || true; }
 __sh2_require() { for c in "$@"; do if ! command -v -- "$c" >/dev/null 2>&1; then printf '%s\n' "missing required command: $c" >&2; exit 127; fi; done; }
+__sh2_read_file() { cat "$1" 2>/dev/null || true; }
+__sh2_write_file() { if [ "$3" = "true" ]; then printf '%s' "$2" >> "$1"; else printf '%s' "$2" > "$1"; fi; }
 "##);
     s
 }

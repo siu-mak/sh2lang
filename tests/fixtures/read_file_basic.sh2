@@ -1,0 +1,6 @@
+
+func main() {
+    write_file("tmp_read_basic.txt", "hello world")
+    let s = read_file("tmp_read_basic.txt")
+    print(s)
+}
