@@ -292,6 +292,8 @@ fn lower_stmt(stmt: ast::Stmt, out: &mut Vec<ir::Cmd>) {
                  panic!("home() returns a value; use it in an expression (e.g., let h = home())");
             } else if name == "path_join" {
                  panic!("path_join() returns a value; use it in an expression (e.g., let p = path_join(\"a\", \"b\"))");
+            } else if name == "try_run" {
+                 panic!("try_run() must be bound via let (e.g., let r = try_run(...))");
             } else {
                 let args = args.iter().map(|e| lower_expr(e.clone())).collect();
                 out.push(ir::Cmd::Call { name: name.clone(), args });
@@ -513,10 +515,20 @@ fn lower_expr(e: ast::Expr) -> ir::Val {
         },
         ast::Expr::Field { base, name } => {
             let b = lower_expr(*base);
+            // Check for RunResult fields (status, stdout, stderr) on Variables
+            if matches!(name.as_str(), "status" | "stdout" | "stderr") {
+                if let ir::Val::Var(vname) = &b {
+                    return ir::Val::Var(format!("{}__{}", vname, name));
+                }
+                // If base is not a simple variable, we can't easily map to x__status.
+                // We could panic or error. For now, restrict to variables.
+                panic!("Field access '{}' only supported on variables (e.g. r.status)", name);
+            }
+
             match name.as_str() {
                 "flags" => ir::Val::ArgsFlags(Box::new(b)),
                 "positionals" => ir::Val::ArgsPositionals(Box::new(b)),
-                _ => panic!("Unknown field '{}'. Only 'flags' and 'positionals' are supported on args object.", name),
+                _ => panic!("Unknown field '{}'. Supported: status, stdout, stderr, flags, positionals.", name),
             }
         },
         ast::Expr::Join { list, sep } => ir::Val::Join {
@@ -585,6 +597,12 @@ fn lower_expr(e: ast::Expr) -> ir::Val {
                 }
                 let arg = lower_expr(args.into_iter().next().unwrap());
                 ir::Val::Which(Box::new(arg))
+            } else if name == "try_run" {
+                if args.is_empty() {
+                    panic!("try_run() requires at least 1 argument (cmd)");
+                }
+                let lowered_args = args.into_iter().map(lower_expr).collect();
+                ir::Val::TryRun(lowered_args)
             } else if name == "require" {
                 panic!("require() is a statement, not an expression");
             } else if name == "read_file" {

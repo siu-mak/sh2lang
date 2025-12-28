@@ -58,6 +58,7 @@ pub enum Val {
     MapIndex { map: String, key: String },
     Which(Box<Val>),
     ReadFile(Box<Val>),
+    TryRun(Vec<Val>),
     Home,
     PathJoin(Vec<Val>),
 }

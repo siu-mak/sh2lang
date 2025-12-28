@@ -1,0 +1,6 @@
+func main() {
+    let r = try_run("echo", "hello")
+    print(r.status)
+    print(r.stdout)
+    print(r.stderr)
+}

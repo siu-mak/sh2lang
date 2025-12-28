@@ -61,6 +61,7 @@ fn emit_val(v: &Val, target: TargetShell) -> String {
         Val::Literal(s) => sh_single_quote(s),
         Val::Var(s) => format!("\"${}\"", s),
         Val::Concat(l, r) => format!("{}{}", emit_val(l, target), emit_val(r, target)),
+        Val::TryRun(_) => panic!("try_run() must be bound via let (e.g., let r = try_run(...))"),
         Val::Which(arg) => format!("\"$( __sh2_which {} )\"", emit_word(arg, target)),
         Val::ReadFile(arg) => format!("\"$( __sh2_read_file {} )\"", emit_word(arg, target)),
         Val::Home => "\"$( __sh2_home )\"".to_string(),
@@ -473,6 +474,24 @@ fn emit_cmd(cmd: &Cmd, out: &mut String, indent: usize, target: TargetShell) {
                     out.push_str(&emit_word(elem, target));
                 }
                 out.push_str(")\n");
+            } else if let Val::TryRun(args) = val {
+                let cmd = args.iter().map(|a| emit_word(a, target)).collect::<Vec<_>>().join(" ");
+                // Mktemp
+                out.push_str(&format!("{pad}{name}__tmp_out=\"$(__sh2_tmpfile)\"\n", pad=pad, name=name));
+                out.push_str(&format!("{pad}{name}__tmp_err=\"$(__sh2_tmpfile)\"\n", pad=pad, name=name));
+                
+                // Run (allow fail semantics)
+                out.push_str(&format!("{pad}case $- in *e*) __e=1;; *) __e=0;; esac; set +e; {} >\"${name}__tmp_out\" 2>\"${name}__tmp_err\"; {name}__status=$?; if [ \"$__e\" = 1 ]; then set -e; fi;\n", cmd, name=name));
+
+                // Read output
+                out.push_str(&format!("{pad}{name}__stdout=\"$(__sh2_read_file \"${name}__tmp_out\")\"\n", pad=pad, name=name));
+                out.push_str(&format!("{pad}{name}__stderr=\"$(__sh2_read_file \"${name}__tmp_err\")\"\n", pad=pad, name=name));
+
+                // Cleanup
+                out.push_str(&format!("{pad}rm -f \"${name}__tmp_out\" \"${name}__tmp_err\"\n", pad=pad, name=name));
+                
+                // Propagate status purely for __sh2_status tracking, though try_run succeeded as a statement.
+                out.push_str(&format!("{pad}__sh2_status=\"${name}__status\"\n", pad=pad, name=name));
             } else if let Val::Args = val {
                 out.push_str(name);
                 out.push_str("=(\"$@\")\n");
@@ -1292,6 +1311,7 @@ __sh2_save_envfile() { printf '%s' "$2" | awk -F '\t' 'NF>=1{ print $1 "=" $2 }'
 __sh2_json_kv() { printf '%s' "$1" | awk -F '\t' 'function esc(s) { gsub(/\\/, "\\\\", s); gsub(/"/, "\\\"", s); gsub(/\t/, "\\t", s); gsub(/\r/, "\\r", s); gsub(/\n/, "\\n", s); return s; } { k=$1; v=$2; if (k == "") next; if (!(k in seen)) { ord[++n] = k; seen[k] = 1; } val[k] = v; } END { printf "{"; for (i=1; i<=n; i++) { k = ord[i]; v = val[k]; printf "%s\"%s\":\"%s\"", (i==1?"":","), esc(k), esc(v); } printf "}"; }'; }
 __sh2_which() { command -v -- "$1" 2>/dev/null || true; }
 __sh2_require() { for c in "$@"; do if ! command -v -- "$c" >/dev/null 2>&1; then printf '%s\n' "missing required command: $c" >&2; exit 127; fi; done; }
+__sh2_tmpfile() { if command -v mktemp >/dev/null 2>&1; then mktemp; else printf "%s/sh2_tmp_%s_%s" "${TMPDIR:-/tmp}" "$$" "$(awk 'BEGIN{srand();print int(rand()*1000000)}')"; fi; }
 __sh2_read_file() { cat "$1" 2>/dev/null || true; }
 __sh2_write_file() { if [ "$3" = "true" ]; then printf '%s' "$2" >> "$1"; else printf '%s' "$2" > "$1"; fi; }
 __sh2_log_now() { if [ -n "${SH2_LOG_TS:-}" ]; then printf '%s' "$SH2_LOG_TS"; return 0; fi; date '+%Y-%m-%dT%H:%M:%S%z' 2>/dev/null || date 2>/dev/null || printf '%s' 'unknown-time'; }

@@ -1065,6 +1065,15 @@ fn parse_primary(tokens: &[Token], i: &mut usize) -> Expr {
                 if let Some(Token::Ident(name)) = tokens.get(*i) {
                     *i += 1;
                     expr = Expr::Field { base: Box::new(expr), name: name.clone() };
+                } else if matches!(tokens.get(*i), Some(Token::Status)) {
+                    *i += 1;
+                    expr = Expr::Field { base: Box::new(expr), name: "status".to_string() };
+                } else if matches!(tokens.get(*i), Some(Token::Stdout)) {
+                    *i += 1;
+                    expr = Expr::Field { base: Box::new(expr), name: "stdout".to_string() };
+                } else if matches!(tokens.get(*i), Some(Token::Stderr)) {
+                    *i += 1;
+                    expr = Expr::Field { base: Box::new(expr), name: "stderr".to_string() };
                 } else {
                     panic!("Expected identifier after dot");
                 }

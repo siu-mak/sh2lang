@@ -1,0 +1,7 @@
+func main() {
+    let r = try_run("sh", "-c", "printf 'out'; printf 'err' 1>&2; exit 7")
+    print(r.status)
+    print(r.stdout)
+    print(r.stderr)
+    print("after")
+}
