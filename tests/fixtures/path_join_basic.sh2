@@ -1,0 +1,5 @@
+
+func main() {
+    let p = path_join("a", "b", "c")
+    print(p)
+}

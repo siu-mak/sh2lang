@@ -292,6 +292,10 @@ fn lower_stmt(stmt: ast::Stmt, out: &mut Vec<ir::Cmd>) {
                      false
                  };
                  out.push(ir::Cmd::Log { level, msg, timestamp });
+            } else if name == "home" {
+                 panic!("home() returns a value; use it in an expression (e.g., let h = home())");
+            } else if name == "path_join" {
+                 panic!("path_join() returns a value; use it in an expression (e.g., let p = path_join(\"a\", \"b\"))");
             } else {
                 let args = args.iter().map(|e| lower_expr(e.clone())).collect();
                 out.push(ir::Cmd::Call { name: name.clone(), args });
@@ -597,6 +601,17 @@ fn lower_expr(e: ast::Expr) -> ir::Val {
                  panic!("write_file() is a statement, not an expression");
             } else if matches!(name.as_str(), "log_info" | "log_warn" | "log_error") {
                  panic!("{}() is a statement, not an expression", name);
+            } else if name == "home" {
+                if !args.is_empty() {
+                    panic!("home() takes no arguments");
+                }
+                ir::Val::Home
+            } else if name == "path_join" {
+                if args.is_empty() {
+                    panic!("path_join() requires at least 1 argument");
+                }
+                let lowered_args = args.into_iter().map(lower_expr).collect();
+                ir::Val::PathJoin(lowered_args)
             } else if name == "save_envfile" {
                  panic!("save_envfile() is a statement; use it as a standalone call");
             } else {

@@ -1,0 +1,4 @@
+
+func main() {
+    path_join("a", "b")
+}

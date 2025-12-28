@@ -63,6 +63,11 @@ fn emit_val(v: &Val, target: TargetShell) -> String {
         Val::Concat(l, r) => format!("{}{}", emit_val(l, target), emit_val(r, target)),
         Val::Which(arg) => format!("\"$( __sh2_which {} )\"", emit_word(arg, target)),
         Val::ReadFile(arg) => format!("\"$( __sh2_read_file {} )\"", emit_word(arg, target)),
+        Val::Home => "\"$( __sh2_home )\"".to_string(),
+        Val::PathJoin(args) => {
+            let parts: Vec<String> = args.iter().map(|a| emit_word(a, target)).collect();
+            format!("\"$( __sh2_path_join {} )\"", parts.join(" "))
+        }
         Val::Command(args) => {
             let parts: Vec<String> = args.iter().map(|a| emit_word(a, target)).collect();
             format!("\"$( {} )\"", parts.join(" "))
@@ -1290,6 +1295,8 @@ __sh2_read_file() { cat "$1" 2>/dev/null || true; }
 __sh2_write_file() { if [ "$3" = "true" ]; then printf '%s' "$2" >> "$1"; else printf '%s' "$2" > "$1"; fi; }
 __sh2_log_now() { if [ -n "${SH2_LOG_TS:-}" ]; then printf '%s' "$SH2_LOG_TS"; return 0; fi; date '+%Y-%m-%dT%H:%M:%S%z' 2>/dev/null || date 2>/dev/null || printf '%s' 'unknown-time'; }
 __sh2_log() { if [ "$3" = "true" ]; then printf '%s\t%s\t%s\n' "$(__sh2_log_now)" "$1" "$2" >&2; else printf '%s\t%s\n' "$1" "$2" >&2; fi; }
+__sh2_home() { printf '%s' "${HOME-}"; }
+__sh2_path_join() { out=''; for p in "$@"; do [ -z "$p" ] && continue; case "$p" in /*) out="$p";; *) if [ -z "$out" ]; then out="$p"; else while [ "${out%/}" != "$out" ]; do out="${out%/}"; done; while [ "${p#/}" != "$p" ]; do p="${p#/}"; done; out="${out}/${p}"; fi;; esac; done; printf '%s' "$out"; }
 "##);
     s
 }
