@@ -1,0 +1,7 @@
+func main() {
+  let r = "base"
+  with env {} { 
+      let r = try_run("sh","-c","printf 'x'; exit 0") 
+  }
+  print(r.stdout)
+}

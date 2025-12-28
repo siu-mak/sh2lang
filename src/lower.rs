@@ -125,7 +125,7 @@ fn lower_stmt(stmt: ast::Stmt, out: &mut Vec<ir::Cmd>, mut ctx: LoweringContext)
 
             for elif in elifs {
                 let mut body_cmds = Vec::new();
-                let elif_cond = lower_expr(elif.cond, &mut ctx); // Evaluate cond in original context
+                let elif_cond = lower_expr(elif.cond, &ctx); // Evaluate cond in original context
                 let ctx_elif = lower_block(elif.body, &mut body_cmds, ctx.clone());
                 lowered_elifs.push((elif_cond, body_cmds));
                 ctx_elifs.push(ctx_elif);
@@ -260,28 +260,22 @@ fn lower_stmt(stmt: ast::Stmt, out: &mut Vec<ir::Cmd>, mut ctx: LoweringContext)
              ctx
         }
         ast::Stmt::WithEnv { bindings, body } => {
-            let lowered_bindings = bindings.into_iter().map(|(k, v)| (k, lower_expr(v, &mut ctx))).collect();
+            let lowered_bindings = bindings.into_iter().map(|(k, v)| (k, lower_expr(v, &ctx))).collect();
             let mut lower_body = Vec::new();
-            // WithEnv persists changes? In sh/bash, `VAR=val cmd` scopes VAR to cmd.
-            // But `WithEnv` in AST usually maps to `export VAR=val; body...` or similar block scoping?
-            // Existing lowering used `Cmd::WithEnv { bindings, body }`.
-            // If the body executes in current shell, side effects persist. 
-            // In Sh2, `with env { ... }` generates `( export ...; ... )` usually? 
-            // Wait, looking at Codegen: WithEnv usually emits a subshell `( export K=V; ... )`.
-            // If it's a subshell, changes DO NOT persist.
-            // Let's check codegen... no, I can't check codegen right now easily, but usually `with env` implies isolation.
-            // Actually, based on typical sh2 semantics, `with env` is scoped. 
-            // Let's assume it IS a subshell-like scope for safety.
-            // The "Plan" said: "Bodies execute in current shell context; allow persistence". 
-            // Wait, typically `with_env` might just export then unexport?
-            // Re-reading Plan Step 3H: "Bodies execute in current shell context; allow persistence: ctx_body_out".
-            // Implementation follows the Plan.
-            let ctx_body = lower_block(body, &mut lower_body, ctx.clone());
+            
+            // Codegen: 
+            // - If body.len() == 1 and it's an Exec, it optimizes to inline env. (Persistent? No, effectively subshell for that cmd)
+            // - Otherwise, it emits `( export ...; body )` (Subshell).
+            // In BOTH cases, variable assignments inside do NOT persist to the outer shell.
+            // So we must return the original context `ctx` (discarding inner changes).
+
+            lower_block(body, &mut lower_body, ctx.clone());
+            
             out.push(ir::Cmd::WithEnv {
                 bindings: lowered_bindings,
                 body: lower_body,
             });
-            ctx_body
+            ctx
         }
         ast::Stmt::AndThen { left, right } => {
             let mut lower_left = Vec::new();
@@ -310,27 +304,33 @@ fn lower_stmt(stmt: ast::Stmt, out: &mut Vec<ir::Cmd>, mut ctx: LoweringContext)
             ctx_left.intersection(&ctx_right)
         }
         ast::Stmt::WithCwd { path, body } => {
-            let lowered_path = lower_expr(path, &mut ctx);
+            let lowered_path = lower_expr(path, &ctx);
             let mut lower_body = Vec::new();
-            // Plan 3H: allow persistence.
-            let ctx_body = lower_block(body, &mut lower_body, ctx.clone());
+            
+            // Codegen: emits `( cd path; body )` (Subshell).
+            // Changes do NOT persist. Return original ctx.
+            lower_block(body, &mut lower_body, ctx.clone());
+            
             out.push(ir::Cmd::WithCwd {
                 path: lowered_path,
                 body: lower_body,
             });
-            ctx_body
+            ctx
         }
         ast::Stmt::WithLog { path, append, body } => {
-            let lowered_path = lower_expr(path, &mut ctx);
+            let lowered_path = lower_expr(path, &ctx);
             let mut lower_body = Vec::new();
-            // Plan 3H: allow persistence.
-            let ctx_body = lower_block(body, &mut lower_body, ctx.clone());
+            
+            // Codegen: emits `( __sh2_log_path=...; exec >...; body )` (Subshell).
+            // Changes do NOT persist. Return original ctx.
+            lower_block(body, &mut lower_body, ctx.clone());
+            
             out.push(ir::Cmd::WithLog {
                 path: lowered_path,
                 append,
                 body: lower_body,
             });
-            ctx_body
+            ctx
         }
         ast::Stmt::Cd { path } => {
             out.push(ir::Cmd::Cd(lower_expr(path, &mut ctx)));
@@ -442,10 +442,15 @@ fn lower_stmt(stmt: ast::Stmt, out: &mut Vec<ir::Cmd>, mut ctx: LoweringContext)
         }
         ast::Stmt::WithRedirect { stdout, stderr, stdin, body } => {
              let mut lowered_body = Vec::new();
-             // Plan 3H: persist
+             
+             // Codegen: emits `{ body } (>...)` (Group with redirection).
+             // Changes DO persist (it's a group, not a subshell, unless piped).
+             // Since this is just redirection, it runs in the current shell context generally.
+             // Wait, does `{ ... } > file` run in a subshell? In Bash/POSIX, no, it runs in current shell.
+             // So changes persist. Return ctx_body.
              let ctx_body = lower_block(body, &mut lowered_body, ctx.clone());
              
-             let lower_target = |t: ast::RedirectTarget, c: &mut LoweringContext| match t {
+             let lower_target = |t: ast::RedirectTarget, c: &LoweringContext| match t {
                  ast::RedirectTarget::File { path, append } => ir::RedirectTarget::File { path: lower_expr(path, c), append },
                  ast::RedirectTarget::HereDoc { content } => ir::RedirectTarget::HereDoc { content },
                  ast::RedirectTarget::Stdout => ir::RedirectTarget::Stdout,
@@ -453,9 +458,9 @@ fn lower_stmt(stmt: ast::Stmt, out: &mut Vec<ir::Cmd>, mut ctx: LoweringContext)
              };
              
              out.push(ir::Cmd::WithRedirect {
-                  stdout: stdout.map(|t| lower_target(t, &mut ctx)),
-                 stderr: stderr.map(|t| lower_target(t, &mut ctx)),
-                 stdin: stdin.map(|t| lower_target(t, &mut ctx)),
+                  stdout: stdout.map(|t| lower_target(t, &ctx)),
+                 stderr: stderr.map(|t| lower_target(t, &ctx)),
+                 stdin: stdin.map(|t| lower_target(t, &ctx)),
                  body: lowered_body,
              });
              ctx_body
@@ -554,7 +559,7 @@ fn lower_stmt(stmt: ast::Stmt, out: &mut Vec<ir::Cmd>, mut ctx: LoweringContext)
     }
 }
 
-fn lower_expr(e: ast::Expr, ctx: &mut LoweringContext) -> ir::Val {
+fn lower_expr(e: ast::Expr, ctx: &LoweringContext) -> ir::Val {
     match e {
         ast::Expr::Literal(s) => ir::Val::Literal(s),
         ast::Expr::Var(s) => ir::Val::Var(s),

@@ -120,3 +120,35 @@ fn exec_try_run_field_subshell_no_leak_ok_posix() {
 fn compile_try_run_field_group_leak_invalid() {
     assert_codegen_panics("try_run_field_group_leak_invalid", ".stdout is only valid on try_run() results (bind via let)");
 }
+
+#[test]
+fn compile_try_run_field_with_env_leak_invalid() {
+     assert_codegen_panics("try_run_field_with_env_leak_invalid", ".stdout is only valid on try_run() results (bind via let)");
+}
+
+#[test]
+fn compile_try_run_field_with_cwd_leak_invalid() {
+     assert_codegen_panics("try_run_field_with_cwd_leak_invalid", ".stdout is only valid on try_run() results (bind via let)");
+}
+
+#[test]
+fn compile_try_run_field_with_log_leak_invalid() {
+     assert_codegen_panics("try_run_field_with_log_leak_invalid", ".stdout is only valid on try_run() results (bind via let)");
+}
+
+#[test]
+fn compile_try_run_field_with_redirect_leak_invalid() {
+    // This is invalid because the inner 'let r = "shadowed"' PERSISTS to the outer scope,
+    // shadowing the outer 'let r = try_run(...)'.
+    assert_codegen_panics("try_run_field_with_redirect_leak_invalid", ".stdout is only valid on try_run() results (bind via let)");
+}
+
+#[test]
+fn exec_try_run_field_with_redirect_leak_ok_bash() {
+    assert_exec_matches_fixture_target("try_run_field_with_redirect_leak_ok", TargetShell::Bash);
+}
+
+#[test]
+fn exec_try_run_field_with_redirect_leak_ok_posix() {
+    assert_exec_matches_fixture_target("try_run_field_with_redirect_leak_ok", TargetShell::Posix);
+}

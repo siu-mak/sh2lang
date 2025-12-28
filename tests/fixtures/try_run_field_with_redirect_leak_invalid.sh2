@@ -1,0 +1,7 @@
+func main() {
+    let r = try_run("echo", "ok")
+    with redirect { stdout: file("out.txt") } {
+       let r = "shadowed"
+    }
+    print(r.stdout) // Should FAIL because WithRedirect PERsists
+}

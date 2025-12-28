@@ -1,0 +1,7 @@
+func main() {
+  let r = "base"
+  with log("test.log") { 
+      let r = try_run("echo", "log") 
+  }
+  print(r.stdout)
+}

@@ -1,0 +1,7 @@
+func main() {
+  let r = "base"
+  with cwd "/tmp" { 
+      let r = try_run("sh", "-c", "printf 'cwd'; exit 0") 
+  }
+  print(r.stdout)
+}

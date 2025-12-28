@@ -1,0 +1,7 @@
+func main() {
+    let r = "base"
+    with redirect { stdout: file("out.txt") } {
+       let r = try_run("echo", "ok")
+    }
+    print(r.stdout) // Should SUCCEED because WithRedirect PERsists
+}
