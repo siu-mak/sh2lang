@@ -124,7 +124,7 @@ pub enum Cmd {
     Break,
     Continue,
     Return(Option<Val>),
-    Require(Vec<String>),
+    Require(Vec<Val>),
     Exit(Option<Val>),
     WithEnv {
         bindings: Vec<(String, Val)>,

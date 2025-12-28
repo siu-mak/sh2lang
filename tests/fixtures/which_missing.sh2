@@ -1,5 +1,4 @@
 
 func main() {
-    let p = which("definitely_not_a_real_cmd_12345")
-    if p == "" { print("OK") } else { print("BAD") }
+    print(which("definitely_not_a_real_cmd_123"))
 }

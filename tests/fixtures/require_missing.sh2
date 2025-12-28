@@ -1,5 +1,5 @@
 
 func main() {
-    require(["definitely_not_a_real_cmd_12345"])
-    print("SHOULD_NOT_RUN")
+    require(["missingcmd"])
+    print("after")
 }

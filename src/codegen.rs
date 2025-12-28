@@ -663,9 +663,10 @@ fn emit_cmd(cmd: &Cmd, out: &mut String, indent: usize, target: TargetShell) {
              out.push_str("__sh2_require");
              for cmd in cmds {
                  out.push(' ');
-                 out.push_str(&sh_single_quote(cmd));
+                 out.push_str(&emit_word(cmd, target));
              }
              out.push('\n');
+             out.push_str(&format!("{}__sh2_status=$?; (exit $__sh2_status)\n", pad));
         }
         Cmd::Log { level, msg, timestamp } => {
             out.push_str(&pad);

@@ -235,21 +235,17 @@ fn lower_stmt(stmt: ast::Stmt, out: &mut Vec<ir::Cmd>) {
                  panic!("which() returns a value; use it in an expression (e.g., let p = which(\"cmd\"))");
             } else if name == "require" {
                  if args.len() != 1 {
-                     panic!("require() expects exactly one argument");
+                     panic!("require() requires exactly one argument (cmd_list)");
                  }
                  let arg = &args[0];
                  if let ast::Expr::List(elems) = arg {
                      let mut valid_cmds = Vec::new();
                      for e in elems {
-                         if let ast::Expr::Literal(s) = e {
-                             valid_cmds.push(s.clone());
-                         } else {
-                             panic!("require() expects a list literal of string literals");
-                         }
+                         valid_cmds.push(lower_expr(e.clone()));
                      }
                      out.push(ir::Cmd::Require(valid_cmds));
                  } else {
-                     panic!("require() expects a list literal of string literals");
+                     panic!("require() expects a list literal");
                  }
             } else if name == "write_file" {
                  if args.len() < 2 || args.len() > 3 {

@@ -1,4 +1,4 @@
 
 func main() {
-    which("a", "b")
+    let x = which()
 }

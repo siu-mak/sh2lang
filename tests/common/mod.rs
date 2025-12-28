@@ -273,7 +273,21 @@ pub fn assert_exec_matches_fixture_target(fixture_name: &str, target: TargetShel
         let env_content = fs::read_to_string(&env_path).expect("Failed to read env fixture");
         for line in env_content.lines() {
             if let Some((k, v)) = line.split_once('=') {
-                env_vars.push((k.to_string(), v.to_string()));
+                if k == "PATH" {
+                   let current_path = std::env::var("PATH").unwrap_or_default();
+                   let new_segment = if v.starts_with("tests/fixtures") {
+                        std::env::current_dir().unwrap().join(v).to_string_lossy().to_string()
+                   } else {
+                        v.to_string()
+                   };
+                   let new_path = format!("{}:{}", new_segment, current_path);
+                   env_vars.push((k.to_string(), new_path));
+                } else if v.starts_with("tests/fixtures") {
+                   let abs_path = std::env::current_dir().unwrap().join(v);
+                   env_vars.push((k.to_string(), abs_path.to_string_lossy().to_string()));
+                } else {
+                   env_vars.push((k.to_string(), v.to_string()));
+                }
             }
         }
     }
