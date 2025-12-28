@@ -3,6 +3,7 @@ pub struct Function {
     pub name: String,
     pub params: Vec<String>,
     pub commands: Vec<Cmd>,
+    pub file: String,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -91,8 +92,8 @@ pub enum CompareOp {
 
 #[derive(Debug)]
 pub enum Cmd {
-    Assign(String, Val),
-    Exec { args: Vec<Val>, allow_fail: bool },
+    Assign(String, Val, Option<String>),
+    Exec { args: Vec<Val>, allow_fail: bool, loc: Option<String> },
     Print(Val),
     PrintErr(Val),
     If {
@@ -101,8 +102,8 @@ pub enum Cmd {
         elifs: Vec<(Val, Vec<Cmd>)>,
         else_body: Vec<Cmd>,
     },
-    Pipe(Vec<(Vec<Val>, bool)>),
-    PipeBlocks(Vec<Vec<Cmd>>),
+    Pipe(Vec<(Vec<Val>, bool)>, Option<String>),
+    PipeBlocks(Vec<Vec<Cmd>>, Option<String>),
     Case {
         expr: Val,
         arms: Vec<(Vec<Pattern>, Vec<Cmd>)>,
@@ -172,7 +173,7 @@ pub enum Cmd {
     Export { name: String, value: Option<Val> },
     Unset(String),
     Source(Val),
-    ExecReplace(Vec<Val>),
+    ExecReplace(Vec<Val>, Option<String>),
     SaveEnvfile { path: Val, env: Val },
 }
 

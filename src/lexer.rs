@@ -1,5 +1,7 @@
+use crate::span::{Span, SourceMap};
+
 #[derive(Debug, Clone, PartialEq)]
-pub enum Token {
+pub enum TokenKind {
     Func,
     Run,
     Print,
@@ -103,128 +105,171 @@ pub enum Token {
     Confirm,
 }
 
-pub fn lex(input: &str) -> Vec<Token> {
-    let mut tokens = Vec::new();
-    let mut chars = input.chars().peekable();
+#[derive(Debug, Clone, PartialEq)]
+pub struct Token {
+    pub kind: TokenKind,
+    pub span: Span,
+}
 
-    while let Some(&c) = chars.peek() {
+struct Lexer<'a> {
+    chars: std::iter::Peekable<std::str::Chars<'a>>,
+    pos: usize,
+    sm: &'a SourceMap,
+    file: &'a str,
+}
+
+impl<'a> Lexer<'a> {
+    fn new(sm: &'a SourceMap, file: &'a str) -> Self {
+        Lexer {
+            chars: sm.src().chars().peekable(),
+            pos: 0,
+            sm,
+            file,
+        }
+    }
+
+    fn peek(&mut self) -> Option<&char> {
+        self.chars.peek()
+    }
+
+    fn next(&mut self) -> Option<char> {
+        let c = self.chars.next();
+        if let Some(ch) = c {
+            self.pos += ch.len_utf8();
+        }
+        c
+    }
+
+    fn error(&self, msg: &str, start: usize) -> ! {
+        let span = Span::new(start, self.pos);
+        panic!("{}", self.sm.format_diagnostic(self.file, msg, span));
+    }
+}
+
+pub fn lex(sm: &SourceMap, file: &str) -> Vec<Token> {
+    let mut tokens = Vec::new();
+    let mut lexer = Lexer::new(sm, file);
+
+    while let Some(&c) = lexer.peek() {
+        let start = lexer.pos;
         match c {
-            ' ' | '\n' | '\t' => { chars.next(); }
-            '(' => { tokens.push(Token::LParen); chars.next(); }
-            ')' => { tokens.push(Token::RParen); chars.next(); }
-            '{' => { tokens.push(Token::LBrace); chars.next(); }
-            '}' => { tokens.push(Token::RBrace); chars.next(); }
-            '[' => { tokens.push(Token::LBracket); chars.next(); }
-            ']' => { tokens.push(Token::RBracket); chars.next(); }
-            ',' => { tokens.push(Token::Comma); chars.next(); }
-            ':' => { tokens.push(Token::Colon); chars.next(); }
+            ' ' | '\n' | '\t' => { lexer.next(); }
+            '(' => { lexer.next(); tokens.push(Token { kind: TokenKind::LParen, span: Span::new(start, lexer.pos) }); }
+            ')' => { lexer.next(); tokens.push(Token { kind: TokenKind::RParen, span: Span::new(start, lexer.pos) }); }
+            '{' => { lexer.next(); tokens.push(Token { kind: TokenKind::LBrace, span: Span::new(start, lexer.pos) }); }
+            '}' => { lexer.next(); tokens.push(Token { kind: TokenKind::RBrace, span: Span::new(start, lexer.pos) }); }
+            '[' => { lexer.next(); tokens.push(Token { kind: TokenKind::LBracket, span: Span::new(start, lexer.pos) }); }
+            ']' => { lexer.next(); tokens.push(Token { kind: TokenKind::RBracket, span: Span::new(start, lexer.pos) }); }
+            ',' => { lexer.next(); tokens.push(Token { kind: TokenKind::Comma, span: Span::new(start, lexer.pos) }); }
+            ':' => { lexer.next(); tokens.push(Token { kind: TokenKind::Colon, span: Span::new(start, lexer.pos) }); }
             '=' => {
-                chars.next();
-                if chars.peek() == Some(&'=') {
-                     tokens.push(Token::EqEq);
-                     chars.next();
-                } else if chars.peek() == Some(&'>') {
-                     tokens.push(Token::Arrow);
-                     chars.next();
+                lexer.next();
+                if lexer.peek() == Some(&'=') {
+                     lexer.next();
+                     tokens.push(Token { kind: TokenKind::EqEq, span: Span::new(start, lexer.pos) });
+                } else if lexer.peek() == Some(&'>') {
+                     lexer.next();
+                     tokens.push(Token { kind: TokenKind::Arrow, span: Span::new(start, lexer.pos) });
                 } else {
-                     tokens.push(Token::Equals);
+                     tokens.push(Token { kind: TokenKind::Equals, span: Span::new(start, lexer.pos) });
                 }
             }
-            '_' => { tokens.push(Token::Underscore); chars.next(); }
-            '+' => { tokens.push(Token::Plus); chars.next(); }
-            '-' => { tokens.push(Token::Minus); chars.next(); }
-            '*' => { tokens.push(Token::Star); chars.next(); }
+            '_' => { lexer.next(); tokens.push(Token { kind: TokenKind::Underscore, span: Span::new(start, lexer.pos) }); }
+            '+' => { lexer.next(); tokens.push(Token { kind: TokenKind::Plus, span: Span::new(start, lexer.pos) }); }
+            '-' => { lexer.next(); tokens.push(Token { kind: TokenKind::Minus, span: Span::new(start, lexer.pos) }); }
+            '*' => { lexer.next(); tokens.push(Token { kind: TokenKind::Star, span: Span::new(start, lexer.pos) }); }
             '/' => {
-                chars.next();
-                if chars.peek() == Some(&'/') {
+                lexer.next();
+                if lexer.peek() == Some(&'/') {
                     // Comment
-                    while let Some(&ch) = chars.peek() {
+                    while let Some(&ch) = lexer.peek() {
                          if ch == '\n' { break; }
-                         chars.next();
+                         lexer.next();
                     }
                 } else {
-                    tokens.push(Token::Slash);
+                    tokens.push(Token { kind: TokenKind::Slash, span: Span::new(start, lexer.pos) });
                 }
             }
-            '%' => { tokens.push(Token::Percent); chars.next(); }
+            '%' => { lexer.next(); tokens.push(Token { kind: TokenKind::Percent, span: Span::new(start, lexer.pos) }); }
             '<' => {
-                 chars.next();
-                 if chars.peek() == Some(&'=') {
-                     tokens.push(Token::Le);
-                     chars.next();
+                 lexer.next();
+                 if lexer.peek() == Some(&'=') {
+                     lexer.next();
+                     tokens.push(Token { kind: TokenKind::Le, span: Span::new(start, lexer.pos) });
                  } else {
-                     tokens.push(Token::Lt);
+                     tokens.push(Token { kind: TokenKind::Lt, span: Span::new(start, lexer.pos) });
                  }
             }
             '>' => {
-                 chars.next();
-                 if chars.peek() == Some(&'=') {
-                     tokens.push(Token::Ge);
-                     chars.next();
+                 lexer.next();
+                 if lexer.peek() == Some(&'=') {
+                     lexer.next();
+                     tokens.push(Token { kind: TokenKind::Ge, span: Span::new(start, lexer.pos) });
                  } else {
-                     tokens.push(Token::Gt);
+                     tokens.push(Token { kind: TokenKind::Gt, span: Span::new(start, lexer.pos) });
                  }
             }
             '&' => {
-                 chars.next();
-                 if chars.peek() == Some(&'&') {
-                     tokens.push(Token::AndAnd);
-                     chars.next();
+                 lexer.next();
+                 if lexer.peek() == Some(&'&') {
+                     lexer.next();
+                     tokens.push(Token { kind: TokenKind::AndAnd, span: Span::new(start, lexer.pos) });
                  } else {
-                     tokens.push(Token::Amp);
+                     tokens.push(Token { kind: TokenKind::Amp, span: Span::new(start, lexer.pos) });
                  }
 
             }
-            '.' => { tokens.push(Token::Dot); chars.next(); }
+            '.' => { lexer.next(); tokens.push(Token { kind: TokenKind::Dot, span: Span::new(start, lexer.pos) }); }
             '|' => {
-                 chars.next();
-                 if chars.peek() == Some(&'|') {
-                     tokens.push(Token::OrOr);
-                     chars.next();
+                 lexer.next();
+                 if lexer.peek() == Some(&'|') {
+                     lexer.next();
+                     tokens.push(Token { kind: TokenKind::OrOr, span: Span::new(start, lexer.pos) });
                  } else {
-                     tokens.push(Token::Pipe);
+                     tokens.push(Token { kind: TokenKind::Pipe, span: Span::new(start, lexer.pos) });
                  }
             }
-            '$' => { tokens.push(Token::Dollar); chars.next(); }
+            '$' => { lexer.next(); tokens.push(Token { kind: TokenKind::Dollar, span: Span::new(start, lexer.pos) }); }
             '!' => {
-                chars.next();
-                if chars.peek() == Some(&'=') {
-                    tokens.push(Token::NotEq);
-                    chars.next();
+                lexer.next();
+                if lexer.peek() == Some(&'=') {
+                    lexer.next();
+                    tokens.push(Token { kind: TokenKind::NotEq, span: Span::new(start, lexer.pos) });
                 } else {
-                    tokens.push(Token::Bang);
+                    tokens.push(Token { kind: TokenKind::Bang, span: Span::new(start, lexer.pos) });
                 }
             }
             '"' => {
                 // Check for triple quote start """
                 let mut is_triple = false;
                 {
-                    let mut la = chars.clone();
+                    // Lookahead
+                    let mut la = lexer.chars.clone();
                     la.next(); // skip current "
                     if la.next() == Some('"') && la.next() == Some('"') {
-                        is_triple = true;
+                         is_triple = true;
                     }
                 }
 
                 if is_triple {
-                    chars.next(); // "
-                    chars.next(); // "
-                    chars.next(); // "
+                    lexer.next(); // "
+                    lexer.next(); // "
+                    lexer.next(); // "
                     
                     let mut s = String::new();
                     loop {
                         // Check for triple quote end """
                         {
-                            let mut la = chars.clone();
+                            let mut la = lexer.chars.clone();
                             if la.next() == Some('"') && la.next() == Some('"') && la.next() == Some('"') {
-                                chars.next(); chars.next(); chars.next();
+                                lexer.next(); lexer.next(); lexer.next();
                                 break;
                             }
                         }
 
-                        if let Some(ch) = chars.next() {
+                        if let Some(ch) = lexer.next() {
                             if ch == '\\' {
-                                if let Some(escaped) = chars.next() {
+                                if let Some(escaped) = lexer.next() {
                                     match escaped {
                                         'n' => s.push('\n'),
                                         't' => s.push('\t'),
@@ -238,83 +283,86 @@ pub fn lex(input: &str) -> Vec<Token> {
                                         _ => s.push(escaped),
                                     }
                                 } else {
-                                    panic!("Unexpected EOF in string escape");
+                                    lexer.error("Unexpected EOF in string escape", start);
                                 }
                             } else {
                                 s.push(ch);
                             }
                         } else {
-                            panic!("Unterminated triple-quoted string");
+                            lexer.error("Unterminated triple-quoted string", start);
                         }
                     }
-                    tokens.push(Token::String(s));
+                    tokens.push(Token { kind: TokenKind::String(s), span: Span::new(start, lexer.pos) });
                 } else {
                     // Regular string
-                    chars.next(); // consume opening quote
+                    lexer.next(); // consume opening quote
                     let mut s = String::new();
-                    while let Some(&ch) = chars.peek() {
+                    while let Some(&ch) = lexer.peek() {
                         if ch == '"' { break; }
                         if ch == '\\' {
-                            chars.next(); // consume backslash
-                            if let Some(&escaped) = chars.peek() {
+                            lexer.next(); // consume backslash
+                            if let Some(&escaped) = lexer.peek() {
                                 match escaped {
                                     'n' => {
                                         s.push('\n');
-                                        chars.next();
+                                        lexer.next();
                                     }
                                     't' => {
                                         s.push('\t');
-                                        chars.next();
+                                        lexer.next();
                                     }
                                     'r' => {
                                         s.push('\r');
-                                        chars.next();
+                                        lexer.next();
                                     }
                                     '\\' => {
                                         s.push('\\');
-                                        chars.next();
+                                        lexer.next();
                                     }
                                     '"' => {
                                         s.push('"');
-                                        chars.next();
+                                        lexer.next();
                                     }
                                     '$' => {
                                         s.push('\\');
                                         s.push('$');
-                                        chars.next();
+                                        lexer.next();
                                     }
                                     _ => {
                                         s.push(escaped);
-                                        chars.next();
+                                        lexer.next();
                                     }
                                 }
                             }
                         } else {
                             s.push(ch);
-                            chars.next();
+                            lexer.next();
                         }
                     }
-                    if chars.peek() == Some(&'"') {
-                        chars.next(); // consume closing quote
+                    if lexer.peek() == Some(&'"') {
+                        lexer.next(); // consume closing quote
+                    } else {
+                        // EOF before quote
+                        lexer.error("Unterminated string (missing closing quote)", start);
                     }
-                    tokens.push(Token::String(s));
+                    tokens.push(Token { kind: TokenKind::String(s), span: Span::new(start, lexer.pos) });
                 }
             }
             _ if c.is_ascii_digit() => {
                 let mut num_str = String::new();
-                while let Some(&ch) = chars.peek() {
+                while let Some(&ch) = lexer.peek() {
                     if !ch.is_ascii_digit() { break; }
                     num_str.push(ch);
-                    chars.next();
+                    lexer.next();
                 }
                 let n: u32 = num_str.parse().expect("Invalid number literal");
-                tokens.push(Token::Number(n));
+                tokens.push(Token { kind: TokenKind::Number(n), span: Span::new(start, lexer.pos) });
             }
             _ if c.is_alphabetic() => {
                 if c == 'r' {
                     let mut is_raw = false;
                     {
-                        let mut la = chars.clone();
+                        let mut la = lexer.chars.clone();
                         la.next(); // r
                         if la.next() == Some('"') && la.next() == Some('"') && la.next() == Some('"') {
                             is_raw = true;
@@ -322,117 +370,117 @@ pub fn lex(input: &str) -> Vec<Token> {
                     }
                     
                     if is_raw {
-                         chars.next(); // r
-                         chars.next(); chars.next(); chars.next(); // """
+                         lexer.next(); // r
+                         lexer.next(); lexer.next(); lexer.next(); // """
                          let mut s = String::new();
                          loop {
                              // Check for triple quote end """
                              {
-                                 let mut la = chars.clone();
+                                 let mut la = lexer.chars.clone();
                                  if la.next() == Some('"') && la.next() == Some('"') && la.next() == Some('"') {
-                                     chars.next(); chars.next(); chars.next();
+                                     lexer.next(); lexer.next(); lexer.next();
                                      break;
                                  }
                              }
                              
-                             if let Some(ch) = chars.next() {
+                             if let Some(ch) = lexer.next() {
                                  s.push(ch);
                              } else {
-                                 panic!("Unterminated raw triple-quoted string");
+                                 lexer.error("Unterminated raw triple-quoted string", start);
                              }
                          }
-                         tokens.push(Token::String(s));
+                         tokens.push(Token { kind: TokenKind::String(s), span: Span::new(start, lexer.pos) });
                          continue;
                     }
                 }
 
                 let mut ident = String::new();
-                while let Some(&ch) = chars.peek() {
+                while let Some(&ch) = lexer.peek() {
                     if !ch.is_alphanumeric() && ch != '_' { break; }
                     ident.push(ch);
-                    chars.next();
+                    lexer.next();
                 }
-                match ident.as_str() {
-                    "func" => tokens.push(Token::Func),
-                    "run" => tokens.push(Token::Run),
-                    "print" => tokens.push(Token::Print),
-                    "print_err" => tokens.push(Token::PrintErr),
-                    "if" => tokens.push(Token::If),
-                    "elif" => tokens.push(Token::Elif),
-                    "else" => tokens.push(Token::Else),
-                    "let" => tokens.push(Token::Let),
-                    "case" => tokens.push(Token::Case),
-                    "while" => tokens.push(Token::While),
-                    "for" => tokens.push(Token::For),
-                    "in" => tokens.push(Token::In),
-                    "args" => tokens.push(Token::Args),
-                    "with" => tokens.push(Token::With),
-                    "env" => tokens.push(Token::Env),
-                    "cd" => tokens.push(Token::Cd),
-                    "cwd" => tokens.push(Token::Cwd),
-                    "sh" => tokens.push(Token::Sh),
-                    "break" => tokens.push(Token::Break),
-                    "continue" => tokens.push(Token::Continue),
-                    "return" => tokens.push(Token::Return),
-                    "exit" => tokens.push(Token::Exit),
-                    "capture" => tokens.push(Token::Capture),
-                    "subshell" => tokens.push(Token::Subshell),
-                    "group" => tokens.push(Token::Group),
-                    "redirect" => tokens.push(Token::Redirect),
-                    "stdout" => tokens.push(Token::Stdout),
-                    "stderr" => tokens.push(Token::Stderr),
-                    "stdin" => tokens.push(Token::Stdin),
-                    "file" => tokens.push(Token::File),
-                    "append" => tokens.push(Token::Append),
-                    "spawn" => tokens.push(Token::Spawn),
-                    "wait" => tokens.push(Token::Wait),
-                    "try" => tokens.push(Token::Try),
-                    "catch" => tokens.push(Token::Catch),
-                    "export" => tokens.push(Token::Export),
-                    "unset" => tokens.push(Token::Unset),
-                    "source" => tokens.push(Token::Source),
-                    "set" => tokens.push(Token::Set),
-                    "exists" => tokens.push(Token::Exists),
-                    "arg" => tokens.push(Token::Arg),
-                    "index" => tokens.push(Token::Index),
-                    "join" => tokens.push(Token::Join),
-                    "exec" => tokens.push(Token::Exec),
-                    "status" => tokens.push(Token::Status),
-                    "pid" => tokens.push(Token::Pid),
-                    "count" => tokens.push(Token::Count),
-                    "uid" => tokens.push(Token::Uid),
-                    "ppid" => tokens.push(Token::Ppid),
-                    "pwd" => tokens.push(Token::Pwd),
-                    "self_pid" => tokens.push(Token::SelfPid),
-                    "argv0" => tokens.push(Token::Argv0),
-                    "argc" => tokens.push(Token::Argc),
-                    "true" => tokens.push(Token::True),
-                    "false" => tokens.push(Token::False),
-                    "is_dir" => tokens.push(Token::IsDir),
-                    "is_file" => tokens.push(Token::IsFile),
-                    "is_symlink" => tokens.push(Token::IsSymlink),
-                    "is_exec" => tokens.push(Token::IsExec),
-                    "is_readable" => tokens.push(Token::IsReadable),
-                    "is_writable" => tokens.push(Token::IsWritable),
-                    "is_non_empty" => tokens.push(Token::IsNonEmpty),
-                    "bool_str" => tokens.push(Token::BoolStr),
-
-                    "pipe" => tokens.push(Token::PipeKw),
-                    "len" => tokens.push(Token::Len),
-                    "log" => tokens.push(Token::Log),
-                    "import" => tokens.push(Token::Import),
-                    "input" => tokens.push(Token::Input),
-                    "confirm" => tokens.push(Token::Confirm),
-                    _ => tokens.push(Token::Ident(ident)),
-                }
+                let kind = match ident.as_str() {
+                    "func" => TokenKind::Func,
+                    "run" => TokenKind::Run,
+                    "print" => TokenKind::Print,
+                    "print_err" => TokenKind::PrintErr,
+                    "if" => TokenKind::If,
+                    "elif" => TokenKind::Elif,
+                    "else" => TokenKind::Else,
+                    "let" => TokenKind::Let,
+                    "case" => TokenKind::Case,
+                    "while" => TokenKind::While,
+                    "for" => TokenKind::For,
+                    "in" => TokenKind::In,
+                    "args" => TokenKind::Args,
+                    "with" => TokenKind::With,
+                    "env" => TokenKind::Env,
+                    "cd" => TokenKind::Cd,
+                    "cwd" => TokenKind::Cwd,
+                    "sh" => TokenKind::Sh,
+                    "break" => TokenKind::Break,
+                    "continue" => TokenKind::Continue,
+                    "return" => TokenKind::Return,
+                    "exit" => TokenKind::Exit,
+                    "capture" => TokenKind::Capture,
+                    "subshell" => TokenKind::Subshell,
+                    "group" => TokenKind::Group,
+                    "redirect" => TokenKind::Redirect,
+                    "stdout" => TokenKind::Stdout,
+                    "stderr" => TokenKind::Stderr,
+                    "stdin" => TokenKind::Stdin,
+                    "file" => TokenKind::File,
+                    "append" => TokenKind::Append,
+                    "spawn" => TokenKind::Spawn,
+                    "wait" => TokenKind::Wait,
+                    "try" => TokenKind::Try,
+                    "catch" => TokenKind::Catch,
+                    "export" => TokenKind::Export,
+                    "unset" => TokenKind::Unset,
+                    "source" => TokenKind::Source,
+                    "set" => TokenKind::Set,
+                    "exists" => TokenKind::Exists,
+                    "arg" => TokenKind::Arg,
+                    "index" => TokenKind::Index,
+                    "join" => TokenKind::Join,
+                    "exec" => TokenKind::Exec,
+                    "status" => TokenKind::Status,
+                    "pid" => TokenKind::Pid,
+                    "count" => TokenKind::Count,
+                    "uid" => TokenKind::Uid,
+                    "ppid" => TokenKind::Ppid,
+                    "pwd" => TokenKind::Pwd,
+                    "self_pid" => TokenKind::SelfPid,
+                    "argv0" => TokenKind::Argv0,
+                    "argc" => TokenKind::Argc,
+                    "true" => TokenKind::True,
+                    "false" => TokenKind::False,
+                    "is_dir" => TokenKind::IsDir,
+                    "is_file" => TokenKind::IsFile,
+                    "is_symlink" => TokenKind::IsSymlink,
+                    "is_exec" => TokenKind::IsExec,
+                    "is_readable" => TokenKind::IsReadable,
+                    "is_writable" => TokenKind::IsWritable,
+                    "is_non_empty" => TokenKind::IsNonEmpty,
+                    "bool_str" => TokenKind::BoolStr,
+                    "pipe" => TokenKind::PipeKw,
+                    "len" => TokenKind::Len,
+                    "log" => TokenKind::Log,
+                    "import" => TokenKind::Import,
+                    "input" => TokenKind::Input,
+                    "confirm" => TokenKind::Confirm,
+                    _ => TokenKind::Ident(ident),
+                };
+                tokens.push(Token { kind, span: Span::new(start, lexer.pos) });
             }
             '#' => {
-                 while let Some(&ch) = chars.peek() {
+                 while let Some(&ch) = lexer.peek() {
                      if ch == '\n' { break; }
-                     chars.next();
+                     lexer.next();
                  }
             }
-            _ => panic!("Unexpected char: {}", c),
+            _ => lexer.error(&format!("Unexpected char: {}", c), start),
         }
     }
 

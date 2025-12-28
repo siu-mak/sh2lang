@@ -5,3 +5,4 @@ pub mod ir;
 pub mod lower;
 pub mod codegen;
 pub mod loader;
+pub mod span;

@@ -25,8 +25,10 @@ pub fn compile_to_bash(src: &str) -> String {
 }
 
 pub fn compile_to_shell(src: &str, target: TargetShell) -> String {
-    let tokens = lexer::lex(src);
-    let program = parser::parse(&tokens);
+    let sm = sh2c::span::SourceMap::new(src.to_string());
+    let tokens = lexer::lex(&sm, src);
+    let program = parser::parse(&tokens, &sm, "inline_test");
+    // Note: lower calls generally require accurate file info but here we use "inline_test"
     let ir = lower::lower(program);
     codegen::emit_with_target(&ir, target)
 }
@@ -34,8 +36,9 @@ pub fn compile_to_shell(src: &str, target: TargetShell) -> String {
 pub fn parse_fixture(fixture_name: &str) -> ast::Program {
     let sh2_path = format!("tests/fixtures/{}.sh2", fixture_name);
     let src = fs::read_to_string(&sh2_path).expect("Failed to read fixture");
-    let tokens = lexer::lex(&src);
-    parser::parse(&tokens)
+    let sm = sh2c::span::SourceMap::new(src.clone());
+    let tokens = lexer::lex(&sm, &src);
+    parser::parse(&tokens, &sm, &sh2_path)
 }
 
 pub fn assert_codegen_matches_snapshot(fixture_name: &str) {

@@ -1,6 +1,7 @@
 use crate::ast::{Program, Function};
 use crate::lexer;
 use crate::parser;
+use crate::span::SourceMap;
 use std::collections::{HashSet, HashMap};
 use std::path::{Path, PathBuf};
 use std::fs;
@@ -23,6 +24,8 @@ struct Loader {
     function_order: Vec<String>,
     // Top level statements from the entry file
     entry_top_level: Vec<crate::ast::Stmt>,
+    // Collected source maps
+    source_maps: HashMap<String, SourceMap>,
 }
 
 impl Loader {
@@ -34,16 +37,11 @@ impl Loader {
             functions: HashMap::new(),
             function_order: Vec::new(),
             entry_top_level: Vec::new(),
+            source_maps: HashMap::new(),
         }
     }
 }
 
-// Clean up: make load return void and logic cleaner
-impl Loader {
-    // ... (rest is fine)
-}
-
-// Re-write load_program_with_imports to separate the recursive updating from final construction
 fn load_program_with_imports_impl(loader: &mut Loader, entry_path: &Path, is_entry: bool) {
     let canonical_path = match fs::canonicalize(entry_path) {
         Ok(p) => p,
@@ -75,8 +73,14 @@ fn load_program_with_imports_impl(loader: &mut Loader, entry_path: &Path, is_ent
         Err(e) => panic!("Failed to read {}: {}", canonical_path.display(), e),
     };
 
-    let tokens = lexer::lex(&src);
-    let program = parser::parse(&tokens);
+    let file_str = canonical_path.to_string_lossy().to_string();
+    let sm = SourceMap::new(src);
+    loader.source_maps.insert(file_str.clone(), sm);
+    
+    let sm_ref = loader.source_maps.get(&file_str).unwrap();
+    
+    let tokens = lexer::lex(sm_ref, &file_str);
+    let program = parser::parse(&tokens, sm_ref, &file_str);
 
     let base_dir = canonical_path.parent().unwrap_or(Path::new("."));
     for import_str in program.imports {
@@ -104,6 +108,7 @@ fn load_program_with_imports_impl(loader: &mut Loader, entry_path: &Path, is_ent
 
     if is_entry {
         loader.entry_top_level = program.top_level;
+        // Also capture the program span if needed? Program span is just file span.
     } else {
         if !program.top_level.is_empty() {
              panic!("Top-level statements are only allowed in the entry file (found in {})", canonical_path.display());
@@ -115,7 +120,6 @@ fn load_program_with_imports_impl(loader: &mut Loader, entry_path: &Path, is_ent
     loader.loaded.insert(canonical_path);
 }
 
-// Final wrapper
 pub fn load(entry_path: &Path) -> Program {
     let mut loader = Loader::new();
     load_program_with_imports_impl(&mut loader, entry_path, true);
@@ -127,5 +131,24 @@ pub fn load(entry_path: &Path) -> Program {
         functions.push(func);
     }
     
-    Program { imports: vec![], functions, top_level: loader.entry_top_level }
+    // We need a span for the final merged program.
+    // It's conceptually the entry file's span, or a synthetic one.
+    // Using 0..0 is fine as Program span isn't used much? 
+    // Or we should grab it from loader.
+    // But we don't store the entry program struct.
+    // Let's just make a dummy span 0..0 for now, or use empty.
+    let span = crate::span::Span { start: 0, end: 0 };
+    
+    // We need the entry file name.
+    // Since load_program_with_imports_impl canonicalizes, we should too to match keys.
+    let entry_file = fs::canonicalize(entry_path).unwrap().to_string_lossy().to_string();
+
+    Program { 
+        imports: vec![], 
+        functions, 
+        top_level: loader.entry_top_level,
+        span,
+        source_maps: loader.source_maps,
+        entry_file,
+    }
 }

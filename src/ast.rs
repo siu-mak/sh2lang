@@ -1,8 +1,16 @@
+use crate::span::Span;
+
+use std::collections::HashMap;
+use crate::span::SourceMap;
+
 #[derive(Debug, PartialEq)]
 pub struct Program {
     pub imports: Vec<String>,
     pub functions: Vec<Function>,
     pub top_level: Vec<Stmt>,
+    pub span: Span,
+    pub source_maps: HashMap<String, SourceMap>,
+    pub entry_file: String,
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -10,6 +18,8 @@ pub struct Function {
     pub name: String,
     pub params: Vec<String>,
     pub body: Vec<Stmt>,
+    pub span: Span,
+    pub file: String,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -38,7 +48,13 @@ pub enum LValue {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub enum Expr {
+pub struct Expr {
+    pub kind: ExprKind,
+    pub span: Span,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum ExprKind {
     Literal(String),
     Var(String),
     Command(Vec<Expr>),
@@ -92,7 +108,13 @@ pub struct RunCall {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub enum Stmt {
+pub struct Stmt {
+    pub kind: StmtKind,
+    pub span: Span,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum StmtKind {
     Let { name: String, value: Expr },
     Run(RunCall),
     Print(Expr),
@@ -194,4 +216,3 @@ pub struct Elif {
     pub cond: Expr,
     pub body: Vec<Stmt>,
 }
-

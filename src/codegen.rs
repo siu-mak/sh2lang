@@ -419,7 +419,10 @@ fn emit_cmd(cmd: &Cmd, out: &mut String, indent: usize, target: TargetShell) {
     let pad = " ".repeat(indent);
 
     match cmd {
-        Cmd::Assign(name, val) => {
+        Cmd::Assign(name, val, loc) => {
+            if let Some(l) = loc {
+                 out.push_str(&format!("{}__sh2_loc=\"{}\"\n", pad, l));
+            }
             if target == TargetShell::Posix {
                 if matches!(val, Val::MapLiteral(_)) {
                     panic!("map/dict is only supported in Bash target");
@@ -502,7 +505,10 @@ fn emit_cmd(cmd: &Cmd, out: &mut String, indent: usize, target: TargetShell) {
                 out.push('\n');
             }
         }
-        Cmd::Exec { args, allow_fail } => {
+        Cmd::Exec { args, allow_fail, loc } => {
+            if let Some(l) = loc {
+                 out.push_str(&format!("{}__sh2_loc=\"{}\"\n", pad, l));
+            }
             out.push_str(&pad);
             let shell_cmd = args.iter().map(|a| emit_word(a, target)).collect::<Vec<_>>().join(" ");
             
@@ -518,7 +524,10 @@ fn emit_cmd(cmd: &Cmd, out: &mut String, indent: usize, target: TargetShell) {
                 out.push_str("; __sh2_status=$?; (exit $__sh2_status)\n");
             }
         }
-        Cmd::ExecReplace(args) => {
+        Cmd::ExecReplace(args, loc) => {
+            if let Some(l) = loc {
+                 out.push_str(&format!("{}__sh2_loc=\"{}\"\n", pad, l));
+            }
             out.push_str(&pad);
             out.push_str("exec ");
             let shell_args: Vec<String> = args.iter().map(|a| emit_word(a, target)).collect();
@@ -567,7 +576,10 @@ fn emit_cmd(cmd: &Cmd, out: &mut String, indent: usize, target: TargetShell) {
 
             out.push_str(&format!("{pad}fi\n"));
         }
-        Cmd::Pipe(segments) => {
+        Cmd::Pipe(segments, loc) => {
+             if let Some(l) = loc {
+                 out.push_str(&format!("{}__sh2_loc=\"{}\"\n", pad, l));
+             }
              // Bash: normal pipeline with PIPESTATUS
              // POSIX: manual pipeline with FIFOs via helper
              
@@ -615,7 +627,10 @@ fn emit_cmd(cmd: &Cmd, out: &mut String, indent: usize, target: TargetShell) {
                  }
              }
         }
-        Cmd::PipeBlocks(segments) => {
+        Cmd::PipeBlocks(segments, loc) => {
+            if let Some(l) = loc {
+                 out.push_str(&format!("{}__sh2_loc=\"{}\"\n", pad, l));
+            }
             match target {
                 TargetShell::Bash => {
                     out.push_str(&pad);
@@ -1009,8 +1024,11 @@ fn emit_cmd(cmd: &Cmd, out: &mut String, indent: usize, target: TargetShell) {
              out.push_str("( ");
              
              match cmd.as_ref() {
-                 Cmd::Exec { args, allow_fail: _ } => {
+                 Cmd::Exec { args, allow_fail: _, loc } => {
                      // Simple command: emit inline
+                     if let Some(l) = loc {
+                         out.push_str(&format!("__sh2_loc=\"{}\"; ", l));
+                     }
                      let shell_cmd = args.iter().map(|a| emit_word(a, target)).collect::<Vec<_>>().join(" ");
                      out.push_str(&shell_cmd);
                      out.push_str(" ) &\n");
@@ -1264,6 +1282,8 @@ __sh2_before() { awk -v s="$1" -v sep="$2" 'BEGIN { n=index(s, sep); if(n==0) pr
 __sh2_after() { awk -v s="$1" -v sep="$2" 'BEGIN { n=index(s, sep); if(n==0) printf ""; else printf "%s", substr(s, n+length(sep)) }'; }
 __sh2_replace() { awk -v s="$1" -v old="$2" -v new="$3" 'BEGIN { if(old=="") { printf "%s", s; exit } len=length(old); while(i=index(s, old)) { printf "%s%s", substr(s, 1, i-1), new; s=substr(s, i+len) } printf "%s", s }'; }
 __sh2_split() { awk -v s="$1" -v sep="$2" 'BEGIN { if(sep=="") { printf "%s", s; exit } len=length(sep); while(i=index(s, sep)) { printf "%s\n", substr(s, 1, i-1); s=substr(s, i+len) } printf "%s", s }'; }
+__sh2_err_handler() { printf "Error in %s\n" "${__sh2_loc:-unknown}" >&2; }
+trap '__sh2_err_handler' ERR
 "#);
     match target {
         TargetShell::Bash => {
