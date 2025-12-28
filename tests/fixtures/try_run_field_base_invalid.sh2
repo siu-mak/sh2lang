@@ -1,0 +1,4 @@
+func main() {
+  let x = "not runresult"
+  print(x.stdout)
+}

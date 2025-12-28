@@ -1,0 +1,4 @@
+func main() {
+  let r = try_run("echo", "hi")
+  print(r.nope)
+}
