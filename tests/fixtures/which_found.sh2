@@ -1,0 +1,5 @@
+
+func main() {
+    let p = which("sh")
+    if p != "" { print("OK") } else { print("NO") }
+}

@@ -1,7 +1,5 @@
 use std::fs;
 use std::process;
-use sh2c::lexer;
-use sh2c::parser;
 use sh2c::lower;
 use sh2c::codegen;
 use sh2c::loader;
@@ -57,7 +55,7 @@ fn main() {
         }
     };
 
-    let src = match fs::read_to_string(&filename) {
+    let _src = match fs::read_to_string(&filename) {
         Ok(s) => s,
         Err(e) => {
             eprintln!("Failed to read {}: {}", filename, e);

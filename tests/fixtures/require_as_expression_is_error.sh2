@@ -1,0 +1,4 @@
+
+func main() {
+    let r = require(["sh"])
+}

@@ -231,6 +231,26 @@ fn lower_stmt(stmt: ast::Stmt, out: &mut Vec<ir::Cmd>) {
                  out.push(ir::Cmd::SaveEnvfile { path, env });
             } else if name == "load_envfile" {
                  panic!("load_envfile() returns a value; use it in an expression (e.g., let m = load_envfile(\"env.meta\"))");
+            } else if name == "which" {
+                 panic!("which() returns a value; use it in an expression (e.g., let p = which(\"cmd\"))");
+            } else if name == "require" {
+                 if args.len() != 1 {
+                     panic!("require() expects exactly one argument");
+                 }
+                 let arg = &args[0];
+                 if let ast::Expr::List(elems) = arg {
+                     let mut valid_cmds = Vec::new();
+                     for e in elems {
+                         if let ast::Expr::Literal(s) = e {
+                             valid_cmds.push(s.clone());
+                         } else {
+                             panic!("require() expects a list literal of string literals");
+                         }
+                     }
+                     out.push(ir::Cmd::Require(valid_cmds));
+                 } else {
+                     panic!("require() expects a list literal of string literals");
+                 }
             } else {
                 let args = args.iter().map(|e| lower_expr(e.clone())).collect();
                 out.push(ir::Cmd::Call { name: name.clone(), args });
@@ -518,6 +538,14 @@ fn lower_expr(e: ast::Expr) -> ir::Val {
                 }
                 let blob = lower_expr(args.into_iter().next().unwrap());
                 ir::Val::JsonKv(Box::new(blob))
+            } else if name == "which" {
+                if args.len() != 1 {
+                    panic!("which() requires exactly 1 argument (cmd)");
+                }
+                let arg = lower_expr(args.into_iter().next().unwrap());
+                ir::Val::Which(Box::new(arg))
+            } else if name == "require" {
+                panic!("require() is a statement, not an expression");
             } else if name == "save_envfile" {
                  panic!("save_envfile() is a statement; use it as a standalone call");
             } else {

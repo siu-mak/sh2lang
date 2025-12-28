@@ -56,6 +56,7 @@ pub enum Val {
     JsonKv(Box<Val>),
     MapLiteral(Vec<(String, Val)>),
     MapIndex { map: String, key: String },
+    Which(Box<Val>),
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -113,6 +114,7 @@ pub enum Cmd {
     Break,
     Continue,
     Return(Option<Val>),
+    Require(Vec<String>),
     Exit(Option<Val>),
     WithEnv {
         bindings: Vec<(String, Val)>,
