@@ -1,0 +1,9 @@
+func main() {
+  let r = "init"
+  if true {
+    let r = try_run("sh", "-c", "printf 'a'; exit 0")
+  } else {
+    let r = try_run("sh", "-c", "printf 'b'; exit 0")
+  }
+  print(r.stdout)
+}

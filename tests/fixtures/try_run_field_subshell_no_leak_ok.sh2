@@ -1,0 +1,7 @@
+func main() {
+  let r = try_run("sh", "-c", "printf 'out'; exit 0")
+  subshell {
+    let r = "shadowed"
+  }
+  print(r.stdout)
+}

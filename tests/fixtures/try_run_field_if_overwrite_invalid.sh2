@@ -1,0 +1,7 @@
+func main() {
+  let r = try_run("echo", "ok")
+  if true {
+    let r = "shadowed"
+  }
+  print(r.stdout)
+}

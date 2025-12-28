@@ -2,8 +2,28 @@ use crate::ast;
 use crate::ir;
 use std::collections::HashSet;
 
+#[derive(Clone, Debug)]
 struct LoweringContext {
     run_results: HashSet<String>,
+}
+
+impl LoweringContext {
+    fn new() -> Self {
+        Self { run_results: HashSet::new() }
+    }
+
+    fn insert(&mut self, name: &str) {
+        self.run_results.insert(name.to_string());
+    }
+
+    fn remove(&mut self, name: &str) {
+        self.run_results.remove(name);
+    }
+
+    fn intersection(&self, other: &Self) -> Self {
+        let run_results = self.run_results.intersection(&other.run_results).cloned().collect();
+        Self { run_results }
+    }
 }
 
 /// Lower a whole program (AST) into IR
@@ -35,12 +55,10 @@ pub fn lower(mut p: ast::Program) -> Vec<ir::Function> {
 /// Lower a single function
 fn lower_function(f: ast::Function) -> ir::Function {
     let mut commands = Vec::new();
-    let mut ctx = LoweringContext {
-        run_results: HashSet::new(),
-    };
+    let mut current_ctx = LoweringContext::new();
 
     for stmt in f.body {
-        lower_stmt(stmt, &mut commands, &mut ctx);
+        current_ctx = lower_stmt(stmt, &mut commands, current_ctx);
     }
 
     ir::Function {
@@ -50,9 +68,16 @@ fn lower_function(f: ast::Function) -> ir::Function {
     }
 }
 
-/// Lower one AST statement into IR commands
-/// Lower one AST statement into IR commands
-fn lower_stmt(stmt: ast::Stmt, out: &mut Vec<ir::Cmd>, ctx: &mut LoweringContext) {
+/// Helper to lower a block of statements sequentially
+fn lower_block(stmts: Vec<ast::Stmt>, out: &mut Vec<ir::Cmd>, mut ctx: LoweringContext) -> LoweringContext {
+    for stmt in stmts {
+        ctx = lower_stmt(stmt, out, ctx);
+    }
+    ctx
+}
+
+/// Lower one AST statement into IR commands. Returns the updated context after this statement.
+fn lower_stmt(stmt: ast::Stmt, out: &mut Vec<ir::Cmd>, mut ctx: LoweringContext) -> LoweringContext {
     match stmt {
         ast::Stmt::Let { name, value } => {
             // Special handling for try_run to allow it ONLY during strict let-binding lowering.
@@ -63,64 +88,95 @@ fn lower_stmt(stmt: ast::Stmt, out: &mut Vec<ir::Cmd>, ctx: &mut LoweringContext
                         panic!("try_run() requires at least 1 argument (cmd)");
                     }
                     // lower args using ctx
-                    let lowered_args = args.clone().into_iter().map(|a| lower_expr(a, ctx)).collect();
+                    let lowered_args = args.clone().into_iter().map(|a| lower_expr(a, &mut ctx)).collect();
                     out.push(ir::Cmd::Assign(name.clone(), ir::Val::TryRun(lowered_args)));
-                    ctx.run_results.insert(name);
-                    return;
+                    ctx.insert(&name);
+                    return ctx;
                 }
             }
-            out.push(ir::Cmd::Assign(name.clone(), lower_expr(value, ctx)));
-            ctx.run_results.remove(&name);
+            out.push(ir::Cmd::Assign(name.clone(), lower_expr(value, &mut ctx)));
+            ctx.remove(&name);
+            ctx
         }
 
         ast::Stmt::Run(run_call) => {
-            let ir_args = run_call.args.into_iter().map(|a| lower_expr(a, ctx)).collect();
+            let ir_args = run_call.args.into_iter().map(|a| lower_expr(a, &mut ctx)).collect();
             out.push(ir::Cmd::Exec { args: ir_args, allow_fail: run_call.allow_fail });
+            ctx
         }
 
         ast::Stmt::Print(e) => {
-            out.push(ir::Cmd::Print(lower_expr(e, ctx)));
+            out.push(ir::Cmd::Print(lower_expr(e, &mut ctx)));
+            ctx
         }
 
         ast::Stmt::PrintErr(e) => {
-            out.push(ir::Cmd::PrintErr(lower_expr(e, ctx)));
+            out.push(ir::Cmd::PrintErr(lower_expr(e, &mut ctx)));
+            ctx
         }
         ast::Stmt::If { cond, then_body, elifs, else_body } => {
+            let cond_val = lower_expr(cond, &mut ctx);
+            
             let mut t_cmds = Vec::new();
-            for s in then_body {
-                lower_stmt(s, &mut t_cmds, ctx);
-            }
+            let ctx_then = lower_block(then_body, &mut t_cmds, ctx.clone());
             
             let mut lowered_elifs = Vec::new();
+            let mut ctx_elifs = Vec::new();
+
             for elif in elifs {
                 let mut body_cmds = Vec::new();
-                for s in elif.body {
-                    lower_stmt(s, &mut body_cmds, ctx);
-                }
-                lowered_elifs.push((lower_expr(elif.cond, ctx), body_cmds));
+                let elif_cond = lower_expr(elif.cond, &mut ctx); // Evaluate cond in original context
+                let ctx_elif = lower_block(elif.body, &mut body_cmds, ctx.clone());
+                lowered_elifs.push((elif_cond, body_cmds));
+                ctx_elifs.push(ctx_elif);
             }
 
             let mut e_cmds = Vec::new();
-            if let Some(body) = else_body {
-                for s in body {
-                    lower_stmt(s, &mut e_cmds, ctx);
-                }
-            }
+            let ctx_else = if let Some(body) = else_body {
+                lower_block(body, &mut e_cmds, ctx.clone())
+            } else {
+                ctx.clone() // Empty else block means "no change" relative to entry
+            };
 
             out.push(ir::Cmd::If {
-                cond: lower_expr(cond, ctx),
+                cond: cond_val,
                 then_body: t_cmds,
                 elifs: lowered_elifs,
                 else_body: e_cmds,
             });
+
+            // Intersection of all paths
+            let mut final_ctx = ctx_then.intersection(&ctx_else);
+            for c in ctx_elifs {
+                final_ctx = final_ctx.intersection(&c);
+            }
+            final_ctx
         }
         ast::Stmt::Case { expr, arms } => {
+             // Treat case as: intersection of all arms.
+             // If no arms match, it does nothing? Typical shell switch...
+             // For safety, assume it might not match any pattern if usage forces it (or if there is no default *)
+             // But actually, AST pattern matching might cover all cases. 
+             // To be safe/strict: intersection of all arms AND (if no wildcard present) implicit fallthrough?
+             // Let's assume there is an implicit "nothing happened" path unless a wildcard catch-all exists.
+             // However, checking for wildcard in AST is easy.
+            
+            let expr_val = lower_expr(expr, &mut ctx);
             let mut lower_arms = Vec::new();
+            let mut arm_ctxs = Vec::new();
+            let mut has_wildcard = false;
+
             for arm in arms {
                 let mut body_cmds = Vec::new();
-                for s in arm.body {
-                    lower_stmt(s, &mut body_cmds, ctx);
+                
+                 // Check for wildcard pattern
+                for p in &arm.patterns {
+                    if matches!(p, ast::Pattern::Wildcard) {
+                        has_wildcard = true;
+                    }
                 }
+                
+                let ctx_arm = lower_block(arm.body, &mut body_cmds, ctx.clone());
                 
                 let patterns = arm.patterns.into_iter().map(|p| match p {
                     ast::Pattern::Literal(s) => ir::Pattern::Literal(s),
@@ -129,120 +185,166 @@ fn lower_stmt(stmt: ast::Stmt, out: &mut Vec<ir::Cmd>, ctx: &mut LoweringContext
                 }).collect();
                 
                 lower_arms.push((patterns, body_cmds));
+                arm_ctxs.push(ctx_arm);
             }
+            
             out.push(ir::Cmd::Case {
-                expr: lower_expr(expr, ctx),
+                expr: expr_val,
                 arms: lower_arms,
             });
+
+            if arm_ctxs.is_empty() {
+                return ctx;
+            }
+
+            let mut final_ctx = arm_ctxs[0].clone();
+            for c in arm_ctxs.iter().skip(1) {
+                final_ctx = final_ctx.intersection(c);
+            }
+            
+            if !has_wildcard {
+                final_ctx = final_ctx.intersection(&ctx);
+            }
+
+            final_ctx
         }
         ast::Stmt::While { cond, body } => {
+            let cond_val = lower_expr(cond, &mut ctx);
             let mut lower_body = Vec::new();
-            for s in body {
-                lower_stmt(s, &mut lower_body, ctx);
-            }
+            let ctx_body = lower_block(body, &mut lower_body, ctx.clone());
+            
             out.push(ir::Cmd::While {
-                cond: lower_expr(cond, ctx),
+                cond: cond_val,
                 body: lower_body,
             });
+            
+            // Loop might run zero times -> intersection with entry context
+            ctx.intersection(&ctx_body)
         }
         ast::Stmt::For { var, items, body } => {
+            let lowered_items = items.into_iter().map(|i| lower_expr(i, &mut ctx)).collect();
             let mut lower_body = Vec::new();
-            for s in body {
-                lower_stmt(s, &mut lower_body, ctx);
-            }
-            let lowered_items = items.into_iter().map(|i| lower_expr(i, ctx)).collect();
+            let ctx_body = lower_block(body, &mut lower_body, ctx.clone());
+            
             out.push(ir::Cmd::For {
                 var,
                 items: lowered_items,
                 body: lower_body,
             });
+             // Loop might run zero times -> intersection with entry context
+            ctx.intersection(&ctx_body)
         }
         ast::Stmt::Pipe(segments) => {
             let mut lowered_segments = Vec::new();
             for run_call in segments {
-                let lowered_args = run_call.args.into_iter().map(|a| lower_expr(a, ctx)).collect();
+                let lowered_args = run_call.args.into_iter().map(|a| lower_expr(a, &mut ctx)).collect();
                 lowered_segments.push((lowered_args, run_call.allow_fail));
             }
             out.push(ir::Cmd::Pipe(lowered_segments));
+            ctx
         }
         ast::Stmt::Break => {
             out.push(ir::Cmd::Break);
+            ctx
         }
         ast::Stmt::Continue => {
             out.push(ir::Cmd::Continue);
+            ctx
         }
         ast::Stmt::Return(e) => {
-             out.push(ir::Cmd::Return(e.map(|x| lower_expr(x, ctx))));
+             out.push(ir::Cmd::Return(e.map(|x| lower_expr(x, &mut ctx))));
+             ctx
         }
         ast::Stmt::Exit(e) => {
-             out.push(ir::Cmd::Exit(e.map(|x| lower_expr(x, ctx))));
+             out.push(ir::Cmd::Exit(e.map(|x| lower_expr(x, &mut ctx))));
+             ctx
         }
         ast::Stmt::WithEnv { bindings, body } => {
-            let lowered_bindings = bindings.into_iter().map(|(k, v)| (k, lower_expr(v, ctx))).collect();
+            let lowered_bindings = bindings.into_iter().map(|(k, v)| (k, lower_expr(v, &mut ctx))).collect();
             let mut lower_body = Vec::new();
-            for s in body {
-                lower_stmt(s, &mut lower_body, ctx);
-            }
+            // WithEnv persists changes? In sh/bash, `VAR=val cmd` scopes VAR to cmd.
+            // But `WithEnv` in AST usually maps to `export VAR=val; body...` or similar block scoping?
+            // Existing lowering used `Cmd::WithEnv { bindings, body }`.
+            // If the body executes in current shell, side effects persist. 
+            // In Sh2, `with env { ... }` generates `( export ...; ... )` usually? 
+            // Wait, looking at Codegen: WithEnv usually emits a subshell `( export K=V; ... )`.
+            // If it's a subshell, changes DO NOT persist.
+            // Let's check codegen... no, I can't check codegen right now easily, but usually `with env` implies isolation.
+            // Actually, based on typical sh2 semantics, `with env` is scoped. 
+            // Let's assume it IS a subshell-like scope for safety.
+            // The "Plan" said: "Bodies execute in current shell context; allow persistence". 
+            // Wait, typically `with_env` might just export then unexport?
+            // Re-reading Plan Step 3H: "Bodies execute in current shell context; allow persistence: ctx_body_out".
+            // Implementation follows the Plan.
+            let ctx_body = lower_block(body, &mut lower_body, ctx.clone());
             out.push(ir::Cmd::WithEnv {
                 bindings: lowered_bindings,
                 body: lower_body,
             });
+            ctx_body
         }
         ast::Stmt::AndThen { left, right } => {
             let mut lower_left = Vec::new();
-            for s in left {
-                lower_stmt(s, &mut lower_left, ctx);
-            }
+            let ctx_left = lower_block(left, &mut lower_left, ctx.clone());
+            
             let mut lower_right = Vec::new();
-            for s in right {
-                lower_stmt(s, &mut lower_right, ctx);
-            }
+            // Right executes only if Left succeeds.
+            // If Left fails, we effectively skip Right.
+            // So result is ctx_left (fail case) merged with ctx_right (success case).
+            let ctx_right = lower_block(right, &mut lower_right, ctx_left.clone());
+            
             out.push(ir::Cmd::AndThen { left: lower_left, right: lower_right });
+            ctx_left.intersection(&ctx_right)
         }
         ast::Stmt::OrElse { left, right } => {
             let mut lower_left = Vec::new();
-            for s in left {
-                lower_stmt(s, &mut lower_left, ctx);
-            }
+            let ctx_left = lower_block(left, &mut lower_left, ctx.clone());
+            
             let mut lower_right = Vec::new();
-            for s in right {
-                lower_stmt(s, &mut lower_right, ctx);
-            }
+            // Right executes only if Left fails.
+            // If Left succeeds, we skip Right.
+            // So result is ctx_left (success case) merged with ctx_right (fail case).
+            let ctx_right = lower_block(right, &mut lower_right, ctx_left.clone());
+
             out.push(ir::Cmd::OrElse { left: lower_left, right: lower_right });
+            ctx_left.intersection(&ctx_right)
         }
         ast::Stmt::WithCwd { path, body } => {
-            let lowered_path = lower_expr(path, ctx);
+            let lowered_path = lower_expr(path, &mut ctx);
             let mut lower_body = Vec::new();
-            for s in body {
-                lower_stmt(s, &mut lower_body, ctx);
-            }
+            // Plan 3H: allow persistence.
+            let ctx_body = lower_block(body, &mut lower_body, ctx.clone());
             out.push(ir::Cmd::WithCwd {
                 path: lowered_path,
                 body: lower_body,
             });
+            ctx_body
         }
         ast::Stmt::WithLog { path, append, body } => {
-            let lowered_path = lower_expr(path, ctx);
+            let lowered_path = lower_expr(path, &mut ctx);
             let mut lower_body = Vec::new();
-            for s in body {
-                lower_stmt(s, &mut lower_body, ctx);
-            }
+            // Plan 3H: allow persistence.
+            let ctx_body = lower_block(body, &mut lower_body, ctx.clone());
             out.push(ir::Cmd::WithLog {
                 path: lowered_path,
                 append,
                 body: lower_body,
             });
+            ctx_body
         }
         ast::Stmt::Cd { path } => {
-            out.push(ir::Cmd::Cd(lower_expr(path, ctx)));
+            out.push(ir::Cmd::Cd(lower_expr(path, &mut ctx)));
+            ctx
         }
         ast::Stmt::Sh(s) => {
             out.push(ir::Cmd::Raw(s));
+            ctx
         }
         ast::Stmt::ShBlock(lines) => {
             for s in lines {
                 out.push(ir::Cmd::Raw(s));
             }
+            ctx
         }
         ast::Stmt::Call { name, args } => {
             if name == "save_envfile" {
@@ -250,8 +352,8 @@ fn lower_stmt(stmt: ast::Stmt, out: &mut Vec<ir::Cmd>, ctx: &mut LoweringContext
                      panic!("save_envfile() requires exactly 2 arguments (path, env_blob)");
                  }
                  let mut iter = args.into_iter();
-                 let path = lower_expr(iter.next().unwrap(), ctx);
-                 let env = lower_expr(iter.next().unwrap(), ctx);
+                 let path = lower_expr(iter.next().unwrap(), &mut ctx);
+                 let env = lower_expr(iter.next().unwrap(), &mut ctx);
                  out.push(ir::Cmd::SaveEnvfile { path, env });
             } else if name == "load_envfile" {
                  panic!("load_envfile() returns a value; use it in an expression (e.g., let m = load_envfile(\"env.meta\"))");
@@ -265,7 +367,7 @@ fn lower_stmt(stmt: ast::Stmt, out: &mut Vec<ir::Cmd>, ctx: &mut LoweringContext
                  if let ast::Expr::List(elems) = arg {
                      let mut valid_cmds = Vec::new();
                      for e in elems {
-                         valid_cmds.push(lower_expr(e.clone(), ctx));
+                         valid_cmds.push(lower_expr(e.clone(), &mut ctx));
                      }
                      out.push(ir::Cmd::Require(valid_cmds));
                  } else {
@@ -276,8 +378,8 @@ fn lower_stmt(stmt: ast::Stmt, out: &mut Vec<ir::Cmd>, ctx: &mut LoweringContext
                      panic!("write_file() requires 2 or 3 arguments (path, content, [append])");
                  }
                  let mut iter = args.into_iter();
-                 let path = lower_expr(iter.next().unwrap(), ctx);
-                 let content = lower_expr(iter.next().unwrap(), ctx);
+                 let path = lower_expr(iter.next().unwrap(), &mut ctx);
+                 let content = lower_expr(iter.next().unwrap(), &mut ctx);
                  let append = if iter.len() > 0 {
                      if let ast::Expr::Bool(b) = iter.next().unwrap() {
                          b
@@ -301,7 +403,7 @@ fn lower_stmt(stmt: ast::Stmt, out: &mut Vec<ir::Cmd>, ctx: &mut LoweringContext
                      panic!("{}() requires 1 or 2 arguments (msg, [timestamp])", name);
                  }
                  let mut iter = args.into_iter();
-                 let msg = lower_expr(iter.next().unwrap(), ctx);
+                 let msg = lower_expr(iter.next().unwrap(), &mut ctx);
                  let timestamp = if iter.len() > 0 {
                      if let ast::Expr::Bool(b) = iter.next().unwrap() {
                          b
@@ -319,29 +421,29 @@ fn lower_stmt(stmt: ast::Stmt, out: &mut Vec<ir::Cmd>, ctx: &mut LoweringContext
             } else if name == "try_run" {
                  panic!("try_run() must be bound via let (e.g., let r = try_run(...))");
             } else {
-                let args = args.iter().map(|e| lower_expr(e.clone(), ctx)).collect();
+                let args = args.iter().map(|e| lower_expr(e.clone(), &mut ctx)).collect();
                 out.push(ir::Cmd::Call { name: name.clone(), args });
             }
+            ctx
         }
         ast::Stmt::Subshell { body } => {
-            let mut lowered = Vec::new();
-            for s in body {
-                lower_stmt(s, &mut lowered, ctx);
-            }
-            out.push(ir::Cmd::Subshell { body: lowered });
+            let mut lower_body = Vec::new();
+            // Subshell does NOT persist changes. Return original ctx.
+            lower_block(body, &mut lower_body, ctx.clone());
+            out.push(ir::Cmd::Subshell { body: lower_body });
+            ctx
         }
         ast::Stmt::Group { body } => {
-            let mut lowered = Vec::new();
-            for s in body {
-                lower_stmt(s, &mut lowered, ctx);
-            }
-            out.push(ir::Cmd::Group { body: lowered });
+            let mut lower_body = Vec::new();
+            // Group DOES persist changes.
+            let ctx_body = lower_block(body, &mut lower_body, ctx.clone());
+            out.push(ir::Cmd::Group { body: lower_body });
+            ctx_body
         }
         ast::Stmt::WithRedirect { stdout, stderr, stdin, body } => {
              let mut lowered_body = Vec::new();
-             for s in body {
-                 lower_stmt(s, &mut lowered_body, ctx);
-             }
+             // Plan 3H: persist
+             let ctx_body = lower_block(body, &mut lowered_body, ctx.clone());
              
              let lower_target = |t: ast::RedirectTarget, c: &mut LoweringContext| match t {
                  ast::RedirectTarget::File { path, append } => ir::RedirectTarget::File { path: lower_expr(path, c), append },
@@ -351,62 +453,69 @@ fn lower_stmt(stmt: ast::Stmt, out: &mut Vec<ir::Cmd>, ctx: &mut LoweringContext
              };
              
              out.push(ir::Cmd::WithRedirect {
-                  stdout: stdout.map(|t| lower_target(t, ctx)),
-                 stderr: stderr.map(|t| lower_target(t, ctx)),
-                 stdin: stdin.map(|t| lower_target(t, ctx)),
+                  stdout: stdout.map(|t| lower_target(t, &mut ctx)),
+                 stderr: stderr.map(|t| lower_target(t, &mut ctx)),
+                 stdin: stdin.map(|t| lower_target(t, &mut ctx)),
                  body: lowered_body,
              });
+             ctx_body
         }
         ast::Stmt::Spawn { stmt } => {
             let mut lower_cmds = Vec::new();
-            lower_stmt(*stmt, &mut lower_cmds, ctx);
+            // Spawn does NOT persist changes (background). Return original ctx.
+            lower_stmt(*stmt, &mut lower_cmds, ctx.clone());
             
             if lower_cmds.len() == 1 {
                  out.push(ir::Cmd::Spawn(Box::new(lower_cmds.remove(0))));
             } else {
                  out.push(ir::Cmd::Spawn(Box::new(ir::Cmd::Group { body: lower_cmds })));
             }
+            ctx
         }
         ast::Stmt::Wait(expr) => {
-            out.push(ir::Cmd::Wait(expr.map(|e| lower_expr(e, ctx))));
+            out.push(ir::Cmd::Wait(expr.map(|e| lower_expr(e, &mut ctx))));
+            ctx
         }
         ast::Stmt::TryCatch { try_body, catch_body } => {
             let mut lower_try = Vec::new();
-            for s in try_body {
-                lower_stmt(s, &mut lower_try, ctx);
-            }
+            let ctx_try = lower_block(try_body, &mut lower_try, ctx.clone());
+            
             let mut lower_catch = Vec::new();
-            for s in catch_body {
-                lower_stmt(s, &mut lower_catch, ctx);
-            }
+            let ctx_catch = lower_block(catch_body, &mut lower_catch, ctx.clone());
+            
             out.push(ir::Cmd::TryCatch { try_body: lower_try, catch_body: lower_catch });
+            ctx_try.intersection(&ctx_catch)
         }
         ast::Stmt::Export { name, value } => {
             out.push(ir::Cmd::Export {
                 name,
-                value: value.map(|v| lower_expr(v, ctx)),
+                value: value.map(|v| lower_expr(v, &mut ctx)),
             });
+            ctx
         }
         ast::Stmt::Unset { name } => {
             out.push(ir::Cmd::Unset(name));
+            ctx
         }
         ast::Stmt::Source { path } => {
-            out.push(ir::Cmd::Source(lower_expr(path, ctx)));
+            out.push(ir::Cmd::Source(lower_expr(path, &mut ctx)));
+            ctx
         }
         ast::Stmt::Exec(args) => {
-            out.push(ir::Cmd::ExecReplace(args.into_iter().map(|a| lower_expr(a, ctx)).collect()));
+            out.push(ir::Cmd::ExecReplace(args.into_iter().map(|a| lower_expr(a, &mut ctx)).collect()));
+            ctx
         }
         ast::Stmt::Set { target, value } => {
              match target {
                  ast::LValue::Var(name) => {
-                     out.push(ir::Cmd::Assign(name, lower_expr(value, ctx)));
+                     out.push(ir::Cmd::Assign(name, lower_expr(value, &mut ctx)));
                  }
                   ast::LValue::Env(name) => {
                       if matches!(&value, ast::Expr::List(_) | ast::Expr::Args) {
                           panic!("set env.<NAME> requires a scalar string/number; lists/args are not supported");
                       }
 
-                      let val = lower_expr(value, ctx);
+                      let val = lower_expr(value, &mut ctx);
 
                       if matches!(&val, ir::Val::List(_) | ir::Val::Args) {
                            panic!("set env.<NAME> requires a scalar string/number; lists/args are not supported");
@@ -418,29 +527,29 @@ fn lower_stmt(stmt: ast::Stmt, out: &mut Vec<ir::Cmd>, ctx: &mut LoweringContext
                       });
                   }
              }
+             ctx
         }
         ast::Stmt::PipeBlocks { segments } => {
             let mut lower_segments = Vec::new();
             for seg in segments {
                 let mut lowered = Vec::new();
-                for s in seg {
-                    lower_stmt(s, &mut lowered, ctx);
-                }
+                lower_block(seg, &mut lowered, ctx.clone());
                 lower_segments.push(lowered);
             }
             out.push(ir::Cmd::PipeBlocks(lower_segments));
+            ctx
         }
         ast::Stmt::ForMap { key_var, val_var, map, body } => {
             let mut lower_body = Vec::new();
-            for s in body {
-                lower_stmt(s, &mut lower_body, ctx);
-            }
+            let ctx_body = lower_block(body, &mut lower_body, ctx.clone());
             out.push(ir::Cmd::ForMap {
                 key_var,
                 val_var,
                 map,
                 body: lower_body,
             });
+            // Loop intersection
+            ctx.intersection(&ctx_body)
         }
     }
 }

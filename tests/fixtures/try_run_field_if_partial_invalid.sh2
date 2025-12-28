@@ -1,0 +1,7 @@
+func main() {
+  let r = "x"
+  if true {
+    let r = try_run("echo", "ok")
+  }
+  print(r.stdout)
+}

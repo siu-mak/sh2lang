@@ -1,0 +1,7 @@
+func main() {
+  let r = try_run("echo", "ok")
+  group {
+    let r = "shadowed"
+  }
+  print(r.stdout)
+}

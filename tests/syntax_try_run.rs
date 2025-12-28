@@ -85,3 +85,38 @@ fn codegen_try_run_fields_bash() {
 fn codegen_try_run_fields_posix() {
     assert_codegen_matches_snapshot_target("try_run_fields", TargetShell::Posix);
 }
+
+#[test]
+fn compile_try_run_field_if_partial_invalid() {
+     assert_codegen_panics("try_run_field_if_partial_invalid", ".stdout is only valid on try_run() results (bind via let)");
+}
+
+#[test]
+fn compile_try_run_field_if_overwrite_invalid() {
+     assert_codegen_panics("try_run_field_if_overwrite_invalid", ".stdout is only valid on try_run() results (bind via let)");
+}
+
+#[test]
+fn exec_try_run_field_if_both_ok_bash() {
+    assert_exec_matches_fixture_target("try_run_field_if_both_ok", TargetShell::Bash);
+}
+
+#[test]
+fn exec_try_run_field_if_both_ok_posix() {
+    assert_exec_matches_fixture_target("try_run_field_if_both_ok", TargetShell::Posix);
+}
+
+#[test]
+fn exec_try_run_field_subshell_no_leak_ok_bash() {
+     assert_exec_matches_fixture_target("try_run_field_subshell_no_leak_ok", TargetShell::Bash);
+}
+
+#[test]
+fn exec_try_run_field_subshell_no_leak_ok_posix() {
+     assert_exec_matches_fixture_target("try_run_field_subshell_no_leak_ok", TargetShell::Posix);
+}
+
+#[test]
+fn compile_try_run_field_group_leak_invalid() {
+    assert_codegen_panics("try_run_field_group_leak_invalid", ".stdout is only valid on try_run() results (bind via let)");
+}
