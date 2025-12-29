@@ -3,7 +3,7 @@ show() {
 }
 
 main() {
-  __sh2_loc="tests/fixtures/cmd_sub_call.sh2:6"
+  __sh2_loc="tests/fixtures/cmd_sub_call.sh2:6:3"
   out="$( 'show' )"
   printf '%s\n' "$out"
 }

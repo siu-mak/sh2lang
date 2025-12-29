@@ -1,5 +1,5 @@
 main() {
-  __sh2_loc="tests/fixtures/capture_args.sh2:2"
+  __sh2_loc="tests/fixtures/capture_args.sh2:2:3"
   out="$( 'printf' '%s' "$@" )"
   printf '%s\n' "$out"
 }

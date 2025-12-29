@@ -35,7 +35,7 @@ impl<'a> Parser<'a> {
     }
 
     pub fn error(&self, msg: &str, span: Span) -> ! {
-        panic!("{}", self.sm.format_diagnostic(self.file, msg, span));
+        panic!("{}", self.sm.format_diagnostic(self.file, None, msg, span));
     }
 
     pub fn previous_span(&self) -> Span {

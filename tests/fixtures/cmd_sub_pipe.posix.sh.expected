@@ -1,5 +1,5 @@
 main() {
-  __sh2_loc="tests/fixtures/cmd_sub_pipe.sh2:2"
+  __sh2_loc="tests/fixtures/cmd_sub_pipe.sh2:2:5"
   x="$( 'echo' 'hello' | 'cat' )"
   printf '%s\n' "$x"
 }

@@ -1,7 +1,7 @@
 __sh2_err_handler() { printf "Error in %s\n" "${__sh2_loc:-unknown}" >&2; }
 trap '__sh2_err_handler' ERR
 main() {
-  __sh2_loc="tests/fixtures/exec_exit_status.sh2:2"
+  __sh2_loc="tests/fixtures/exec_exit_status.sh2:2:5"
   exec 'bash' '-c' 'echo ok; exit 7'
   printf '%s\n' 'after'
 }

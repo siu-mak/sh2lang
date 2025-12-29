@@ -1,5 +1,5 @@
 main() {
-  __sh2_loc="tests/fixtures/compare.sh2:2"
+  __sh2_loc="tests/fixtures/compare.sh2:2:5"
   user='admin'
   if [ "$user" = 'admin' ]; then
     printf '%s\n' 'welcome root'

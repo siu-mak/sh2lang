@@ -1,5 +1,5 @@
 main() {
-  __sh2_loc="tests/fixtures/cmd_sub.sh2:2"
+  __sh2_loc="tests/fixtures/cmd_sub.sh2:2:5"
   files="$( 'ls' )"
   printf '%s\n' 'Files: '"$files"
 }

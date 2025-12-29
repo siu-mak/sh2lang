@@ -1,5 +1,5 @@
 main() {
-  __sh2_loc="tests/fixtures/exec_stmt.sh2:2"
+  __sh2_loc="tests/fixtures/exec_stmt.sh2:2:3"
   exec 'sh' '-c' 'echo exec_ok'
   printf '%s\n' 'after_exec_bad'
 }

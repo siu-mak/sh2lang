@@ -1,6 +1,6 @@
 main() {
   printf '%s\n' 'before'
-  __sh2_loc="tests/fixtures/exec_basic.sh2:3"
+  __sh2_loc="tests/fixtures/exec_basic.sh2:3:3"
   exec 'sh' '-c' 'echo execed'
   printf '%s\n' 'after'
 }

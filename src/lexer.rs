@@ -142,7 +142,7 @@ impl<'a> Lexer<'a> {
 
     fn error(&self, msg: &str, start: usize) -> ! {
         let span = Span::new(start, self.pos);
-        panic!("{}", self.sm.format_diagnostic(self.file, msg, span));
+        panic!("{}", self.sm.format_diagnostic(self.file, None, msg, span));
     }
 }
 

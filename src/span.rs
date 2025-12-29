@@ -66,12 +66,25 @@ impl SourceMap {
         &self.src[start..end]
     }
 
-    pub fn format_diagnostic(&self, file: &str, msg: &str, span: Span) -> String {
+    pub fn format_diagnostic(&self, file: &str, base: Option<&std::path::Path>, msg: &str, span: Span) -> String {
         let (start_line, start_col) = self.line_col(span.start);
         let (end_line, _) = self.line_col(span.end);
         let snippet = self.line_snippet(start_line);
+        
+        let mut arrow_col = start_col;
+
+        if start_line != end_line {
+            // Multi-line adjustment: skip leading whitespace if we point to it
+             if let Some(first_non_ws) = snippet.chars().position(|c| !c.is_whitespace()) {
+                 let first_non_ws_col = first_non_ws + 1;
+                 if start_col < first_non_ws_col {
+                     arrow_col = first_non_ws_col;
+                 }
+            }
+        }
+
         let mut arrow = String::new();
-        for _ in 0..(start_col - 1) {
+        for _ in 0..(arrow_col - 1) {
             arrow.push(' ');
         }
 
@@ -85,7 +98,7 @@ impl SourceMap {
             arrow.push_str(" (spans multiple lines)");
         }
 
-        let display_file = crate::diag_path::display_path(file, None);
+        let display_file = crate::diag_path::display_path(file, base);
 
         format!(
             "error: {}\n--> {}:{}:{}\n |\n | {}\n | {}",

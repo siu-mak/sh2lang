@@ -1,5 +1,5 @@
 main() {
-  __sh2_loc="tests/fixtures/arith_count_args_plus_one.sh2:2"
+  __sh2_loc="tests/fixtures/arith_count_args_plus_one.sh2:2:3"
   n="$(( ( $# + 1 ) ))"
   printf '%s\n' "$n"
 }

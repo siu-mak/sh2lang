@@ -1,5 +1,5 @@
 main() {
-  __sh2_loc="tests/fixtures/arith_len_plus_one.sh2:2"
+  __sh2_loc="tests/fixtures/arith_len_plus_one.sh2:2:3"
   n="$(( ( $( printf "%s" 'hi' | awk '{ print length($0) }' ) + 1 ) ))"
   printf '%s\n' "$n"
 }

@@ -111,6 +111,8 @@ pub fn assert_codegen_matches_snapshot_target(fixture_name: &str, target: Target
 
     let expected_path = if Path::new(&target_expected_path).exists() {
         target_expected_path.clone()
+    } else if std::env::var("SH2C_UPDATE_SNAPSHOTS").is_ok() && !Path::new(&default_expected_path).exists() {
+         target_expected_path.clone()
     } else {
         default_expected_path.clone()
     };
@@ -118,9 +120,15 @@ pub fn assert_codegen_matches_snapshot_target(fixture_name: &str, target: Target
     let shell_script = compile_path_to_shell(Path::new(&sh2_path), target);
 
     let expected = if std::env::var("SH2C_UPDATE_SNAPSHOTS").is_ok() {
+        if let Some(parent) = Path::new(&expected_path).parent() {
+            fs::create_dir_all(parent).expect("Failed to create snapshot dir");
+        }
         fs::write(&expected_path, &shell_script).expect("Failed to update snapshot");
         shell_script.clone()
     } else {
+        if !Path::new(&expected_path).exists() {
+             panic!("Snapshot missing: {}. run with SH2C_UPDATE_SNAPSHOTS=1 to create it.", expected_path);
+        }
         fs::read_to_string(&expected_path).expect("Failed to read expected codegen fixture")
     };
     

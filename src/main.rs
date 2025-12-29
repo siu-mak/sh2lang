@@ -7,8 +7,28 @@ use std::process;
 
 fn main() {
     let args: Vec<String> = std::env::args().collect();
-    // Suppress default panic output (thread info, location) so we can control error formatting
-    std::panic::set_hook(Box::new(|_| {}));
+    // Suppress default panic output for string errors (our diagnostics),
+    // but show it for everything else or if backtrace is requested.
+    let default_hook = std::panic::take_hook();
+    std::panic::set_hook(Box::new(move |info| {
+        let msg = if let Some(s) = info.payload().downcast_ref::<&str>() {
+            Some(*s)
+        } else if let Some(s) = info.payload().downcast_ref::<String>() {
+            Some(s.as_str())
+        } else {
+            None
+        };
+
+        if let Some(msg) = msg {
+            if msg.starts_with("error: ") && std::env::var("RUST_BACKTRACE").is_err() {
+                // It's a structured diagnostic, let catch_unwind handle printing it cleanly.
+                return;
+            }
+        }
+        
+        // Otherwise, it's an unexpected panic or backtrace is requested.
+        default_hook(info);
+    }));
 
     if args.len() < 2 {
         print_usage();
@@ -101,13 +121,19 @@ fn main() {
         Ok(out) => print!("{}", out),
         Err(e) => {
             let msg = if let Some(s) = e.downcast_ref::<&str>() {
-                format!("Error: {}", s)
+                (*s).to_string()
             } else if let Some(s) = e.downcast_ref::<String>() {
-                format!("Error: {}", s)
+                s.clone()
             } else {
-                "Error: Unknown compiler error".to_string()
+                "Unknown compiler error".to_string()
             };
-            eprintln!("{}", msg);
+            
+            // Format consistency: avoid double prefixes if the message already is a diagnostic
+            if msg.starts_with("error: ") {
+                eprintln!("{}", msg);
+            } else {
+                eprintln!("Error: {}", msg);
+            }
             process::exit(2);
         }
     }

@@ -1,7 +1,7 @@
 main() {
-  __sh2_loc="tests/fixtures/concat_var_and_literal_safe.sh2:2"
+  __sh2_loc="tests/fixtures/concat_var_and_literal_safe.sh2:2:5"
   x='a b'
-  __sh2_loc="tests/fixtures/concat_var_and_literal_safe.sh2:3"
+  __sh2_loc="tests/fixtures/concat_var_and_literal_safe.sh2:3:5"
   'echo' "$x"'*''$'; __sh2_status=$?; if [ $__sh2_status -ne 0 ]; then printf 'Error in %s\n' "$__sh2_loc" >&2; exit $__sh2_status; fi
 }
 __sh2_status=0

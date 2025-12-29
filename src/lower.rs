@@ -5,14 +5,16 @@ use crate::span::Span;
 use std::collections::HashSet;
 
 #[derive(Clone, Debug)]
-struct LoweringContext {
+struct LoweringContext<'a> {
     run_results: HashSet<String>,
+    opts: &'a LowerOptions,
 }
 
-impl LoweringContext {
-    fn new() -> Self {
+impl<'a> LoweringContext<'a> {
+    fn new(opts: &'a LowerOptions) -> Self {
         Self {
             run_results: HashSet::new(),
+            opts,
         }
     }
 
@@ -30,7 +32,10 @@ impl LoweringContext {
             .intersection(&other.run_results)
             .cloned()
             .collect();
-        Self { run_results }
+        Self {
+            run_results,
+            opts: self.opts,
+        }
     }
 }
 
@@ -71,7 +76,7 @@ pub fn lower_with_options(p: ast::Program, opts: &LowerOptions) -> Vec<ir::Funct
 
     if has_top_level {
         if has_main {
-            let snippet = entry_sm.format_diagnostic(entry_file, "Top-level statements are not allowed when `func main` is defined; move statements into main or remove main to use implicit main.", p.span);
+            let snippet = entry_sm.format_diagnostic(entry_file, opts.diag_base_dir.as_deref(), "Top-level statements are not allowed when `func main` is defined; move statements into main or remove main to use implicit main.", p.span);
             panic!("{}", snippet);
         }
         // Synthesize main
@@ -105,30 +110,30 @@ pub fn lower_with_options(p: ast::Program, opts: &LowerOptions) -> Vec<ir::Funct
 
 /// Lower a single function
 fn lower_function(f: ast::Function, sm: &SourceMap, opts: &LowerOptions) -> ir::Function {
-    let mut commands = Vec::new();
-    let mut current_ctx = LoweringContext::new();
+    let mut body = Vec::new();
+    let mut ctx = LoweringContext::new(opts);
 
     for stmt in f.body {
-        current_ctx = lower_stmt(stmt, &mut commands, current_ctx, sm, &f.file, opts);
+        ctx = lower_stmt(stmt, &mut body, ctx, sm, &f.file, opts);
     }
 
     ir::Function {
         name: f.name,
         params: f.params,
-        commands,
+        commands: body,
         file: f.file,
     }
 }
 
 /// Helper to lower a block of statements sequentially
-fn lower_block(
+fn lower_block<'a>(
     stmts: Vec<ast::Stmt>,
     out: &mut Vec<ir::Cmd>,
-    mut ctx: LoweringContext,
+    mut ctx: LoweringContext<'a>,
     sm: &SourceMap,
     file: &str,
-    opts: &LowerOptions,
-) -> LoweringContext {
+    opts: &'a LowerOptions,
+) -> LoweringContext<'a> {
     for stmt in stmts {
         ctx = lower_stmt(stmt, out, ctx, sm, file, opts);
     }
@@ -147,14 +152,14 @@ fn resolve_span(
 }
 
 /// Lower one AST statement into IR commands. Returns the updated context after this statement.
-fn lower_stmt(
+fn lower_stmt<'a>(
     stmt: ast::Stmt,
     out: &mut Vec<ir::Cmd>,
-    mut ctx: LoweringContext,
+    mut ctx: LoweringContext<'a>,
     sm: &SourceMap,
     file: &str,
-    opts: &LowerOptions,
-) -> LoweringContext {
+    opts: &'a LowerOptions,
+) -> LoweringContext<'a> {
     let loc = if opts.include_diagnostics {
         Some(resolve_span(
             stmt.span,
@@ -179,6 +184,7 @@ fn lower_stmt(
                             "{}",
                             sm.format_diagnostic(
                                 file,
+                                opts.diag_base_dir.as_deref(),
                                 "try_run() requires at least 1 argument (cmd)",
                                 value.span
                             )
@@ -462,6 +468,7 @@ fn lower_stmt(
                         "{}",
                         sm.format_diagnostic(
                             file,
+                            opts.diag_base_dir.as_deref(),
                             "save_envfile() requires exactly 2 arguments (path, env_blob)",
                             stmt.span
                         )
@@ -472,15 +479,16 @@ fn lower_stmt(
                 let env = lower_expr(iter.next().unwrap(), &mut ctx, sm, file);
                 out.push(ir::Cmd::SaveEnvfile { path, env });
             } else if name == "load_envfile" {
-                panic!("{}", sm.format_diagnostic(file, "load_envfile() returns a value; use it in an expression (e.g., let m = load_envfile(\"env.meta\"))", stmt.span));
+                panic!("{}", sm.format_diagnostic(file, opts.diag_base_dir.as_deref(), "load_envfile() returns a value; use it in an expression (e.g., let m = load_envfile(\"env.meta\"))", stmt.span));
             } else if name == "which" {
-                panic!("{}", sm.format_diagnostic(file, "which() returns a value; use it in an expression (e.g., let p = which(\"cmd\"))", stmt.span));
+                panic!("{}", sm.format_diagnostic(file, opts.diag_base_dir.as_deref(), "which() returns a value; use it in an expression (e.g., let p = which(\"cmd\"))", stmt.span));
             } else if name == "require" {
                 if args.len() != 1 {
                     panic!(
                         "{}",
                         sm.format_diagnostic(
                             file,
+                            opts.diag_base_dir.as_deref(),
                             "require() requires exactly one argument (cmd_list)",
                             stmt.span
                         )
@@ -496,7 +504,7 @@ fn lower_stmt(
                 } else {
                     panic!(
                         "{}",
-                        sm.format_diagnostic(file, "require() expects a list literal", arg.span)
+                        sm.format_diagnostic(file, opts.diag_base_dir.as_deref(), "require() expects a list literal", arg.span)
                     );
                 }
             } else if name == "write_file" {
@@ -505,6 +513,7 @@ fn lower_stmt(
                         "{}",
                         sm.format_diagnostic(
                             file,
+                            opts.diag_base_dir.as_deref(),
                             "write_file() requires 2 or 3 arguments (path, content, [append])",
                             stmt.span
                         )
@@ -522,6 +531,7 @@ fn lower_stmt(
                             "{}",
                             sm.format_diagnostic(
                                 file,
+                                opts.diag_base_dir.as_deref(),
                                 "write_file() third argument must be a boolean literal",
                                 arg.span
                             )
@@ -536,7 +546,7 @@ fn lower_stmt(
                     append,
                 });
             } else if name == "read_file" {
-                panic!("{}", sm.format_diagnostic(file, "read_file() returns a value; use it in an expression (e.g., let s = read_file(\"foo.txt\"))", stmt.span));
+                panic!("{}", sm.format_diagnostic(file, opts.diag_base_dir.as_deref(), "read_file() returns a value; use it in an expression (e.g., let s = read_file(\"foo.txt\"))", stmt.span));
             } else if matches!(name.as_str(), "log_info" | "log_warn" | "log_error") {
                 let level = match name.as_str() {
                     "log_info" => ir::LogLevel::Info,
@@ -549,6 +559,7 @@ fn lower_stmt(
                         "{}",
                         sm.format_diagnostic(
                             file,
+                            opts.diag_base_dir.as_deref(),
                             format!("{}() requires 1 or 2 arguments (msg, [timestamp])", name)
                                 .as_str(),
                             stmt.span
@@ -566,6 +577,7 @@ fn lower_stmt(
                             "{}",
                             sm.format_diagnostic(
                                 file,
+                                opts.diag_base_dir.as_deref(),
                                 format!("{}() second argument must be a boolean literal", name)
                                     .as_str(),
                                 arg.span
@@ -585,17 +597,19 @@ fn lower_stmt(
                     "{}",
                     sm.format_diagnostic(
                         file,
+                        opts.diag_base_dir.as_deref(),
                         "home() returns a value; use it in an expression (e.g., let h = home())",
                         stmt.span
                     )
                 );
             } else if name == "path_join" {
-                panic!("{}", sm.format_diagnostic(file, "path_join() returns a value; use it in an expression (e.g., let p = path_join(\"a\", \"b\"))", stmt.span));
+                panic!("{}", sm.format_diagnostic(file, opts.diag_base_dir.as_deref(), "path_join() returns a value; use it in an expression (e.g., let p = path_join(\"a\", \"b\"))", stmt.span));
             } else if name == "try_run" {
                 panic!(
                     "{}",
                     sm.format_diagnostic(
                         file,
+                        opts.diag_base_dir.as_deref(),
                         "try_run() must be bound via let (e.g., let r = try_run(...))",
                         stmt.span
                     )
@@ -721,13 +735,13 @@ fn lower_stmt(
                 }
                 ast::LValue::Env(name) => {
                     if matches!(&value.node, ast::ExprKind::List(_) | ast::ExprKind::Args) {
-                        panic!("{}", sm.format_diagnostic(file, "set env.<NAME> requires a scalar string/number; lists/args are not supported", stmt.span));
+                        panic!("{}", sm.format_diagnostic(file, opts.diag_base_dir.as_deref(), "set env.<NAME> requires a scalar string/number; lists/args are not supported", stmt.span));
                     }
 
                     let val = lower_expr(value, &mut ctx, sm, file);
 
                     if matches!(&val, ir::Val::List(_) | ir::Val::Args) {
-                        panic!("{}", sm.format_diagnostic(file, "set env.<NAME> requires a scalar string/number; lists/args are not supported", stmt.span));
+                        panic!("{}", sm.format_diagnostic(file, opts.diag_base_dir.as_deref(), "set env.<NAME> requires a scalar string/number; lists/args are not supported", stmt.span));
                     }
 
                     out.push(ir::Cmd::Export {
@@ -767,7 +781,8 @@ fn lower_stmt(
     }
 }
 
-fn lower_expr(e: ast::Expr, ctx: &mut LoweringContext, sm: &SourceMap, file: &str) -> ir::Val {
+fn lower_expr<'a>(e: ast::Expr, ctx: &mut LoweringContext<'a>, sm: &SourceMap, file: &str) -> ir::Val {
+    let opts = ctx.opts; // Get opts from context for diagnostic formatting
     match e.node {
         ast::ExprKind::Literal(s) => ir::Val::Literal(s),
         ast::ExprKind::Var(s) => ir::Val::Var(s),
@@ -860,13 +875,13 @@ fn lower_expr(e: ast::Expr, ctx: &mut LoweringContext, sm: &SourceMap, file: &st
                         if ctx.run_results.contains(vname) {
                             ir::Val::Var(format!("{}__{}", vname, name))
                         } else {
-                            panic!("{}", sm.format_diagnostic(file, format!(".{} is only valid on try_run() results (bind via let)", name).as_str(), e.span));
+                            panic!("{}", sm.format_diagnostic(file, opts.diag_base_dir.as_deref(), format!(".{} is only valid on try_run() results (bind via let)", name).as_str(), e.span));
                         }
                     } else {
-                        panic!("{}", sm.format_diagnostic(file, format!("Field access '{}' only supported on variables (e.g. r.status)", name).as_str(), e.span));
+                        panic!("{}", sm.format_diagnostic(file, opts.diag_base_dir.as_deref(), format!("Field access '{}' only supported on variables (e.g. r.status)", name).as_str(), e.span));
                     }
                 }
-                _ => panic!("{}", sm.format_diagnostic(file, format!("Unknown field '{}'. Supported: status, stdout, stderr, flags, positionals.", name).as_str(), e.span)),
+                _ => panic!("{}", sm.format_diagnostic(file, opts.diag_base_dir.as_deref(), format!("Unknown field '{}'. Supported: status, stdout, stderr, flags, positionals.", name).as_str(), e.span)),
             }
         }
         ast::ExprKind::Join { list, sep } => ir::Val::Join {
@@ -921,6 +936,7 @@ fn lower_expr(e: ast::Expr, ctx: &mut LoweringContext, sm: &SourceMap, file: &st
                         "{}",
                         sm.format_diagnostic(
                             file,
+                            opts.diag_base_dir.as_deref(),
                             "matches() requires exactly 2 arguments (text, regex)",
                             e.span
                         )
@@ -934,7 +950,7 @@ fn lower_expr(e: ast::Expr, ctx: &mut LoweringContext, sm: &SourceMap, file: &st
                 if !args.is_empty() {
                     panic!(
                         "{}",
-                        sm.format_diagnostic(file, "parse_args() takes no arguments", e.span)
+                        sm.format_diagnostic(file, opts.diag_base_dir.as_deref(), "parse_args() takes no arguments", e.span)
                     );
                 }
                 ir::Val::ParseArgs
@@ -944,6 +960,7 @@ fn lower_expr(e: ast::Expr, ctx: &mut LoweringContext, sm: &SourceMap, file: &st
                         "{}",
                         sm.format_diagnostic(
                             file,
+                            opts.diag_base_dir.as_deref(),
                             "load_envfile() requires exactly 1 argument (path)",
                             e.span
                         )
@@ -957,6 +974,7 @@ fn lower_expr(e: ast::Expr, ctx: &mut LoweringContext, sm: &SourceMap, file: &st
                         "{}",
                         sm.format_diagnostic(
                             file,
+                            opts.diag_base_dir.as_deref(),
                             "json_kv() requires exactly 1 argument (pairs_blob)",
                             e.span
                         )
@@ -970,6 +988,7 @@ fn lower_expr(e: ast::Expr, ctx: &mut LoweringContext, sm: &SourceMap, file: &st
                         "{}",
                         sm.format_diagnostic(
                             file,
+                            opts.diag_base_dir.as_deref(),
                             "which() requires exactly 1 argument (cmd)",
                             e.span
                         )
@@ -982,6 +1001,7 @@ fn lower_expr(e: ast::Expr, ctx: &mut LoweringContext, sm: &SourceMap, file: &st
                     "{}",
                     sm.format_diagnostic(
                         file,
+                        opts.diag_base_dir.as_deref(),
                         "try_run() must be bound via let (e.g., let r = try_run(...))",
                         e.span
                     )
@@ -991,6 +1011,7 @@ fn lower_expr(e: ast::Expr, ctx: &mut LoweringContext, sm: &SourceMap, file: &st
                     "{}",
                     sm.format_diagnostic(
                         file,
+                        opts.diag_base_dir.as_deref(),
                         "require() is a statement, not an expression",
                         e.span
                     )
@@ -1001,6 +1022,7 @@ fn lower_expr(e: ast::Expr, ctx: &mut LoweringContext, sm: &SourceMap, file: &st
                         "{}",
                         sm.format_diagnostic(
                             file,
+                            opts.diag_base_dir.as_deref(),
                             "read_file() requires exactly 1 argument (path)",
                             e.span
                         )
@@ -1013,6 +1035,7 @@ fn lower_expr(e: ast::Expr, ctx: &mut LoweringContext, sm: &SourceMap, file: &st
                     "{}",
                     sm.format_diagnostic(
                         file,
+                        opts.diag_base_dir.as_deref(),
                         "write_file() is a statement, not an expression",
                         e.span
                     )
@@ -1022,6 +1045,7 @@ fn lower_expr(e: ast::Expr, ctx: &mut LoweringContext, sm: &SourceMap, file: &st
                     "{}",
                     sm.format_diagnostic(
                         file,
+                        opts.diag_base_dir.as_deref(),
                         format!("{}() is a statement, not an expression", name).as_str(),
                         e.span
                     )
@@ -1030,7 +1054,7 @@ fn lower_expr(e: ast::Expr, ctx: &mut LoweringContext, sm: &SourceMap, file: &st
                 if !args.is_empty() {
                     panic!(
                         "{}",
-                        sm.format_diagnostic(file, "home() takes no arguments", e.span)
+                        sm.format_diagnostic(file, opts.diag_base_dir.as_deref(), "home() takes no arguments", e.span)
                     );
                 }
                 ir::Val::Home
@@ -1038,12 +1062,12 @@ fn lower_expr(e: ast::Expr, ctx: &mut LoweringContext, sm: &SourceMap, file: &st
                 if args.is_empty() {
                     panic!(
                         "{}",
-                        sm.format_diagnostic(
-                            file,
-                            "path_join() requires at least 1 argument",
-                            e.span
-                        )
-                    );
+                            sm.format_diagnostic(
+                                file,
+                                opts.diag_base_dir.as_deref(),
+                                "path_join() requires at least 1 argument",
+                                e.span
+                            )                  );
                 }
                 let lowered_args = args
                     .into_iter()
@@ -1055,6 +1079,7 @@ fn lower_expr(e: ast::Expr, ctx: &mut LoweringContext, sm: &SourceMap, file: &st
                     "{}",
                     sm.format_diagnostic(
                         file,
+                        opts.diag_base_dir.as_deref(),
                         "save_envfile() is a statement; use it as a standalone call",
                         e.span
                     )

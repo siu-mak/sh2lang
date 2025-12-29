@@ -17,10 +17,13 @@ fn assert_diag_output(fixture: &str) {
     assert!(!output.status.success(), "sh2c should fail");
     
     let stderr = String::from_utf8_lossy(&output.stderr);
-    let expected = std::fs::read_to_string(&expected_path).expect("Missing expected file");
-    
-    // Normalize newlines
     let stderr = stderr.replace("\r\n", "\n").trim().to_string();
+    
+    if std::env::var("SH2C_UPDATE_SNAPSHOTS").is_ok() {
+        std::fs::write(&expected_path, &stderr).expect("Failed to update snapshot");
+    }
+    
+    let expected = std::fs::read_to_string(&expected_path).expect("Missing expected file");
     let expected = expected.replace("\r\n", "\n").trim().to_string();
     
     assert_eq!(stderr, expected, "Stderr mismatch for {}", fixture);

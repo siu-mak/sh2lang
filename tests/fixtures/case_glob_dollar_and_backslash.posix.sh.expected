@@ -1,5 +1,5 @@
 main() {
-  __sh2_loc="tests/fixtures/case_glob_dollar_and_backslash.sh2:2"
+  __sh2_loc="tests/fixtures/case_glob_dollar_and_backslash.sh2:2:5"
   x='cost $5\done'
   case "$x" in
     'cost $'*'\done')

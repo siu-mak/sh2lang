@@ -5,7 +5,7 @@ main() {
   export BAZ
   unset FOO
   {
-    __sh2_loc="tests/fixtures/export_unset.sh2:5"
+    __sh2_loc="tests/fixtures/export_unset.sh2:5:3"
     if [[ -o pipefail ]]; then __p=1; else __p=0; fi; set -o pipefail; case $- in *e*) __e=1;; *) __e=0;; esac; set +e; 'env' | 'grep' 'BAZ' ; __sh2_status=$?; if [ "$__e" = 1 ]; then set -e; fi; if [ "$__p" = 0 ]; then set +o pipefail; fi; (exit $__sh2_status)
   } || {
     printf '%s\n' 'no baz'
