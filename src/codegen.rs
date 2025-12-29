@@ -6,6 +6,21 @@ pub enum TargetShell {
     Posix,
 }
 
+#[derive(Clone, Debug, Copy)]
+pub struct CodegenOptions {
+    pub target: TargetShell,
+    pub include_diagnostics: bool,
+}
+
+impl Default for CodegenOptions {
+    fn default() -> Self {
+        Self {
+            target: TargetShell::Bash,
+            include_diagnostics: true,
+        }
+    }
+}
+
 #[derive(Debug, Default, Clone)]
 pub struct PreludeUsage {
     pub coalesce: bool,
@@ -34,26 +49,26 @@ pub struct PreludeUsage {
     pub loc: bool,
 }
 
-fn scan_usage(funcs: &[Function]) -> PreludeUsage {
+fn scan_usage(funcs: &[Function], include_diagnostics: bool) -> PreludeUsage {
     let mut usage = PreludeUsage::default();
     for f in funcs {
         for cmd in &f.commands {
-            visit_cmd(cmd, &mut usage);
+            visit_cmd(cmd, &mut usage, include_diagnostics);
         }
     }
     usage
 }
 
-fn visit_cmd(cmd: &Cmd, usage: &mut PreludeUsage) {
+fn visit_cmd(cmd: &Cmd, usage: &mut PreludeUsage, include_diagnostics: bool) {
     match cmd {
         Cmd::Assign(_, val, loc) => {
-            if loc.is_some() {
+            if include_diagnostics && loc.is_some() {
                 usage.loc = true;
             }
             visit_val(val, usage);
         }
         Cmd::Exec { args, loc, .. } => {
-            if loc.is_some() {
+            if include_diagnostics && loc.is_some() {
                 usage.loc = true;
             }
             for a in args {
@@ -69,20 +84,20 @@ fn visit_cmd(cmd: &Cmd, usage: &mut PreludeUsage) {
         } => {
             visit_val(cond, usage);
             for c in then_body {
-                visit_cmd(c, usage);
+                visit_cmd(c, usage, include_diagnostics);
             }
             for (v, c) in elifs {
                 visit_val(v, usage);
                 for i in c {
-                    visit_cmd(i, usage);
+                    visit_cmd(i, usage, include_diagnostics);
                 }
             }
             for c in else_body {
-                visit_cmd(c, usage);
+                visit_cmd(c, usage, include_diagnostics);
             }
         }
         Cmd::Pipe(segs, loc) => {
-            if loc.is_some() {
+            if include_diagnostics && loc.is_some() {
                 usage.loc = true;
             }
             for (args, _) in segs {
@@ -92,12 +107,12 @@ fn visit_cmd(cmd: &Cmd, usage: &mut PreludeUsage) {
             }
         }
         Cmd::PipeBlocks(segs, loc) => {
-            if loc.is_some() {
+            if include_diagnostics && loc.is_some() {
                 usage.loc = true;
             }
             for s in segs {
                 for c in s {
-                    visit_cmd(c, usage)
+                    visit_cmd(c, usage, include_diagnostics)
                 }
             }
         }
@@ -105,7 +120,7 @@ fn visit_cmd(cmd: &Cmd, usage: &mut PreludeUsage) {
             visit_val(expr, usage);
             for (_, body) in arms {
                 for c in body {
-                    visit_cmd(c, usage);
+                    visit_cmd(c, usage, include_diagnostics);
                 }
             }
         }
@@ -114,18 +129,18 @@ fn visit_cmd(cmd: &Cmd, usage: &mut PreludeUsage) {
                 visit_val(i, usage);
             }
             for c in body {
-                visit_cmd(c, usage);
+                visit_cmd(c, usage, include_diagnostics);
             }
         }
         Cmd::ForMap { body, .. } => {
             for c in body {
-                visit_cmd(c, usage);
+                visit_cmd(c, usage, include_diagnostics);
             }
         }
         Cmd::While { cond, body } => {
             visit_val(cond, usage);
             for c in body {
-                visit_cmd(c, usage);
+                visit_cmd(c, usage, include_diagnostics);
             }
         }
         Cmd::Require(vals) => {
@@ -151,7 +166,7 @@ fn visit_cmd(cmd: &Cmd, usage: &mut PreludeUsage) {
         }
         Cmd::Subshell { body } | Cmd::Group { body } => {
             for c in body {
-                visit_cmd(c, usage)
+                visit_cmd(c, usage, include_diagnostics)
             }
         }
         Cmd::WithRedirect {
@@ -170,10 +185,10 @@ fn visit_cmd(cmd: &Cmd, usage: &mut PreludeUsage) {
                 visit_redirect(t, usage);
             }
             for c in body {
-                visit_cmd(c, usage);
+                visit_cmd(c, usage, include_diagnostics);
             }
         }
-        Cmd::Spawn(inner) => visit_cmd(inner, usage),
+        Cmd::Spawn(inner) => visit_cmd(inner, usage, include_diagnostics),
         Cmd::Wait(opt) => {
             if let Some(v) = opt {
                 visit_val(v, usage)
@@ -184,18 +199,18 @@ fn visit_cmd(cmd: &Cmd, usage: &mut PreludeUsage) {
             catch_body,
         } => {
             for c in try_body {
-                visit_cmd(c, usage);
+                visit_cmd(c, usage, include_diagnostics);
             }
             for c in catch_body {
-                visit_cmd(c, usage);
+                visit_cmd(c, usage, include_diagnostics);
             }
         }
         Cmd::AndThen { left, right } | Cmd::OrElse { left, right } => {
             for c in left {
-                visit_cmd(c, usage);
+                visit_cmd(c, usage, include_diagnostics);
             }
             for c in right {
-                visit_cmd(c, usage);
+                visit_cmd(c, usage, include_diagnostics);
             }
         }
         Cmd::Export { value, .. } => {
@@ -205,7 +220,7 @@ fn visit_cmd(cmd: &Cmd, usage: &mut PreludeUsage) {
         }
         Cmd::Source(v) => visit_val(v, usage),
         Cmd::ExecReplace(args, loc) => {
-            if loc.is_some() {
+            if include_diagnostics && loc.is_some() {
                 usage.loc = true;
             }
             for a in args {
@@ -222,19 +237,19 @@ fn visit_cmd(cmd: &Cmd, usage: &mut PreludeUsage) {
                 visit_val(v, usage);
             }
             for c in body {
-                visit_cmd(c, usage);
+                visit_cmd(c, usage, include_diagnostics);
             }
         }
         Cmd::WithLog { path, body, .. } => {
             visit_val(path, usage);
             for c in body {
-                visit_cmd(c, usage);
+                visit_cmd(c, usage, include_diagnostics);
             }
         }
         Cmd::WithCwd { path, body } => {
             visit_val(path, usage);
             for c in body {
-                visit_cmd(c, usage);
+                visit_cmd(c, usage, include_diagnostics);
             }
         }
         Cmd::Break
@@ -373,11 +388,21 @@ pub fn emit(funcs: &[Function]) -> String {
 }
 
 pub fn emit_with_target(funcs: &[Function], target: TargetShell) -> String {
-    let usage = scan_usage(funcs);
+    emit_with_options(
+        funcs,
+        CodegenOptions {
+            target,
+            include_diagnostics: true,
+        },
+    )
+}
+
+pub fn emit_with_options(funcs: &[Function], opts: CodegenOptions) -> String {
+    let usage = scan_usage(funcs, opts.include_diagnostics);
     let mut out = String::new();
 
     // Usage-aware prelude emission
-    out.push_str(&emit_prelude(target, &usage));
+    out.push_str(&emit_prelude(opts.target, &usage));
 
     for (i, f) in funcs.iter().enumerate() {
         if i > 0 {
@@ -385,7 +410,7 @@ pub fn emit_with_target(funcs: &[Function], target: TargetShell) -> String {
         }
         out.push_str(&format!("{}() {{\n", f.name));
         for (idx, param) in f.params.iter().enumerate() {
-            match target {
+            match opts.target {
                 TargetShell::Bash => {
                     out.push_str(&format!("  local {}=\"${{{}}}\"\n", param, idx + 1))
                 }
@@ -393,7 +418,7 @@ pub fn emit_with_target(funcs: &[Function], target: TargetShell) -> String {
             }
         }
         for cmd in &f.commands {
-            emit_cmd(cmd, &mut out, 2, target);
+            emit_cmd(cmd, &mut out, 2, opts.target);
         }
         out.push_str("}\n");
     }

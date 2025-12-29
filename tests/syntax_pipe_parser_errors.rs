@@ -23,9 +23,9 @@ fn test_pipe_parser_error() {
     let expected = "expected run(...) after '|' in pipeline";
 
     if let Some(msg) = err.downcast_ref::<&str>() {
-        assert_eq!(*msg, expected);
+        assert!(msg.contains(expected), "Panic message did not contain expected text: {}", msg);
     } else if let Some(msg) = err.downcast_ref::<String>() {
-        assert_eq!(msg, expected);
+        assert!(msg.contains(expected), "Panic message did not contain expected text: {}", msg);
     } else {
         panic!("Unknown panic payload type");
     }

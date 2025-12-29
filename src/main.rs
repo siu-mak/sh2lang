@@ -14,6 +14,7 @@ fn main() {
 
     let mut filename: Option<String> = None;
     let mut target = TargetShell::Bash;
+    let mut include_diagnostics = true;
 
     let mut i = 1;
     while i < args.len() {
@@ -33,6 +34,9 @@ fn main() {
                 process::exit(1);
             }
             target = parse_target(val);
+            i += 1;
+        } else if arg == "--no-diagnostics" {
+            include_diagnostics = false;
             i += 1;
         } else if arg.starts_with("-") {
             eprintln!("Unexpected argument: {}", arg);
@@ -67,8 +71,19 @@ fn main() {
         // Loader handles reading, lexing, parsing, and resolving imports recursively
         let path = std::path::Path::new(&filename);
         let ast = loader::load_program_with_imports(path);
-        let ir = lower::lower(ast);
-        codegen::emit_with_target(&ir, target)
+        let ir = lower::lower_with_options(
+            ast,
+            &lower::LowerOptions {
+                include_diagnostics,
+            },
+        );
+        codegen::emit_with_options(
+            &ir,
+            codegen::CodegenOptions {
+                target,
+                include_diagnostics,
+            },
+        )
     });
 
     match result {
@@ -102,4 +117,5 @@ fn print_usage() {
     eprintln!("Usage: sh2c [flags] <script.sh2> [flags]");
     eprintln!("Flags:");
     eprintln!("  --target <bash|posix>  Select output shell dialect (default: bash)");
+    eprintln!("  --no-diagnostics       Disable error location reporting and traps");
 }

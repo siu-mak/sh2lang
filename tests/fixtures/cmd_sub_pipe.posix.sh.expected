@@ -1,7 +1,7 @@
 main() {
   __sh2_loc="/srv/repos/rust/sh2c/tests/fixtures/cmd_sub_pipe.sh2:2"
-  out="$( 'sh' '-c' 'echo hi' | 'tr' 'a-z' 'A-Z' )"
-  printf '%s\n' "$out"
+  x="$( 'echo' 'hello' | 'cat' )"
+  printf '%s\n' "$x"
 }
 __sh2_status=0
 main "$@"

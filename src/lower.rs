@@ -35,8 +35,25 @@ impl LoweringContext {
     }
 }
 
+#[derive(Clone, Debug)]
+pub struct LowerOptions {
+    pub include_diagnostics: bool,
+}
+
+impl Default for LowerOptions {
+    fn default() -> Self {
+        Self {
+            include_diagnostics: true,
+        }
+    }
+}
+
 /// Lower a whole program (AST) into IR
 pub fn lower(p: ast::Program) -> Vec<ir::Function> {
+    lower_with_options(p, &LowerOptions::default())
+}
+
+pub fn lower_with_options(p: ast::Program, opts: &LowerOptions) -> Vec<ir::Function> {
     let has_main = p.functions.iter().any(|f| f.name == "main");
     let has_top_level = !p.top_level.is_empty();
 
@@ -46,7 +63,6 @@ pub fn lower(p: ast::Program) -> Vec<ir::Function> {
     let entry_sm = maps
         .get(entry_file)
         .expect("Missing source map for entry file");
-
 
     let mut ir_funcs = Vec::new();
 
@@ -63,25 +79,21 @@ pub fn lower(p: ast::Program) -> Vec<ir::Function> {
             span: p.span,
             file: entry_file.clone(),
         };
-        // Lower synthesize main separately or just add to list?
-        // Since we iterate p.functions, we should add it there?
-        // But `p` is moved.
-        // We can lower existing functions then lower synthesized main.
 
         for f in p.functions {
             let sm = maps.get(&f.file).expect("Missing source map");
-            ir_funcs.push(lower_function(f, sm));
+            ir_funcs.push(lower_function(f, sm, opts));
         }
 
         let sm = maps.get(&main_func.file).expect("Missing source map");
-        ir_funcs.push(lower_function(main_func, sm));
+        ir_funcs.push(lower_function(main_func, sm, opts));
     } else {
         if !has_main {
             panic!("No entrypoint: define `func main()` or add top-level statements.");
         }
         for f in p.functions {
             let sm = maps.get(&f.file).expect("Missing source map");
-            ir_funcs.push(lower_function(f, sm));
+            ir_funcs.push(lower_function(f, sm, opts));
         }
     }
 
@@ -89,12 +101,12 @@ pub fn lower(p: ast::Program) -> Vec<ir::Function> {
 }
 
 /// Lower a single function
-fn lower_function(f: ast::Function, sm: &SourceMap) -> ir::Function {
+fn lower_function(f: ast::Function, sm: &SourceMap, opts: &LowerOptions) -> ir::Function {
     let mut commands = Vec::new();
     let mut current_ctx = LoweringContext::new();
 
     for stmt in f.body {
-        current_ctx = lower_stmt(stmt, &mut commands, current_ctx, sm, &f.file);
+        current_ctx = lower_stmt(stmt, &mut commands, current_ctx, sm, &f.file, opts);
     }
 
     ir::Function {
@@ -112,9 +124,10 @@ fn lower_block(
     mut ctx: LoweringContext,
     sm: &SourceMap,
     file: &str,
+    opts: &LowerOptions,
 ) -> LoweringContext {
     for stmt in stmts {
-        ctx = lower_stmt(stmt, out, ctx, sm, file);
+        ctx = lower_stmt(stmt, out, ctx, sm, file, opts);
     }
     ctx
 }
@@ -131,8 +144,13 @@ fn lower_stmt(
     mut ctx: LoweringContext,
     sm: &SourceMap,
     file: &str,
+    opts: &LowerOptions,
 ) -> LoweringContext {
-    let loc = Some(resolve_span(stmt.span, sm, file));
+    let loc = if opts.include_diagnostics {
+        Some(resolve_span(stmt.span, sm, file))
+    } else {
+        None
+    };
     match stmt.kind {
         ast::StmtKind::Let { name, value } => {
             // Special handling for try_run to allow it ONLY during strict let-binding lowering.
@@ -207,7 +225,7 @@ fn lower_stmt(
             let cond_val = lower_expr(cond, &mut ctx, sm, file);
 
             let mut t_cmds = Vec::new();
-            let ctx_then = lower_block(then_body, &mut t_cmds, ctx.clone(), sm, file);
+            let ctx_then = lower_block(then_body, &mut t_cmds, ctx.clone(), sm, file, opts);
 
             let mut lowered_elifs = Vec::new();
             let mut ctx_elifs = Vec::new();
@@ -215,14 +233,14 @@ fn lower_stmt(
             for elif in elifs {
                 let mut body_cmds = Vec::new();
                 let elif_cond = lower_expr(elif.cond, &mut ctx, sm, file); // Evaluate cond in original context
-                let ctx_elif = lower_block(elif.body, &mut body_cmds, ctx.clone(), sm, file);
+                let ctx_elif = lower_block(elif.body, &mut body_cmds, ctx.clone(), sm, file, opts);
                 lowered_elifs.push((elif_cond, body_cmds));
                 ctx_elifs.push(ctx_elif);
             }
 
             let mut e_cmds = Vec::new();
             let ctx_else = if let Some(body) = else_body {
-                lower_block(body, &mut e_cmds, ctx.clone(), sm, file)
+                lower_block(body, &mut e_cmds, ctx.clone(), sm, file, opts)
             } else {
                 ctx.clone()
             };
@@ -256,7 +274,7 @@ fn lower_stmt(
                     }
                 }
 
-                let ctx_arm = lower_block(arm.body, &mut body_cmds, ctx.clone(), sm, file);
+                let ctx_arm = lower_block(arm.body, &mut body_cmds, ctx.clone(), sm, file, opts);
 
                 let patterns = arm
                     .patterns
@@ -295,7 +313,7 @@ fn lower_stmt(
         ast::StmtKind::While { cond, body } => {
             let cond_val = lower_expr(cond, &mut ctx, sm, file);
             let mut lower_body = Vec::new();
-            let ctx_body = lower_block(body, &mut lower_body, ctx.clone(), sm, file);
+            let ctx_body = lower_block(body, &mut lower_body, ctx.clone(), sm, file, opts);
 
             out.push(ir::Cmd::While {
                 cond: cond_val,
@@ -309,7 +327,7 @@ fn lower_stmt(
                 .map(|i| lower_expr(i, &mut ctx, sm, file))
                 .collect();
             let mut lower_body = Vec::new();
-            let ctx_body = lower_block(body, &mut lower_body, ctx.clone(), sm, file);
+            let ctx_body = lower_block(body, &mut lower_body, ctx.clone(), sm, file, opts);
 
             out.push(ir::Cmd::For {
                 var,
@@ -355,7 +373,7 @@ fn lower_stmt(
                 .map(|(k, v)| (k, lower_expr(v, &mut ctx, sm, file)))
                 .collect();
             let mut lower_body = Vec::new();
-            let ctx_body = lower_block(body, &mut lower_body, ctx.clone(), sm, file);
+            let ctx_body = lower_block(body, &mut lower_body, ctx.clone(), sm, file, opts);
             out.push(ir::Cmd::WithEnv {
                 bindings: lowered_bindings,
                 body: lower_body,
@@ -364,10 +382,10 @@ fn lower_stmt(
         }
         ast::StmtKind::AndThen { left, right } => {
             let mut lower_left = Vec::new();
-            let ctx_left = lower_block(left, &mut lower_left, ctx.clone(), sm, file);
+            let ctx_left = lower_block(left, &mut lower_left, ctx.clone(), sm, file, opts);
 
             let mut lower_right = Vec::new();
-            let ctx_right = lower_block(right, &mut lower_right, ctx_left.clone(), sm, file);
+            let ctx_right = lower_block(right, &mut lower_right, ctx_left.clone(), sm, file, opts);
 
             out.push(ir::Cmd::AndThen {
                 left: lower_left,
@@ -377,10 +395,10 @@ fn lower_stmt(
         }
         ast::StmtKind::OrElse { left, right } => {
             let mut lower_left = Vec::new();
-            let ctx_left = lower_block(left, &mut lower_left, ctx.clone(), sm, file);
+            let ctx_left = lower_block(left, &mut lower_left, ctx.clone(), sm, file, opts);
 
             let mut lower_right = Vec::new();
-            let ctx_right = lower_block(right, &mut lower_right, ctx_left.clone(), sm, file);
+            let ctx_right = lower_block(right, &mut lower_right, ctx_left.clone(), sm, file, opts);
 
             out.push(ir::Cmd::OrElse {
                 left: lower_left,
@@ -391,7 +409,7 @@ fn lower_stmt(
         ast::StmtKind::WithCwd { path, body } => {
             let lowered_path = lower_expr(path, &mut ctx, sm, file);
             let mut lower_body = Vec::new();
-            let ctx_body = lower_block(body, &mut lower_body, ctx.clone(), sm, file);
+            let ctx_body = lower_block(body, &mut lower_body, ctx.clone(), sm, file, opts);
             out.push(ir::Cmd::WithCwd {
                 path: lowered_path,
                 body: lower_body,
@@ -401,7 +419,7 @@ fn lower_stmt(
         ast::StmtKind::WithLog { path, append, body } => {
             let lowered_path = lower_expr(path, &mut ctx, sm, file);
             let mut lower_body = Vec::new();
-            let ctx_body = lower_block(body, &mut lower_body, ctx.clone(), sm, file);
+            let ctx_body = lower_block(body, &mut lower_body, ctx.clone(), sm, file, opts);
             out.push(ir::Cmd::WithLog {
                 path: lowered_path,
                 append,
@@ -581,13 +599,13 @@ fn lower_stmt(
         }
         ast::StmtKind::Subshell { body } => {
             let mut lower_body = Vec::new();
-            lower_block(body, &mut lower_body, ctx.clone(), sm, file);
+            lower_block(body, &mut lower_body, ctx.clone(), sm, file, opts);
             out.push(ir::Cmd::Subshell { body: lower_body });
             ctx
         }
         ast::StmtKind::Group { body } => {
             let mut lower_body = Vec::new();
-            let ctx_body = lower_block(body, &mut lower_body, ctx.clone(), sm, file);
+            let ctx_body = lower_block(body, &mut lower_body, ctx.clone(), sm, file, opts);
             out.push(ir::Cmd::Group { body: lower_body });
             ctx_body
         }
@@ -598,7 +616,7 @@ fn lower_stmt(
             body,
         } => {
             let mut lowered_body = Vec::new();
-            let ctx_body = lower_block(body, &mut lowered_body, ctx.clone(), sm, file);
+            let ctx_body = lower_block(body, &mut lowered_body, ctx.clone(), sm, file, opts);
 
             let mut lower_target = |t: ast::RedirectTarget, c: &mut LoweringContext| match t {
                 ast::RedirectTarget::File { path, append } => ir::RedirectTarget::File {
@@ -620,7 +638,7 @@ fn lower_stmt(
         }
         ast::StmtKind::Spawn { stmt } => {
             let mut lower_cmds = Vec::new();
-            lower_stmt(*stmt, &mut lower_cmds, ctx.clone(), sm, file);
+            lower_stmt(*stmt, &mut lower_cmds, ctx.clone(), sm, file, opts);
 
             if lower_cmds.len() == 1 {
                 out.push(ir::Cmd::Spawn(Box::new(lower_cmds.remove(0))));
@@ -642,10 +660,10 @@ fn lower_stmt(
             catch_body,
         } => {
             let mut lower_try = Vec::new();
-            let ctx_try = lower_block(try_body, &mut lower_try, ctx.clone(), sm, file);
+            let ctx_try = lower_block(try_body, &mut lower_try, ctx.clone(), sm, file, opts);
 
             let mut lower_catch = Vec::new();
-            let ctx_catch = lower_block(catch_body, &mut lower_catch, ctx.clone(), sm, file);
+            let ctx_catch = lower_block(catch_body, &mut lower_catch, ctx.clone(), sm, file, opts);
 
             out.push(ir::Cmd::TryCatch {
                 try_body: lower_try,
@@ -709,7 +727,7 @@ fn lower_stmt(
             let mut lower_segments = Vec::new();
             for seg in segments {
                 let mut lowered = Vec::new();
-                lower_block(seg, &mut lowered, ctx.clone(), sm, file);
+                lower_block(seg, &mut lowered, ctx.clone(), sm, file, opts);
                 lower_segments.push(lowered);
             }
             out.push(ir::Cmd::PipeBlocks(lower_segments, loc));
@@ -722,7 +740,7 @@ fn lower_stmt(
             body,
         } => {
             let mut lower_body = Vec::new();
-            let ctx_body = lower_block(body, &mut lower_body, ctx.clone(), sm, file);
+            let ctx_body = lower_block(body, &mut lower_body, ctx.clone(), sm, file, opts);
             out.push(ir::Cmd::ForMap {
                 key_var,
                 val_var,

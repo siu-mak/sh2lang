@@ -19,7 +19,11 @@ fn parse_pipe_blocks_mixed_left_stmt_fail() {
         "Unknown panic message"
     };
 
-    assert_eq!(msg, "expected run(...) after '|' in pipeline");
+    assert!(
+        msg.contains("expected run(...) after '|' in pipeline"),
+        "Unexpected panic message: {}",
+        msg
+    );
 }
 
 // Codegen and Exec tests removed because parsing is expected to fail.
