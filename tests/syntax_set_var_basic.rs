@@ -1,7 +1,7 @@
 use sh2c::ast::StmtKind;
 mod common;
 use common::*;
-use sh2c::ast::{ExprKind, LValue, Stmt};
+use sh2c::ast::{LValue, Stmt};
 
 #[test]
 fn parse_set_var_basic() {

@@ -14,7 +14,7 @@ test() {
 }
 
 main() {
-  __sh2_loc="/srv/repos/rust/sh2c/tests/fixtures/list_args_utils.sh2:23"
+  __sh2_loc="tests/fixtures/list_args_utils.sh2:23"
   xs=('a' 'b' 'c')
   printf '%s\n' "${#xs[@]}"
   printf '%s\n' "${xs[1]}"

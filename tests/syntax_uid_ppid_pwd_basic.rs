@@ -1,7 +1,7 @@
 use sh2c::ast::StmtKind;
 mod common;
 use common::*;
-use sh2c::ast::{ExprKind, Stmt};
+use sh2c::ast::Stmt;
 
 #[test]
 fn parse_uid_ppid_pwd_basic() {

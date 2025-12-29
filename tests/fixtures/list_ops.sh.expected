@@ -1,7 +1,7 @@
 __sh2_err_handler() { printf "Error in %s\n" "${__sh2_loc:-unknown}" >&2; }
 trap '__sh2_err_handler' ERR
 main() {
-  __sh2_loc="/srv/repos/rust/sh2c/tests/fixtures/list_ops.sh2:2"
+  __sh2_loc="tests/fixtures/list_ops.sh2:2"
   xs=('a' 'b' 'c')
   if [ "${#xs[@]}" = "3" ]; then
     printf '%s\n' 'count_ok'

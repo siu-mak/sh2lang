@@ -1,11 +1,12 @@
-use std::fs;
 use std::process::Command;
 
 fn sh2c_path() -> String {
     env!("CARGO_BIN_EXE_sh2c").to_string()
 }
 
-fn assert_cmd_stdout(args: &[&str], expected_file: &str) {
+
+
+fn assert_cmd_stdout_str(args: &[&str], expected: &str) {
     let output = Command::new(sh2c_path())
         .args(args)
         .output()
@@ -17,7 +18,6 @@ fn assert_cmd_stdout(args: &[&str], expected_file: &str) {
     }
 
     let stdout = String::from_utf8(output.stdout).expect("Invalid UTF-8 in stdout");
-    let expected = fs::read_to_string(expected_file).expect("Failed to read expected file");
 
     assert_eq!(stdout.trim(), expected.trim());
 }
@@ -47,33 +47,81 @@ fn assert_cmd_fail(args: &[&str], expected_status: Option<i32>, expected_stderr_
 #[test]
 fn cli_target_default_is_bash() {
     // Default should match cli_target_basic.sh.expected (bash)
-    assert_cmd_stdout(
+    // Note: CLI uses script parent as base, so paths are basename-only here.
+   
+     let expected = r#"
+__sh2_err_handler() { printf "Error in %s\n" "${__sh2_loc:-unknown}" >&2; }
+trap '__sh2_err_handler' ERR
+main() {
+  __sh2_loc="cli_target_basic.sh2:2"
+  x='world'
+  __sh2_loc="cli_target_basic.sh2:3"
+  'echo' 'hello' "$x"; __sh2_status=$?; (exit $__sh2_status)
+}
+__sh2_status=0
+main "$@"
+"#;
+    assert_cmd_stdout_str(
         &["tests/fixtures/cli_target_basic.sh2"],
-        "tests/fixtures/cli_target_basic.sh.expected",
+        expected,
     );
 }
 
 #[test]
 fn cli_target_explicit_bash() {
-    assert_cmd_stdout(
+    let expected = r#"
+__sh2_err_handler() { printf "Error in %s\n" "${__sh2_loc:-unknown}" >&2; }
+trap '__sh2_err_handler' ERR
+main() {
+  __sh2_loc="cli_target_basic.sh2:2"
+  x='world'
+  __sh2_loc="cli_target_basic.sh2:3"
+  'echo' 'hello' "$x"; __sh2_status=$?; (exit $__sh2_status)
+}
+__sh2_status=0
+main "$@"
+"#;
+    assert_cmd_stdout_str(
         &["--target", "bash", "tests/fixtures/cli_target_basic.sh2"],
-        "tests/fixtures/cli_target_basic.sh.expected",
+        expected,
     );
 }
 
 #[test]
 fn cli_target_explicit_bash_equal() {
-    assert_cmd_stdout(
+    let expected = r#"
+__sh2_err_handler() { printf "Error in %s\n" "${__sh2_loc:-unknown}" >&2; }
+trap '__sh2_err_handler' ERR
+main() {
+  __sh2_loc="cli_target_basic.sh2:2"
+  x='world'
+  __sh2_loc="cli_target_basic.sh2:3"
+  'echo' 'hello' "$x"; __sh2_status=$?; (exit $__sh2_status)
+}
+__sh2_status=0
+main "$@"
+"#;
+    assert_cmd_stdout_str(
         &["--target=bash", "tests/fixtures/cli_target_basic.sh2"],
-        "tests/fixtures/cli_target_basic.sh.expected",
+        expected,
     );
 }
 
 #[test]
 fn cli_target_posix() {
-    assert_cmd_stdout(
+    let expected = r#"
+main() {
+  __sh2_loc="cli_target_basic.sh2:2"
+  x='world'
+  __sh2_loc="cli_target_basic.sh2:3"
+  'echo' 'hello' "$x"; __sh2_status=$?; if [ $__sh2_status -ne 0 ]; then printf 'Error in %s\n' "$__sh2_loc" >&2; exit $__sh2_status; fi
+}
+__sh2_status=0
+main "$@"
+"#;
+    assert_cmd_stdout_str(
         &["--target", "posix", "tests/fixtures/cli_target_basic.sh2"],
-        "tests/fixtures/cli_target_basic.posix.sh.expected",
+        expected,
     );
 }
 

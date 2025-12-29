@@ -16,7 +16,7 @@ pub fn compile_path_to_shell(path: &Path, target: TargetShell) -> String {
     let program = loader::load_program_with_imports(path);
     let opts = sh2c::lower::LowerOptions {
         include_diagnostics: true,
-        diag_base_dir: std::env::current_dir().ok(),
+        diag_base_dir: Some(std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))),
     };
     let ir = lower::lower_with_options(program, &opts);
     codegen::emit_with_target(&ir, target)
@@ -35,7 +35,7 @@ pub fn compile_to_shell(src: &str, target: TargetShell) -> String {
     // Note: lower calls generally require accurate file info but here we use "inline_test"
     let opts = sh2c::lower::LowerOptions {
         include_diagnostics: true,
-        diag_base_dir: std::env::current_dir().ok(),
+        diag_base_dir: Some(std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))),
     };
     let ir = lower::lower_with_options(program, &opts);
     codegen::emit_with_target(&ir, target)

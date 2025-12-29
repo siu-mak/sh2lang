@@ -1,9 +1,6 @@
 #[allow(unused_imports)]
 use sh2c::ast::{self, Expr, ExprKind, Stmt, StmtKind};
-use sh2c::codegen::{self, TargetShell};
-use sh2c::lexer;
-use sh2c::lower;
-use sh2c::parser;
+use sh2c::codegen::TargetShell;
 
 mod common;
 use common::*;

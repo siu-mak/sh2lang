@@ -1,6 +1,6 @@
 use sh2c::ast::ExprKind;
 use sh2c::ast::StmtKind;
-use sh2c::ast::{self, ArithOp, CompareOp, Expr, Stmt};
+use sh2c::ast::{ArithOp, CompareOp, Expr, Stmt};
 mod common;
 use common::*;
 

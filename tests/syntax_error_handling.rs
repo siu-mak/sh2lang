@@ -1,6 +1,6 @@
 mod common;
 use common::{assert_codegen_matches_snapshot, assert_exec_matches_fixture, parse_fixture};
-use sh2c::ast::{ExprKind, Stmt, StmtKind};
+use sh2c::ast::{Stmt, StmtKind};
 
 #[test]
 fn parse_try_catch_basic() {

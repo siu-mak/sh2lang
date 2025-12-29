@@ -1,4 +1,4 @@
-use sh2c::ast::{Expr, ExprKind, Stmt, StmtKind};
+use sh2c::ast::{Stmt, StmtKind};
 mod common;
 use common::*;
 

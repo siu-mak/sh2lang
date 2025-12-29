@@ -1,7 +1,7 @@
 __sh2_err_handler() { printf "Error in %s\n" "${__sh2_loc:-unknown}" >&2; }
 trap '__sh2_err_handler' ERR
 main() {
-  __sh2_loc="/srv/repos/rust/sh2c/tests/fixtures/map_literal_index.sh2:2"
+  __sh2_loc="tests/fixtures/map_literal_index.sh2:2"
   local -A m=( ['a']='1' ['b']='2' )
   local -a __sh2_keys_m=( 'a' 'b' )
   printf '%s\n' "${m['a']}"

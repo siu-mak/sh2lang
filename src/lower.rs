@@ -2,7 +2,6 @@ use crate::ast;
 use crate::ir;
 use crate::span::SourceMap;
 use crate::span::Span;
-use std::collections::HashMap;
 use std::collections::HashSet;
 
 #[derive(Clone, Debug)]
@@ -633,7 +632,7 @@ fn lower_stmt(
             let mut lowered_body = Vec::new();
             let ctx_body = lower_block(body, &mut lowered_body, ctx.clone(), sm, file, opts);
 
-            let mut lower_target = |t: ast::RedirectTarget, c: &mut LoweringContext| match t {
+            let lower_target = |t: ast::RedirectTarget, c: &mut LoweringContext| match t {
                 ast::RedirectTarget::File { path, append } => ir::RedirectTarget::File {
                     path: lower_expr(path, c, sm, file),
                     append,

@@ -191,7 +191,7 @@ fn parse_if_statement_inline() {
             }
         }
     "#;
-    use sh2c::{lexer, parser};
+    use sh2c::parser;
     let sm = sh2c::span::SourceMap::new(src.to_string());
     let tokens = sh2c::lexer::lex(&sm, "test");
     let ast = parser::parse(&tokens, &sm, "test");
@@ -233,7 +233,7 @@ fn parse_nested_if_inline() {
             }
         }
     "#;
-    use sh2c::{lexer, parser};
+    use sh2c::parser;
     let sm = sh2c::span::SourceMap::new(src.to_string());
     let tokens = sh2c::lexer::lex(&sm, "test");
     let ast = parser::parse(&tokens, &sm, "test");

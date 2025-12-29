@@ -89,7 +89,7 @@ fn parse_simple_function_inline() {
             run("echo", "hi")
         }
     "#;
-    use sh2c::{lexer, parser};
+    use sh2c::parser;
     let sm = sh2c::span::SourceMap::new(src.to_string());
     let tokens = sh2c::lexer::lex(&sm, "test");
     let ast = parser::parse(&tokens, &sm, "test");

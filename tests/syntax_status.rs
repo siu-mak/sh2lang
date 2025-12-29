@@ -1,5 +1,5 @@
 use sh2c::ast::StmtKind;
-use sh2c::ast::{self, Expr, ExprKind, Stmt};
+use sh2c::ast::{Expr, ExprKind, Stmt};
 mod common;
 use common::*;
 

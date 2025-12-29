@@ -127,7 +127,7 @@ fn exec_let_args() {
 }
 
 // --- Migrated form compare_tests.rs ---
-use sh2c::{ast, lexer, parser};
+use sh2c::{ast, parser};
 
 #[test]
 fn parses_comparison() {
@@ -422,7 +422,7 @@ fn parses_let_statement() {
             let x = "y"
         }
     "#;
-    use sh2c::{ast, lexer, parser};
+    use sh2c::{ast, parser};
     let sm = sh2c::span::SourceMap::new(src.to_string());
     let tokens = sh2c::lexer::lex(&sm, "test");
     let program = parser::parse(&tokens, &sm, "test");
@@ -455,7 +455,7 @@ fn codegen_let_and_usage() {
             print(msg)
         }
     "#;
-    use sh2c::{codegen, lexer, lower, parser};
+    use sh2c::{codegen, lower, parser};
     let sm = sh2c::span::SourceMap::new(src.to_string());
     let tokens = sh2c::lexer::lex(&sm, "test");
     let ast = parser::parse(&tokens, &sm, "test");
@@ -473,7 +473,7 @@ fn exec_let_variable() {
             run("echo", val)
         }
     "#;
-    use sh2c::{codegen, lexer, lower, parser};
+    use sh2c::{codegen, lower, parser};
     let sm = sh2c::span::SourceMap::new(src.to_string());
     let tokens = sh2c::lexer::lex(&sm, "test");
     let ast = parser::parse(&tokens, &sm, "test");
@@ -492,7 +492,7 @@ fn let_alias_variable() {
             print(b)
         }
     "#;
-    use sh2c::{codegen, lexer, lower, parser};
+    use sh2c::{codegen, lower, parser};
     let sm = sh2c::span::SourceMap::new(src.to_string());
     let tokens = sh2c::lexer::lex(&sm, "test");
     let ast = parser::parse(&tokens, &sm, "test");
@@ -618,7 +618,7 @@ fn parse_index_arith_index() {
     {
         // i + 2
         if let Expr {
-            kind: ExprKind::Arith { left, op, right },
+            kind: ExprKind::Arith { left: _, op, right: _ },
             ..
         } = &**index
         {

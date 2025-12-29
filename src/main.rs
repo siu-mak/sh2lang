@@ -72,9 +72,11 @@ fn main() {
         let path = std::path::Path::new(&filename);
         let ast = loader::load_program_with_imports(path);
         
-        // Base dir is the current working directory.
-        // This ensures relative paths in diagnostics are relative to where the compiler is run.
-        let diag_base_dir = std::env::current_dir().ok();
+        // Base dir is the input file's parent directory.
+        // This ensures paths are relative to the script location, which is more
+        // robust than CWD if the compiler is run from elsewhere.
+        let diag_base_dir = path.parent()
+            .map(|p| std::fs::canonicalize(p).unwrap_or_else(|_| p.to_path_buf()));
 
         let ir = lower::lower_with_options(
             ast,

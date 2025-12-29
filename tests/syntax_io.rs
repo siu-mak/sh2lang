@@ -88,7 +88,7 @@ fn parse_print_err_statement_inline() {
             print_err("fail")
         }
     "#;
-    use sh2c::{lexer, parser};
+    use sh2c::parser;
     let sm = sh2c::span::SourceMap::new(src.to_string());
     let tokens = sh2c::lexer::lex(&sm, "test");
     let program = parser::parse(&tokens, &sm, "test");
@@ -126,7 +126,7 @@ fn codegen_with_redirect_stdout_to_stderr_and_stderr_file() {
 #[should_panic(expected = "Cyclic redirection")]
 fn codegen_with_redirect_cyclic() {
     let src = include_str!("fixtures/with_redirect_cyclic.sh2");
-    use sh2c::{codegen, lexer, lower, parser};
+    use sh2c::{codegen, lower, parser};
     let sm = sh2c::span::SourceMap::new(src.to_string());
     let tokens = sh2c::lexer::lex(&sm, "test");
     let mut ast = parser::parse(&tokens, &sm, "test");

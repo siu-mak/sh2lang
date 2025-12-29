@@ -1,8 +1,7 @@
 use super::common::Parser;
 use crate::ast::*;
-use crate::lexer::{Token, TokenKind};
+use crate::lexer::TokenKind;
 use crate::span::Span;
-use std::cmp::{max, min};
 
 impl<'a> Parser<'a> {
     pub fn parse_expr(&mut self) -> Expr {

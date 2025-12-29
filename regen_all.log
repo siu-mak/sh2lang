@@ -1,0 +1,968 @@
+warning: unused import: `std::collections::HashMap`
+ --> src/lower.rs:5:5
+  |
+5 | use std::collections::HashMap;
+  |     ^^^^^^^^^^^^^^^^^^^^^^^^^
+  |
+  = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused import: `Token`
+ --> src/parser/expr.rs:3:20
+  |
+3 | use crate::lexer::{Token, TokenKind};
+  |                    ^^^^^
+
+warning: unused imports: `max` and `min`
+ --> src/parser/expr.rs:5:16
+  |
+5 | use std::cmp::{max, min};
+  |                ^^^  ^^^
+
+warning: unused import: `Token`
+ --> src/parser/stmt.rs:3:20
+  |
+3 | use crate::lexer::{Token, TokenKind};
+  |                    ^^^^^
+
+warning: unused import: `crate::span::Span`
+ --> src/parser/stmt.rs:4:5
+  |
+4 | use crate::span::Span;
+  |     ^^^^^^^^^^^^^^^^^
+
+warning: unused import: `Span`
+ --> src/parser/mod.rs:8:30
+  |
+8 | use crate::span::{SourceMap, Span};
+  |                              ^^^^
+
+warning: variable does not need to be mutable
+   --> src/lower.rs:636:17
+    |
+636 | ... let mut lower_target = |t: ast...
+    |         ----^^^^^^^^^^^^
+    |         |
+    |         help: remove this `mut`
+    |
+    = note: `#[warn(unused_mut)]` (part of `#[warn(unused)]`) on by default
+
+warning: `sh2c` (lib) generated 7 warnings (run `cargo fix --lib -p sh2c` to apply 7 suggestions)
+   Compiling sh2c v0.1.0 (/srv/repos/rust/sh2c)
+warning: unused import: `Path`
+ --> src/bin/regen_all.rs:7:21
+  |
+7 |     use std::path::{Path, PathBuf};
+  |                     ^^^^
+  |
+  = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: `sh2c` (bin "regen_all") generated 1 warning (run `cargo fix --bin "regen_all" -p sh2c` to apply 1 suggestion)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.21s
+     Running `target/debug/regen_all`
+Processing tests/fixtures/and_or_chain.sh2
+Processing tests/fixtures/and_or_stmt.sh2
+Processing tests/fixtures/andthen_short_circuit.sh2
+Processing tests/fixtures/argc_argv0_basic.sh2
+Processing tests/fixtures/args_ops.sh2
+
+thread 'main' (1651952) panicked at src/codegen.rs:506:25:
+List indexing is not supported in POSIX sh target
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+Skipping tests/fixtures/args_ops.sh2 (compilation/lowering/codegen failed)
+Processing tests/fixtures/arith_cmdsub_plus_one.sh2
+Processing tests/fixtures/arith_comparison.sh2
+Processing tests/fixtures/arith_count_args_plus_one.sh2
+Processing tests/fixtures/arith_len_plus_one.sh2
+Processing tests/fixtures/arith_precedence.sh2
+Processing tests/fixtures/arith_unary_minus.sh2
+Processing tests/fixtures/bool_literals.sh2
+Processing tests/fixtures/bool_str_as_arg.sh2
+Processing tests/fixtures/bool_str_basic.sh2
+Processing tests/fixtures/break_basic.sh2
+
+thread 'main' (1651952) panicked at src/codegen.rs:917:21:
+Array assignment is not supported in POSIX sh target
+Skipping tests/fixtures/break_basic.sh2 (compilation/lowering/codegen failed)
+Processing tests/fixtures/call_args.sh2
+Processing tests/fixtures/call_func.sh2
+Processing tests/fixtures/call_unknown_arity_ok.sh2
+Processing tests/fixtures/call_user_func_expr.sh2
+Processing tests/fixtures/capture_args.sh2
+Processing tests/fixtures/capture_basic.sh2
+Processing tests/fixtures/capture_is_single_arg.sh2
+Processing tests/fixtures/capture_pipe.sh2
+Processing tests/fixtures/case_basic.sh2
+Processing tests/fixtures/case_glob_dollar_and_backslash.sh2
+Processing tests/fixtures/case_glob_literal_safety.sh2
+Processing tests/fixtures/case_glob_question.sh2
+Processing tests/fixtures/case_glob_star.sh2
+Processing tests/fixtures/case_wildcard.sh2
+Processing tests/fixtures/cd_basic.sh2
+Processing tests/fixtures/cli_target_basic.sh2
+Processing tests/fixtures/cli_target_posix_rejects_array.sh2
+
+thread 'main' (1651952) panicked at src/codegen.rs:917:21:
+Array assignment is not supported in POSIX sh target
+Skipping tests/fixtures/cli_target_posix_rejects_array.sh2 (compilation/lowering/codegen failed)
+Processing tests/fixtures/cmd_sub.sh2
+Processing tests/fixtures/cmd_sub_args.sh2
+Processing tests/fixtures/cmd_sub_call.sh2
+Processing tests/fixtures/cmd_sub_call_args.sh2
+Processing tests/fixtures/cmd_sub_pipe.sh2
+Processing tests/fixtures/comments.sh2
+Processing tests/fixtures/compare.sh2
+Processing tests/fixtures/concat_amp_basic.sh2
+Processing tests/fixtures/concat_amp_precedence.sh2
+Processing tests/fixtures/concat_var_and_literal_safe.sh2
+Processing tests/fixtures/confirm_invalid_then_no.sh2
+
+thread 'main' (1651952) panicked at src/codegen.rs:806:35:
+confirm(...) is not supported in POSIX sh target
+Skipping tests/fixtures/confirm_invalid_then_no.sh2 (compilation/lowering/codegen failed)
+Processing tests/fixtures/confirm_yes.sh2
+
+thread 'main' (1651952) panicked at src/codegen.rs:806:35:
+confirm(...) is not supported in POSIX sh target
+Skipping tests/fixtures/confirm_yes.sh2 (compilation/lowering/codegen failed)
+Processing tests/fixtures/continue_basic.sh2
+
+thread 'main' (1651952) panicked at src/codegen.rs:917:21:
+Array assignment is not supported in POSIX sh target
+Skipping tests/fixtures/continue_basic.sh2 (compilation/lowering/codegen failed)
+Processing tests/fixtures/count_args.sh2
+Processing tests/fixtures/count_list_literal.sh2
+
+thread 'main' (1651952) panicked at src/codegen.rs:577:39:
+List literals not supported in POSIX target
+Skipping tests/fixtures/count_list_literal.sh2 (compilation/lowering/codegen failed)
+Processing tests/fixtures/count_list_var.sh2
+
+thread 'main' (1651952) panicked at src/codegen.rs:917:21:
+Array assignment is not supported in POSIX sh target
+Skipping tests/fixtures/count_list_var.sh2 (compilation/lowering/codegen failed)
+Processing tests/fixtures/dollar_pipe.sh2
+Processing tests/fixtures/env_basic.sh2
+Processing tests/fixtures/env_export_unset_source.sh2
+Processing tests/fixtures/env_indirect.sh2
+
+thread 'main' (1651952) panicked at src/codegen.rs:596:39:
+env(var_name) is not supported in POSIX sh target; use env("NAME") or env.NAME
+Skipping tests/fixtures/env_indirect.sh2 (compilation/lowering/codegen failed)
+Processing tests/fixtures/envdot_shadow.sh2
+Processing tests/fixtures/envfile_load_as_statement.sh2
+
+thread 'main' (1651952) panicked at src/lower.rs:476:17:
+error: load_envfile() returns a value; use it in an expression (e.g., let m = load_envfile("env.meta"))
+--> /srv/repos/rust/sh2c/tests/fixtures/envfile_load_as_statement.sh2:2:3
+ |
+ |   load_envfile("env.meta")
+ |   ^^^^^^^^^^^^^^^^^^^^^^^^
+Skipping tests/fixtures/envfile_load_as_statement.sh2 (compilation/lowering/codegen failed)
+Processing tests/fixtures/envfile_load_basic.sh2
+Processing tests/fixtures/envfile_missing_file.sh2
+Processing tests/fixtures/envfile_roundtrip.sh2
+Processing tests/fixtures/exec_basic.sh2
+Processing tests/fixtures/exec_exit_status.sh2
+Processing tests/fixtures/exec_replace.sh2
+Processing tests/fixtures/exec_stmt.sh2
+Processing tests/fixtures/exec_stops_execution.sh2
+Processing tests/fixtures/exists_check.sh2
+Processing tests/fixtures/exists_isdir_isfile_basic.sh2
+Processing tests/fixtures/exit_arg.sh2
+Processing tests/fixtures/exit_basic.sh2
+Processing tests/fixtures/exit_status.sh2
+Processing tests/fixtures/export_unset.sh2
+Processing tests/fixtures/for_args.sh2
+Processing tests/fixtures/for_basic.sh2
+Processing tests/fixtures/for_list.sh2
+Processing tests/fixtures/for_list_var.sh2
+
+thread 'main' (1651952) panicked at src/codegen.rs:917:21:
+Array assignment is not supported in POSIX sh target
+Skipping tests/fixtures/for_list_var.sh2 (compilation/lowering/codegen failed)
+Processing tests/fixtures/fs_exec_basic.sh2
+Processing tests/fixtures/fs_exists_dir_file_symlink_basic.sh2
+Processing tests/fixtures/fs_non_empty_basic.sh2
+Processing tests/fixtures/fs_predicates_basic.sh2
+Processing tests/fixtures/fs_predicates_cwd.sh2
+
+thread 'main' (1651952) panicked at src/codegen.rs:619:35:
+pwd() is not supported in POSIX sh target
+Skipping tests/fixtures/fs_predicates_cwd.sh2 (compilation/lowering/codegen failed)
+Processing tests/fixtures/fs_predicates_full.sh2
+Processing tests/fixtures/fs_readable_writable_basic.sh2
+Processing tests/fixtures/func_args_basic.sh2
+Processing tests/fixtures/func_params_10.sh2
+Processing tests/fixtures/func_params_basic.sh2
+Processing tests/fixtures/group_basic.sh2
+Processing tests/fixtures/hello.sh2
+Processing tests/fixtures/hello_exec.sh2
+Processing tests/fixtures/heredoc_basic.sh2
+Processing tests/fixtures/heredoc_cat_basic.sh2
+Processing tests/fixtures/heredoc_delim_collision.sh2
+Processing tests/fixtures/heredoc_literal_no_expansion.sh2
+Processing tests/fixtures/heredoc_literal_safety.sh2
+Processing tests/fixtures/heredoc_no_trailing_newline.sh2
+Processing tests/fixtures/heredoc_stderr_rejected.sh2
+
+thread 'main' (1651952) panicked at src/parser/common.rs:38:9:
+error: heredoc only allowed for stdin
+--> /srv/repos/rust/sh2c/tests/fixtures/heredoc_stderr_rejected.sh2:2:43
+ |
+ |     with redirect { stderr: heredoc("FAIL") } {
+ |                                           ^
+Skipping tests/fixtures/heredoc_stderr_rejected.sh2 (compilation/lowering/codegen failed)
+Processing tests/fixtures/heredoc_stdout_rejected.sh2
+
+thread 'main' (1651952) panicked at src/parser/common.rs:38:9:
+error: heredoc only allowed for stdin
+--> /srv/repos/rust/sh2c/tests/fixtures/heredoc_stdout_rejected.sh2:2:43
+ |
+ |     with redirect { stdout: heredoc("FAIL") } {
+ |                                           ^
+Skipping tests/fixtures/heredoc_stdout_rejected.sh2 (compilation/lowering/codegen failed)
+Processing tests/fixtures/if_basic.sh2
+Processing tests/fixtures/if_bool.sh2
+Processing tests/fixtures/if_bool_and.sh2
+Processing tests/fixtures/if_bool_literals_combo.sh2
+Processing tests/fixtures/if_bool_not_basic.sh2
+Processing tests/fixtures/if_bool_or.sh2
+Processing tests/fixtures/if_bool_paren_overrides_precedence.sh2
+Processing tests/fixtures/if_bool_precedence_and_over_or.sh2
+Processing tests/fixtures/if_elif.sh2
+Processing tests/fixtures/if_else.sh2
+Processing tests/fixtures/if_else_if.sh2
+Processing tests/fixtures/if_env_false.sh2
+Processing tests/fixtures/if_env_true.sh2
+Processing tests/fixtures/if_exists.sh2
+Processing tests/fixtures/if_false_literal.sh2
+Processing tests/fixtures/if_is_dir.sh2
+Processing tests/fixtures/if_is_file.sh2
+Processing tests/fixtures/if_number_compare.sh2
+Processing tests/fixtures/if_paren_cond.sh2
+Processing tests/fixtures/if_true_literal.sh2
+Processing tests/fixtures/index_args.sh2
+
+thread 'main' (1651952) panicked at src/codegen.rs:506:25:
+List indexing is not supported in POSIX sh target
+Skipping tests/fixtures/index_args.sh2 (compilation/lowering/codegen failed)
+Processing tests/fixtures/index_arith_index.sh2
+
+thread 'main' (1651952) panicked at src/codegen.rs:917:21:
+Array assignment is not supported in POSIX sh target
+Skipping tests/fixtures/index_arith_index.sh2 (compilation/lowering/codegen failed)
+Processing tests/fixtures/index_list_literal.sh2
+
+thread 'main' (1651952) panicked at src/codegen.rs:506:25:
+List indexing is not supported in POSIX sh target
+Skipping tests/fixtures/index_list_literal.sh2 (compilation/lowering/codegen failed)
+Processing tests/fixtures/index_list_literal_expr.sh2
+
+thread 'main' (1651952) panicked at src/codegen.rs:506:25:
+List indexing is not supported in POSIX sh target
+Skipping tests/fixtures/index_list_literal_expr.sh2 (compilation/lowering/codegen failed)
+Processing tests/fixtures/index_list_var.sh2
+
+thread 'main' (1651952) panicked at src/codegen.rs:917:21:
+Array assignment is not supported in POSIX sh target
+Skipping tests/fixtures/index_list_var.sh2 (compilation/lowering/codegen failed)
+Processing tests/fixtures/index_var_index.sh2
+
+thread 'main' (1651952) panicked at src/codegen.rs:917:21:
+Array assignment is not supported in POSIX sh target
+Skipping tests/fixtures/index_var_index.sh2 (compilation/lowering/codegen failed)
+Processing tests/fixtures/input_basic.sh2
+
+thread 'main' (1651952) panicked at src/codegen.rs:640:35:
+input(...) is not supported in POSIX sh target
+Skipping tests/fixtures/input_basic.sh2 (compilation/lowering/codegen failed)
+Processing tests/fixtures/interp_basic.sh2
+Processing tests/fixtures/interp_escape.sh2
+Processing tests/fixtures/interpolated_dollar_basic.sh2
+Processing tests/fixtures/interpolated_dollar_escape.sh2
+Processing tests/fixtures/interpolated_string_basic.sh2
+Processing tests/fixtures/interpolated_string_dollar_basic.sh2
+Processing tests/fixtures/interpolated_string_dollar_escape.sh2
+Processing tests/fixtures/interpolated_string_escape.sh2
+Processing tests/fixtures/introspection_builtins.sh2
+
+thread 'main' (1651952) panicked at src/codegen.rs:619:35:
+pwd() is not supported in POSIX sh target
+Skipping tests/fixtures/introspection_builtins.sh2 (compilation/lowering/codegen failed)
+Processing tests/fixtures/join_args.sh2
+
+thread 'main' (1651952) panicked at src/codegen.rs:540:17:
+List join is not supported in POSIX sh target
+Skipping tests/fixtures/join_args.sh2 (compilation/lowering/codegen failed)
+Processing tests/fixtures/join_list_literal.sh2
+
+thread 'main' (1651952) panicked at src/codegen.rs:540:17:
+List join is not supported in POSIX sh target
+Skipping tests/fixtures/join_list_literal.sh2 (compilation/lowering/codegen failed)
+Processing tests/fixtures/join_list_var.sh2
+
+thread 'main' (1651952) panicked at src/codegen.rs:917:21:
+Array assignment is not supported in POSIX sh target
+Skipping tests/fixtures/join_list_var.sh2 (compilation/lowering/codegen failed)
+Processing tests/fixtures/json_kv_basic.sh2
+Processing tests/fixtures/json_kv_duplicates.sh2
+Processing tests/fixtures/json_kv_empty.sh2
+Processing tests/fixtures/json_kv_no_double_call.sh2
+Processing tests/fixtures/len_basic.sh2
+Processing tests/fixtures/let.sh2
+Processing tests/fixtures/let_args.sh2
+
+thread 'main' (1651952) panicked at src/codegen.rs:917:21:
+Array assignment is not supported in POSIX sh target
+Skipping tests/fixtures/let_args.sh2 (compilation/lowering/codegen failed)
+Processing tests/fixtures/list_args_utils.sh2
+
+thread 'main' (1651952) panicked at src/codegen.rs:506:25:
+List indexing is not supported in POSIX sh target
+Skipping tests/fixtures/list_args_utils.sh2 (compilation/lowering/codegen failed)
+Processing tests/fixtures/list_index_numeric.sh2
+
+thread 'main' (1651952) panicked at src/codegen.rs:917:21:
+Array assignment is not supported in POSIX sh target
+Skipping tests/fixtures/list_index_numeric.sh2 (compilation/lowering/codegen failed)
+Processing tests/fixtures/list_ops.sh2
+
+thread 'main' (1651952) panicked at src/codegen.rs:917:21:
+Array assignment is not supported in POSIX sh target
+Skipping tests/fixtures/list_ops.sh2 (compilation/lowering/codegen failed)
+Processing tests/fixtures/literal_arg_backslash.sh2
+Processing tests/fixtures/literal_arg_dollar.sh2
+Processing tests/fixtures/literal_arg_glob_star.sh2
+Processing tests/fixtures/literal_arg_newline.sh2
+Processing tests/fixtures/literal_arg_spaces.sh2
+Processing tests/fixtures/log_bad_arity_0.sh2
+
+thread 'main' (1651952) panicked at src/lower.rs:549:21:
+error: log_info() requires 1 or 2 arguments (msg, [timestamp])
+--> /srv/repos/rust/sh2c/tests/fixtures/log_bad_arity_0.sh2:3:5
+ |
+ |     log_info()
+ |     ^^^^^^^^^^
+Skipping tests/fixtures/log_bad_arity_0.sh2 (compilation/lowering/codegen failed)
+Processing tests/fixtures/log_bad_arity_3.sh2
+
+thread 'main' (1651952) panicked at src/lower.rs:549:21:
+error: log_info() requires 1 or 2 arguments (msg, [timestamp])
+--> /srv/repos/rust/sh2c/tests/fixtures/log_bad_arity_3.sh2:3:5
+ |
+ |     log_info("a", false, true)
+ |     ^^^^^^^^^^^^^^^^^^^^^^^^^^
+Skipping tests/fixtures/log_bad_arity_3.sh2 (compilation/lowering/codegen failed)
+Processing tests/fixtures/log_bad_timestamp_type.sh2
+
+thread 'main' (1651952) panicked at src/lower.rs:565:25:
+error: log_info() second argument must be a boolean literal
+--> /srv/repos/rust/sh2c/tests/fixtures/log_bad_timestamp_type.sh2:3:5
+ |
+ |     log_info("a", "true")
+ |     ^^^^^^^^^^^^^^^^^^^^^
+Skipping tests/fixtures/log_bad_timestamp_type.sh2 (compilation/lowering/codegen failed)
+Processing tests/fixtures/log_info_basic.sh2
+Processing tests/fixtures/log_timestamp_enabled.sh2
+Processing tests/fixtures/log_used_as_expr.sh2
+
+thread 'main' (1651952) panicked at src/lower.rs:1021:17:
+error: log_info() is a statement, not an expression
+--> /srv/repos/rust/sh2c/tests/fixtures/log_used_as_expr.sh2:3:13
+ |
+ |     let x = log_info("a")
+ |             ^^^^^^^^^^^^^
+Skipping tests/fixtures/log_used_as_expr.sh2 (compilation/lowering/codegen failed)
+Processing tests/fixtures/log_warn_error.sh2
+Processing tests/fixtures/map_duplicate_keys.sh2
+
+thread 'main' (1651952) panicked at src/codegen.rs:914:21:
+map/dict is only supported in Bash target
+Skipping tests/fixtures/map_duplicate_keys.sh2 (compilation/lowering/codegen failed)
+Processing tests/fixtures/map_for_iter.sh2
+
+thread 'main' (1651952) panicked at src/codegen.rs:914:21:
+map/dict is only supported in Bash target
+Skipping tests/fixtures/map_for_iter.sh2 (compilation/lowering/codegen failed)
+Processing tests/fixtures/map_literal_index.sh2
+
+thread 'main' (1651952) panicked at src/codegen.rs:914:21:
+map/dict is only supported in Bash target
+Skipping tests/fixtures/map_literal_index.sh2 (compilation/lowering/codegen failed)
+Processing tests/fixtures/map_posix_for_only_is_error.sh2
+
+thread 'main' (1651952) panicked at src/codegen.rs:1362:17:
+map/dict is only supported in Bash target
+Skipping tests/fixtures/map_posix_for_only_is_error.sh2 (compilation/lowering/codegen failed)
+Processing tests/fixtures/map_posix_index_only_is_error.sh2
+
+thread 'main' (1651952) panicked at src/codegen.rs:673:17:
+map/dict is only supported in Bash target
+Skipping tests/fixtures/map_posix_index_only_is_error.sh2 (compilation/lowering/codegen failed)
+Processing tests/fixtures/map_posix_is_error.sh2
+
+thread 'main' (1651952) panicked at src/codegen.rs:914:21:
+map/dict is only supported in Bash target
+Skipping tests/fixtures/map_posix_is_error.sh2 (compilation/lowering/codegen failed)
+Processing tests/fixtures/matches_basic.sh2
+Processing tests/fixtures/matches_empty_regex.sh2
+Processing tests/fixtures/multi_run.sh2
+Processing tests/fixtures/multiline_cooked_basic.sh2
+Processing tests/fixtures/multiline_mixed_quotes.sh2
+Processing tests/fixtures/multiline_raw_basic.sh2
+Processing tests/fixtures/multiline_unterminated.sh2
+
+thread 'main' (1651952) panicked at src/lexer.rs:145:9:
+error: Unterminated triple-quoted string
+--> /srv/repos/rust/sh2c/tests/fixtures/multiline_unterminated.sh2:2:13
+ |
+ |     set s = """oops
+ |             ^^^^^^^^^^
+Skipping tests/fixtures/multiline_unterminated.sh2 (compilation/lowering/codegen failed)
+Processing tests/fixtures/no_diagnostics_basic.sh2
+Processing tests/fixtures/no_diagnostics_pipeline.sh2
+Processing tests/fixtures/no_entrypoint_is_error.sh2
+
+thread 'main' (1651952) panicked at src/lower.rs:96:13:
+No entrypoint: define `func main()` or add top-level statements.
+Skipping tests/fixtures/no_entrypoint_is_error.sh2 (compilation/lowering/codegen failed)
+Processing tests/fixtures/nothing.sh2
+
+thread 'main' (1651952) panicked at src/lower.rs:96:13:
+No entrypoint: define `func main()` or add top-level statements.
+Skipping tests/fixtures/nothing.sh2 (compilation/lowering/codegen failed)
+Processing tests/fixtures/number_let_print.sh2
+Processing tests/fixtures/numeric_compare.sh2
+Processing tests/fixtures/orelse_short_circuit.sh2
+Processing tests/fixtures/parse_args_basic.sh2
+Processing tests/fixtures/parse_args_double_dash.sh2
+Processing tests/fixtures/parse_args_fields_materialize.sh2
+Processing tests/fixtures/parse_args_in_helper.sh2
+Processing tests/fixtures/parse_args_positional_marker.sh2
+Processing tests/fixtures/parse_args_repeated_and_missing.sh2
+Processing tests/fixtures/path_home_arity_error.sh2
+
+thread 'main' (1651952) panicked at src/lower.rs:1031:21:
+error: home() takes no arguments
+--> /srv/repos/rust/sh2c/tests/fixtures/path_home_arity_error.sh2:3:13
+ |
+ |     let h = home("arg")
+ |             ^^^^^^^^^^^
+Skipping tests/fixtures/path_home_arity_error.sh2 (compilation/lowering/codegen failed)
+Processing tests/fixtures/path_home_basic.sh2
+Processing tests/fixtures/path_home_stmt_error.sh2
+
+thread 'main' (1651952) panicked at src/lower.rs:584:17:
+error: home() returns a value; use it in an expression (e.g., let h = home())
+--> /srv/repos/rust/sh2c/tests/fixtures/path_home_stmt_error.sh2:3:5
+ |
+ |     home()
+ |     ^^^^^^
+Skipping tests/fixtures/path_home_stmt_error.sh2 (compilation/lowering/codegen failed)
+Processing tests/fixtures/path_join_absolute_reset.sh2
+Processing tests/fixtures/path_join_arity_error.sh2
+
+thread 'main' (1651952) panicked at src/lower.rs:1039:21:
+error: path_join() requires at least 1 argument
+--> /srv/repos/rust/sh2c/tests/fixtures/path_join_arity_error.sh2:3:13
+ |
+ |     let p = path_join()
+ |             ^^^^^^^^^^^
+Skipping tests/fixtures/path_join_arity_error.sh2 (compilation/lowering/codegen failed)
+Processing tests/fixtures/path_join_basic.sh2
+Processing tests/fixtures/path_join_slashes_and_empty.sh2
+Processing tests/fixtures/path_join_stmt_error.sh2
+
+thread 'main' (1651952) panicked at src/lower.rs:593:17:
+error: path_join() returns a value; use it in an expression (e.g., let p = path_join("a", "b"))
+--> /srv/repos/rust/sh2c/tests/fixtures/path_join_stmt_error.sh2:3:5
+ |
+ |     path_join("a", "b")
+ |     ^^^^^^^^^^^^^^^^^^^
+Skipping tests/fixtures/path_join_stmt_error.sh2 (compilation/lowering/codegen failed)
+Processing tests/fixtures/pid_basic.sh2
+Processing tests/fixtures/pid_wait_spawn.sh2
+Processing tests/fixtures/pipe.sh2
+Processing tests/fixtures/pipe_allow_fail_middle_ignored.sh2
+Processing tests/fixtures/pipe_basic.sh2
+Processing tests/fixtures/pipe_blocks_basic.sh2
+Processing tests/fixtures/pipe_blocks_mixed_left_stmt.sh2
+
+thread 'main' (1651952) panicked at src/parser/common.rs:38:9:
+error: expected run(...) after '|' in pipeline
+--> /srv/repos/rust/sh2c/tests/fixtures/pipe_blocks_mixed_left_stmt.sh2:2:44
+ |
+ |   pipe run("sh", "-c", "echo a; echo b") | { run("grep", "b") }
+ |                                            ^
+Skipping tests/fixtures/pipe_blocks_mixed_left_stmt.sh2 (compilation/lowering/codegen failed)
+Processing tests/fixtures/pipe_blocks_mixed_right_stmt.sh2
+Processing tests/fixtures/pipe_fail_first.sh2
+Processing tests/fixtures/pipe_fail_middle.sh2
+Processing tests/fixtures/pipe_posix_errexit_safe.sh2
+Processing tests/fixtures/pipe_two_fail_rightmost_wins.sh2
+Processing tests/fixtures/pipeblocks_fail_middle.sh2
+Processing tests/fixtures/posix_params.sh2
+Processing tests/fixtures/posix_runtime_error.sh2
+Processing tests/fixtures/print_args.sh2
+Processing tests/fixtures/print_err.sh2
+Processing tests/fixtures/print_err_args.sh2
+Processing tests/fixtures/print_err_exec.sh2
+Processing tests/fixtures/proc_params_builtins.sh2
+Processing tests/fixtures/quote_args_disallowed_concat.sh2
+
+thread 'main' (1651952) panicked at src/codegen.rs:698:31:
+Cannot emit boolean/list value as string
+Skipping tests/fixtures/quote_args_disallowed_concat.sh2 (compilation/lowering/codegen failed)
+Processing tests/fixtures/quote_args_splice.sh2
+Processing tests/fixtures/quote_backslash.sh2
+Processing tests/fixtures/quote_concat_no_split.sh2
+Processing tests/fixtures/quote_concat_var.sh2
+Processing tests/fixtures/quote_dollar_literal.sh2
+Processing tests/fixtures/quote_glob_star.sh2
+Processing tests/fixtures/quote_literal_dollar_backslash_star.sh2
+Processing tests/fixtures/quote_literal_newline.sh2
+Processing tests/fixtures/quote_literal_spaces.sh2
+Processing tests/fixtures/quote_newline_literal.sh2
+Processing tests/fixtures/quote_space_arg.sh2
+Processing tests/fixtures/quoting_backslash_literal.sh2
+Processing tests/fixtures/quoting_dollar_literal.sh2
+Processing tests/fixtures/quoting_glob_run.sh2
+Processing tests/fixtures/quoting_newline_literal.sh2
+Processing tests/fixtures/quoting_single_quote.sh2
+Processing tests/fixtures/quoting_space_argv_count.sh2
+Processing tests/fixtures/read_file_basic.sh2
+Processing tests/fixtures/read_file_missing.sh2
+Processing tests/fixtures/read_file_stmt_error.sh2
+
+thread 'main' (1651952) panicked at src/lower.rs:540:17:
+error: read_file() returns a value; use it in an expression (e.g., let s = read_file("foo.txt"))
+--> /srv/repos/rust/sh2c/tests/fixtures/read_file_stmt_error.sh2:3:5
+ |
+ |     read_file("foo.txt")
+ |     ^^^^^^^^^^^^^^^^^^^^
+Skipping tests/fixtures/read_file_stmt_error.sh2 (compilation/lowering/codegen failed)
+Processing tests/fixtures/redirect_io.sh2
+Processing tests/fixtures/require_arity_error.sh2
+
+thread 'main' (1651952) panicked at src/lower.rs:481:21:
+error: require() requires exactly one argument (cmd_list)
+--> /srv/repos/rust/sh2c/tests/fixtures/require_arity_error.sh2:3:5
+ |
+ |     require()
+ |     ^^^^^^^^^
+Skipping tests/fixtures/require_arity_error.sh2 (compilation/lowering/codegen failed)
+Processing tests/fixtures/require_as_expression_is_error.sh2
+
+thread 'main' (1651952) panicked at src/lower.rs:990:17:
+error: require() is a statement, not an expression
+--> /srv/repos/rust/sh2c/tests/fixtures/require_as_expression_is_error.sh2:3:13
+ |
+ |     let r = require(["sh"])
+ |             ^^^^^^^^^^^^^^^
+Skipping tests/fixtures/require_as_expression_is_error.sh2 (compilation/lowering/codegen failed)
+Processing tests/fixtures/require_expr_error.sh2
+
+thread 'main' (1651952) panicked at src/lower.rs:990:17:
+error: require() is a statement, not an expression
+--> /srv/repos/rust/sh2c/tests/fixtures/require_expr_error.sh2:3:13
+ |
+ |     let x = require(["a"])
+ |             ^^^^^^^^^^^^^^
+Skipping tests/fixtures/require_expr_error.sh2 (compilation/lowering/codegen failed)
+Processing tests/fixtures/require_missing.sh2
+Processing tests/fixtures/require_non_literal_is_error.sh2
+Processing tests/fixtures/require_non_string_element_is_error.sh2
+Processing tests/fixtures/require_ok.sh2
+Processing tests/fixtures/require_ok_mock.sh2
+Processing tests/fixtures/return_arg.sh2
+Processing tests/fixtures/return_basic.sh2
+Processing tests/fixtures/return_fs_predicate.sh2
+Processing tests/fixtures/return_len.sh2
+Processing tests/fixtures/return_not.sh2
+Processing tests/fixtures/return_number.sh2
+Processing tests/fixtures/return_status.sh2
+Processing tests/fixtures/run_allow_fail_does_not_trigger_try_catch.sh2
+Processing tests/fixtures/run_allow_fail_duplicate.sh2
+
+thread 'main' (1651952) panicked at src/parser/common.rs:38:9:
+error: allow_fail duplicate
+--> /srv/repos/rust/sh2c/tests/fixtures/run_allow_fail_duplicate.sh2:1:61
+ |
+ | func main() { run("echo", allow_fail=true, "hi", allow_fail=false) }
+ |                                                             ^^^^^
+Skipping tests/fixtures/run_allow_fail_duplicate.sh2 (compilation/lowering/codegen failed)
+Processing tests/fixtures/run_allow_fail_duplicate_first_false.sh2
+
+thread 'main' (1651952) panicked at src/parser/common.rs:38:9:
+error: allow_fail duplicate
+--> /srv/repos/rust/sh2c/tests/fixtures/run_allow_fail_duplicate_first_false.sh2:1:62
+ |
+ | func main() { run("echo", allow_fail=false, "hi", allow_fail=true) }
+ |                                                              ^^^^
+Skipping tests/fixtures/run_allow_fail_duplicate_first_false.sh2 (compilation/lowering/codegen failed)
+Processing tests/fixtures/run_allow_fail_in_capture_rejected.sh2
+
+thread 'main' (1651952) panicked at src/parser/common.rs:38:9:
+error: run options like allow_fail=... are not supported inside command substitution
+--> /srv/repos/rust/sh2c/tests/fixtures/run_allow_fail_in_capture_rejected.sh2:2:47
+ |
+ |     let x = capture(run("sh", "-c", "exit 7", allow_fail=true))
+ |                                               ^^^^^^^^^^
+Skipping tests/fixtures/run_allow_fail_in_capture_rejected.sh2 (compilation/lowering/codegen failed)
+Processing tests/fixtures/run_allow_fail_non_bool.sh2
+
+thread 'main' (1651952) panicked at src/parser/common.rs:38:9:
+error: allow_fail must be bool
+--> /srv/repos/rust/sh2c/tests/fixtures/run_allow_fail_non_bool.sh2:1:44
+ |
+ | func main() { run("echo", "hi", allow_fail=1) }
+ |                                            ^
+Skipping tests/fixtures/run_allow_fail_non_bool.sh2 (compilation/lowering/codegen failed)
+Processing tests/fixtures/run_allow_fail_pipe_last.sh2
+Processing tests/fixtures/run_allow_fail_pipe_segment.sh2
+Processing tests/fixtures/run_allow_fail_sets_status.sh2
+Processing tests/fixtures/run_allow_fail_try.sh2
+Processing tests/fixtures/run_allow_fail_unknown_option.sh2
+
+thread 'main' (1651952) panicked at src/parser/common.rs:38:9:
+error: Expected expression, got Equals
+--> /srv/repos/rust/sh2c/tests/fixtures/run_allow_fail_unknown_option.sh2:1:37
+ |
+ | func main() { run("echo", "hi", nope=true) }
+ |                                     ^
+Skipping tests/fixtures/run_allow_fail_unknown_option.sh2 (compilation/lowering/codegen failed)
+Processing tests/fixtures/run_args.sh2
+Processing tests/fixtures/run_disallow_fail_try.sh2
+Processing tests/fixtures/runtime_error_loc.sh2
+Processing tests/fixtures/self_pid_arith.sh2
+Processing tests/fixtures/set_env_and_read.sh2
+Processing tests/fixtures/set_env_args_invalid.sh2
+
+thread 'main' (1651952) panicked at src/lower.rs:724:25:
+error: set env.<NAME> requires a scalar string/number; lists/args are not supported
+--> /srv/repos/rust/sh2c/tests/fixtures/set_env_args_invalid.sh2:2:3
+ |
+ |   set env.FOO = args
+ |   ^^^^^^^^^^^^^^^^^^
+Skipping tests/fixtures/set_env_args_invalid.sh2 (compilation/lowering/codegen failed)
+Processing tests/fixtures/set_env_basic.sh2
+Processing tests/fixtures/set_env_list_invalid.sh2
+
+thread 'main' (1651952) panicked at src/lower.rs:724:25:
+error: set env.<NAME> requires a scalar string/number; lists/args are not supported
+--> /srv/repos/rust/sh2c/tests/fixtures/set_env_list_invalid.sh2:2:3
+ |
+ |   set env.FOO = ["a", "b"]
+ |   ^^^^^^^^^^^^^^^^^^^^^^^^
+Skipping tests/fixtures/set_env_list_invalid.sh2 (compilation/lowering/codegen failed)
+Processing tests/fixtures/set_env_scalar_ok.sh2
+Processing tests/fixtures/set_var_basic.sh2
+Processing tests/fixtures/set_var_list.sh2
+
+thread 'main' (1651952) panicked at src/codegen.rs:917:21:
+Array assignment is not supported in POSIX sh target
+Skipping tests/fixtures/set_var_list.sh2 (compilation/lowering/codegen failed)
+Processing tests/fixtures/sh_block.sh2
+Processing tests/fixtures/sh_raw.sh2
+Processing tests/fixtures/source_basic.sh2
+Processing tests/fixtures/spawn_async_file.sh2
+Processing tests/fixtures/spawn_block_basic.sh2
+Processing tests/fixtures/spawn_group.sh2
+Processing tests/fixtures/spawn_run.sh2
+Processing tests/fixtures/spawn_sh_block.sh2
+Processing tests/fixtures/spawn_wait_status_pid.sh2
+Processing tests/fixtures/status_after_run_no_wrapper.sh2
+Processing tests/fixtures/status_basic.sh2
+Processing tests/fixtures/status_builtin.sh2
+Processing tests/fixtures/status_cond.sh2
+Processing tests/fixtures/string_before_after_basic.sh2
+Processing tests/fixtures/string_coalesce_basic.sh2
+Processing tests/fixtures/string_default_alias.sh2
+Processing tests/fixtures/string_quote_escape.sh2
+Processing tests/fixtures/string_replace_basic.sh2
+Processing tests/fixtures/string_split_basic.sh2
+Processing tests/fixtures/string_split_empty_sep_noop.sh2
+Processing tests/fixtures/string_split_sep_not_found.sh2
+Processing tests/fixtures/string_split_trailing_and_empty.sh2
+Processing tests/fixtures/string_trim_basic.sh2
+Processing tests/fixtures/string_utils_multiline.sh2
+Processing tests/fixtures/subshell_basic.sh2
+Processing tests/fixtures/subshell_group_scope.sh2
+Processing tests/fixtures/system_vars_builtins.sh2
+
+thread 'main' (1651952) panicked at src/codegen.rs:611:35:
+uid() is not supported in POSIX sh target
+Skipping tests/fixtures/system_vars_builtins.sh2 (compilation/lowering/codegen failed)
+Processing tests/fixtures/target_posix_basic.sh2
+Processing tests/fixtures/target_posix_env_indirect_unsupported.sh2
+
+thread 'main' (1651952) panicked at src/codegen.rs:596:39:
+env(var_name) is not supported in POSIX sh target; use env("NAME") or env.NAME
+Skipping tests/fixtures/target_posix_env_indirect_unsupported.sh2 (compilation/lowering/codegen failed)
+Processing tests/fixtures/target_posix_list_unsupported.sh2
+
+thread 'main' (1651952) panicked at src/codegen.rs:917:21:
+Array assignment is not supported in POSIX sh target
+Skipping tests/fixtures/target_posix_list_unsupported.sh2 (compilation/lowering/codegen failed)
+Processing tests/fixtures/target_posix_params.sh2
+Processing tests/fixtures/target_posix_rejects_index.sh2
+
+thread 'main' (1651952) panicked at src/codegen.rs:506:25:
+List indexing is not supported in POSIX sh target
+Skipping tests/fixtures/target_posix_rejects_index.sh2 (compilation/lowering/codegen failed)
+Processing tests/fixtures/target_scalar_print.sh2
+Processing tests/fixtures/toplevel_let_and_run.sh2
+Processing tests/fixtures/toplevel_print.sh2
+Processing tests/fixtures/toplevel_with_explicit_main_is_error.sh2
+
+thread 'main' (1651952) panicked at src/lower.rs:76:13:
+error: Top-level statements are not allowed when `func main` is defined; move statements into main or remove main to use implicit main.
+--> /srv/repos/rust/sh2c/tests/fixtures/toplevel_with_explicit_main_is_error.sh2:1:1
+ |
+ | 
+ | ^
+Skipping tests/fixtures/toplevel_with_explicit_main_is_error.sh2 (compilation/lowering/codegen failed)
+Processing tests/fixtures/truthiness_cmdsub_empty.sh2
+Processing tests/fixtures/truthiness_cmdsub_nonempty.sh2
+Processing tests/fixtures/truthiness_empty_literal.sh2
+Processing tests/fixtures/truthiness_empty_var.sh2
+Processing tests/fixtures/truthiness_string_zero_true.sh2
+Processing tests/fixtures/truthiness_unset_var.sh2
+Processing tests/fixtures/truthiness_while_scalar.sh2
+Processing tests/fixtures/truthy_args_disallowed.sh2
+
+thread 'main' (1651952) panicked at src/codegen.rs:811:13:
+args/list is not a valid condition; use count(...) > 0
+Skipping tests/fixtures/truthy_args_disallowed.sh2 (compilation/lowering/codegen failed)
+Processing tests/fixtures/truthy_capture.sh2
+Processing tests/fixtures/truthy_empty_string.sh2
+Processing tests/fixtures/truthy_list_disallowed.sh2
+
+thread 'main' (1651952) panicked at src/codegen.rs:811:13:
+args/list is not a valid condition; use count(...) > 0
+Skipping tests/fixtures/truthy_list_disallowed.sh2 (compilation/lowering/codegen failed)
+Processing tests/fixtures/truthy_nonempty_string.sh2
+Processing tests/fixtures/truthy_not_scalar.sh2
+Processing tests/fixtures/truthy_whitespace_newline.sh2
+Processing tests/fixtures/truthy_zero.sh2
+Processing tests/fixtures/try_catch_basic.sh2
+Processing tests/fixtures/try_catch_success.sh2
+Processing tests/fixtures/try_run_captures.sh2
+Processing tests/fixtures/try_run_expr_invalid.sh2
+
+thread 'main' (1651952) panicked at src/lower.rs:981:17:
+error: try_run() must be bound via let (e.g., let r = try_run(...))
+--> /srv/repos/rust/sh2c/tests/fixtures/try_run_expr_invalid.sh2:2:11
+ |
+ |     print(try_run("echo", "fail"))
+ |           ^^^^^^^^^^^^^^^^^^^^^^^
+Skipping tests/fixtures/try_run_expr_invalid.sh2 (compilation/lowering/codegen failed)
+Processing tests/fixtures/try_run_field_base_invalid.sh2
+
+thread 'main' (1651952) panicked at src/lower.rs:863:29:
+error: .stdout is only valid on try_run() results (bind via let)
+--> /srv/repos/rust/sh2c/tests/fixtures/try_run_field_base_invalid.sh2:3:9
+ |
+ |   print(x.stdout)
+ |         ^^^^^^^^
+Skipping tests/fixtures/try_run_field_base_invalid.sh2 (compilation/lowering/codegen failed)
+Processing tests/fixtures/try_run_field_group_leak_invalid.sh2
+
+thread 'main' (1651952) panicked at src/lower.rs:863:29:
+error: .stdout is only valid on try_run() results (bind via let)
+--> /srv/repos/rust/sh2c/tests/fixtures/try_run_field_group_leak_invalid.sh2:6:9
+ |
+ |   print(r.stdout)
+ |         ^^^^^^^^
+Skipping tests/fixtures/try_run_field_group_leak_invalid.sh2 (compilation/lowering/codegen failed)
+Processing tests/fixtures/try_run_field_if_both_ok.sh2
+Processing tests/fixtures/try_run_field_if_overwrite_invalid.sh2
+
+thread 'main' (1651952) panicked at src/lower.rs:863:29:
+error: .stdout is only valid on try_run() results (bind via let)
+--> /srv/repos/rust/sh2c/tests/fixtures/try_run_field_if_overwrite_invalid.sh2:6:9
+ |
+ |   print(r.stdout)
+ |         ^^^^^^^^
+Skipping tests/fixtures/try_run_field_if_overwrite_invalid.sh2 (compilation/lowering/codegen failed)
+Processing tests/fixtures/try_run_field_if_partial_invalid.sh2
+
+thread 'main' (1651952) panicked at src/lower.rs:863:29:
+error: .stdout is only valid on try_run() results (bind via let)
+--> /srv/repos/rust/sh2c/tests/fixtures/try_run_field_if_partial_invalid.sh2:6:9
+ |
+ |   print(r.stdout)
+ |         ^^^^^^^^
+Skipping tests/fixtures/try_run_field_if_partial_invalid.sh2 (compilation/lowering/codegen failed)
+Processing tests/fixtures/try_run_field_shadow_invalid.sh2
+
+thread 'main' (1651952) panicked at src/lower.rs:863:29:
+error: .stdout is only valid on try_run() results (bind via let)
+--> /srv/repos/rust/sh2c/tests/fixtures/try_run_field_shadow_invalid.sh2:4:9
+ |
+ |   print(r.stdout)
+ |         ^^^^^^^^
+Skipping tests/fixtures/try_run_field_shadow_invalid.sh2 (compilation/lowering/codegen failed)
+Processing tests/fixtures/try_run_field_subshell_no_leak_ok.sh2
+Processing tests/fixtures/try_run_field_unknown_invalid.sh2
+
+thread 'main' (1651952) panicked at src/lower.rs:869:22:
+error: Unknown field 'nope'. Supported: status, stdout, stderr, flags, positionals.
+--> /srv/repos/rust/sh2c/tests/fixtures/try_run_field_unknown_invalid.sh2:3:9
+ |
+ |   print(r.nope)
+ |         ^^^^^^
+Skipping tests/fixtures/try_run_field_unknown_invalid.sh2 (compilation/lowering/codegen failed)
+Processing tests/fixtures/try_run_field_with_cwd_leak_invalid.sh2
+Processing tests/fixtures/try_run_field_with_env_leak_invalid.sh2
+Processing tests/fixtures/try_run_field_with_log_leak_invalid.sh2
+
+thread 'main' (1651952) panicked at src/codegen.rs:1449:17:
+with log(...) is not supported in POSIX sh target
+Skipping tests/fixtures/try_run_field_with_log_leak_invalid.sh2 (compilation/lowering/codegen failed)
+Processing tests/fixtures/try_run_field_with_redirect_leak_invalid.sh2
+
+thread 'main' (1651952) panicked at src/lower.rs:863:29:
+error: .stdout is only valid on try_run() results (bind via let)
+--> /srv/repos/rust/sh2c/tests/fixtures/try_run_field_with_redirect_leak_invalid.sh2:6:11
+ |
+ |     print(r.stdout) // Should FAIL because WithRedirect PERsists
+ |           ^^^^^^^^
+Skipping tests/fixtures/try_run_field_with_redirect_leak_invalid.sh2 (compilation/lowering/codegen failed)
+Processing tests/fixtures/try_run_field_with_redirect_leak_ok.sh2
+Processing tests/fixtures/try_run_fields.sh2
+Processing tests/fixtures/try_run_stmt_invalid.sh2
+
+thread 'main' (1651952) panicked at src/lower.rs:595:17:
+error: try_run() must be bound via let (e.g., let r = try_run(...))
+--> /srv/repos/rust/sh2c/tests/fixtures/try_run_stmt_invalid.sh2:2:5
+ |
+ |     try_run("echo", "fail")
+ |     ^^^^^^^^^^^^^^^^^^^^^^^
+Skipping tests/fixtures/try_run_stmt_invalid.sh2 (compilation/lowering/codegen failed)
+Processing tests/fixtures/try_run_success.sh2
+Processing tests/fixtures/uid_ppid_pwd_basic.sh2
+
+thread 'main' (1651952) panicked at src/codegen.rs:611:35:
+uid() is not supported in POSIX sh target
+Skipping tests/fixtures/uid_ppid_pwd_basic.sh2 (compilation/lowering/codegen failed)
+Processing tests/fixtures/wait_all.sh2
+Processing tests/fixtures/wait_arg.sh2
+Processing tests/fixtures/wait_complex.sh2
+Processing tests/fixtures/wait_list_basic.sh2
+Processing tests/fixtures/wait_list_complex.sh2
+Processing tests/fixtures/wait_list_literal.sh2
+Processing tests/fixtures/wait_list_var.sh2
+Processing tests/fixtures/wait_no_arg.sh2
+Processing tests/fixtures/wait_pid_basic.sh2
+Processing tests/fixtures/wait_pid_literal.sh2
+Processing tests/fixtures/wait_pid_var.sh2
+Processing tests/fixtures/which_arity_error.sh2
+
+thread 'main' (1651952) panicked at src/lower.rs:969:21:
+error: which() requires exactly 1 argument (cmd)
+--> /srv/repos/rust/sh2c/tests/fixtures/which_arity_error.sh2:3:13
+ |
+ |     let x = which()
+ |             ^^^^^^^
+Skipping tests/fixtures/which_arity_error.sh2 (compilation/lowering/codegen failed)
+Processing tests/fixtures/which_found.sh2
+Processing tests/fixtures/which_found_mock.sh2
+Processing tests/fixtures/which_missing.sh2
+Processing tests/fixtures/which_stmt_error.sh2
+
+thread 'main' (1651952) panicked at src/lower.rs:478:17:
+error: which() returns a value; use it in an expression (e.g., let p = which("cmd"))
+--> /srv/repos/rust/sh2c/tests/fixtures/which_stmt_error.sh2:3:5
+ |
+ |     which("x")
+ |     ^^^^^^^^^^
+Skipping tests/fixtures/which_stmt_error.sh2 (compilation/lowering/codegen failed)
+Processing tests/fixtures/while_basic.sh2
+Processing tests/fixtures/with_cwd.sh2
+Processing tests/fixtures/with_cwd_check.sh2
+Processing tests/fixtures/with_env.sh2
+Processing tests/fixtures/with_env_colon_basic.sh2
+Processing tests/fixtures/with_log_append.sh2
+
+thread 'main' (1651952) panicked at src/codegen.rs:1449:17:
+with log(...) is not supported in POSIX sh target
+Skipping tests/fixtures/with_log_append.sh2 (compilation/lowering/codegen failed)
+Processing tests/fixtures/with_log_append_duplicate.sh2
+
+thread 'main' (1651952) panicked at src/codegen.rs:1449:17:
+with log(...) is not supported in POSIX sh target
+Skipping tests/fixtures/with_log_append_duplicate.sh2 (compilation/lowering/codegen failed)
+Processing tests/fixtures/with_log_append_duplicate_first_false.sh2
+
+thread 'main' (1651952) panicked at src/codegen.rs:1449:17:
+with log(...) is not supported in POSIX sh target
+Skipping tests/fixtures/with_log_append_duplicate_first_false.sh2 (compilation/lowering/codegen failed)
+Processing tests/fixtures/with_log_append_non_bool.sh2
+
+thread 'main' (1651952) panicked at src/parser/common.rs:38:9:
+error: append must be true/false
+--> /srv/repos/rust/sh2c/tests/fixtures/with_log_append_non_bool.sh2:1:42
+ |
+ | func main() { with log("out.log", append=1) { print("A") } }
+ |                                          ^
+Skipping tests/fixtures/with_log_append_non_bool.sh2 (compilation/lowering/codegen failed)
+Processing tests/fixtures/with_log_basic.sh2
+
+thread 'main' (1651952) panicked at src/codegen.rs:1449:17:
+with log(...) is not supported in POSIX sh target
+Skipping tests/fixtures/with_log_basic.sh2 (compilation/lowering/codegen failed)
+Processing tests/fixtures/with_log_posix_unsupported.sh2
+
+thread 'main' (1651952) panicked at src/codegen.rs:1449:17:
+with log(...) is not supported in POSIX sh target
+Skipping tests/fixtures/with_log_posix_unsupported.sh2 (compilation/lowering/codegen failed)
+Processing tests/fixtures/with_log_try_catch.sh2
+
+thread 'main' (1651952) panicked at src/codegen.rs:1449:17:
+with log(...) is not supported in POSIX sh target
+Skipping tests/fixtures/with_log_try_catch.sh2 (compilation/lowering/codegen failed)
+Processing tests/fixtures/with_log_unknown_option.sh2
+
+thread 'main' (1651952) panicked at src/parser/common.rs:38:9:
+error: Expected option name (e.g. append)
+--> /srv/repos/rust/sh2c/tests/fixtures/with_log_unknown_option.sh2:1:35
+ |
+ | func main() { with log("out.log", nope=true) { print("A") } }
+ |                                   ^^^^
+Skipping tests/fixtures/with_log_unknown_option.sh2 (compilation/lowering/codegen failed)
+Processing tests/fixtures/with_redirect_combo.sh2
+Processing tests/fixtures/with_redirect_cyclic.sh2
+
+thread 'main' (1651952) panicked at src/codegen.rs:1564:25:
+Cyclic redirection: stdout to stderr AND stderr to stdout is not supported
+Skipping tests/fixtures/with_redirect_cyclic.sh2 (compilation/lowering/codegen failed)
+Processing tests/fixtures/with_redirect_stderr_noop.sh2
+Processing tests/fixtures/with_redirect_stderr_to_stdout.sh2
+Processing tests/fixtures/with_redirect_stdin_and_stdout_file.sh2
+Processing tests/fixtures/with_redirect_stdin_file.sh2
+Processing tests/fixtures/with_redirect_stdout.sh2
+Processing tests/fixtures/with_redirect_stdout_append.sh2
+Processing tests/fixtures/with_redirect_stdout_to_stderr.sh2
+Processing tests/fixtures/with_redirect_stdout_to_stderr_and_stderr_file.sh2
+Processing tests/fixtures/write_file_append.sh2
+Processing tests/fixtures/write_file_bad_arg.sh2
+
+thread 'main' (1651952) panicked at src/lower.rs:522:25:
+error: write_file() third argument must be a boolean literal
+--> /srv/repos/rust/sh2c/tests/fixtures/write_file_bad_arg.sh2:3:5
+ |
+ |     write_file("foo.txt", "content", "true") 
+ |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Skipping tests/fixtures/write_file_bad_arg.sh2 (compilation/lowering/codegen failed)
+Processing tests/fixtures/write_file_expr_error.sh2
+
+thread 'main' (1651952) panicked at src/lower.rs:1012:17:
+error: write_file() is a statement, not an expression
+--> /srv/repos/rust/sh2c/tests/fixtures/write_file_expr_error.sh2:3:13
+ |
+ |     let x = write_file("foo.txt", "content")
+ |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Skipping tests/fixtures/write_file_expr_error.sh2 (compilation/lowering/codegen failed)
+Processing tests/fixtures/write_file_overwrite.sh2
+Processing tests/fixtures/write_file_spaces.sh2

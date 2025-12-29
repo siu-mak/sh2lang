@@ -5,7 +5,7 @@ mod stmt;
 use self::common::Parser;
 use crate::ast::*;
 use crate::lexer::{Token, TokenKind};
-use crate::span::{SourceMap, Span};
+use crate::span::SourceMap;
 use std::collections::HashMap;
 
 pub fn parse(tokens: &[Token], sm: &SourceMap, file: &str) -> Program {

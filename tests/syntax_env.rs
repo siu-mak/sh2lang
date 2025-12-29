@@ -1,6 +1,6 @@
 use sh2c::ast::ExprKind;
 use sh2c::ast::StmtKind;
-use sh2c::ast::{self, Expr, Stmt};
+use sh2c::ast::{Expr, Stmt};
 mod common;
 use common::*;
 

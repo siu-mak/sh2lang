@@ -1,7 +1,6 @@
 use super::common::Parser;
 use crate::ast::*;
-use crate::lexer::{Token, TokenKind};
-use crate::span::Span;
+use crate::lexer::TokenKind;
 
 impl<'a> Parser<'a> {
     pub fn parse_stmt(&mut self) -> Stmt {
