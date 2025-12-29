@@ -46,7 +46,6 @@ pub fn assert_codegen_matches_snapshot(fixture_name: &str) {
     let expected_path = format!("tests/fixtures/{}.sh.expected", fixture_name);
     
     let expected = fs::read_to_string(&expected_path).expect("Failed to read expected codegen fixture");
-    
     let output = compile_path_to_shell(Path::new(&sh2_path), TargetShell::Bash);
     assert_eq!(output.trim(), expected.trim(), "Codegen mismatch for {}", fixture_name);
 }
@@ -83,9 +82,9 @@ pub fn assert_codegen_matches_snapshot_target(fixture_name: &str, target: Target
     let default_expected_path = format!("tests/fixtures/{}.sh.expected", fixture_name);
     
     let expected_path = if Path::new(&target_expected_path).exists() {
-        target_expected_path
+        target_expected_path.clone()
     } else {
-        default_expected_path
+        default_expected_path.clone()
     };
 
     let expected = fs::read_to_string(&expected_path).expect("Failed to read expected codegen fixture");

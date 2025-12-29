@@ -6,16 +6,216 @@ pub enum TargetShell {
     Posix,
 }
 
+#[derive(Debug, Default, Clone)]
+pub struct PreludeUsage {
+    pub coalesce: bool,
+    pub trim: bool,
+    pub before: bool,
+    pub after: bool,
+    pub replace: bool,
+    pub split: bool,
+    pub matches: bool,
+    pub parse_args: bool,
+    pub args_flags: bool,
+    pub args_positionals: bool,
+    pub args_flag_get: bool,
+    pub list_get: bool,
+    pub load_envfile: bool,
+    pub save_envfile: bool,
+    pub json_kv: bool,
+    pub which: bool,
+    pub require: bool,
+    pub tmpfile: bool,
+    pub read_file: bool,
+    pub write_file: bool,
+    pub log: bool,
+    pub home: bool,
+    pub path_join: bool,
+    pub loc: bool,
+}
+
+fn scan_usage(funcs: &[Function]) -> PreludeUsage {
+    let mut usage = PreludeUsage::default();
+    for f in funcs {
+        for cmd in &f.commands {
+            visit_cmd(cmd, &mut usage);
+        }
+    }
+    usage
+}
+
+fn visit_cmd(cmd: &Cmd, usage: &mut PreludeUsage) {
+    match cmd {
+        Cmd::Assign(_, val, loc) => { 
+            if loc.is_some() { usage.loc = true; }
+            visit_val(val, usage);
+        },
+        Cmd::Exec { args, loc, .. } => { 
+            if loc.is_some() { usage.loc = true; }
+            for a in args { visit_val(a, usage) } 
+        },
+        Cmd::Print(val) | Cmd::PrintErr(val) => visit_val(val, usage),
+        Cmd::If { cond, then_body, elifs, else_body } => {
+            visit_val(cond, usage);
+            for c in then_body { visit_cmd(c, usage); }
+            for (v, c) in elifs { visit_val(v, usage); for i in c { visit_cmd(i, usage); } }
+            for c in else_body { visit_cmd(c, usage); }
+        }
+        Cmd::Pipe(segs, loc) => { 
+            if loc.is_some() { usage.loc = true; }
+            for (args, _) in segs { for a in args { visit_val(a, usage) } } 
+        },
+        Cmd::PipeBlocks(segs, loc) => { 
+            if loc.is_some() { usage.loc = true; }
+            for s in segs { for c in s { visit_cmd(c, usage) } } 
+        },
+        Cmd::Case { expr, arms } => {
+            visit_val(expr, usage);
+            for (_, body) in arms { for c in body { visit_cmd(c, usage); } }
+        }
+        Cmd::For { items, body, .. } => {
+             for i in items { visit_val(i, usage); }
+             for c in body { visit_cmd(c, usage); }
+        }
+        Cmd::ForMap { body, .. } => {
+             for c in body { visit_cmd(c, usage); }
+        }
+        Cmd::While { cond, body } => {
+             visit_val(cond, usage);
+             for c in body { visit_cmd(c, usage); }
+        }
+        Cmd::Require(vals) => {
+             usage.require = true;
+             for v in vals { visit_val(v, usage); }
+        }
+        Cmd::Log { msg, .. } => {
+             usage.log = true;
+             visit_val(msg, usage);
+        }
+        Cmd::WriteFile { path, content, .. } => {
+             usage.write_file = true;
+             visit_val(path, usage);
+             visit_val(content, usage);
+        }
+        Cmd::Cd(val) => visit_val(val, usage),
+        Cmd::Call { args, .. } => for a in args { visit_val(a, usage) },
+        Cmd::Subshell { body } | Cmd::Group { body } => for c in body { visit_cmd(c, usage) },
+        Cmd::WithRedirect { stdout, stderr, stdin, body } => {
+             if let Some(t) = stdout { visit_redirect(t, usage); }
+             if let Some(t) = stderr { visit_redirect(t, usage); }
+             if let Some(t) = stdin { visit_redirect(t, usage); }
+             for c in body { visit_cmd(c, usage); }
+        }
+        Cmd::Spawn(inner) => visit_cmd(inner, usage),
+        Cmd::Wait(opt) => if let Some(v) = opt { visit_val(v, usage) },
+        Cmd::TryCatch { try_body, catch_body } => {
+             for c in try_body { visit_cmd(c, usage); }
+             for c in catch_body { visit_cmd(c, usage); }
+        }
+        Cmd::AndThen { left, right } | Cmd::OrElse { left, right } => {
+             for c in left { visit_cmd(c, usage); }
+             for c in right { visit_cmd(c, usage); }
+        }
+        Cmd::Export { value, .. } => if let Some(v) = value { visit_val(v, usage) },
+        Cmd::Source(v) => visit_val(v, usage),
+        Cmd::ExecReplace(args, loc) => { 
+            if loc.is_some() { usage.loc = true; }
+            for a in args { visit_val(a, usage) } 
+        },
+        Cmd::SaveEnvfile { path, env } => {
+             usage.save_envfile = true;
+             visit_val(path, usage);
+             visit_val(env, usage);
+        }
+        Cmd::WithEnv { bindings, body } => {
+            for (_, v) in bindings { visit_val(v, usage); }
+            for c in body { visit_cmd(c, usage); }
+        }
+        Cmd::WithLog { path, body, .. } => {
+            visit_val(path, usage);
+            for c in body { visit_cmd(c, usage); }
+        }
+        Cmd::WithCwd { path, body } => {
+            visit_val(path, usage);
+            for c in body { visit_cmd(c, usage); }
+        }
+        Cmd::Break | Cmd::Continue | Cmd::Return(_) | Cmd::Exit(_) | Cmd::Unset(_) | Cmd::Raw(_) => {
+             if let Cmd::Return(Some(v)) = cmd { visit_val(v, usage); }
+             if let Cmd::Exit(Some(v)) = cmd { visit_val(v, usage); }
+        }
+    }
+}
+
+fn visit_redirect(target: &RedirectTarget, usage: &mut PreludeUsage) {
+    match target {
+        RedirectTarget::File { path, .. } => visit_val(path, usage),
+        _ => {}
+    }
+}
+
+fn visit_val(val: &Val, usage: &mut PreludeUsage) {
+    match val {
+        Val::Call { name, args } => {
+            if name == "default" { usage.coalesce = true; } 
+            match name.as_str() {
+                "trim" => usage.trim = true,
+                "before" => usage.before = true,
+                "after" => usage.after = true,
+                "replace" => usage.replace = true,
+                "split" => usage.split = true,
+                "coalesce" => usage.coalesce = true,
+                _ => {}
+            }
+            for a in args { visit_val(a, usage); }
+        }
+        Val::Which(v) => { usage.which = true; visit_val(v, usage); },
+        Val::ReadFile(v) => { usage.read_file = true; visit_val(v, usage); },
+        Val::Home => { usage.home = true; },
+        Val::PathJoin(args) => { usage.path_join = true; for a in args { visit_val(a, usage); } },
+        Val::Concat(l, r) | Val::And(l, r) | Val::Or(l, r) => { visit_val(l, usage); visit_val(r, usage); },
+        Val::Arith { left, right, .. } | Val::Compare { left, right, .. } => { visit_val(left, usage); visit_val(right, usage); },
+        Val::Not(v) | Val::Exists(v) | Val::IsDir(v) | Val::IsFile(v) | Val::IsSymlink(v) | Val::IsExec(v) | Val::IsReadable(v) | Val::IsWritable(v) | Val::IsNonEmpty(v) | Val::Len(v) | Val::Count(v) | Val::BoolStr(v) | Val::Input(v) | Val::Confirm(v) | Val::Env(v) | Val::ArgsFlags(v) | Val::ArgsPositionals(v) | Val::LoadEnvfile(v) | Val::JsonKv(v) => {
+             visit_val(v, usage);
+             if let Val::ArgsFlags(_) = val { usage.args_flags = true; }
+             if let Val::ArgsPositionals(_) = val { usage.args_positionals = true; }
+             if let Val::LoadEnvfile(_) = val { usage.load_envfile = true; }
+             if let Val::JsonKv(_) = val { usage.json_kv = true; }
+        }
+        Val::Matches(t, r) => {
+            usage.matches = true;
+            visit_val(t, usage);
+            visit_val(r, usage);
+        }
+        Val::ParseArgs => usage.parse_args = true,
+        Val::Index { list, index } => {
+            visit_val(list, usage);
+            visit_val(index, usage);
+            if let Val::ArgsFlags(_) = **list { usage.args_flag_get = true; }
+            if let Val::ArgsPositionals(_) = **list { usage.list_get = true; }
+        }
+        Val::Join { list, sep } => {
+             visit_val(list, usage);
+             visit_val(sep, usage);
+        }
+        Val::TryRun(args) => {
+             usage.tmpfile = true;
+             usage.read_file = true; 
+             for a in args { visit_val(a, usage); }
+        }
+        _ => {}
+    }
+}
+
 pub fn emit(funcs: &[Function]) -> String {
     emit_with_target(funcs, TargetShell::Bash)
 }
 
 pub fn emit_with_target(funcs: &[Function], target: TargetShell) -> String {
+    let usage = scan_usage(funcs);
     let mut out = String::new();
     
-    // Existing codegen didn't emit shebang or options, but tests might expect bare functions.
-    // Preserving identical output for Bash target.
-    out.push_str(&emit_prelude(target));
+    // Usage-aware prelude emission
+    out.push_str(&emit_prelude(target, &usage));
     
     for (i, f) in funcs.iter().enumerate() {
         if i > 0 {
@@ -34,7 +234,9 @@ pub fn emit_with_target(funcs: &[Function], target: TargetShell) -> String {
         out.push_str("}\n");
     }
 
-    out.push_str("\n__sh2_parsed_args=\"$(__sh2_parse_args \"$@\")\"\n");
+    if usage.parse_args {
+        out.push_str("\n__sh2_parsed_args=\"$(__sh2_parse_args \"$@\")\"\n");
+    }
     out.push_str("__sh2_status=0\nmain \"$@\"\n");
     out
 }
@@ -1322,72 +1524,112 @@ fn emit_posix_pipeline(
     out.push_str(&format!("{}}}\n", pad));
 }
 
-fn emit_prelude(target: TargetShell) -> String {
+fn emit_prelude(target: TargetShell, usage: &PreludeUsage) -> String {
     let mut s = String::new();
-    s.push_str(r#"
-__sh2_coalesce() { if [ -n "$1" ]; then printf '%s' "$1"; else printf '%s' "$2"; fi; }
-__sh2_trim() { awk -v s="$1" 'BEGIN { sub(/^[[:space:]]+/, "", s); sub(/[[:space:]]+$/, "", s); printf "%s", s }'; }
-__sh2_before() { awk -v s="$1" -v sep="$2" 'BEGIN { n=index(s, sep); if(n==0) printf "%s", s; else printf "%s", substr(s, 1, n-1) }'; }
-__sh2_after() { awk -v s="$1" -v sep="$2" 'BEGIN { n=index(s, sep); if(n==0) printf ""; else printf "%s", substr(s, n+length(sep)) }'; }
-__sh2_replace() { awk -v s="$1" -v old="$2" -v new="$3" 'BEGIN { if(old=="") { printf "%s", s; exit } len=length(old); while(i=index(s, old)) { printf "%s%s", substr(s, 1, i-1), new; s=substr(s, i+len) } printf "%s", s }'; }
-__sh2_split() { awk -v s="$1" -v sep="$2" 'BEGIN { if(sep=="") { printf "%s", s; exit } len=length(sep); while(i=index(s, sep)) { printf "%s\n", substr(s, 1, i-1); s=substr(s, i+len) } printf "%s", s }'; }
-"#);
+    
+    if usage.coalesce { s.push_str("__sh2_coalesce() { if [ -n \"$1\" ]; then printf '%s' \"$1\"; else printf '%s' \"$2\"; fi; }\n"); }
+    if usage.trim { s.push_str(r#"__sh2_trim() { awk -v s="$1" 'BEGIN { sub(/^[[:space:]]+/, "", s); sub(/[[:space:]]+$/, "", s); printf "%s", s }'; }
+"#); }
+    if usage.before { s.push_str(r#"__sh2_before() { awk -v s="$1" -v sep="$2" 'BEGIN { n=index(s, sep); if(n==0) printf "%s", s; else printf "%s", substr(s, 1, n-1) }'; }
+"#); }
+    if usage.after { s.push_str(r#"__sh2_after() { awk -v s="$1" -v sep="$2" 'BEGIN { n=index(s, sep); if(n==0) printf ""; else printf "%s", substr(s, n+length(sep)) }'; }
+"#); }
+    if usage.replace { s.push_str(r#"__sh2_replace() { awk -v s="$1" -v old="$2" -v new="$3" 'BEGIN { if(old=="") { printf "%s", s; exit } len=length(old); while(i=index(s, old)) { printf "%s%s", substr(s, 1, i-1), new; s=substr(s, i+len) } printf "%s", s }'; }
+"#); }
+    if usage.split { s.push_str(r#"__sh2_split() { awk -v s="$1" -v sep="$2" 'BEGIN { if(sep=="") { printf "%s", s; exit } len=length(sep); while(i=index(s, sep)) { printf "%s\n", substr(s, 1, i-1); s=substr(s, i+len) } printf "%s", s }'; }
+"#); }
+
     match target {
         TargetShell::Bash => {
-            s.push_str("__sh2_err_handler() { printf \"Error in %s\\n\" \"${__sh2_loc:-unknown}\" >&2; }\n");
-            s.push_str("trap '__sh2_err_handler' ERR\n");
-            s.push_str("__sh2_matches() { [[ \"$1\" =~ $2 ]]; }\n");
-            s.push_str("__sh2_parse_args() {\n");
-            s.push_str("  local out=\"\" key val\n");
-            s.push_str("  while [ \"$#\" -gt 0 ]; do\n");
-            s.push_str("    case \"$1\" in\n");
-            s.push_str("      --) shift; while [ \"$#\" -gt 0 ]; do out=\"${out}P\t${1}\n\"; shift; done; break ;;\n");
-            s.push_str("      --*=*) key=\"${1%%=*}\"; val=\"${1#*=}\"; out=\"${out}F\t${key}\t${val}\n\" ;;\n");
-            s.push_str("      --*) key=\"$1\"; if [ \"$#\" -gt 1 ] && [ \"${2}\" != \"--\" ] && [[ ! \"$2\" =~ ^-- ]]; then val=\"$2\"; shift; else val=\"true\"; fi; out=\"${out}F\t${key}\t${val}\n\" ;;\n");
-            s.push_str("      *) out=\"${out}P\t${1}\n\" ;;\n");
-            s.push_str("    esac\n");
-            s.push_str("    shift\n");
-            s.push_str("  done\n");
-            s.push_str("  printf '%s' \"$out\"\n");
-            s.push_str("}\n");
+            if usage.loc {
+                s.push_str("__sh2_err_handler() { printf \"Error in %s\\n\" \"${__sh2_loc:-unknown}\" >&2; }\n");
+                s.push_str("trap '__sh2_err_handler' ERR\n");
+            }
+            if usage.matches { s.push_str("__sh2_matches() { [[ \"$1\" =~ $2 ]]; }\n"); }
+            if usage.parse_args {
+                s.push_str(r#"__sh2_parse_args() {
+  local out="" key val
+  while [ "$#" -gt 0 ]; do
+    case "$1" in
+      --) shift; while [ "$#" -gt 0 ]; do out="${out}P	${1}
+"; shift; done; break ;;
+      --*=*) key="${1%%=*}"; val="${1#*=}"; out="${out}F	${key}	${val}
+" ;;
+      --*) key="$1"; if [ "$#" -gt 1 ] && [ "${2}" != "--" ] && [[ ! "$2" =~ ^-- ]]; then val="$2"; shift; else val="true"; fi; out="${out}F	${key}	${val}
+" ;;
+      *) out="${out}P	${1}
+" ;;
+    esac
+    shift
+  done
+  printf '%s' "$out"
+}
+"#);
+            }
         }
         TargetShell::Posix => {
-            s.push_str("__sh2_matches() { printf '%s\\n' \"$1\" | grep -Eq -- \"$2\"; }\n");
-            s.push_str("__sh2_parse_args() {\n");
-            s.push_str("  __out=\"\" \n");
-            s.push_str("  while [ \"$#\" -gt 0 ]; do\n");
-            s.push_str("    case \"$1\" in\n");
-            s.push_str("      --) shift; while [ \"$#\" -gt 0 ]; do __out=\"${__out}P\t${1}\n\"; shift; done; break ;;\n");
-            s.push_str("      --*=*) __key=\"${1%%=*}\"; __val=\"${1#*=}\"; __out=\"${__out}F\t${__key}\t${__val}\n\" ;;\n");
-            s.push_str("      --*) __key=\"$1\"; __f=0; case \"$2\" in --*) __f=1;; esac\n");
-            s.push_str("           if [ \"$#\" -gt 1 ] && [ \"${2}\" != \"--\" ] && [ \"$__f\" = 0 ]; then __val=\"$2\"; shift; else __val=\"true\"; fi\n");
-            s.push_str("           __out=\"${__out}F\t${__key}\t${__val}\n\" ;;\n");
-            s.push_str("      *) __out=\"${__out}P\t${1}\n\" ;;\n");
-            s.push_str("    esac\n");
-            s.push_str("    shift\n");
-            s.push_str("  done\n");
-            s.push_str("  printf '%s' \"$__out\"\n");
-            s.push_str("}\n");
+            if usage.matches { s.push_str(r#"__sh2_matches() { printf '%s\n' "$1" | grep -Eq -- "$2"; }
+"#); }
+            if usage.parse_args {
+                s.push_str(r#"__sh2_parse_args() {
+  __out="" 
+  while [ "$#" -gt 0 ]; do
+    case "$1" in
+      --) shift; while [ "$#" -gt 0 ]; do __out="${__out}P	${1}
+"; shift; done; break ;;
+      --*=*) __key="${1%%=*}"; __val="${1#*=}"; __out="${__out}F	${__key}	${__val}
+" ;;
+      --*) __key="$1"; __f=0; case "$2" in --*) __f=1;; esac
+           if [ "$#" -gt 1 ] && [ "${2}" != "--" ] && [ "$__f" = 0 ]; then __val="$2"; shift; else __val="true"; fi
+           __out="${__out}F	${__key}	${__val}
+" ;;
+      *) __out="${__out}P	${1}
+" ;;
+    esac
+    shift
+  done
+  printf '%s' "$__out"
+}
+"#);
+            }
         }
     }
-    s.push_str(r##"
-__sh2_args_flags() { printf '%s' "$1" | awk '/^F\t/ { sub(/^F\t/, ""); print }'; }
-__sh2_args_positionals() { printf '%s' "$1" | awk '/^P\t/ { sub(/^P\t/, ""); print }'; }
-__sh2_args_flag_get() { printf '%s' "$1" | awk -v k="$2" -F '\t' '{ if (sub(/^F\t/, "")) { if ($1==k) v=$2 } else if ($1==k) v=$2 } END { printf "%s", v }'; }
-__sh2_list_get() { printf '%s' "$1" | awk -v i="$2" 'NR==i+1 { printf "%s", $0; exit }'; }
-__sh2_load_envfile() { if [ -r "$1" ]; then awk '{ sub(/^[[:space:]]+/, ""); sub(/[[:space:]]+$/, ""); if($0=="" || substr($0,1,1)=="#") next; if(substr($0,1,7)=="export ") sub(/^export[[:space:]]+/, ""); idx=index($0,"="); if(idx==0) next; k=substr($0,1,idx-1); v=substr($0,idx+1); sub(/^[[:space:]]+/, "", k); sub(/[[:space:]]+$/, "", k); sub(/^[[:space:]]+/, "", v); sub(/[[:space:]]+$/, "", v); len=length(v); if(len>=2){ f=substr(v,1,1); l=substr(v,len,1); if((f=="\047" && l=="\047") || (f=="\"" && l=="\"")){ v=substr(v,2,len-2) } } printf "%s\t%s\n", k, v }' "$1" 2>/dev/null || true; fi; }
-__sh2_save_envfile() { printf '%s' "$2" | awk -F '\t' 'NF>=1{ print $1 "=" $2 }' > "$1"; }
-__sh2_json_kv() { printf '%s' "$1" | awk -F '\t' 'function esc(s) { gsub(/\\/, "\\\\", s); gsub(/"/, "\\\"", s); gsub(/\t/, "\\t", s); gsub(/\r/, "\\r", s); gsub(/\n/, "\\n", s); return s; } { k=$1; v=$2; if (k == "") next; if (!(k in seen)) { ord[++n] = k; seen[k] = 1; } val[k] = v; } END { printf "{"; for (i=1; i<=n; i++) { k = ord[i]; v = val[k]; printf "%s\"%s\":\"%s\"", (i==1?"":","), esc(k), esc(v); } printf "}"; }'; }
-__sh2_which() { command -v -- "$1" 2>/dev/null || true; }
-__sh2_require() { for c in "$@"; do if ! command -v -- "$c" >/dev/null 2>&1; then printf '%s\n' "missing required command: $c" >&2; exit 127; fi; done; }
-__sh2_tmpfile() { if command -v mktemp >/dev/null 2>&1; then mktemp; else printf "%s/sh2_tmp_%s_%s" "${TMPDIR:-/tmp}" "$$" "$(awk 'BEGIN{srand();print int(rand()*1000000)}')"; fi; }
-__sh2_read_file() { cat "$1" 2>/dev/null || true; }
-__sh2_write_file() { if [ "$3" = "true" ]; then printf '%s' "$2" >> "$1"; else printf '%s' "$2" > "$1"; fi; }
-__sh2_log_now() { if [ -n "${SH2_LOG_TS:-}" ]; then printf '%s' "$SH2_LOG_TS"; return 0; fi; date '+%Y-%m-%dT%H:%M:%S%z' 2>/dev/null || date 2>/dev/null || printf '%s' 'unknown-time'; }
-__sh2_log() { if [ "$3" = "true" ]; then printf '%s\t%s\t%s\n' "$(__sh2_log_now)" "$1" "$2" >&2; else printf '%s\t%s\n' "$1" "$2" >&2; fi; }
-__sh2_home() { printf '%s' "${HOME-}"; }
-__sh2_path_join() { out=''; for p in "$@"; do [ -z "$p" ] && continue; case "$p" in /*) out="$p";; *) if [ -z "$out" ]; then out="$p"; else while [ "${out%/}" != "$out" ]; do out="${out%/}"; done; while [ "${p#/}" != "$p" ]; do p="${p#/}"; done; out="${out}/${p}"; fi;; esac; done; printf '%s' "$out"; }
-"##);
+
+    if usage.args_flags { s.push_str(r#"__sh2_args_flags() { printf '%s' "$1" | awk '/^F\t/ { sub(/^F\t/, ""); print }'; }
+"#); }
+    if usage.args_positionals { s.push_str(r#"__sh2_args_positionals() { printf '%s' "$1" | awk '/^P\t/ { sub(/^P\t/, ""); print }'; }
+"#); }
+    if usage.args_flag_get { s.push_str(r#"__sh2_args_flag_get() { printf '%s' "$1" | awk -v k="$2" -F '\t' '{ if (sub(/^F\t/, "")) { if ($1==k) v=$2 } else if ($1==k) v=$2 } END { printf "%s", v }'; }
+"#); }
+    if usage.list_get { s.push_str(r#"__sh2_list_get() { printf '%s' "$1" | awk -v i="$2" 'NR==i+1 { printf "%s", $0; exit }'; }
+"#); }
+    if usage.load_envfile { s.push_str(r##"__sh2_load_envfile() { if [ -r "$1" ]; then awk '{ sub(/^[[:space:]]+/, ""); sub(/[[:space:]]+$/, ""); if($0=="" || substr($0,1,1)=="#") next; if(substr($0,1,7)=="export ") sub(/^export[[:space:]]+/, ""); idx=index($0,"="); if(idx==0) next; k=substr($0,1,idx-1); v=substr($0,idx+1); sub(/^[[:space:]]+/, "", k); sub(/[[:space:]]+$/, "", k); sub(/^[[:space:]]+/, "", v); sub(/[[:space:]]+$/, "", v); len=length(v); if(len>=2){ f=substr(v,1,1); l=substr(v,len,1); if((f=="\047" && l=="\047") || (f=="\"" && l=="\"")){ v=substr(v,2,len-2) } } printf "%s\t%s\n", k, v }' "$1" 2>/dev/null || true; fi; }
+"##); }
+    if usage.save_envfile { s.push_str(r#"__sh2_save_envfile() { printf '%s' "$2" | awk -F '\t' 'NF>=1{ print $1 "=" $2 }' > "$1"; }
+"#); }
+    if usage.json_kv { s.push_str(r#"__sh2_json_kv() { printf '%s' "$1" | awk -F '\t' 'function esc(s) { gsub(/\\/, "\\\\", s); gsub(/"/, "\\\"", s); gsub(/\t/, "\\t", s); gsub(/\r/, "\\r", s); gsub(/\n/, "\\n", s); return s; } { k=$1; v=$2; if (k == "") next; if (!(k in seen)) { ord[++n] = k; seen[k] = 1; } val[k] = v; } END { printf "{"; for (i=1; i<=n; i++) { k = ord[i]; v = val[k]; printf "%s\"%s\":\"%s\"", (i==1?"":","), esc(k), esc(v); } printf "}"; }'; }
+"#); }
+    if usage.which { s.push_str(r#"__sh2_which() { command -v -- "$1" 2>/dev/null || true; }
+"#); }
+    if usage.require { s.push_str(r#"__sh2_require() { for c in "$@"; do if ! command -v -- "$c" >/dev/null 2>&1; then printf '%s\n' "missing required command: $c" >&2; exit 127; fi; done; }
+"#); }
+    if usage.tmpfile { s.push_str(r#"__sh2_tmpfile() { if command -v mktemp >/dev/null 2>&1; then mktemp; else printf "%s/sh2_tmp_%s_%s" "${TMPDIR:-/tmp}" "$$" "$(awk 'BEGIN{srand();print int(rand()*1000000)}')"; fi; }
+"#); }
+    if usage.read_file { s.push_str(r#"__sh2_read_file() { cat "$1" 2>/dev/null || true; }
+"#); }
+    if usage.write_file { s.push_str(r#"__sh2_write_file() { if [ "$3" = "true" ]; then printf '%s' "$2" >> "$1"; else printf '%s' "$2" > "$1"; fi; }
+"#); }
+    if usage.log {
+         s.push_str(r#"__sh2_log_now() { if [ -n "${SH2_LOG_TS:-}" ]; then printf '%s' "$SH2_LOG_TS"; return 0; fi; date '+%Y-%m-%dT%H:%M:%S%z' 2>/dev/null || date 2>/dev/null || printf '%s' 'unknown-time'; }
+"#);
+         s.push_str(r#"__sh2_log() { if [ "$3" = "true" ]; then printf '%s\t%s\t%s\n' "$(__sh2_log_now)" "$1" "$2" >&2; else printf '%s\t%s\n' "$1" "$2" >&2; fi; }
+"#); 
+    }
+    if usage.home { s.push_str(r#"__sh2_home() { printf '%s' "${HOME-}"; }
+"#); }
+    if usage.path_join { s.push_str(r#"__sh2_path_join() { out=''; for p in "$@"; do [ -z "$p" ] && continue; case "$p" in /*) out="$p";; *) if [ -z "$out" ]; then out="$p"; else while [ "${out%/}" != "$out" ]; do out="${out%/}"; done; while [ "${p#/}" != "$p" ]; do p="${p#/}"; done; out="${out}/${p}"; fi;; esac; done; printf '%s' "$out"; }
+"#); }
+
     s
 }
 

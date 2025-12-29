@@ -1,47 +1,3 @@
-
-__sh2_coalesce() { if [ -n "$1" ]; then printf '%s' "$1"; else printf '%s' "$2"; fi; }
-__sh2_trim() { awk -v s="$1" 'BEGIN { sub(/^[[:space:]]+/, "", s); sub(/[[:space:]]+$/, "", s); printf "%s", s }'; }
-__sh2_before() { awk -v s="$1" -v sep="$2" 'BEGIN { n=index(s, sep); if(n==0) printf "%s", s; else printf "%s", substr(s, 1, n-1) }'; }
-__sh2_after() { awk -v s="$1" -v sep="$2" 'BEGIN { n=index(s, sep); if(n==0) printf ""; else printf "%s", substr(s, n+length(sep)) }'; }
-__sh2_replace() { awk -v s="$1" -v old="$2" -v new="$3" 'BEGIN { if(old=="") { printf "%s", s; exit } len=length(old); while(i=index(s, old)) { printf "%s%s", substr(s, 1, i-1), new; s=substr(s, i+len) } printf "%s", s }'; }
-__sh2_split() { awk -v s="$1" -v sep="$2" 'BEGIN { if(sep=="") { printf "%s", s; exit } len=length(sep); while(i=index(s, sep)) { printf "%s\n", substr(s, 1, i-1); s=substr(s, i+len) } printf "%s", s }'; }
-__sh2_err_handler() { printf "Error in %s\n" "${__sh2_loc:-unknown}" >&2; }
-trap '__sh2_err_handler' ERR
-__sh2_matches() { [[ "$1" =~ $2 ]]; }
-__sh2_parse_args() {
-  local out="" key val
-  while [ "$#" -gt 0 ]; do
-    case "$1" in
-      --) shift; while [ "$#" -gt 0 ]; do out="${out}P	${1}
-"; shift; done; break ;;
-      --*=*) key="${1%%=*}"; val="${1#*=}"; out="${out}F	${key}	${val}
-" ;;
-      --*) key="$1"; if [ "$#" -gt 1 ] && [ "${2}" != "--" ] && [[ ! "$2" =~ ^-- ]]; then val="$2"; shift; else val="true"; fi; out="${out}F	${key}	${val}
-" ;;
-      *) out="${out}P	${1}
-" ;;
-    esac
-    shift
-  done
-  printf '%s' "$out"
-}
-
-__sh2_args_flags() { printf '%s' "$1" | awk '/^F\t/ { sub(/^F\t/, ""); print }'; }
-__sh2_args_positionals() { printf '%s' "$1" | awk '/^P\t/ { sub(/^P\t/, ""); print }'; }
-__sh2_args_flag_get() { printf '%s' "$1" | awk -v k="$2" -F '\t' '{ if (sub(/^F\t/, "")) { if ($1==k) v=$2 } else if ($1==k) v=$2 } END { printf "%s", v }'; }
-__sh2_list_get() { printf '%s' "$1" | awk -v i="$2" 'NR==i+1 { printf "%s", $0; exit }'; }
-__sh2_load_envfile() { if [ -r "$1" ]; then awk '{ sub(/^[[:space:]]+/, ""); sub(/[[:space:]]+$/, ""); if($0=="" || substr($0,1,1)=="#") next; if(substr($0,1,7)=="export ") sub(/^export[[:space:]]+/, ""); idx=index($0,"="); if(idx==0) next; k=substr($0,1,idx-1); v=substr($0,idx+1); sub(/^[[:space:]]+/, "", k); sub(/[[:space:]]+$/, "", k); sub(/^[[:space:]]+/, "", v); sub(/[[:space:]]+$/, "", v); len=length(v); if(len>=2){ f=substr(v,1,1); l=substr(v,len,1); if((f=="\047" && l=="\047") || (f=="\"" && l=="\"")){ v=substr(v,2,len-2) } } printf "%s\t%s\n", k, v }' "$1" 2>/dev/null || true; fi; }
-__sh2_save_envfile() { printf '%s' "$2" | awk -F '\t' 'NF>=1{ print $1 "=" $2 }' > "$1"; }
-__sh2_json_kv() { printf '%s' "$1" | awk -F '\t' 'function esc(s) { gsub(/\\/, "\\\\", s); gsub(/"/, "\\\"", s); gsub(/\t/, "\\t", s); gsub(/\r/, "\\r", s); gsub(/\n/, "\\n", s); return s; } { k=$1; v=$2; if (k == "") next; if (!(k in seen)) { ord[++n] = k; seen[k] = 1; } val[k] = v; } END { printf "{"; for (i=1; i<=n; i++) { k = ord[i]; v = val[k]; printf "%s\"%s\":\"%s\"", (i==1?"":","), esc(k), esc(v); } printf "}"; }'; }
-__sh2_which() { command -v -- "$1" 2>/dev/null || true; }
-__sh2_require() { for c in "$@"; do if ! command -v -- "$c" >/dev/null 2>&1; then printf '%s\n' "missing required command: $c" >&2; exit 127; fi; done; }
-__sh2_tmpfile() { if command -v mktemp >/dev/null 2>&1; then mktemp; else printf "%s/sh2_tmp_%s_%s" "${TMPDIR:-/tmp}" "$$" "$(awk 'BEGIN{srand();print int(rand()*1000000)}')"; fi; }
-__sh2_read_file() { cat "$1" 2>/dev/null || true; }
-__sh2_write_file() { if [ "$3" = "true" ]; then printf '%s' "$2" >> "$1"; else printf '%s' "$2" > "$1"; fi; }
-__sh2_log_now() { if [ -n "${SH2_LOG_TS:-}" ]; then printf '%s' "$SH2_LOG_TS"; return 0; fi; date '+%Y-%m-%dT%H:%M:%S%z' 2>/dev/null || date 2>/dev/null || printf '%s' 'unknown-time'; }
-__sh2_log() { if [ "$3" = "true" ]; then printf '%s\t%s\t%s\n' "$(__sh2_log_now)" "$1" "$2" >&2; else printf '%s\t%s\n' "$1" "$2" >&2; fi; }
-__sh2_home() { printf '%s' "${HOME-}"; }
-__sh2_path_join() { out=''; for p in "$@"; do [ -z "$p" ] && continue; case "$p" in /*) out="$p";; *) if [ -z "$out" ]; then out="$p"; else while [ "${out%/}" != "$out" ]; do out="${out%/}"; done; while [ "${p#/}" != "$p" ]; do p="${p#/}"; done; out="${out}/${p}"; fi;; esac; done; printf '%s' "$out"; }
 main() {
   if true && ! false; then
     printf '%s\n' 'ok'
@@ -49,7 +5,5 @@ main() {
     printf '%s\n' 'bad'
   fi
 }
-
-__sh2_parsed_args="$(__sh2_parse_args "$@")"
 __sh2_status=0
 main "$@"
