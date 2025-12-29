@@ -1,4 +1,4 @@
-use sh2c::ast::{Stmt, StmtKind, Expr, ExprKind};
+use sh2c::ast::{Expr, ExprKind, Stmt, StmtKind};
 mod common;
 use common::*;
 
@@ -8,14 +8,26 @@ fn parse_dollar_pipe() {
     let func = &program.functions[0];
 
     // stmt0: let out = $( ... | ... ) => Expr { kind: ExprKind::CommandPipe, .. }
-    if let Stmt { kind: StmtKind::Let { name, value }, .. } = &func.body[0] {
+    if let Stmt {
+        kind: StmtKind::Let { name, value },
+        ..
+    } = &func.body[0]
+    {
         assert_eq!(name, "out");
-        assert!(matches!(value, Expr { kind: ExprKind::CommandPipe(_), .. }));
+        assert!(matches!(
+            value,
+            Expr {
+                kind: ExprKind::CommandPipe(_),
+                ..
+            }
+        ));
     } else {
         panic!("Expected let out = $(...)");
     }
 
-    assert!(matches!(func.body[1], Stmt { kind: StmtKind::Print(Expr { kind: ExprKind::Var(ref v), .. }), .. } if v == "out"));
+    assert!(
+        matches!(func.body[1], Stmt { kind: StmtKind::Print(Expr { kind: ExprKind::Var(ref v), .. }), .. } if v == "out")
+    );
 }
 
 #[test]

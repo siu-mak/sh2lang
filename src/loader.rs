@@ -1,10 +1,10 @@
-use crate::ast::{Program, Function};
+use crate::ast::{Function, Program};
 use crate::lexer;
 use crate::parser;
 use crate::span::SourceMap;
-use std::collections::{HashSet, HashMap};
-use std::path::{Path, PathBuf};
+use std::collections::{HashMap, HashSet};
 use std::fs;
+use std::path::{Path, PathBuf};
 
 pub fn load_program_with_imports(entry_path: &Path) -> Program {
     load(entry_path)
@@ -61,10 +61,10 @@ fn load_program_with_imports_impl(loader: &mut Loader, entry_path: &Path, is_ent
             cycle_msg.push_str(&format!("{} -> ", p.display()));
         }
         cycle_msg.push_str(&format!("{}", canonical_path.display()));
-        
+
         panic!("Import cycle detected: {}", cycle_msg);
     }
-    
+
     loader.visiting.insert(canonical_path.clone());
     loader.stack.push(canonical_path.clone());
 
@@ -76,9 +76,9 @@ fn load_program_with_imports_impl(loader: &mut Loader, entry_path: &Path, is_ent
     let file_str = canonical_path.to_string_lossy().to_string();
     let sm = SourceMap::new(src);
     loader.source_maps.insert(file_str.clone(), sm);
-    
+
     let sm_ref = loader.source_maps.get(&file_str).unwrap();
-    
+
     let tokens = lexer::lex(sm_ref, &file_str);
     let program = parser::parse(&tokens, sm_ref, &file_str);
 
@@ -93,17 +93,29 @@ fn load_program_with_imports_impl(loader: &mut Loader, entry_path: &Path, is_ent
 
     for func in program.functions {
         // Reserved name check
-        if matches!(func.name.as_str(), "trim" | "before" | "after" | "replace" | "split") {
-             panic!("Function name '{}' is reserved (prelude helper); choose a different name.", func.name);
+        if matches!(
+            func.name.as_str(),
+            "trim" | "before" | "after" | "replace" | "split"
+        ) {
+            panic!(
+                "Function name '{}' is reserved (prelude helper); choose a different name.",
+                func.name
+            );
         }
 
         if let Some((_, defined_at)) = loader.functions.get(&func.name) {
-            panic!("Function '{}' is already defined in {}", func.name, defined_at.display());
+            panic!(
+                "Function '{}' is already defined in {}",
+                func.name,
+                defined_at.display()
+            );
         }
-    // Extract function to own it
+        // Extract function to own it
         let name = func.name.clone();
         loader.function_order.push(name.clone());
-        loader.functions.insert(name, (func, canonical_path.clone()));
+        loader
+            .functions
+            .insert(name, (func, canonical_path.clone()));
     }
 
     if is_entry {
@@ -111,10 +123,13 @@ fn load_program_with_imports_impl(loader: &mut Loader, entry_path: &Path, is_ent
         // Also capture the program span if needed? Program span is just file span.
     } else {
         if !program.top_level.is_empty() {
-             panic!("Top-level statements are only allowed in the entry file (found in {})", canonical_path.display());
+            panic!(
+                "Top-level statements are only allowed in the entry file (found in {})",
+                canonical_path.display()
+            );
         }
     }
-    
+
     loader.visiting.remove(&canonical_path);
     loader.stack.pop();
     loader.loaded.insert(canonical_path);
@@ -123,29 +138,32 @@ fn load_program_with_imports_impl(loader: &mut Loader, entry_path: &Path, is_ent
 pub fn load(entry_path: &Path) -> Program {
     let mut loader = Loader::new();
     load_program_with_imports_impl(&mut loader, entry_path, true);
-    
+
     // Construct final program in deterministic order
     let mut functions = Vec::new();
     for name in loader.function_order {
         let (func, _) = loader.functions.remove(&name).unwrap();
         functions.push(func);
     }
-    
+
     // We need a span for the final merged program.
     // It's conceptually the entry file's span, or a synthetic one.
-    // Using 0..0 is fine as Program span isn't used much? 
+    // Using 0..0 is fine as Program span isn't used much?
     // Or we should grab it from loader.
     // But we don't store the entry program struct.
     // Let's just make a dummy span 0..0 for now, or use empty.
     let span = crate::span::Span { start: 0, end: 0 };
-    
+
     // We need the entry file name.
     // Since load_program_with_imports_impl canonicalizes, we should too to match keys.
-    let entry_file = fs::canonicalize(entry_path).unwrap().to_string_lossy().to_string();
+    let entry_file = fs::canonicalize(entry_path)
+        .unwrap()
+        .to_string_lossy()
+        .to_string();
 
-    Program { 
-        imports: vec![], 
-        functions, 
+    Program {
+        imports: vec![],
+        functions,
         top_level: loader.entry_top_level,
         span,
         source_maps: loader.source_maps,

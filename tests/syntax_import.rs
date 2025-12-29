@@ -8,7 +8,7 @@ fn compile_import_basic() {
     // But `assert_codegen_matches_snapshot` works on a single file name basis,
     // assuming it's in tests/fixtures/<name>.sh2.
     // Here we have structure tests/fixtures/imports/basic/main.sh2.
-    
+
     // We need to support nested paths in our test harness or manually specify full relative path.
     // `assert_codegen_matches_snapshot` uses `tests/fixtures/{fixture_name}.sh2`
     // So we can pass "imports/basic/main".
@@ -33,7 +33,10 @@ fn exec_import_chain() {
 
 #[test]
 fn compile_import_duplicate() {
-    assert_codegen_panics("imports/duplicate/main", "Function 'dup' is already defined");
+    assert_codegen_panics(
+        "imports/duplicate/main",
+        "Function 'dup' is already defined",
+    );
 }
 
 #[test]
@@ -49,7 +52,10 @@ fn compile_import_missing() {
 
 #[test]
 fn compile_import_not_top_level() {
-    assert_codegen_panics("imports/not_top_level/main", "import is only allowed at top-level");
+    assert_codegen_panics(
+        "imports/not_top_level/main",
+        "import is only allowed at top-level",
+    );
 }
 
 #[test]

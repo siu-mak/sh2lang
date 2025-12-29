@@ -1,9 +1,9 @@
+use sh2c::codegen;
+use sh2c::codegen::TargetShell;
+use sh2c::loader;
+use sh2c::lower;
 use std::fs;
 use std::process;
-use sh2c::lower;
-use sh2c::codegen;
-use sh2c::loader;
-use sh2c::codegen::TargetShell;
 
 fn main() {
     let args: Vec<String> = std::env::args().collect();
@@ -20,7 +20,7 @@ fn main() {
         let arg = &args[i];
         if arg == "--target" {
             if i + 1 < args.len() {
-                target = parse_target(&args[i+1]);
+                target = parse_target(&args[i + 1]);
                 i += 2;
             } else {
                 eprintln!("--target requires an argument");

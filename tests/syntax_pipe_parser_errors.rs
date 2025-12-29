@@ -1,6 +1,5 @@
-
-use sh2c::parser::parse;
 use sh2c::lexer::lex;
+use sh2c::parser::parse;
 
 #[test]
 fn test_pipe_parser_error() {
@@ -15,11 +14,14 @@ fn test_pipe_parser_error() {
     let result = std::panic::catch_unwind(move || {
         parse(&tokens, &sm, "test_pipe_parser_error.sh2");
     });
-    assert!(result.is_err(), "Parser should panic on non-run pipe segment");
-    
+    assert!(
+        result.is_err(),
+        "Parser should panic on non-run pipe segment"
+    );
+
     let err = result.err().unwrap();
     let expected = "expected run(...) after '|' in pipeline";
-    
+
     if let Some(msg) = err.downcast_ref::<&str>() {
         assert_eq!(*msg, expected);
     } else if let Some(msg) = err.downcast_ref::<String>() {

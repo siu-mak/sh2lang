@@ -13,7 +13,10 @@ fn exec_quote_literal_spaces_bash() {
 
 #[test]
 fn codegen_quote_literal_dollar_backslash_star_bash() {
-    assert_codegen_matches_snapshot_target("quote_literal_dollar_backslash_star", TargetShell::Bash);
+    assert_codegen_matches_snapshot_target(
+        "quote_literal_dollar_backslash_star",
+        TargetShell::Bash,
+    );
 }
 #[test]
 fn exec_quote_literal_dollar_backslash_star_bash() {
@@ -50,9 +53,9 @@ fn exec_quote_args_splice_bash() {
 #[test]
 fn codegen_quote_args_disallowed_concat_fail() {
     assert_codegen_panics_target(
-        "quote_args_disallowed_concat", 
-        TargetShell::Bash, 
-        "Cannot emit boolean/list"
+        "quote_args_disallowed_concat",
+        TargetShell::Bash,
+        "Cannot emit boolean/list",
     );
 }
 

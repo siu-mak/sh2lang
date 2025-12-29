@@ -33,7 +33,10 @@ fn exec_envfile_roundtrip_posix() {
 
 #[test]
 fn compile_envfile_load_as_statement() {
-    assert_codegen_panics("envfile_load_as_statement", "load_envfile() returns a value; use it in an expression");
+    assert_codegen_panics(
+        "envfile_load_as_statement",
+        "load_envfile() returns a value; use it in an expression",
+    );
 }
 
 #[test]

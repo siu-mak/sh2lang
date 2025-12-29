@@ -1,7 +1,7 @@
 use crate::span::Span;
 
-use std::collections::HashMap;
 use crate::span::SourceMap;
+use std::collections::HashMap;
 
 #[derive(Debug, PartialEq)]
 pub struct Program {
@@ -60,8 +60,16 @@ pub enum ExprKind {
     Command(Vec<Expr>),
     CommandPipe(Vec<Vec<Expr>>),
     Concat(Box<Expr>, Box<Expr>),
-    Arith { left: Box<Expr>, op: ArithOp, right: Box<Expr> },
-    Compare { left: Box<Expr>, op: CompareOp, right: Box<Expr> },
+    Arith {
+        left: Box<Expr>,
+        op: ArithOp,
+        right: Box<Expr>,
+    },
+    Compare {
+        left: Box<Expr>,
+        op: CompareOp,
+        right: Box<Expr>,
+    },
     And(Box<Expr>, Box<Expr>),
     Or(Box<Expr>, Box<Expr>),
     Not(Box<Expr>),
@@ -76,9 +84,18 @@ pub enum ExprKind {
     BoolStr(Box<Expr>),
     Len(Box<Expr>),
     Arg(u32),
-    Index { list: Box<Expr>, index: Box<Expr> },
-    Field { base: Box<Expr>, name: String },
-    Join { list: Box<Expr>, sep: Box<Expr> },
+    Index {
+        list: Box<Expr>,
+        index: Box<Expr>,
+    },
+    Field {
+        base: Box<Expr>,
+        name: String,
+    },
+    Join {
+        list: Box<Expr>,
+        sep: Box<Expr>,
+    },
     Count(Box<Expr>),
     Bool(bool),
     Number(u32),
@@ -96,9 +113,15 @@ pub enum ExprKind {
     EnvDot(String),
     Input(Box<Expr>),
     Confirm(Box<Expr>),
-    Call { name: String, args: Vec<Expr> },
+    Call {
+        name: String,
+        args: Vec<Expr>,
+    },
     MapLiteral(Vec<(String, Expr)>),
-    MapIndex { map: String, key: String },
+    MapIndex {
+        map: String,
+        key: String,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -115,7 +138,10 @@ pub struct Stmt {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum StmtKind {
-    Let { name: String, value: Expr },
+    Let {
+        name: String,
+        value: Expr,
+    },
     Run(RunCall),
     Print(Expr),
     PrintErr(Expr),
@@ -158,36 +184,65 @@ pub enum StmtKind {
         bindings: Vec<(String, Expr)>,
         body: Vec<Stmt>,
     },
-    AndThen { left: Vec<Stmt>, right: Vec<Stmt> },
-    OrElse { left: Vec<Stmt>, right: Vec<Stmt> },
+    AndThen {
+        left: Vec<Stmt>,
+        right: Vec<Stmt>,
+    },
+    OrElse {
+        left: Vec<Stmt>,
+        right: Vec<Stmt>,
+    },
     WithCwd {
         path: Expr,
         body: Vec<Stmt>,
     },
-    Cd { path: Expr },
+    Cd {
+        path: Expr,
+    },
     Sh(String),
     ShBlock(Vec<String>),
-    Call { name: String, args: Vec<Expr> },
-    Subshell { body: Vec<Stmt> },
-    Group { body: Vec<Stmt> },
+    Call {
+        name: String,
+        args: Vec<Expr>,
+    },
+    Subshell {
+        body: Vec<Stmt>,
+    },
+    Group {
+        body: Vec<Stmt>,
+    },
     WithRedirect {
         stdout: Option<RedirectTarget>,
         stderr: Option<RedirectTarget>,
         stdin: Option<RedirectTarget>,
         body: Vec<Stmt>,
     },
-    Spawn { stmt: Box<Stmt> },
+    Spawn {
+        stmt: Box<Stmt>,
+    },
     Wait(Option<Expr>),
     TryCatch {
         try_body: Vec<Stmt>,
         catch_body: Vec<Stmt>,
     },
-    Export { name: String, value: Option<Expr> },
-    Unset { name: String },
-    Source { path: Expr },
+    Export {
+        name: String,
+        value: Option<Expr>,
+    },
+    Unset {
+        name: String,
+    },
+    Source {
+        path: Expr,
+    },
     Exec(Vec<Expr>),
-    Set { target: LValue, value: Expr },
-    PipeBlocks { segments: Vec<Vec<Stmt>> },
+    Set {
+        target: LValue,
+        value: Expr,
+    },
+    PipeBlocks {
+        segments: Vec<Vec<Stmt>>,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq)]

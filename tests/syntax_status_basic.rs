@@ -1,14 +1,21 @@
 mod common;
 use common::*;
-use sh2c::ast::{Stmt, StmtKind, Expr, ExprKind};
+use sh2c::ast::{Expr, ExprKind, Stmt, StmtKind};
 
 #[test]
 fn parse_status_basic() {
     let program = parse_fixture("status_basic");
     let func = &program.functions[0];
-    
+
     // Check print(status())
-    if let Stmt { kind: StmtKind::Print(Expr { kind: ExprKind::Status, .. }), .. } = &func.body[1] {
+    if let Stmt {
+        kind: StmtKind::Print(Expr {
+            kind: ExprKind::Status,
+            ..
+        }),
+        ..
+    } = &func.body[1]
+    {
         // OK
     } else {
         panic!("Expected Print(Status)");

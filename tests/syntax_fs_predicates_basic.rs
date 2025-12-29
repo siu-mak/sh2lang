@@ -1,6 +1,6 @@
 mod common;
 use common::*;
-use sh2c::ast::{Stmt, StmtKind, Expr, ExprKind};
+use sh2c::ast::{Expr, ExprKind, Stmt, StmtKind};
 
 #[test]
 fn parse_fs_predicates_basic() {
@@ -9,39 +9,102 @@ fn parse_fs_predicates_basic() {
     assert_eq!(func.body.len(), 2);
 
     // stmt0: run(...)
-    if let Stmt { kind: StmtKind::Run(_), .. } = &func.body[0] {} else { panic!("Expected Run"); }
+    if let Stmt {
+        kind: StmtKind::Run(_),
+        ..
+    } = &func.body[0]
+    {
+    } else {
+        panic!("Expected Run");
+    }
 
     // stmt1: if is_symlink(...) && is_exec(...) && is_readable(...) && is_writable(...)
-    if let Stmt { kind: StmtKind::If { cond, .. }, .. } = &func.body[1] {
+    if let Stmt {
+        kind: StmtKind::If { cond, .. },
+        ..
+    } = &func.body[1]
+    {
         fn contains_is_symlink(e: &Expr) -> bool {
             match e {
-                Expr { kind: ExprKind::IsSymlink(_), .. } => true,
-                Expr { kind: ExprKind::And(a,b), .. } | Expr { kind: ExprKind::Or(a,b), .. } => contains_is_symlink(a) || contains_is_symlink(b),
-                Expr { kind: ExprKind::Not(x), .. } => contains_is_symlink(x),
+                Expr {
+                    kind: ExprKind::IsSymlink(_),
+                    ..
+                } => true,
+                Expr {
+                    kind: ExprKind::And(a, b),
+                    ..
+                }
+                | Expr {
+                    kind: ExprKind::Or(a, b),
+                    ..
+                } => contains_is_symlink(a) || contains_is_symlink(b),
+                Expr {
+                    kind: ExprKind::Not(x),
+                    ..
+                } => contains_is_symlink(x),
                 _ => false,
             }
         }
         fn contains_is_exec(e: &Expr) -> bool {
             match e {
-                Expr { kind: ExprKind::IsExec(_), .. } => true,
-                Expr { kind: ExprKind::And(a,b), .. } | Expr { kind: ExprKind::Or(a,b), .. } => contains_is_exec(a) || contains_is_exec(b),
-                Expr { kind: ExprKind::Not(x), .. } => contains_is_exec(x),
+                Expr {
+                    kind: ExprKind::IsExec(_),
+                    ..
+                } => true,
+                Expr {
+                    kind: ExprKind::And(a, b),
+                    ..
+                }
+                | Expr {
+                    kind: ExprKind::Or(a, b),
+                    ..
+                } => contains_is_exec(a) || contains_is_exec(b),
+                Expr {
+                    kind: ExprKind::Not(x),
+                    ..
+                } => contains_is_exec(x),
                 _ => false,
             }
         }
         fn contains_is_readable(e: &Expr) -> bool {
             match e {
-                Expr { kind: ExprKind::IsReadable(_), .. } => true,
-                Expr { kind: ExprKind::And(a,b), .. } | Expr { kind: ExprKind::Or(a,b), .. } => contains_is_readable(a) || contains_is_readable(b),
-                Expr { kind: ExprKind::Not(x), .. } => contains_is_readable(x),
+                Expr {
+                    kind: ExprKind::IsReadable(_),
+                    ..
+                } => true,
+                Expr {
+                    kind: ExprKind::And(a, b),
+                    ..
+                }
+                | Expr {
+                    kind: ExprKind::Or(a, b),
+                    ..
+                } => contains_is_readable(a) || contains_is_readable(b),
+                Expr {
+                    kind: ExprKind::Not(x),
+                    ..
+                } => contains_is_readable(x),
                 _ => false,
             }
         }
         fn contains_is_writable(e: &Expr) -> bool {
             match e {
-                Expr { kind: ExprKind::IsWritable(_), .. } => true,
-                Expr { kind: ExprKind::And(a,b), .. } | Expr { kind: ExprKind::Or(a,b), .. } => contains_is_writable(a) || contains_is_writable(b),
-                Expr { kind: ExprKind::Not(x), .. } => contains_is_writable(x),
+                Expr {
+                    kind: ExprKind::IsWritable(_),
+                    ..
+                } => true,
+                Expr {
+                    kind: ExprKind::And(a, b),
+                    ..
+                }
+                | Expr {
+                    kind: ExprKind::Or(a, b),
+                    ..
+                } => contains_is_writable(a) || contains_is_writable(b),
+                Expr {
+                    kind: ExprKind::Not(x),
+                    ..
+                } => contains_is_writable(x),
                 _ => false,
             }
         }

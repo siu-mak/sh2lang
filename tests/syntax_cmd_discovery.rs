@@ -1,10 +1,9 @@
-
 #[allow(unused_imports)]
-use sh2c::ast::{StmtKind, ExprKind, self, Stmt, Expr};
-use sh2c::parser;
+use sh2c::ast::{self, Expr, ExprKind, Stmt, StmtKind};
+use sh2c::codegen::{self, TargetShell};
 use sh2c::lexer;
 use sh2c::lower;
-use sh2c::codegen::{self, TargetShell};
+use sh2c::parser;
 
 mod common;
 use common::*;
@@ -92,15 +91,24 @@ fn compile_which_arity_error() {
 
 #[test]
 fn compile_which_stmt_error() {
-    assert_codegen_panics("which_stmt_error", "which() returns a value; use it in an expression");
+    assert_codegen_panics(
+        "which_stmt_error",
+        "which() returns a value; use it in an expression",
+    );
 }
 
 #[test]
 fn compile_require_arity_error() {
-    assert_codegen_panics("require_arity_error", "require() requires exactly one argument");
+    assert_codegen_panics(
+        "require_arity_error",
+        "require() requires exactly one argument",
+    );
 }
 
 #[test]
 fn compile_require_expr_error() {
-    assert_codegen_panics("require_expr_error", "require() is a statement, not an expression");
+    assert_codegen_panics(
+        "require_expr_error",
+        "require() is a statement, not an expression",
+    );
 }

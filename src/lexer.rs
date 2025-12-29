@@ -1,4 +1,4 @@
-use crate::span::{Span, SourceMap};
+use crate::span::{SourceMap, Span};
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum TokenKind {
@@ -153,90 +153,225 @@ pub fn lex(sm: &SourceMap, file: &str) -> Vec<Token> {
     while let Some(&c) = lexer.peek() {
         let start = lexer.pos;
         match c {
-            ' ' | '\n' | '\t' => { lexer.next(); }
-            '(' => { lexer.next(); tokens.push(Token { kind: TokenKind::LParen, span: Span::new(start, lexer.pos) }); }
-            ')' => { lexer.next(); tokens.push(Token { kind: TokenKind::RParen, span: Span::new(start, lexer.pos) }); }
-            '{' => { lexer.next(); tokens.push(Token { kind: TokenKind::LBrace, span: Span::new(start, lexer.pos) }); }
-            '}' => { lexer.next(); tokens.push(Token { kind: TokenKind::RBrace, span: Span::new(start, lexer.pos) }); }
-            '[' => { lexer.next(); tokens.push(Token { kind: TokenKind::LBracket, span: Span::new(start, lexer.pos) }); }
-            ']' => { lexer.next(); tokens.push(Token { kind: TokenKind::RBracket, span: Span::new(start, lexer.pos) }); }
-            ',' => { lexer.next(); tokens.push(Token { kind: TokenKind::Comma, span: Span::new(start, lexer.pos) }); }
-            ':' => { lexer.next(); tokens.push(Token { kind: TokenKind::Colon, span: Span::new(start, lexer.pos) }); }
+            ' ' | '\n' | '\t' => {
+                lexer.next();
+            }
+            '(' => {
+                lexer.next();
+                tokens.push(Token {
+                    kind: TokenKind::LParen,
+                    span: Span::new(start, lexer.pos),
+                });
+            }
+            ')' => {
+                lexer.next();
+                tokens.push(Token {
+                    kind: TokenKind::RParen,
+                    span: Span::new(start, lexer.pos),
+                });
+            }
+            '{' => {
+                lexer.next();
+                tokens.push(Token {
+                    kind: TokenKind::LBrace,
+                    span: Span::new(start, lexer.pos),
+                });
+            }
+            '}' => {
+                lexer.next();
+                tokens.push(Token {
+                    kind: TokenKind::RBrace,
+                    span: Span::new(start, lexer.pos),
+                });
+            }
+            '[' => {
+                lexer.next();
+                tokens.push(Token {
+                    kind: TokenKind::LBracket,
+                    span: Span::new(start, lexer.pos),
+                });
+            }
+            ']' => {
+                lexer.next();
+                tokens.push(Token {
+                    kind: TokenKind::RBracket,
+                    span: Span::new(start, lexer.pos),
+                });
+            }
+            ',' => {
+                lexer.next();
+                tokens.push(Token {
+                    kind: TokenKind::Comma,
+                    span: Span::new(start, lexer.pos),
+                });
+            }
+            ':' => {
+                lexer.next();
+                tokens.push(Token {
+                    kind: TokenKind::Colon,
+                    span: Span::new(start, lexer.pos),
+                });
+            }
             '=' => {
                 lexer.next();
                 if lexer.peek() == Some(&'=') {
-                     lexer.next();
-                     tokens.push(Token { kind: TokenKind::EqEq, span: Span::new(start, lexer.pos) });
+                    lexer.next();
+                    tokens.push(Token {
+                        kind: TokenKind::EqEq,
+                        span: Span::new(start, lexer.pos),
+                    });
                 } else if lexer.peek() == Some(&'>') {
-                     lexer.next();
-                     tokens.push(Token { kind: TokenKind::Arrow, span: Span::new(start, lexer.pos) });
+                    lexer.next();
+                    tokens.push(Token {
+                        kind: TokenKind::Arrow,
+                        span: Span::new(start, lexer.pos),
+                    });
                 } else {
-                     tokens.push(Token { kind: TokenKind::Equals, span: Span::new(start, lexer.pos) });
+                    tokens.push(Token {
+                        kind: TokenKind::Equals,
+                        span: Span::new(start, lexer.pos),
+                    });
                 }
             }
-            '_' => { lexer.next(); tokens.push(Token { kind: TokenKind::Underscore, span: Span::new(start, lexer.pos) }); }
-            '+' => { lexer.next(); tokens.push(Token { kind: TokenKind::Plus, span: Span::new(start, lexer.pos) }); }
-            '-' => { lexer.next(); tokens.push(Token { kind: TokenKind::Minus, span: Span::new(start, lexer.pos) }); }
-            '*' => { lexer.next(); tokens.push(Token { kind: TokenKind::Star, span: Span::new(start, lexer.pos) }); }
+            '_' => {
+                lexer.next();
+                tokens.push(Token {
+                    kind: TokenKind::Underscore,
+                    span: Span::new(start, lexer.pos),
+                });
+            }
+            '+' => {
+                lexer.next();
+                tokens.push(Token {
+                    kind: TokenKind::Plus,
+                    span: Span::new(start, lexer.pos),
+                });
+            }
+            '-' => {
+                lexer.next();
+                tokens.push(Token {
+                    kind: TokenKind::Minus,
+                    span: Span::new(start, lexer.pos),
+                });
+            }
+            '*' => {
+                lexer.next();
+                tokens.push(Token {
+                    kind: TokenKind::Star,
+                    span: Span::new(start, lexer.pos),
+                });
+            }
             '/' => {
                 lexer.next();
                 if lexer.peek() == Some(&'/') {
                     // Comment
                     while let Some(&ch) = lexer.peek() {
-                         if ch == '\n' { break; }
-                         lexer.next();
+                        if ch == '\n' {
+                            break;
+                        }
+                        lexer.next();
                     }
                 } else {
-                    tokens.push(Token { kind: TokenKind::Slash, span: Span::new(start, lexer.pos) });
+                    tokens.push(Token {
+                        kind: TokenKind::Slash,
+                        span: Span::new(start, lexer.pos),
+                    });
                 }
             }
-            '%' => { lexer.next(); tokens.push(Token { kind: TokenKind::Percent, span: Span::new(start, lexer.pos) }); }
+            '%' => {
+                lexer.next();
+                tokens.push(Token {
+                    kind: TokenKind::Percent,
+                    span: Span::new(start, lexer.pos),
+                });
+            }
             '<' => {
-                 lexer.next();
-                 if lexer.peek() == Some(&'=') {
-                     lexer.next();
-                     tokens.push(Token { kind: TokenKind::Le, span: Span::new(start, lexer.pos) });
-                 } else {
-                     tokens.push(Token { kind: TokenKind::Lt, span: Span::new(start, lexer.pos) });
-                 }
+                lexer.next();
+                if lexer.peek() == Some(&'=') {
+                    lexer.next();
+                    tokens.push(Token {
+                        kind: TokenKind::Le,
+                        span: Span::new(start, lexer.pos),
+                    });
+                } else {
+                    tokens.push(Token {
+                        kind: TokenKind::Lt,
+                        span: Span::new(start, lexer.pos),
+                    });
+                }
             }
             '>' => {
-                 lexer.next();
-                 if lexer.peek() == Some(&'=') {
-                     lexer.next();
-                     tokens.push(Token { kind: TokenKind::Ge, span: Span::new(start, lexer.pos) });
-                 } else {
-                     tokens.push(Token { kind: TokenKind::Gt, span: Span::new(start, lexer.pos) });
-                 }
+                lexer.next();
+                if lexer.peek() == Some(&'=') {
+                    lexer.next();
+                    tokens.push(Token {
+                        kind: TokenKind::Ge,
+                        span: Span::new(start, lexer.pos),
+                    });
+                } else {
+                    tokens.push(Token {
+                        kind: TokenKind::Gt,
+                        span: Span::new(start, lexer.pos),
+                    });
+                }
             }
             '&' => {
-                 lexer.next();
-                 if lexer.peek() == Some(&'&') {
-                     lexer.next();
-                     tokens.push(Token { kind: TokenKind::AndAnd, span: Span::new(start, lexer.pos) });
-                 } else {
-                     tokens.push(Token { kind: TokenKind::Amp, span: Span::new(start, lexer.pos) });
-                 }
-
+                lexer.next();
+                if lexer.peek() == Some(&'&') {
+                    lexer.next();
+                    tokens.push(Token {
+                        kind: TokenKind::AndAnd,
+                        span: Span::new(start, lexer.pos),
+                    });
+                } else {
+                    tokens.push(Token {
+                        kind: TokenKind::Amp,
+                        span: Span::new(start, lexer.pos),
+                    });
+                }
             }
-            '.' => { lexer.next(); tokens.push(Token { kind: TokenKind::Dot, span: Span::new(start, lexer.pos) }); }
+            '.' => {
+                lexer.next();
+                tokens.push(Token {
+                    kind: TokenKind::Dot,
+                    span: Span::new(start, lexer.pos),
+                });
+            }
             '|' => {
-                 lexer.next();
-                 if lexer.peek() == Some(&'|') {
-                     lexer.next();
-                     tokens.push(Token { kind: TokenKind::OrOr, span: Span::new(start, lexer.pos) });
-                 } else {
-                     tokens.push(Token { kind: TokenKind::Pipe, span: Span::new(start, lexer.pos) });
-                 }
+                lexer.next();
+                if lexer.peek() == Some(&'|') {
+                    lexer.next();
+                    tokens.push(Token {
+                        kind: TokenKind::OrOr,
+                        span: Span::new(start, lexer.pos),
+                    });
+                } else {
+                    tokens.push(Token {
+                        kind: TokenKind::Pipe,
+                        span: Span::new(start, lexer.pos),
+                    });
+                }
             }
-            '$' => { lexer.next(); tokens.push(Token { kind: TokenKind::Dollar, span: Span::new(start, lexer.pos) }); }
+            '$' => {
+                lexer.next();
+                tokens.push(Token {
+                    kind: TokenKind::Dollar,
+                    span: Span::new(start, lexer.pos),
+                });
+            }
             '!' => {
                 lexer.next();
                 if lexer.peek() == Some(&'=') {
                     lexer.next();
-                    tokens.push(Token { kind: TokenKind::NotEq, span: Span::new(start, lexer.pos) });
+                    tokens.push(Token {
+                        kind: TokenKind::NotEq,
+                        span: Span::new(start, lexer.pos),
+                    });
                 } else {
-                    tokens.push(Token { kind: TokenKind::Bang, span: Span::new(start, lexer.pos) });
+                    tokens.push(Token {
+                        kind: TokenKind::Bang,
+                        span: Span::new(start, lexer.pos),
+                    });
                 }
             }
             '"' => {
@@ -247,7 +382,7 @@ pub fn lex(sm: &SourceMap, file: &str) -> Vec<Token> {
                     let mut la = lexer.chars.clone();
                     la.next(); // skip current "
                     if la.next() == Some('"') && la.next() == Some('"') {
-                         is_triple = true;
+                        is_triple = true;
                     }
                 }
 
@@ -255,14 +390,19 @@ pub fn lex(sm: &SourceMap, file: &str) -> Vec<Token> {
                     lexer.next(); // "
                     lexer.next(); // "
                     lexer.next(); // "
-                    
+
                     let mut s = String::new();
                     loop {
                         // Check for triple quote end """
                         {
                             let mut la = lexer.chars.clone();
-                            if la.next() == Some('"') && la.next() == Some('"') && la.next() == Some('"') {
-                                lexer.next(); lexer.next(); lexer.next();
+                            if la.next() == Some('"')
+                                && la.next() == Some('"')
+                                && la.next() == Some('"')
+                            {
+                                lexer.next();
+                                lexer.next();
+                                lexer.next();
                                 break;
                             }
                         }
@@ -292,13 +432,18 @@ pub fn lex(sm: &SourceMap, file: &str) -> Vec<Token> {
                             lexer.error("Unterminated triple-quoted string", start);
                         }
                     }
-                    tokens.push(Token { kind: TokenKind::String(s), span: Span::new(start, lexer.pos) });
+                    tokens.push(Token {
+                        kind: TokenKind::String(s),
+                        span: Span::new(start, lexer.pos),
+                    });
                 } else {
                     // Regular string
                     lexer.next(); // consume opening quote
                     let mut s = String::new();
                     while let Some(&ch) = lexer.peek() {
-                        if ch == '"' { break; }
+                        if ch == '"' {
+                            break;
+                        }
                         if ch == '\\' {
                             lexer.next(); // consume backslash
                             if let Some(&escaped) = lexer.peek() {
@@ -345,18 +490,26 @@ pub fn lex(sm: &SourceMap, file: &str) -> Vec<Token> {
                         // EOF before quote
                         lexer.error("Unterminated string (missing closing quote)", start);
                     }
-                    tokens.push(Token { kind: TokenKind::String(s), span: Span::new(start, lexer.pos) });
+                    tokens.push(Token {
+                        kind: TokenKind::String(s),
+                        span: Span::new(start, lexer.pos),
+                    });
                 }
             }
             _ if c.is_ascii_digit() => {
                 let mut num_str = String::new();
                 while let Some(&ch) = lexer.peek() {
-                    if !ch.is_ascii_digit() { break; }
+                    if !ch.is_ascii_digit() {
+                        break;
+                    }
                     num_str.push(ch);
                     lexer.next();
                 }
                 let n: u32 = num_str.parse().expect("Invalid number literal");
-                tokens.push(Token { kind: TokenKind::Number(n), span: Span::new(start, lexer.pos) });
+                tokens.push(Token {
+                    kind: TokenKind::Number(n),
+                    span: Span::new(start, lexer.pos),
+                });
             }
             _ if c.is_alphabetic() => {
                 if c == 'r' {
@@ -364,39 +517,54 @@ pub fn lex(sm: &SourceMap, file: &str) -> Vec<Token> {
                     {
                         let mut la = lexer.chars.clone();
                         la.next(); // r
-                        if la.next() == Some('"') && la.next() == Some('"') && la.next() == Some('"') {
+                        if la.next() == Some('"')
+                            && la.next() == Some('"')
+                            && la.next() == Some('"')
+                        {
                             is_raw = true;
                         }
                     }
-                    
+
                     if is_raw {
-                         lexer.next(); // r
-                         lexer.next(); lexer.next(); lexer.next(); // """
-                         let mut s = String::new();
-                         loop {
-                             // Check for triple quote end """
-                             {
-                                 let mut la = lexer.chars.clone();
-                                 if la.next() == Some('"') && la.next() == Some('"') && la.next() == Some('"') {
-                                     lexer.next(); lexer.next(); lexer.next();
-                                     break;
-                                 }
-                             }
-                             
-                             if let Some(ch) = lexer.next() {
-                                 s.push(ch);
-                             } else {
-                                 lexer.error("Unterminated raw triple-quoted string", start);
-                             }
-                         }
-                         tokens.push(Token { kind: TokenKind::String(s), span: Span::new(start, lexer.pos) });
-                         continue;
+                        lexer.next(); // r
+                        lexer.next();
+                        lexer.next();
+                        lexer.next(); // """
+                        let mut s = String::new();
+                        loop {
+                            // Check for triple quote end """
+                            {
+                                let mut la = lexer.chars.clone();
+                                if la.next() == Some('"')
+                                    && la.next() == Some('"')
+                                    && la.next() == Some('"')
+                                {
+                                    lexer.next();
+                                    lexer.next();
+                                    lexer.next();
+                                    break;
+                                }
+                            }
+
+                            if let Some(ch) = lexer.next() {
+                                s.push(ch);
+                            } else {
+                                lexer.error("Unterminated raw triple-quoted string", start);
+                            }
+                        }
+                        tokens.push(Token {
+                            kind: TokenKind::String(s),
+                            span: Span::new(start, lexer.pos),
+                        });
+                        continue;
                     }
                 }
 
                 let mut ident = String::new();
                 while let Some(&ch) = lexer.peek() {
-                    if !ch.is_alphanumeric() && ch != '_' { break; }
+                    if !ch.is_alphanumeric() && ch != '_' {
+                        break;
+                    }
                     ident.push(ch);
                     lexer.next();
                 }
@@ -472,13 +640,18 @@ pub fn lex(sm: &SourceMap, file: &str) -> Vec<Token> {
                     "confirm" => TokenKind::Confirm,
                     _ => TokenKind::Ident(ident),
                 };
-                tokens.push(Token { kind, span: Span::new(start, lexer.pos) });
+                tokens.push(Token {
+                    kind,
+                    span: Span::new(start, lexer.pos),
+                });
             }
             '#' => {
-                 while let Some(&ch) = lexer.peek() {
-                     if ch == '\n' { break; }
-                     lexer.next();
-                 }
+                while let Some(&ch) = lexer.peek() {
+                    if ch == '\n' {
+                        break;
+                    }
+                    lexer.next();
+                }
             }
             _ => lexer.error(&format!("Unexpected char: {}", c), start),
         }

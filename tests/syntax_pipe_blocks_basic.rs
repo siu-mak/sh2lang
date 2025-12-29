@@ -7,9 +7,13 @@ use sh2c::ast::{ExprKind, Stmt};
 fn parse_pipe_blocks_basic() {
     let program = parse_fixture("pipe_blocks_basic");
     let func = &program.functions[0];
-    
+
     // Check Stmt::PipeBlocks { segments }
-    if let Stmt { kind: StmtKind::PipeBlocks { segments }, .. } = &func.body[0] {
+    if let Stmt {
+        kind: StmtKind::PipeBlocks { segments },
+        ..
+    } = &func.body[0]
+    {
         assert_eq!(segments.len(), 2);
         // Seg 0: print("a"), print("b")
         assert_eq!(segments[0].len(), 2);

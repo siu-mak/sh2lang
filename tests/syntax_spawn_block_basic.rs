@@ -7,18 +7,30 @@ use sh2c::ast::{ExprKind, Stmt};
 fn parse_spawn_block_basic() {
     let program = parse_fixture("spawn_block_basic");
     let func = &program.functions[0];
-    
+
     // Check Spawn { stmt: Group { ... } }
-    if let Stmt { kind: StmtKind::Spawn { stmt }, .. } = &func.body[0] {
-        if let Stmt { kind: StmtKind::Group { body }, .. } = &**stmt {
-             assert_eq!(body.len(), 1);
-             if let Stmt { kind: StmtKind::Run(..), .. } = &body[0] {
-                 // OK
-             } else {
-                 panic!("Expected Run inside Group");
-             }
+    if let Stmt {
+        kind: StmtKind::Spawn { stmt },
+        ..
+    } = &func.body[0]
+    {
+        if let Stmt {
+            kind: StmtKind::Group { body },
+            ..
+        } = &**stmt
+        {
+            assert_eq!(body.len(), 1);
+            if let Stmt {
+                kind: StmtKind::Run(..),
+                ..
+            } = &body[0]
+            {
+                // OK
+            } else {
+                panic!("Expected Run inside Group");
+            }
         } else {
-             panic!("Expected Stmt::Group inside Spawn");
+            panic!("Expected Stmt::Group inside Spawn");
         }
     } else {
         panic!("Expected Stmt::Spawn");

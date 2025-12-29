@@ -28,17 +28,29 @@ fn exec_map_duplicate_keys() {
 
 #[test]
 fn compile_map_posix_is_error() {
-    assert_codegen_panics_target("map_posix_is_error", TargetShell::Posix, "map/dict is only supported in Bash target");
+    assert_codegen_panics_target(
+        "map_posix_is_error",
+        TargetShell::Posix,
+        "map/dict is only supported in Bash target",
+    );
 }
 
 #[test]
 fn compile_map_posix_index_only_is_error() {
-    assert_codegen_panics_target("map_posix_index_only_is_error", TargetShell::Posix, "map/dict is only supported in Bash target");
+    assert_codegen_panics_target(
+        "map_posix_index_only_is_error",
+        TargetShell::Posix,
+        "map/dict is only supported in Bash target",
+    );
 }
 
 #[test]
 fn compile_map_posix_for_only_is_error() {
-    assert_codegen_panics_target("map_posix_for_only_is_error", TargetShell::Posix, "map/dict is only supported in Bash target");
+    assert_codegen_panics_target(
+        "map_posix_for_only_is_error",
+        TargetShell::Posix,
+        "map/dict is only supported in Bash target",
+    );
 }
 
 #[test]

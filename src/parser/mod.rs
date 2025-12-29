@@ -2,10 +2,10 @@ mod common;
 mod expr;
 mod stmt;
 
+use self::common::Parser;
 use crate::ast::*;
 use crate::lexer::{Token, TokenKind};
-use crate::span::{Span, SourceMap};
-use self::common::Parser;
+use crate::span::{SourceMap, Span};
 use std::collections::HashMap;
 
 pub fn parse(tokens: &[Token], sm: &SourceMap, file: &str) -> Program {
@@ -22,7 +22,10 @@ pub fn parse(tokens: &[Token], sm: &SourceMap, file: &str) -> Program {
                 imports.push(path.clone());
                 parser.advance();
             } else {
-                parser.error("Expected string literal after import", parser.current_span());
+                parser.error(
+                    "Expected string literal after import",
+                    parser.current_span(),
+                );
             }
         } else if parser.match_kind(TokenKind::Func) {
             let start = parser.previous_span(); // 'func' span
@@ -32,7 +35,7 @@ pub fn parse(tokens: &[Token], sm: &SourceMap, file: &str) -> Program {
                 parser.error("Expected function name", parser.current_span());
             };
             parser.advance();
-            
+
             parser.expect(TokenKind::LParen);
             let mut params = Vec::new();
             if !parser.match_kind(TokenKind::RParen) {
@@ -43,24 +46,35 @@ pub fn parse(tokens: &[Token], sm: &SourceMap, file: &str) -> Program {
                     } else {
                         parser.error("Expected parameter name", parser.current_span());
                     }
-                    if !parser.match_kind(TokenKind::Comma) { break; }
+                    if !parser.match_kind(TokenKind::Comma) {
+                        break;
+                    }
                 }
                 parser.expect(TokenKind::RParen);
             }
-            
+
             parser.expect(TokenKind::LBrace);
             let mut body = Vec::new();
             while !parser.match_kind(TokenKind::RBrace) {
                 if parser.match_kind(TokenKind::Import) {
-                    parser.error("import is only allowed at top-level", parser.previous_span());
+                    parser.error(
+                        "import is only allowed at top-level",
+                        parser.previous_span(),
+                    );
                 }
                 body.push(parser.parse_stmt());
             }
             // RBrace consumed
             let end = parser.previous_span();
             let span = start.merge(end);
-            
-            functions.push(Function { name, params, body, span, file: file.to_string() });
+
+            functions.push(Function {
+                name,
+                params,
+                body,
+                span,
+                file: file.to_string(),
+            });
         } else {
             top_level.push(parser.parse_stmt());
         }
@@ -78,7 +92,7 @@ pub fn parse(tokens: &[Token], sm: &SourceMap, file: &str) -> Program {
         functions,
         top_level,
         span,
-        source_maps: HashMap::new(), // Filled by loader later
+        source_maps: HashMap::new(),  // Filled by loader later
         entry_file: file.to_string(), // Initial parse sets this, loader might override or correct it
     }
 }

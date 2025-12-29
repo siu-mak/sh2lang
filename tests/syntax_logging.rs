@@ -1,10 +1,9 @@
-
 #[allow(unused_imports)]
-use sh2c::ast::{StmtKind, ExprKind, self, Stmt, Expr};
-use sh2c::parser;
+use sh2c::ast::{self, Expr, ExprKind, Stmt, StmtKind};
+use sh2c::codegen::{self, TargetShell};
 use sh2c::lexer;
 use sh2c::lower;
-use sh2c::codegen::{self, TargetShell};
+use sh2c::parser;
 
 mod common;
 use common::*;
@@ -65,7 +64,10 @@ fn compile_log_bad_arity_3() {
 
 #[test]
 fn compile_log_bad_timestamp_type() {
-    assert_codegen_panics("log_bad_timestamp_type", "second argument must be a boolean literal");
+    assert_codegen_panics(
+        "log_bad_timestamp_type",
+        "second argument must be a boolean literal",
+    );
 }
 
 #[test]

@@ -1,10 +1,9 @@
-
 #[allow(unused_imports)]
-use sh2c::ast::{StmtKind, ExprKind, self, Stmt, Expr};
-use sh2c::parser;
+use sh2c::ast::{self, Expr, ExprKind, Stmt, StmtKind};
+use sh2c::codegen::{self, TargetShell};
 use sh2c::lexer;
 use sh2c::lower;
-use sh2c::codegen::{self, TargetShell};
+use sh2c::parser;
 
 mod common;
 use common::*;
@@ -73,7 +72,6 @@ fn exec_path_join_absolute_reset_posix() {
     assert_exec_matches_fixture_target("path_join_absolute_reset", TargetShell::Posix);
 }
 
-
 // ERRORS
 
 #[test]
@@ -88,10 +86,16 @@ fn compile_path_join_arity_error() {
 
 #[test]
 fn compile_path_home_stmt_error() {
-    assert_codegen_panics("path_home_stmt_error", "returns a value; use it in an expression");
+    assert_codegen_panics(
+        "path_home_stmt_error",
+        "returns a value; use it in an expression",
+    );
 }
 
 #[test]
 fn compile_path_join_stmt_error() {
-    assert_codegen_panics("path_join_stmt_error", "returns a value; use it in an expression");
+    assert_codegen_panics(
+        "path_join_stmt_error",
+        "returns a value; use it in an expression",
+    );
 }

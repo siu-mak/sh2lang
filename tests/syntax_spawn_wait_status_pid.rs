@@ -1,6 +1,6 @@
-use sh2c::ast::StmtKind;
 use sh2c::ast::ExprKind;
-use sh2c::ast::{Stmt, Expr, CompareOp};
+use sh2c::ast::StmtKind;
+use sh2c::ast::{CompareOp, Expr, Stmt};
 mod common;
 use common::*;
 
@@ -10,28 +10,83 @@ fn parse_spawn_wait_status_pid() {
     let func = &program.functions[0];
 
     // stmt0: spawn run(...)
-    assert!(matches!(func.body[0], Stmt { kind: StmtKind::Spawn { .. }, .. }));
+    assert!(matches!(
+        func.body[0],
+        Stmt {
+            kind: StmtKind::Spawn { .. },
+            ..
+        }
+    ));
 
     // stmt1: if pid() > 0 { ... }
-    if let Stmt { kind: StmtKind::If { cond, .. }, .. } = &func.body[1] {
-        assert!(matches!(cond,
-            Expr { kind: ExprKind::Compare { op: CompareOp::Gt, .. }, .. }
+    if let Stmt {
+        kind: StmtKind::If { cond, .. },
+        ..
+    } = &func.body[1]
+    {
+        assert!(matches!(
+            cond,
+            Expr {
+                kind: ExprKind::Compare {
+                    op: CompareOp::Gt,
+                    ..
+                },
+                ..
+            }
         ));
-    } else { panic!("Expected If for pid() check"); }
+    } else {
+        panic!("Expected If for pid() check");
+    }
 
     // stmt2: wait(pid())
-    if let Stmt { kind: StmtKind::Wait(Some(e)), .. } = &func.body[2] {
-        assert!(matches!(e, Expr { kind: ExprKind::Pid, .. }));
-    } else { panic!("Expected Wait(Some(Pid))"); }
+    if let Stmt {
+        kind: StmtKind::Wait(Some(e)),
+        ..
+    } = &func.body[2]
+    {
+        assert!(matches!(
+            e,
+            Expr {
+                kind: ExprKind::Pid,
+                ..
+            }
+        ));
+    } else {
+        panic!("Expected Wait(Some(Pid))");
+    }
 
     // stmt3: if status() == 7 { ... }
-    if let Stmt { kind: StmtKind::If { cond, .. }, .. } = &func.body[3] {
-        if let Expr { kind: ExprKind::Compare { left, op, right }, .. } = cond {
+    if let Stmt {
+        kind: StmtKind::If { cond, .. },
+        ..
+    } = &func.body[3]
+    {
+        if let Expr {
+            kind: ExprKind::Compare { left, op, right },
+            ..
+        } = cond
+        {
             assert_eq!(*op, CompareOp::Eq);
-            assert!(matches!(**left, Expr { kind: ExprKind::Status, .. }));
-            assert!(matches!(**right, Expr { kind: ExprKind::Number(7), .. }));
-        } else { panic!("Expected Compare for status() == 7"); }
-    } else { panic!("Expected If for status()"); }
+            assert!(matches!(
+                **left,
+                Expr {
+                    kind: ExprKind::Status,
+                    ..
+                }
+            ));
+            assert!(matches!(
+                **right,
+                Expr {
+                    kind: ExprKind::Number(7),
+                    ..
+                }
+            ));
+        } else {
+            panic!("Expected Compare for status() == 7");
+        }
+    } else {
+        panic!("Expected If for status()");
+    }
 }
 
 #[test]

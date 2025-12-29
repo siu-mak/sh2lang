@@ -15,9 +15,9 @@ fn codegen_target_posix_scalar() {
 #[test]
 fn codegen_target_posix_list_fail() {
     assert_codegen_panics_target(
-        "target_posix_list_unsupported", 
-        TargetShell::Posix, 
-        "supported in POSIX"
+        "target_posix_list_unsupported",
+        TargetShell::Posix,
+        "supported in POSIX",
     );
 }
 
@@ -57,7 +57,7 @@ fn codegen_target_posix_env_indirect_fail() {
     assert_codegen_panics_target(
         "target_posix_env_indirect_unsupported",
         TargetShell::Posix,
-        "env(var_name) is not supported in POSIX"
+        "env(var_name) is not supported in POSIX",
     );
 }
 #[test]
@@ -80,6 +80,6 @@ fn posix_rejects_indexing() {
     assert_codegen_panics_target(
         "target_posix_rejects_index",
         TargetShell::Posix,
-        "supported in POSIX"
+        "supported in POSIX",
     );
 }

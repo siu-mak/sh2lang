@@ -19,10 +19,18 @@ fn exec_confirm_invalid_then_no_bash() {
 
 #[test]
 fn compile_panic_input_posix_unsupported() {
-    assert_codegen_panics_target("input_basic", TargetShell::Posix, "input(...) is not supported in POSIX sh target");
+    assert_codegen_panics_target(
+        "input_basic",
+        TargetShell::Posix,
+        "input(...) is not supported in POSIX sh target",
+    );
 }
 
 #[test]
 fn compile_panic_confirm_posix_unsupported() {
-    assert_codegen_panics_target("confirm_yes", TargetShell::Posix, "confirm(...) is not supported in POSIX sh target");
+    assert_codegen_panics_target(
+        "confirm_yes",
+        TargetShell::Posix,
+        "confirm(...) is not supported in POSIX sh target",
+    );
 }

@@ -1,4 +1,4 @@
-use sh2c::ast::{Stmt, StmtKind, Expr, ExprKind};
+use sh2c::ast::{Expr, ExprKind, Stmt, StmtKind};
 mod common;
 use common::*;
 
@@ -8,20 +8,40 @@ fn parse_capture_pipe() {
     let func = &program.functions[0];
 
     // stmt0: let out = capture(run(...) | run(...)) => Expr { kind: ExprKind::CommandPipe([...]), .. }
-    if let Stmt { kind: StmtKind::Let { name, value }, .. } = &func.body[0] {
+    if let Stmt {
+        kind: StmtKind::Let { name, value },
+        ..
+    } = &func.body[0]
+    {
         assert_eq!(name, "out");
-        if let Expr { kind: ExprKind::CommandPipe(segments), .. } = value {
+        if let Expr {
+            kind: ExprKind::CommandPipe(segments),
+            ..
+        } = value
+        {
             assert_eq!(segments.len(), 2);
 
             // seg0
-            if let Expr { kind: ExprKind::Literal(ref s), .. } = segments[0][0] {
-                 assert_eq!(s, "printf");
-            } else { panic!("Expected printf"); }
+            if let Expr {
+                kind: ExprKind::Literal(ref s),
+                ..
+            } = segments[0][0]
+            {
+                assert_eq!(s, "printf");
+            } else {
+                panic!("Expected printf");
+            }
 
             // seg1
-            if let Expr { kind: ExprKind::Literal(ref s), .. } = segments[1][0] {
-                 assert_eq!(s, "sed");
-            } else { panic!("Expected sed"); }
+            if let Expr {
+                kind: ExprKind::Literal(ref s),
+                ..
+            } = segments[1][0]
+            {
+                assert_eq!(s, "sed");
+            } else {
+                panic!("Expected sed");
+            }
         } else {
             panic!("Expected Expr::CommandPipe for capture(... | ...)");
         }
@@ -30,7 +50,9 @@ fn parse_capture_pipe() {
     }
 
     // stmt1: print(out)
-    assert!(matches!(func.body[1], Stmt { kind: StmtKind::Print(Expr { kind: ExprKind::Var(ref v), .. }), .. } if v == "out"));
+    assert!(
+        matches!(func.body[1], Stmt { kind: StmtKind::Print(Expr { kind: ExprKind::Var(ref v), .. }), .. } if v == "out")
+    );
 }
 
 #[test]

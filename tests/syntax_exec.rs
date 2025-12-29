@@ -1,5 +1,5 @@
 use sh2c::ast::StmtKind;
-use sh2c::ast::{ExprKind, self, Stmt};
+use sh2c::ast::{self, ExprKind, Stmt};
 mod common;
 use common::*;
 
@@ -9,9 +9,30 @@ fn parse_exec_basic() {
     let func = &program.functions[0];
     assert_eq!(func.body.len(), 3);
 
-    if let Stmt { kind: StmtKind::Print(_), .. } = &func.body[0] {} else { panic!("Expected Print"); }
-    if let Stmt { kind: StmtKind::Exec(_), .. } = &func.body[1] {} else { panic!("Expected Exec"); }
-    if let Stmt { kind: StmtKind::Print(_), .. } = &func.body[2] {} else { panic!("Expected Print"); }
+    if let Stmt {
+        kind: StmtKind::Print(_),
+        ..
+    } = &func.body[0]
+    {
+    } else {
+        panic!("Expected Print");
+    }
+    if let Stmt {
+        kind: StmtKind::Exec(_),
+        ..
+    } = &func.body[1]
+    {
+    } else {
+        panic!("Expected Exec");
+    }
+    if let Stmt {
+        kind: StmtKind::Print(_),
+        ..
+    } = &func.body[2]
+    {
+    } else {
+        panic!("Expected Print");
+    }
 }
 
 #[test]

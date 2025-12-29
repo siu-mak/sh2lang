@@ -13,8 +13,16 @@ pub enum Val {
     Command(Vec<Val>),
     CommandPipe(Vec<Vec<Val>>),
     Concat(Box<Val>, Box<Val>),
-    Arith { left: Box<Val>, op: ArithOp, right: Box<Val> },
-    Compare { left: Box<Val>, op: CompareOp, right: Box<Val> },
+    Arith {
+        left: Box<Val>,
+        op: ArithOp,
+        right: Box<Val>,
+    },
+    Compare {
+        left: Box<Val>,
+        op: CompareOp,
+        right: Box<Val>,
+    },
     And(Box<Val>, Box<Val>),
     Or(Box<Val>, Box<Val>),
     Not(Box<Val>),
@@ -28,8 +36,14 @@ pub enum Val {
     IsNonEmpty(Box<Val>),
     Len(Box<Val>),
     Arg(u32),
-    Index { list: Box<Val>, index: Box<Val> },
-    Join { list: Box<Val>, sep: Box<Val> },
+    Index {
+        list: Box<Val>,
+        index: Box<Val>,
+    },
+    Join {
+        list: Box<Val>,
+        sep: Box<Val>,
+    },
     Count(Box<Val>),
     Bool(bool),
     Number(u32),
@@ -52,11 +66,17 @@ pub enum Val {
     ParseArgs,
     ArgsFlags(Box<Val>),
     ArgsPositionals(Box<Val>),
-    Call { name: String, args: Vec<Val> },
+    Call {
+        name: String,
+        args: Vec<Val>,
+    },
     LoadEnvfile(Box<Val>),
     JsonKv(Box<Val>),
     MapLiteral(Vec<(String, Val)>),
-    MapIndex { map: String, key: String },
+    MapIndex {
+        map: String,
+        key: String,
+    },
     Which(Box<Val>),
     ReadFile(Box<Val>),
     TryRun(Vec<Val>),
@@ -93,7 +113,11 @@ pub enum CompareOp {
 #[derive(Debug)]
 pub enum Cmd {
     Assign(String, Val, Option<String>),
-    Exec { args: Vec<Val>, allow_fail: bool, loc: Option<String> },
+    Exec {
+        args: Vec<Val>,
+        allow_fail: bool,
+        loc: Option<String>,
+    },
     Print(Val),
     PrintErr(Val),
     If {
@@ -153,9 +177,16 @@ pub enum Cmd {
     },
     Cd(Val),
     Raw(String),
-    Call { name: String, args: Vec<Val> },
-    Subshell { body: Vec<Cmd> },
-    Group { body: Vec<Cmd> },
+    Call {
+        name: String,
+        args: Vec<Val>,
+    },
+    Subshell {
+        body: Vec<Cmd>,
+    },
+    Group {
+        body: Vec<Cmd>,
+    },
     WithRedirect {
         stdout: Option<RedirectTarget>,
         stderr: Option<RedirectTarget>,
@@ -168,13 +199,25 @@ pub enum Cmd {
         try_body: Vec<Cmd>,
         catch_body: Vec<Cmd>,
     },
-    AndThen { left: Vec<Cmd>, right: Vec<Cmd> },
-    OrElse { left: Vec<Cmd>, right: Vec<Cmd> },
-    Export { name: String, value: Option<Val> },
+    AndThen {
+        left: Vec<Cmd>,
+        right: Vec<Cmd>,
+    },
+    OrElse {
+        left: Vec<Cmd>,
+        right: Vec<Cmd>,
+    },
+    Export {
+        name: String,
+        value: Option<Val>,
+    },
     Unset(String),
     Source(Val),
     ExecReplace(Vec<Val>, Option<String>),
-    SaveEnvfile { path: Val, env: Val },
+    SaveEnvfile {
+        path: Val,
+        env: Val,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq)]

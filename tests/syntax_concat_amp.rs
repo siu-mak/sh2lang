@@ -1,6 +1,6 @@
-use sh2c::ast::StmtKind;
 use sh2c::ast::ExprKind;
-use sh2c::ast::{Stmt, Expr, RunCall};
+use sh2c::ast::StmtKind;
+use sh2c::ast::{Expr, RunCall, Stmt};
 mod common;
 use common::*;
 
@@ -10,15 +10,39 @@ fn parse_concat_amp_basic() {
     let func = &program.functions[0];
 
     // let x = "a" & "b"
-    if let Stmt { kind: StmtKind::Let { name, value }, .. } = &func.body[0] {
+    if let Stmt {
+        kind: StmtKind::Let { name, value },
+        ..
+    } = &func.body[0]
+    {
         assert_eq!(name, "x");
-        assert!(matches!(value, Expr { kind: ExprKind::Concat(_, _), .. }));
-    } else { panic!("Expected Let"); }
+        assert!(matches!(
+            value,
+            Expr {
+                kind: ExprKind::Concat(_, _),
+                ..
+            }
+        ));
+    } else {
+        panic!("Expected Let");
+    }
 
     // run("echo", "c" & "d") => second arg is Concat
-    if let Stmt { kind: StmtKind::Run(RunCall { args, .. }), .. } = &func.body[2] {
-        assert!(matches!(&args[1], Expr { kind: ExprKind::Concat(_, _), .. }));
-    } else { panic!("Expected Run"); }
+    if let Stmt {
+        kind: StmtKind::Run(RunCall { args, .. }),
+        ..
+    } = &func.body[2]
+    {
+        assert!(matches!(
+            &args[1],
+            Expr {
+                kind: ExprKind::Concat(_, _),
+                ..
+            }
+        ));
+    } else {
+        panic!("Expected Run");
+    }
 }
 
 #[test]

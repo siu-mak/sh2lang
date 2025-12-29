@@ -1,4 +1,4 @@
-use sh2c::ast::{Stmt, StmtKind, Expr, ExprKind};
+use sh2c::ast::{Expr, ExprKind, Stmt, StmtKind};
 mod common;
 use common::*;
 
@@ -7,9 +7,27 @@ fn parse_exec_replace() {
     let program = parse_fixture("exec_replace");
     let func = &program.functions[0];
 
-    assert!(matches!(func.body[0], Stmt { kind: StmtKind::Print(_), .. }));
-    assert!(matches!(func.body[1], Stmt { kind: StmtKind::Exec(_), .. }));
-    assert!(matches!(func.body[2], Stmt { kind: StmtKind::Print(_), .. }));
+    assert!(matches!(
+        func.body[0],
+        Stmt {
+            kind: StmtKind::Print(_),
+            ..
+        }
+    ));
+    assert!(matches!(
+        func.body[1],
+        Stmt {
+            kind: StmtKind::Exec(_),
+            ..
+        }
+    ));
+    assert!(matches!(
+        func.body[2],
+        Stmt {
+            kind: StmtKind::Print(_),
+            ..
+        }
+    ));
 }
 
 #[test]

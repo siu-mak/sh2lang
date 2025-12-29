@@ -1,6 +1,6 @@
 mod common;
 use common::*;
-use sh2c::ast::{Stmt, StmtKind, Expr, ExprKind};
+use sh2c::ast::{Expr, ExprKind, Stmt, StmtKind};
 
 #[test]
 fn parse_return_fs_predicate() {
@@ -8,10 +8,21 @@ fn parse_return_fs_predicate() {
     let check_func = &program.functions[0];
     assert_eq!(check_func.name, "check");
     // return(is_non_empty(path))
-    if let Stmt { kind: StmtKind::Return(Some(expr)), .. } = &check_func.body[0] {
-        if let Expr { kind: ExprKind::IsNonEmpty(path), .. } = expr {
+    if let Stmt {
+        kind: StmtKind::Return(Some(expr)),
+        ..
+    } = &check_func.body[0]
+    {
+        if let Expr {
+            kind: ExprKind::IsNonEmpty(path),
+            ..
+        } = expr
+        {
             match &**path {
-                Expr { kind: ExprKind::Var(name), .. } => assert_eq!(name, "path"),
+                Expr {
+                    kind: ExprKind::Var(name),
+                    ..
+                } => assert_eq!(name, "path"),
                 _ => panic!("Expected path var"),
             }
         } else {

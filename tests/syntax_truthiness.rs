@@ -41,20 +41,36 @@ fn exec_truthy_not_scalar() {
 
 #[test]
 fn codegen_panic_truthy_args_disallowed_bash() {
-    assert_codegen_panics_target("truthy_args_disallowed", TargetShell::Bash, "args/list is not a valid condition");
+    assert_codegen_panics_target(
+        "truthy_args_disallowed",
+        TargetShell::Bash,
+        "args/list is not a valid condition",
+    );
 }
 
 #[test]
 fn codegen_panic_truthy_args_disallowed_posix() {
-    assert_codegen_panics_target("truthy_args_disallowed", TargetShell::Posix, "args/list is not a valid condition");
+    assert_codegen_panics_target(
+        "truthy_args_disallowed",
+        TargetShell::Posix,
+        "args/list is not a valid condition",
+    );
 }
 
 #[test]
 fn codegen_panic_truthy_list_disallowed_bash() {
-    assert_codegen_panics_target("truthy_list_disallowed", TargetShell::Bash, "args/list is not a valid condition");
+    assert_codegen_panics_target(
+        "truthy_list_disallowed",
+        TargetShell::Bash,
+        "args/list is not a valid condition",
+    );
 }
 
 #[test]
 fn codegen_panic_truthy_list_disallowed_posix() {
-    assert_codegen_panics_target("truthy_list_disallowed", TargetShell::Posix, "args/list is not a valid condition");
+    assert_codegen_panics_target(
+        "truthy_list_disallowed",
+        TargetShell::Posix,
+        "args/list is not a valid condition",
+    );
 }

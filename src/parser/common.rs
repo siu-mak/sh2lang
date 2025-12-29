@@ -1,5 +1,5 @@
 use crate::lexer::{Token, TokenKind};
-use crate::span::{Span, SourceMap};
+use crate::span::{SourceMap, Span};
 
 pub(crate) struct Parser<'a> {
     pub tokens: &'a [Token],
@@ -66,10 +66,7 @@ impl<'a> Parser<'a> {
             if t.kind == kind {
                 self.advance();
             } else {
-                self.error(
-                    &format!("Expected {:?}, got {:?}", kind, t.kind),
-                    t.span,
-                );
+                self.error(&format!("Expected {:?}, got {:?}", kind, t.kind), t.span);
             }
         } else {
             self.error(

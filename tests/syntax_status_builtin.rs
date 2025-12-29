@@ -1,6 +1,6 @@
-use sh2c::ast::StmtKind;
 use sh2c::ast::ExprKind;
-use sh2c::ast::{Stmt, Expr, CompareOp};
+use sh2c::ast::StmtKind;
+use sh2c::ast::{CompareOp, Expr, Stmt};
 mod common;
 use common::*;
 
@@ -10,28 +10,88 @@ fn parse_status_builtin() {
     let func = &program.functions[0];
 
     // stmt0: run("true")
-    assert!(matches!(func.body[0], Stmt { kind: StmtKind::Run(_), .. }));
+    assert!(matches!(
+        func.body[0],
+        Stmt {
+            kind: StmtKind::Run(_),
+            ..
+        }
+    ));
 
     // stmt1: if status() == 0 { ... }
-    if let Stmt { kind: StmtKind::If { cond, .. }, .. } = &func.body[1] {
-        if let Expr { kind: ExprKind::Compare { left, op, right }, .. } = cond {
-            assert!(matches!(**left, Expr { kind: ExprKind::Status, .. }));
+    if let Stmt {
+        kind: StmtKind::If { cond, .. },
+        ..
+    } = &func.body[1]
+    {
+        if let Expr {
+            kind: ExprKind::Compare { left, op, right },
+            ..
+        } = cond
+        {
+            assert!(matches!(
+                **left,
+                Expr {
+                    kind: ExprKind::Status,
+                    ..
+                }
+            ));
             assert_eq!(*op, CompareOp::Eq);
-            assert!(matches!(**right, Expr { kind: ExprKind::Number(0), .. }));
-        } else { panic!("Expected Compare in first if"); }
-    } else { panic!("Expected If after first run"); }
+            assert!(matches!(
+                **right,
+                Expr {
+                    kind: ExprKind::Number(0),
+                    ..
+                }
+            ));
+        } else {
+            panic!("Expected Compare in first if");
+        }
+    } else {
+        panic!("Expected If after first run");
+    }
 
     // stmt2: run("false")
-    assert!(matches!(func.body[2], Stmt { kind: StmtKind::Run(_), .. }));
+    assert!(matches!(
+        func.body[2],
+        Stmt {
+            kind: StmtKind::Run(_),
+            ..
+        }
+    ));
 
     // stmt3: if status() != 0 { ... }
-    if let Stmt { kind: StmtKind::If { cond, .. }, .. } = &func.body[3] {
-        if let Expr { kind: ExprKind::Compare { left, op, right }, .. } = cond {
-            assert!(matches!(**left, Expr { kind: ExprKind::Status, .. }));
+    if let Stmt {
+        kind: StmtKind::If { cond, .. },
+        ..
+    } = &func.body[3]
+    {
+        if let Expr {
+            kind: ExprKind::Compare { left, op, right },
+            ..
+        } = cond
+        {
+            assert!(matches!(
+                **left,
+                Expr {
+                    kind: ExprKind::Status,
+                    ..
+                }
+            ));
             assert_eq!(*op, CompareOp::NotEq);
-            assert!(matches!(**right, Expr { kind: ExprKind::Number(0), .. }));
-        } else { panic!("Expected Compare in second if"); }
-    } else { panic!("Expected If after second run"); }
+            assert!(matches!(
+                **right,
+                Expr {
+                    kind: ExprKind::Number(0),
+                    ..
+                }
+            ));
+        } else {
+            panic!("Expected Compare in second if");
+        }
+    } else {
+        panic!("Expected If after second run");
+    }
 }
 
 #[test]

@@ -40,5 +40,9 @@ fn exec_pipe_posix_errexit_safe() {
     // Posix target: run with -e flag to verify errexit-safe behavior
     // The pipeline itself should succeed (wait + collect status), and then
     // (exit $__sh2_status) should trigger errexit abort, preventing UNREACHABLE.
-    assert_exec_matches_fixture_target_with_flags("pipe_posix_errexit_safe", TargetShell::Posix, &["-e"]);
+    assert_exec_matches_fixture_target_with_flags(
+        "pipe_posix_errexit_safe",
+        TargetShell::Posix,
+        &["-e"],
+    );
 }

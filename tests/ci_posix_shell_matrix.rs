@@ -1,8 +1,8 @@
 mod common;
 use common::*;
+use lazy_static::lazy_static;
 use sh2c::codegen::TargetShell;
 use std::sync::Mutex;
-use lazy_static::lazy_static;
 
 lazy_static! {
     static ref ENV_LOCK: Mutex<()> = Mutex::new(());
@@ -44,14 +44,14 @@ impl Drop for EnvGuard {
 #[test]
 fn ci_strict_posix_rejects_unknown_shell() {
     let _lock = ENV_LOCK.lock().unwrap();
-    
+
     // Set invalid shell -> expect panic with specific message
     let _env = EnvGuard::set("SH2C_POSIX_SHELL", "shell_that_does_not_exist_12345");
-    
+
     let result = std::panic::catch_unwind(|| {
         assert_exec_matches_fixture_target("truthy_empty_string", TargetShell::Posix);
     });
-    
+
     match result {
         Ok(_) => panic!("Expected panic but found success"),
         Err(e) => {
@@ -62,7 +62,11 @@ fn ci_strict_posix_rejects_unknown_shell() {
             } else {
                 "Unknown panic message"
             };
-            assert!(msg.contains("Invalid SH2C_POSIX_SHELL"), "Got unexpected panic message: {}", msg);
+            assert!(
+                msg.contains("Invalid SH2C_POSIX_SHELL"),
+                "Got unexpected panic message: {}",
+                msg
+            );
         }
     }
 }
@@ -71,23 +75,23 @@ fn ci_strict_posix_rejects_unknown_shell() {
 fn ci_strict_posix_runs_under_dash() {
     let _lock = ENV_LOCK.lock().unwrap();
 
-    // Set valid shell "dash". 
+    // Set valid shell "dash".
     // This requires "dash" to be installed on the system running this test.
     // If dash is missing, this test fails (which is valid for strict CI environments).
     let _env = EnvGuard::set("SH2C_POSIX_SHELL", "dash");
-    
+
     let result = std::panic::catch_unwind(|| {
         assert_exec_matches_fixture_target("truthy_empty_string", TargetShell::Posix);
     });
-    
+
     if let Err(e) = result {
-         let msg = if let Some(s) = e.downcast_ref::<&str>() {
-                *s
-            } else if let Some(s) = e.downcast_ref::<String>() {
-                s.as_str()
-            } else {
-                "Unknown panic message"
-            };
+        let msg = if let Some(s) = e.downcast_ref::<&str>() {
+            *s
+        } else if let Some(s) = e.downcast_ref::<String>() {
+            s.as_str()
+        } else {
+            "Unknown panic message"
+        };
         // If dash isn't installed, we might see the panic from our harness.
         // But for CI, we want this to succeed. For local dev without dash, this fails.
         // User requirements say: "This test MUST fail on systems without dash".

@@ -1,6 +1,6 @@
-use sh2c::ast::StmtKind;
 use sh2c::ast::ExprKind;
-use sh2c::ast::{Stmt, Expr, ArithOp};
+use sh2c::ast::StmtKind;
+use sh2c::ast::{ArithOp, Expr, Stmt};
 mod common;
 use common::*;
 
@@ -10,15 +10,34 @@ fn parse_concat_amp_precedence() {
     let func = &program.functions[0];
 
     // let s = "n=" & 1 + 2
-    if let Stmt { kind: StmtKind::Let { value, .. }, .. } = &func.body[0] {
-        if let Expr { kind: ExprKind::Concat(left, right), .. } = value {
+    if let Stmt {
+        kind: StmtKind::Let { value, .. },
+        ..
+    } = &func.body[0]
+    {
+        if let Expr {
+            kind: ExprKind::Concat(left, right),
+            ..
+        } = value
+        {
             assert!(matches!(**left, Expr { kind: ExprKind::Literal(ref s), .. } if s == "n="));
             // right should be arithmetic (1 + 2)
-            assert!(matches!(**right, Expr { kind: ExprKind::Arith { op: ArithOp::Add, .. }, .. }));
+            assert!(matches!(
+                **right,
+                Expr {
+                    kind: ExprKind::Arith {
+                        op: ArithOp::Add,
+                        ..
+                    },
+                    ..
+                }
+            ));
         } else {
             panic!("Expected Concat at top-level");
         }
-    } else { panic!("Expected Let"); }
+    } else {
+        panic!("Expected Let");
+    }
 }
 
 #[test]

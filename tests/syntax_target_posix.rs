@@ -1,5 +1,7 @@
 mod common;
-use common::{assert_codegen_matches_snapshot_target, assert_exec_matches_fixture_target, TargetShell};
+use common::{
+    TargetShell, assert_codegen_matches_snapshot_target, assert_exec_matches_fixture_target,
+};
 
 #[test]
 fn codegen_posix_params() {

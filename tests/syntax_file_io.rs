@@ -1,10 +1,9 @@
-
 #[allow(unused_imports)]
-use sh2c::ast::{StmtKind, ExprKind, self, Stmt, Expr};
-use sh2c::parser;
+use sh2c::ast::{self, Expr, ExprKind, Stmt, StmtKind};
+use sh2c::codegen::{self, TargetShell};
 use sh2c::lexer;
 use sh2c::lower;
-use sh2c::codegen::{self, TargetShell};
+use sh2c::parser;
 
 mod common;
 use common::*;
@@ -63,7 +62,6 @@ fn exec_write_file_overwrite_posix() {
     assert_exec_matches_fixture_target("write_file_overwrite", TargetShell::Posix);
 }
 
-
 #[test]
 fn exec_write_file_append_bash() {
     assert_exec_matches_fixture_target("write_file_append", TargetShell::Bash);
@@ -84,7 +82,6 @@ fn exec_write_file_spaces_posix() {
     assert_exec_matches_fixture_target("write_file_spaces", TargetShell::Posix);
 }
 
-
 // ERRORS
 
 #[test]
@@ -99,5 +96,8 @@ fn compile_write_file_expr_error() {
 
 #[test]
 fn compile_write_file_bad_arg() {
-    assert_codegen_panics("write_file_bad_arg", "third argument must be a boolean literal");
+    assert_codegen_panics(
+        "write_file_bad_arg",
+        "third argument must be a boolean literal",
+    );
 }

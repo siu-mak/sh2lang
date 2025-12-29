@@ -1,6 +1,6 @@
-use sh2c::ast::StmtKind;
 use sh2c::ast::ExprKind;
-use sh2c::ast::{self, Stmt, Expr};
+use sh2c::ast::StmtKind;
+use sh2c::ast::{self, Expr, Stmt};
 mod common;
 use common::*;
 
@@ -10,14 +10,36 @@ fn parse_env_basic() {
     let func = &program.functions[0];
     // with env { FOO = "bar" } { print(env("FOO")) }
     // body[0] is WithEnv
-    if let Stmt { kind: StmtKind::WithEnv { body, .. }, .. } = &func.body[0] {
+    if let Stmt {
+        kind: StmtKind::WithEnv { body, .. },
+        ..
+    } = &func.body[0]
+    {
         // body of WithEnv block
-        if let Stmt { kind: StmtKind::Print(Expr { kind: ExprKind::Env(inner), .. }), .. } = &body[0] {
-            if let Expr { kind: ExprKind::Literal(s), .. } = &**inner {
+        if let Stmt {
+            kind:
+                StmtKind::Print(Expr {
+                    kind: ExprKind::Env(inner),
+                    ..
+                }),
+            ..
+        } = &body[0]
+        {
+            if let Expr {
+                kind: ExprKind::Literal(s),
+                ..
+            } = &**inner
+            {
                 assert_eq!(s, "FOO");
-            } else { panic!("Expected Literal inside Env"); }
-        } else { panic!("Expected Print(Env)"); }
-    } else { panic!("Expected WithEnv"); }
+            } else {
+                panic!("Expected Literal inside Env");
+            }
+        } else {
+            panic!("Expected Print(Env)");
+        }
+    } else {
+        panic!("Expected WithEnv");
+    }
 }
 
 #[test]

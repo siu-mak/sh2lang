@@ -45,7 +45,8 @@ impl SourceMap {
     }
 
     pub fn line_col(&self, pos: usize) -> (usize, usize) {
-        let line_idx = self.line_starts
+        let line_idx = self
+            .line_starts
             .binary_search(&pos)
             .unwrap_or_else(|x| x - 1);
         let col = pos - self.line_starts[line_idx] + 1;
@@ -76,7 +77,7 @@ impl SourceMap {
         for _ in 0..len {
             arrow.push('^');
         }
-        
+
         format!(
             "error: {}\n--> {}:{}:{}\n |\n | {}\n | {}",
             msg, file, line, col, snippet, arrow
