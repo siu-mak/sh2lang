@@ -1,0 +1,5 @@
+Error: error: try_run() must be bound via let (e.g., let r = try_run(...))
+--> diag_span_multiline_expr.sh2:2:11
+ |
+ |     print(try_run(
+ |           ^ (spans multiple lines)

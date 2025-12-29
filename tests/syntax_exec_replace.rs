@@ -10,21 +10,21 @@ fn parse_exec_replace() {
     assert!(matches!(
         func.body[0],
         Stmt {
-            kind: StmtKind::Print(_),
+            node: StmtKind::Print(_),
             ..
         }
     ));
     assert!(matches!(
         func.body[1],
         Stmt {
-            kind: StmtKind::Exec(_),
+            node: StmtKind::Exec(_),
             ..
         }
     ));
     assert!(matches!(
         func.body[2],
         Stmt {
-            kind: StmtKind::Print(_),
+            node: StmtKind::Print(_),
             ..
         }
     ));

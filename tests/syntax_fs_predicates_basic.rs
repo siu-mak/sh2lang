@@ -10,7 +10,7 @@ fn parse_fs_predicates_basic() {
 
     // stmt0: run(...)
     if let Stmt {
-        kind: StmtKind::Run(_),
+        node: StmtKind::Run(_),
         ..
     } = &func.body[0]
     {
@@ -20,26 +20,26 @@ fn parse_fs_predicates_basic() {
 
     // stmt1: if is_symlink(...) && is_exec(...) && is_readable(...) && is_writable(...)
     if let Stmt {
-        kind: StmtKind::If { cond, .. },
+        node: StmtKind::If { cond, .. },
         ..
     } = &func.body[1]
     {
         fn contains_is_symlink(e: &Expr) -> bool {
             match e {
                 Expr {
-                    kind: ExprKind::IsSymlink(_),
+                    node: ExprKind::IsSymlink(_),
                     ..
                 } => true,
                 Expr {
-                    kind: ExprKind::And(a, b),
+                    node: ExprKind::And(a, b),
                     ..
                 }
                 | Expr {
-                    kind: ExprKind::Or(a, b),
+                    node: ExprKind::Or(a, b),
                     ..
                 } => contains_is_symlink(a) || contains_is_symlink(b),
                 Expr {
-                    kind: ExprKind::Not(x),
+                    node: ExprKind::Not(x),
                     ..
                 } => contains_is_symlink(x),
                 _ => false,
@@ -48,19 +48,19 @@ fn parse_fs_predicates_basic() {
         fn contains_is_exec(e: &Expr) -> bool {
             match e {
                 Expr {
-                    kind: ExprKind::IsExec(_),
+                    node: ExprKind::IsExec(_),
                     ..
                 } => true,
                 Expr {
-                    kind: ExprKind::And(a, b),
+                    node: ExprKind::And(a, b),
                     ..
                 }
                 | Expr {
-                    kind: ExprKind::Or(a, b),
+                    node: ExprKind::Or(a, b),
                     ..
                 } => contains_is_exec(a) || contains_is_exec(b),
                 Expr {
-                    kind: ExprKind::Not(x),
+                    node: ExprKind::Not(x),
                     ..
                 } => contains_is_exec(x),
                 _ => false,
@@ -69,19 +69,19 @@ fn parse_fs_predicates_basic() {
         fn contains_is_readable(e: &Expr) -> bool {
             match e {
                 Expr {
-                    kind: ExprKind::IsReadable(_),
+                    node: ExprKind::IsReadable(_),
                     ..
                 } => true,
                 Expr {
-                    kind: ExprKind::And(a, b),
+                    node: ExprKind::And(a, b),
                     ..
                 }
                 | Expr {
-                    kind: ExprKind::Or(a, b),
+                    node: ExprKind::Or(a, b),
                     ..
                 } => contains_is_readable(a) || contains_is_readable(b),
                 Expr {
-                    kind: ExprKind::Not(x),
+                    node: ExprKind::Not(x),
                     ..
                 } => contains_is_readable(x),
                 _ => false,
@@ -90,19 +90,19 @@ fn parse_fs_predicates_basic() {
         fn contains_is_writable(e: &Expr) -> bool {
             match e {
                 Expr {
-                    kind: ExprKind::IsWritable(_),
+                    node: ExprKind::IsWritable(_),
                     ..
                 } => true,
                 Expr {
-                    kind: ExprKind::And(a, b),
+                    node: ExprKind::And(a, b),
                     ..
                 }
                 | Expr {
-                    kind: ExprKind::Or(a, b),
+                    node: ExprKind::Or(a, b),
                     ..
                 } => contains_is_writable(a) || contains_is_writable(b),
                 Expr {
-                    kind: ExprKind::Not(x),
+                    node: ExprKind::Not(x),
                     ..
                 } => contains_is_writable(x),
                 _ => false,

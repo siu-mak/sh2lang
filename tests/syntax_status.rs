@@ -10,8 +10,8 @@ fn parse_status_basic() {
     // func body: run(...), print(status())
     // 2nd statement should be Print(Status)
     if let Stmt {
-        kind: StmtKind::Print(Expr {
-            kind: ExprKind::Status,
+        node: StmtKind::Print(Expr {
+            node: ExprKind::Status,
             ..
         }),
         ..

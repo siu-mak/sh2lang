@@ -1,7 +1,7 @@
 __sh2_err_handler() { printf "Error in %s\n" "${__sh2_loc:-unknown}" >&2; }
 trap '__sh2_err_handler' ERR
 main() {
-  __sh2_loc="tests/fixtures/interpolated_string_basic.sh2:2"
+  __sh2_loc="tests/fixtures/interpolated_string_basic.sh2:2:3"
   name='world'
   printf '%s\n' 'hello '"$name"'!'
 }

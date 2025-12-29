@@ -8,9 +8,9 @@ fn parse_interpolated_string_escape() {
     let func = &program.functions[0];
     // First print: "literal: \${name}"
     if let Stmt {
-        kind:
+        node:
             StmtKind::Print(Expr {
-                kind: ExprKind::Literal(s),
+                node: ExprKind::Literal(s),
                 ..
             }),
         ..
@@ -22,9 +22,9 @@ fn parse_interpolated_string_escape() {
     }
     // Second print: "dollar: \$"
     if let Stmt {
-        kind:
+        node:
             StmtKind::Print(Expr {
-                kind: ExprKind::Literal(s),
+                node: ExprKind::Literal(s),
                 ..
             }),
         ..

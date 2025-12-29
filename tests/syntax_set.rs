@@ -9,7 +9,7 @@ fn parse_set_var_and_env() {
     let func = &program.functions[0];
     // set env.FOO = "bar"
     if let Stmt {
-        kind: StmtKind::Set { target, value: _ },
+        node: StmtKind::Set { target, value: _ },
         ..
     } = &func.body[0]
     {
@@ -26,7 +26,7 @@ fn parse_set_var_and_env() {
     let func_var = &program_var.functions[0];
     // set x = "b"
     if let Stmt {
-        kind: StmtKind::Set { target, value: _ },
+        node: StmtKind::Set { target, value: _ },
         ..
     } = &func_var.body[1]
     {

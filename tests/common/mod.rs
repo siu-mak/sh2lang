@@ -115,10 +115,17 @@ pub fn assert_codegen_matches_snapshot_target(fixture_name: &str, target: Target
         default_expected_path.clone()
     };
 
-    let expected =
-        fs::read_to_string(&expected_path).expect("Failed to read expected codegen fixture");
-
     let shell_script = compile_path_to_shell(Path::new(&sh2_path), target);
+
+    let expected = if std::env::var("SH2C_UPDATE_SNAPSHOTS").is_ok() {
+        fs::write(&expected_path, &shell_script).expect("Failed to update snapshot");
+        shell_script.clone()
+    } else {
+        fs::read_to_string(&expected_path).expect("Failed to read expected codegen fixture")
+    };
+    
+    // We already have shell_script, no need to call compile_path_to_shell again 
+    // (Wait, original code called it at line 121. I moved it up.)
     assert_eq!(
         shell_script.trim(),
         expected.trim(),

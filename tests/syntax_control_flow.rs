@@ -9,14 +9,14 @@ fn parse_if_bool_and() {
     let program = parse_fixture("if_bool_and");
     let func = &program.functions[0];
     if let Stmt {
-        kind: StmtKind::If { cond, .. },
+        node: StmtKind::If { cond, .. },
         ..
     } = &func.body[0]
     {
         assert!(matches!(
             cond,
             Expr {
-                kind: ExprKind::And(..),
+                node: ExprKind::And(..),
                 ..
             }
         ));
@@ -30,14 +30,14 @@ fn parse_if_bool_literals() {
     let program = parse_fixture("if_true_literal");
     let func = &program.functions[0];
     if let Stmt {
-        kind: StmtKind::If { cond, .. },
+        node: StmtKind::If { cond, .. },
         ..
     } = &func.body[0]
     {
         assert!(matches!(
             cond,
             Expr {
-                kind: ExprKind::Bool(true),
+                node: ExprKind::Bool(true),
                 ..
             }
         ));
@@ -53,7 +53,7 @@ fn parse_while_basic() {
     assert!(matches!(
         func.body[1],
         Stmt {
-            kind: StmtKind::While { .. },
+            node: StmtKind::While { .. },
             ..
         }
     ));
@@ -67,7 +67,7 @@ fn parse_for_list_var() {
     assert_eq!(func.name, "main");
     match &func.body[1] {
         Stmt {
-            kind: StmtKind::For { var, .. },
+            node: StmtKind::For { var, .. },
             ..
         } => assert_eq!(var, "x"),
         _ => panic!("Expected For stmt"),
@@ -197,7 +197,7 @@ fn parse_if_statement_inline() {
     let ast = parser::parse(&tokens, &sm, "test");
     match &ast.functions[0].body[0] {
         sh2c::ast::Stmt {
-            kind:
+            node:
                 StmtKind::If {
                     cond,
                     then_body,
@@ -207,7 +207,7 @@ fn parse_if_statement_inline() {
             ..
         } => {
             if let sh2c::ast::Expr {
-                kind: ExprKind::Var(name),
+                node: ExprKind::Var(name),
                 ..
             } = cond
             {
@@ -239,13 +239,13 @@ fn parse_nested_if_inline() {
     let ast = parser::parse(&tokens, &sm, "test");
     match &ast.functions[0].body[0] {
         sh2c::ast::Stmt {
-            kind: StmtKind::If { then_body, .. },
+            node: StmtKind::If { then_body, .. },
             ..
         } => {
             assert!(matches!(
                 then_body[0],
                 sh2c::ast::Stmt {
-                    kind: StmtKind::If { .. },
+                    node: StmtKind::If { .. },
                     ..
                 }
             ));
@@ -262,19 +262,19 @@ fn parse_break_basic() {
     let func = &program.functions[0];
     // func main -> For -> If -> Break
     if let Stmt {
-        kind: StmtKind::For { body, .. },
+        node: StmtKind::For { body, .. },
         ..
     } = &func.body[1]
     {
         if let Stmt {
-            kind: StmtKind::If { then_body, .. },
+            node: StmtKind::If { then_body, .. },
             ..
         } = &body[0]
         {
             assert!(matches!(
                 then_body[0],
                 Stmt {
-                    kind: StmtKind::Break,
+                    node: StmtKind::Break,
                     ..
                 }
             ));
@@ -291,19 +291,19 @@ fn parse_continue_basic() {
     let program = parse_fixture("continue_basic");
     let func = &program.functions[0];
     if let Stmt {
-        kind: StmtKind::For { body, .. },
+        node: StmtKind::For { body, .. },
         ..
     } = &func.body[1]
     {
         if let Stmt {
-            kind: StmtKind::If { then_body, .. },
+            node: StmtKind::If { then_body, .. },
             ..
         } = &body[0]
         {
             assert!(matches!(
                 then_body[0],
                 Stmt {
-                    kind: StmtKind::Continue,
+                    node: StmtKind::Continue,
                     ..
                 }
             ));
@@ -322,7 +322,7 @@ fn parse_andthen_short_circuit() {
     assert!(matches!(
         func.body[0],
         Stmt {
-            kind: StmtKind::AndThen { .. },
+            node: StmtKind::AndThen { .. },
             ..
         }
     ));
@@ -335,7 +335,7 @@ fn parse_orelse_short_circuit() {
     assert!(matches!(
         func.body[0],
         Stmt {
-            kind: StmtKind::OrElse { .. },
+            node: StmtKind::OrElse { .. },
             ..
         }
     ));
@@ -400,14 +400,14 @@ fn parse_if_bool_or() {
     let program = parse_fixture("if_bool_or");
     let func = &program.functions[0];
     if let Stmt {
-        kind: StmtKind::If { cond, .. },
+        node: StmtKind::If { cond, .. },
         ..
     } = &func.body[0]
     {
         assert!(matches!(
             cond,
             Expr {
-                kind: ExprKind::Or(..),
+                node: ExprKind::Or(..),
                 ..
             }
         ));
@@ -429,27 +429,27 @@ fn parse_if_bool_precedence_and_over_or() {
     let program = parse_fixture("if_bool_precedence_and_over_or");
     let func = &program.functions[0];
     if let Stmt {
-        kind: StmtKind::If { cond, .. },
+        node: StmtKind::If { cond, .. },
         ..
     } = &func.body[0]
     {
         // A || B && C -> Or(A, And(B, C))
         if let Expr {
-            kind: ExprKind::Or(left, right),
+            node: ExprKind::Or(left, right),
             ..
         } = cond
         {
             assert!(matches!(
                 **left,
                 Expr {
-                    kind: ExprKind::Compare { .. },
+                    node: ExprKind::Compare { .. },
                     ..
                 }
             ));
             assert!(matches!(
                 **right,
                 Expr {
-                    kind: ExprKind::And(..),
+                    node: ExprKind::And(..),
                     ..
                 }
             ));
@@ -474,27 +474,27 @@ fn parse_if_bool_paren_overrides_precedence() {
     let program = parse_fixture("if_bool_paren_overrides_precedence");
     let func = &program.functions[0];
     if let Stmt {
-        kind: StmtKind::If { cond, .. },
+        node: StmtKind::If { cond, .. },
         ..
     } = &func.body[0]
     {
         // (A || B) && C -> And(Or(A, B), C)
         if let Expr {
-            kind: ExprKind::And(left, right),
+            node: ExprKind::And(left, right),
             ..
         } = cond
         {
             assert!(matches!(
                 **left,
                 Expr {
-                    kind: ExprKind::Or(..),
+                    node: ExprKind::Or(..),
                     ..
                 }
             ));
             assert!(matches!(
                 **right,
                 Expr {
-                    kind: ExprKind::Compare { .. },
+                    node: ExprKind::Compare { .. },
                     ..
                 }
             ));
@@ -518,14 +518,14 @@ fn exec_if_bool_paren_overrides_precedence() {
 fn parse_if_bool_not_basic() {
     let program = parse_fixture("if_bool_not_basic");
     if let Stmt {
-        kind: StmtKind::If { cond, .. },
+        node: StmtKind::If { cond, .. },
         ..
     } = &program.functions[0].body[0]
     {
         assert!(matches!(
             cond,
             Expr {
-                kind: ExprKind::Not(..),
+                node: ExprKind::Not(..),
                 ..
             }
         ));
@@ -547,13 +547,13 @@ fn parse_arith_comparison() {
     let program = parse_fixture("arith_comparison");
     let func = &program.functions[0];
     if let Stmt {
-        kind: StmtKind::If { cond, .. },
+        node: StmtKind::If { cond, .. },
         ..
     } = &func.body[0]
     {
         // 5 > 3
         if let Expr {
-            kind: ExprKind::Compare { left, op, right },
+            node: ExprKind::Compare { left, op, right },
             ..
         } = cond
         {
@@ -561,14 +561,14 @@ fn parse_arith_comparison() {
             assert!(matches!(
                 **left,
                 Expr {
-                    kind: ExprKind::Number(5),
+                    node: ExprKind::Number(5),
                     ..
                 }
             ));
             assert!(matches!(
                 **right,
                 Expr {
-                    kind: ExprKind::Number(3),
+                    node: ExprKind::Number(3),
                     ..
                 }
             ));

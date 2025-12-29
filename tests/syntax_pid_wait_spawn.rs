@@ -11,14 +11,14 @@ fn parse_pid_wait_spawn() {
 
     // stmt0: spawn run(...)
     if let Stmt {
-        kind: StmtKind::Spawn { stmt },
+        node: StmtKind::Spawn { stmt },
         ..
     } = &func.body[0]
     {
         assert!(matches!(
             **stmt,
             Stmt {
-                kind: StmtKind::Run(_),
+                node: StmtKind::Run(_),
                 ..
             }
         ));
@@ -28,7 +28,7 @@ fn parse_pid_wait_spawn() {
 
     // stmt1: let p = pid()
     if let Stmt {
-        kind: StmtKind::Let { name, value },
+        node: StmtKind::Let { name, value },
         ..
     } = &func.body[1]
     {
@@ -36,7 +36,7 @@ fn parse_pid_wait_spawn() {
         assert!(matches!(
             value,
             Expr {
-                kind: ExprKind::Pid,
+                node: ExprKind::Pid,
                 ..
             }
         ));
@@ -46,30 +46,30 @@ fn parse_pid_wait_spawn() {
 
     // stmt2: wait(p)
     if let Stmt {
-        kind: StmtKind::Wait(Some(e)),
+        node: StmtKind::Wait(Some(e)),
         ..
     } = &func.body[2]
     {
-        assert!(matches!(e, Expr { kind: ExprKind::Var(v), .. } if v == "p"));
+        assert!(matches!(e, Expr { node: ExprKind::Var(v), .. } if v == "p"));
     } else {
         panic!("Expected wait(p)");
     }
 
     // stmt3: if status() == 0 { ... }
     if let Stmt {
-        kind: StmtKind::If { cond, .. },
+        node: StmtKind::If { cond, .. },
         ..
     } = &func.body[3]
     {
         if let Expr {
-            kind: ExprKind::Compare { left, op, right },
+            node: ExprKind::Compare { left, op, right },
             ..
         } = cond
         {
             assert!(matches!(
                 **left,
                 Expr {
-                    kind: ExprKind::Status,
+                    node: ExprKind::Status,
                     ..
                 }
             ));
@@ -77,7 +77,7 @@ fn parse_pid_wait_spawn() {
             assert!(matches!(
                 **right,
                 Expr {
-                    kind: ExprKind::Number(0),
+                    node: ExprKind::Number(0),
                     ..
                 }
             ));

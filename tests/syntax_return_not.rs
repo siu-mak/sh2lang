@@ -7,9 +7,9 @@ fn parse_return_not() {
     let program = parse_fixture("return_not");
     let func = &program.functions[0];
     if let Stmt {
-        kind:
+        node:
             StmtKind::Return(Some(Expr {
-                kind: ExprKind::Not(_),
+                node: ExprKind::Not(_),
                 ..
             })),
         ..

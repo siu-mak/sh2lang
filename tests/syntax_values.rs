@@ -7,14 +7,14 @@ fn parse_let_args_functions() {
     let program = parse_fixture("let_args");
     let func = &program.functions[0];
     if let Stmt {
-        kind: StmtKind::Print(expr),
+        node: StmtKind::Print(expr),
         ..
     } = &func.body[1]
     {
         assert!(matches!(
             expr,
             Expr {
-                kind: ExprKind::Count(_),
+                node: ExprKind::Count(_),
                 ..
             }
         ));
@@ -23,14 +23,14 @@ fn parse_let_args_functions() {
     }
 
     if let Stmt {
-        kind: StmtKind::Print(expr),
+        node: StmtKind::Print(expr),
         ..
     } = &func.body[2]
     {
         assert!(matches!(
             expr,
             Expr {
-                kind: ExprKind::Index { .. },
+                node: ExprKind::Index { .. },
                 ..
             }
         ));
@@ -39,14 +39,14 @@ fn parse_let_args_functions() {
     }
 
     if let Stmt {
-        kind: StmtKind::Print(expr),
+        node: StmtKind::Print(expr),
         ..
     } = &func.body[3]
     {
         assert!(matches!(
             expr,
             Expr {
-                kind: ExprKind::Join { .. },
+                node: ExprKind::Join { .. },
                 ..
             }
         ));
@@ -60,14 +60,14 @@ fn parse_count_list() {
     let program = parse_fixture("count_list_literal");
     let func = &program.functions[0];
     if let Stmt {
-        kind: StmtKind::Print(expr),
+        node: StmtKind::Print(expr),
         ..
     } = &func.body[0]
     {
         assert!(matches!(
             expr,
             Expr {
-                kind: ExprKind::Count(_),
+                node: ExprKind::Count(_),
                 ..
             }
         ));
@@ -146,11 +146,11 @@ fn parses_comparison() {
 
     match &func.body[0] {
         ast::Stmt {
-            kind: StmtKind::If { cond, .. },
+            node: StmtKind::If { cond, .. },
             ..
         } => {
             if let ast::Expr {
-                kind: ExprKind::Compare { left, op, right },
+                node: ExprKind::Compare { left, op, right },
                 ..
             } = cond
             {
@@ -159,14 +159,14 @@ fn parses_comparison() {
                 matches!(
                     **left,
                     ast::Expr {
-                        kind: ExprKind::Var(_),
+                        node: ExprKind::Var(_),
                         ..
                     }
                 );
                 matches!(
                     **right,
                     ast::Expr {
-                        kind: ExprKind::Literal(_),
+                        node: ExprKind::Literal(_),
                         ..
                     }
                 );
@@ -195,18 +195,18 @@ fn precedence_compare_concat() {
     let func = &program.functions[0];
 
     if let ast::Stmt {
-        kind: StmtKind::If { cond, .. },
+        node: StmtKind::If { cond, .. },
         ..
     } = &func.body[0]
     {
         if let ast::Expr {
-            kind: ExprKind::Compare { left, .. },
+            node: ExprKind::Compare { left, .. },
             ..
         } = cond
         {
             match &**left {
                 ast::Expr {
-                    kind:
+                    node:
                         ExprKind::Arith {
                             op: ast::ArithOp::Add,
                             ..
@@ -278,11 +278,11 @@ fn parses_concatenation() {
     match &func.body[0] {
         // Concat is now parsed as Arith(Add)
         ast::Stmt {
-            kind:
+            node:
                 StmtKind::Let {
                     value:
                         ast::Expr {
-                            kind: ExprKind::Arith { left, op, right },
+                            node: ExprKind::Arith { left, op, right },
                             ..
                         },
                     ..
@@ -293,11 +293,11 @@ fn parses_concatenation() {
             match (&**left, &**right) {
                 (
                     ast::Expr {
-                        kind: ExprKind::Literal(l),
+                        node: ExprKind::Literal(l),
                         ..
                     },
                     ast::Expr {
-                        kind: ExprKind::Literal(r),
+                        node: ExprKind::Literal(r),
                         ..
                     },
                 ) => {
@@ -324,9 +324,9 @@ fn parses_chained_concatenation() {
     let func = &program.functions[0];
     // "a" + b + "c" -> (("a" + b) + "c")
     if let ast::Stmt {
-        kind:
+        node:
             StmtKind::Print(ast::Expr {
-                kind: ExprKind::Arith { left, op, right },
+                node: ExprKind::Arith { left, op, right },
                 ..
             }),
         ..
@@ -334,7 +334,7 @@ fn parses_chained_concatenation() {
     {
         assert_eq!(*op, ast::ArithOp::Add);
         if let ast::Expr {
-            kind: ExprKind::Literal(s),
+            node: ExprKind::Literal(s),
             ..
         } = &**right
         {
@@ -343,7 +343,7 @@ fn parses_chained_concatenation() {
             panic!("Expected 'c' on right");
         }
         if let ast::Expr {
-            kind:
+            node:
                 ExprKind::Arith {
                     left: ll,
                     op: lop,
@@ -356,11 +356,11 @@ fn parses_chained_concatenation() {
             match (&**ll, &**lr) {
                 (
                     ast::Expr {
-                        kind: ExprKind::Literal(l),
+                        node: ExprKind::Literal(l),
                         ..
                     },
                     ast::Expr {
-                        kind: ExprKind::Var(r),
+                        node: ExprKind::Var(r),
                         ..
                     },
                 ) => {
@@ -429,12 +429,12 @@ fn parses_let_statement() {
     let func = &program.functions[0];
     match &func.body[0] {
         ast::Stmt {
-            kind:
+            node:
                 StmtKind::Let {
                     name,
                     value:
                         ast::Expr {
-                            kind: ExprKind::Literal(val),
+                            node: ExprKind::Literal(val),
                             ..
                         },
                 },
@@ -506,13 +506,13 @@ fn parse_arith_precedence() {
     let program = parse_fixture("arith_precedence");
     let func = &program.functions[0];
     if let Stmt {
-        kind: StmtKind::Let { value, .. },
+        node: StmtKind::Let { value, .. },
         ..
     } = &func.body[0]
     {
         // 1 + 2 * 3 -> Add(1, Mul(2, 3))
         if let Expr {
-            kind: ExprKind::Arith { left, op, right },
+            node: ExprKind::Arith { left, op, right },
             ..
         } = value
         {
@@ -520,12 +520,12 @@ fn parse_arith_precedence() {
             assert!(matches!(
                 **left,
                 Expr {
-                    kind: ExprKind::Number(1),
+                    node: ExprKind::Number(1),
                     ..
                 }
             ));
             if let Expr {
-                kind:
+                node:
                     ExprKind::Arith {
                         left: l2,
                         op: op2,
@@ -538,14 +538,14 @@ fn parse_arith_precedence() {
                 assert!(matches!(
                     **l2,
                     Expr {
-                        kind: ExprKind::Number(2),
+                        node: ExprKind::Number(2),
                         ..
                     }
                 ));
                 assert!(matches!(
                     **r2,
                     Expr {
-                        kind: ExprKind::Number(3),
+                        node: ExprKind::Number(3),
                         ..
                     }
                 ));
@@ -573,16 +573,16 @@ fn parse_index_var_index() {
     let program = parse_fixture("index_var_index");
     let func = &program.functions[0];
     if let Stmt {
-        kind:
+        node:
             StmtKind::Print(Expr {
-                kind: ExprKind::Index { index, .. },
+                node: ExprKind::Index { index, .. },
                 ..
             }),
         ..
     } = &func.body[2]
     {
         if let Expr {
-            kind: ExprKind::Var(s),
+            node: ExprKind::Var(s),
             ..
         } = &**index
         {
@@ -608,9 +608,9 @@ fn parse_index_arith_index() {
     let program = parse_fixture("index_arith_index");
     let func = &program.functions[0];
     if let Stmt {
-        kind:
+        node:
             StmtKind::Print(Expr {
-                kind: ExprKind::Index { index, .. },
+                node: ExprKind::Index { index, .. },
                 ..
             }),
         ..
@@ -618,7 +618,7 @@ fn parse_index_arith_index() {
     {
         // i + 2
         if let Expr {
-            kind: ExprKind::Arith { left: _, op, right: _ },
+            node: ExprKind::Arith { left: _, op, right: _ },
             ..
         } = &**index
         {
@@ -654,19 +654,19 @@ fn parse_arith_unary_minus() {
     let program = parse_fixture("arith_unary_minus");
     let func = &program.functions[0];
     if let Stmt {
-        kind: StmtKind::Let { value, .. },
+        node: StmtKind::Let { value, .. },
         ..
     } = &func.body[0]
     {
         // -1 + 2 -> Add(Sub(0, 1), 2)
         if let Expr {
-            kind: ExprKind::Arith { left, op, .. },
+            node: ExprKind::Arith { left, op, .. },
             ..
         } = value
         {
             assert_eq!(*op, sh2c::ast::ArithOp::Add);
             if let Expr {
-                kind: ExprKind::Arith { left, op, right },
+                node: ExprKind::Arith { left, op, right },
                 ..
             } = &**left
             {
@@ -674,14 +674,14 @@ fn parse_arith_unary_minus() {
                 assert!(matches!(
                     **left,
                     Expr {
-                        kind: ExprKind::Number(0),
+                        node: ExprKind::Number(0),
                         ..
                     }
                 ));
                 assert!(matches!(
                     **right,
                     Expr {
-                        kind: ExprKind::Number(1),
+                        node: ExprKind::Number(1),
                         ..
                     }
                 ));
@@ -707,9 +707,9 @@ fn parse_index_args() {
     let program = parse_fixture("index_args");
     let func = &program.functions[0];
     if let Stmt {
-        kind:
+        node:
             StmtKind::Print(Expr {
-                kind: ExprKind::Index { list, .. },
+                node: ExprKind::Index { list, .. },
                 ..
             }),
         ..
@@ -718,7 +718,7 @@ fn parse_index_args() {
         assert!(matches!(
             **list,
             Expr {
-                kind: ExprKind::Args,
+                node: ExprKind::Args,
                 ..
             }
         ));
@@ -740,9 +740,9 @@ fn parse_join_args() {
     let program = parse_fixture("join_args");
     let func = &program.functions[0];
     if let Stmt {
-        kind:
+        node:
             StmtKind::Print(Expr {
-                kind: ExprKind::Join { list, .. },
+                node: ExprKind::Join { list, .. },
                 ..
             }),
         ..
@@ -751,7 +751,7 @@ fn parse_join_args() {
         assert!(matches!(
             **list,
             Expr {
-                kind: ExprKind::Args,
+                node: ExprKind::Args,
                 ..
             }
         ));

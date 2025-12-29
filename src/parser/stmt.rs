@@ -11,7 +11,7 @@ impl<'a> Parser<'a> {
                 let right = self.parse_stmt_atom();
                 let span = left.span.merge(right.span);
                 left = Stmt {
-                    kind: StmtKind::AndThen {
+                    node: StmtKind::AndThen {
                         left: vec![left],
                         right: vec![right],
                     },
@@ -21,7 +21,7 @@ impl<'a> Parser<'a> {
                 let right = self.parse_stmt_atom();
                 let span = left.span.merge(right.span);
                 left = Stmt {
-                    kind: StmtKind::OrElse {
+                    node: StmtKind::OrElse {
                         left: vec![left],
                         right: vec![right],
                     },
@@ -457,7 +457,7 @@ impl<'a> Parser<'a> {
                     }
                     StmtKind::Spawn {
                         stmt: Box::new(Stmt {
-                            kind: StmtKind::Group { body },
+                            node: StmtKind::Group { body },
                             span: start_span.merge(self.previous_span()),
                         }),
                     }
@@ -649,7 +649,7 @@ impl<'a> Parser<'a> {
         };
 
         Stmt {
-            kind: stmt_kind,
+            node: stmt_kind,
             span: start_span.merge(self.previous_span()),
         }
     }

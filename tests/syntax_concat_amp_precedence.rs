@@ -11,21 +11,21 @@ fn parse_concat_amp_precedence() {
 
     // let s = "n=" & 1 + 2
     if let Stmt {
-        kind: StmtKind::Let { value, .. },
+        node: StmtKind::Let { value, .. },
         ..
     } = &func.body[0]
     {
         if let Expr {
-            kind: ExprKind::Concat(left, right),
+            node: ExprKind::Concat(left, right),
             ..
         } = value
         {
-            assert!(matches!(**left, Expr { kind: ExprKind::Literal(ref s), .. } if s == "n="));
+            assert!(matches!(**left, Expr { node: ExprKind::Literal(ref s), .. } if s == "n="));
             // right should be arithmetic (1 + 2)
             assert!(matches!(
                 **right,
                 Expr {
-                    kind: ExprKind::Arith {
+                    node: ExprKind::Arith {
                         op: ArithOp::Add,
                         ..
                     },

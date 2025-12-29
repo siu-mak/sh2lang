@@ -9,7 +9,7 @@ fn parse_exit_basic() {
     assert!(matches!(
         func.body[1],
         Stmt {
-            kind: StmtKind::Exit(_),
+            node: StmtKind::Exit(_),
             ..
         }
     ));
@@ -22,7 +22,7 @@ fn parse_with_env() {
     assert!(matches!(
         func.body[0],
         Stmt {
-            kind: StmtKind::WithEnv { .. },
+            node: StmtKind::WithEnv { .. },
             ..
         }
     ));
@@ -35,7 +35,7 @@ fn parse_cd_basic() {
     assert!(matches!(
         func.body[0],
         Stmt {
-            kind: StmtKind::Cd { .. },
+            node: StmtKind::Cd { .. },
             ..
         }
     ));
@@ -48,7 +48,7 @@ fn parse_spawn_run() {
     assert!(matches!(
         func.body[0],
         Stmt {
-            kind: StmtKind::Spawn { .. },
+            node: StmtKind::Spawn { .. },
             ..
         }
     ));
@@ -61,7 +61,7 @@ fn parse_wait_all() {
     assert!(matches!(
         func.body[2],
         Stmt {
-            kind: StmtKind::Wait(_),
+            node: StmtKind::Wait(_),
             ..
         }
     ));
@@ -74,14 +74,14 @@ fn parse_export_unset() {
     assert!(matches!(
         func.body[0],
         Stmt {
-            kind: StmtKind::Export { .. },
+            node: StmtKind::Export { .. },
             ..
         }
     ));
     assert!(matches!(
         func.body[2],
         Stmt {
-            kind: StmtKind::Unset { .. },
+            node: StmtKind::Unset { .. },
             ..
         }
     ));
@@ -94,7 +94,7 @@ fn parse_source_basic() {
     assert!(matches!(
         func.body[1],
         Stmt {
-            kind: StmtKind::Source { .. },
+            node: StmtKind::Source { .. },
             ..
         }
     ));
@@ -105,14 +105,14 @@ fn parse_exists_check() {
     let program = parse_fixture("exists_check");
     let func = &program.functions[0];
     if let Stmt {
-        kind: StmtKind::If { cond, .. },
+        node: StmtKind::If { cond, .. },
         ..
     } = &func.body[0]
     {
         assert!(matches!(
             cond,
             Expr {
-                kind: ExprKind::Exists(..),
+                node: ExprKind::Exists(..),
                 ..
             }
         ));
@@ -196,12 +196,12 @@ fn parse_exit_status() {
     let program = parse_fixture("exit_status");
     let func = &program.functions[0];
     if let Stmt {
-        kind: StmtKind::Exit(Some(val)),
+        node: StmtKind::Exit(Some(val)),
         ..
     } = &func.body[0]
     {
         if let Expr {
-            kind: ExprKind::Number(n),
+            node: ExprKind::Number(n),
             ..
         } = val
         {
@@ -295,7 +295,7 @@ fn parse_subshell_basic() {
     assert!(matches!(
         func.body[1],
         Stmt {
-            kind: StmtKind::Subshell { .. },
+            node: StmtKind::Subshell { .. },
             ..
         }
     ));
@@ -307,9 +307,9 @@ fn parse_wait_complex() {
     let func = &program.functions[0];
     // wait($(run...))
     if let Stmt {
-        kind:
+        node:
             StmtKind::Wait(Some(Expr {
-                kind: ExprKind::Command(_),
+                node: ExprKind::Command(_),
                 ..
             })),
         ..

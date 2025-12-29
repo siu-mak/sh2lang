@@ -10,30 +10,30 @@ fn parse_system_vars_builtins() {
     let func = &program.functions[0];
     // Check first If: uid() == env("UID")
     if let Stmt {
-        kind: StmtKind::If { cond, .. },
+        node: StmtKind::If { cond, .. },
         ..
     } = &func.body[0]
     {
         if let Expr {
-            kind: ExprKind::Compare { left, op, right },
+            node: ExprKind::Compare { left, op, right },
             ..
         } = cond
         {
             assert!(matches!(
                 **left,
                 Expr {
-                    kind: ExprKind::Uid,
+                    node: ExprKind::Uid,
                     ..
                 }
             ));
             assert_eq!(*op, CompareOp::Eq);
             if let Expr {
-                kind: ExprKind::Env(inner),
+                node: ExprKind::Env(inner),
                 ..
             } = &**right
             {
                 if let Expr {
-                    kind: ExprKind::Literal(s),
+                    node: ExprKind::Literal(s),
                     ..
                 } = &**inner
                 {
@@ -53,30 +53,30 @@ fn parse_system_vars_builtins() {
 
     // Check second If: ppid() == env("PPID")
     if let Stmt {
-        kind: StmtKind::If { cond, .. },
+        node: StmtKind::If { cond, .. },
         ..
     } = &func.body[1]
     {
         if let Expr {
-            kind: ExprKind::Compare { left, op, right },
+            node: ExprKind::Compare { left, op, right },
             ..
         } = cond
         {
             assert!(matches!(
                 **left,
                 Expr {
-                    kind: ExprKind::Ppid,
+                    node: ExprKind::Ppid,
                     ..
                 }
             ));
             assert_eq!(*op, CompareOp::Eq);
             if let Expr {
-                kind: ExprKind::Env(inner),
+                node: ExprKind::Env(inner),
                 ..
             } = &**right
             {
                 if let Expr {
-                    kind: ExprKind::Literal(s),
+                    node: ExprKind::Literal(s),
                     ..
                 } = &**inner
                 {
@@ -96,30 +96,30 @@ fn parse_system_vars_builtins() {
 
     // Check third If: pwd() == env("PWD")
     if let Stmt {
-        kind: StmtKind::If { cond, .. },
+        node: StmtKind::If { cond, .. },
         ..
     } = &func.body[2]
     {
         if let Expr {
-            kind: ExprKind::Compare { left, op, right },
+            node: ExprKind::Compare { left, op, right },
             ..
         } = cond
         {
             assert!(matches!(
                 **left,
                 Expr {
-                    kind: ExprKind::Pwd,
+                    node: ExprKind::Pwd,
                     ..
                 }
             ));
             assert_eq!(*op, CompareOp::Eq);
             if let Expr {
-                kind: ExprKind::Env(inner),
+                node: ExprKind::Env(inner),
                 ..
             } = &**right
             {
                 if let Expr {
-                    kind: ExprKind::Literal(s),
+                    node: ExprKind::Literal(s),
                     ..
                 } = &**inner
                 {

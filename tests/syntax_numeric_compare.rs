@@ -11,19 +11,19 @@ fn parse_numeric_compare() {
 
     // if 1 < 2
     if let Stmt {
-        kind: StmtKind::If { cond, .. },
+        node: StmtKind::If { cond, .. },
         ..
     } = &func.body[0]
     {
         if let Expr {
-            kind: ExprKind::Compare { left, op, right },
+            node: ExprKind::Compare { left, op, right },
             ..
         } = cond
         {
             assert!(matches!(
                 **left,
                 Expr {
-                    kind: ExprKind::Number(1),
+                    node: ExprKind::Number(1),
                     ..
                 }
             ));
@@ -31,7 +31,7 @@ fn parse_numeric_compare() {
             assert!(matches!(
                 **right,
                 Expr {
-                    kind: ExprKind::Number(2),
+                    node: ExprKind::Number(2),
                     ..
                 }
             ));

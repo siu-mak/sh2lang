@@ -13,14 +13,14 @@ fn parse_redirect_io() {
     assert!(matches!(
         func.body[0],
         Stmt {
-            kind: StmtKind::Let { .. },
+            node: StmtKind::Let { .. },
             ..
         }
     ));
 
     // stmt1: with redirect { stdout: file(f) } { print("out") }
     if let Stmt {
-        kind:
+        node:
             StmtKind::WithRedirect {
                 stdout,
                 stderr,
@@ -35,14 +35,14 @@ fn parse_redirect_io() {
         match stdout {
             Some(RedirectTarget::File { path, append }) => {
                 assert!(!append);
-                assert!(matches!(path, Expr { kind: ExprKind::Var(v), .. } if v == "f"));
+                assert!(matches!(path, Expr { node: ExprKind::Var(v), .. } if v == "f"));
             }
             _ => panic!("Expected stdout: file(f)"),
         }
         assert!(matches!(
             body[0],
             Stmt {
-                kind: StmtKind::Print(_),
+                node: StmtKind::Print(_),
                 ..
             }
         ));
@@ -52,7 +52,7 @@ fn parse_redirect_io() {
 
     // stmt2: with redirect { stderr: file(f, append=true) } { print_err("err") }
     if let Stmt {
-        kind:
+        node:
             StmtKind::WithRedirect {
                 stdout,
                 stderr,
@@ -67,14 +67,14 @@ fn parse_redirect_io() {
         match stderr {
             Some(RedirectTarget::File { path, append }) => {
                 assert!(*append);
-                assert!(matches!(path, Expr { kind: ExprKind::Var(v), .. } if v == "f"));
+                assert!(matches!(path, Expr { node: ExprKind::Var(v), .. } if v == "f"));
             }
             _ => panic!("Expected stderr: file(f, append=true)"),
         }
         assert!(matches!(
             body[0],
             Stmt {
-                kind: StmtKind::PrintErr(_),
+                node: StmtKind::PrintErr(_),
                 ..
             }
         ));
@@ -86,14 +86,14 @@ fn parse_redirect_io() {
     assert!(matches!(
         func.body[3],
         Stmt {
-            kind: StmtKind::Run(_),
+            node: StmtKind::Run(_),
             ..
         }
     ));
 
     // stmt4: with redirect { stderr: stdout } { print_err("e2s") }
     if let Stmt {
-        kind:
+        node:
             StmtKind::WithRedirect {
                 stdout,
                 stderr,
@@ -112,7 +112,7 @@ fn parse_redirect_io() {
         assert!(matches!(
             body[0],
             Stmt {
-                kind: StmtKind::PrintErr(_),
+                node: StmtKind::PrintErr(_),
                 ..
             }
         ));
@@ -124,7 +124,7 @@ fn parse_redirect_io() {
     assert!(matches!(
         func.body[5],
         Stmt {
-            kind: StmtKind::Let { .. },
+            node: StmtKind::Let { .. },
             ..
         }
     ));
@@ -133,14 +133,14 @@ fn parse_redirect_io() {
     assert!(matches!(
         func.body[6],
         Stmt {
-            kind: StmtKind::Sh(_),
+            node: StmtKind::Sh(_),
             ..
         }
     ));
 
     // stmt7: with redirect { stdin: file(infile) } { run("cat") }
     if let Stmt {
-        kind:
+        node:
             StmtKind::WithRedirect {
                 stdout,
                 stderr,
@@ -155,14 +155,14 @@ fn parse_redirect_io() {
         match stdin {
             Some(RedirectTarget::File { path, append }) => {
                 assert!(!append);
-                assert!(matches!(path, Expr { kind: ExprKind::Var(v), .. } if v == "infile"));
+                assert!(matches!(path, Expr { node: ExprKind::Var(v), .. } if v == "infile"));
             }
             _ => panic!("Expected stdin: file(infile)"),
         }
         assert!(matches!(
             body[0],
             Stmt {
-                kind: StmtKind::Run(_),
+                node: StmtKind::Run(_),
                 ..
             }
         ));
@@ -174,14 +174,14 @@ fn parse_redirect_io() {
     assert!(matches!(
         func.body[8],
         Stmt {
-            kind: StmtKind::Let { .. },
+            node: StmtKind::Let { .. },
             ..
         }
     ));
 
     // stmt9: with redirect { stdout: stderr, stderr: file(f2) } { print("swap_ok") }
     if let Stmt {
-        kind:
+        node:
             StmtKind::WithRedirect {
                 stdout,
                 stderr,
@@ -199,14 +199,14 @@ fn parse_redirect_io() {
         match stderr {
             Some(RedirectTarget::File { path, append }) => {
                 assert!(!append);
-                assert!(matches!(path, Expr { kind: ExprKind::Var(v), .. } if v == "f2"));
+                assert!(matches!(path, Expr { node: ExprKind::Var(v), .. } if v == "f2"));
             }
             _ => panic!("Expected stderr: file(f2)"),
         }
         assert!(matches!(
             body[0],
             Stmt {
-                kind: StmtKind::Print(_),
+                node: StmtKind::Print(_),
                 ..
             }
         ));
@@ -218,7 +218,7 @@ fn parse_redirect_io() {
     assert!(matches!(
         func.body[10],
         Stmt {
-            kind: StmtKind::Run(_),
+            node: StmtKind::Run(_),
             ..
         }
     ));
@@ -227,21 +227,21 @@ fn parse_redirect_io() {
     assert!(matches!(
         func.body[11],
         Stmt {
-            kind: StmtKind::Run(_),
+            node: StmtKind::Run(_),
             ..
         }
     ));
     assert!(matches!(
         func.body[12],
         Stmt {
-            kind: StmtKind::Run(_),
+            node: StmtKind::Run(_),
             ..
         }
     ));
     assert!(matches!(
         func.body[13],
         Stmt {
-            kind: StmtKind::Run(_),
+            node: StmtKind::Run(_),
             ..
         }
     ));

@@ -14,12 +14,12 @@ fn parse_args_ops() {
 
     // show: first stmt is if argc() == 3
     if let Stmt {
-        kind: StmtKind::If { cond, .. },
+        node: StmtKind::If { cond, .. },
         ..
     } = &show.body[0]
     {
         if let Expr {
-            kind: ExprKind::Compare { left, op, right },
+            node: ExprKind::Compare { left, op, right },
             ..
         } = cond
         {
@@ -27,14 +27,14 @@ fn parse_args_ops() {
             assert!(matches!(
                 **left,
                 Expr {
-                    kind: ExprKind::Argc,
+                    node: ExprKind::Argc,
                     ..
                 }
             ));
             assert!(matches!(
                 **right,
                 Expr {
-                    kind: ExprKind::Number(3),
+                    node: ExprKind::Number(3),
                     ..
                 }
             ));
@@ -47,19 +47,19 @@ fn parse_args_ops() {
 
     // show: arg(2) == "y"
     if let Stmt {
-        kind: StmtKind::If { cond, .. },
+        node: StmtKind::If { cond, .. },
         ..
     } = &show.body[1]
     {
         if let Expr {
-            kind: ExprKind::Compare { left, .. },
+            node: ExprKind::Compare { left, .. },
             ..
         } = cond
         {
             assert!(matches!(
                 **left,
                 Expr {
-                    kind: ExprKind::Arg(2),
+                    node: ExprKind::Arg(2),
                     ..
                 }
             ));
@@ -72,19 +72,19 @@ fn parse_args_ops() {
 
     // show: index(args,0) == "x"
     if let Stmt {
-        kind: StmtKind::If { cond, .. },
+        node: StmtKind::If { cond, .. },
         ..
     } = &show.body[2]
     {
         if let Expr {
-            kind: ExprKind::Compare { left, .. },
+            node: ExprKind::Compare { left, .. },
             ..
         } = cond
         {
             assert!(matches!(
                 **left,
                 Expr {
-                    kind: ExprKind::Index { .. },
+                    node: ExprKind::Index { .. },
                     ..
                 }
             ));
@@ -99,8 +99,8 @@ fn parse_args_ops() {
     assert!(matches!(
         show.body[3],
         Stmt {
-            kind: StmtKind::Print(Expr {
-                kind: ExprKind::Join { .. },
+            node: StmtKind::Print(Expr {
+                node: ExprKind::Join { .. },
                 ..
             }),
             ..
@@ -109,7 +109,7 @@ fn parse_args_ops() {
 
     // main: show("x","y","z")
     assert!(
-        matches!(main.body[0], Stmt { kind: StmtKind::Call { ref name, .. }, .. } if name == "show")
+        matches!(main.body[0], Stmt { node: StmtKind::Call { ref name, .. }, .. } if name == "show")
     );
 }
 

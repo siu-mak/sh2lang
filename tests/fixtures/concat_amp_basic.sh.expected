@@ -1,10 +1,10 @@
 __sh2_err_handler() { printf "Error in %s\n" "${__sh2_loc:-unknown}" >&2; }
 trap '__sh2_err_handler' ERR
 main() {
-  __sh2_loc="tests/fixtures/concat_amp_basic.sh2:2"
+  __sh2_loc="tests/fixtures/concat_amp_basic.sh2:2:3"
   x='a''b'
   printf '%s\n' "$x"
-  __sh2_loc="tests/fixtures/concat_amp_basic.sh2:4"
+  __sh2_loc="tests/fixtures/concat_amp_basic.sh2:4:3"
   'echo' 'c''d'; __sh2_status=$?; (exit $__sh2_status)
 }
 __sh2_status=0

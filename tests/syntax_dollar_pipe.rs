@@ -7,9 +7,9 @@ fn parse_dollar_pipe() {
     let program = parse_fixture("dollar_pipe");
     let func = &program.functions[0];
 
-    // stmt0: let out = $( ... | ... ) => Expr { kind: ExprKind::CommandPipe, .. }
+    // stmt0: let out = $( ... | ... ) => Expr { node: ExprKind::CommandPipe, .. }
     if let Stmt {
-        kind: StmtKind::Let { name, value },
+        node: StmtKind::Let { name, value },
         ..
     } = &func.body[0]
     {
@@ -17,7 +17,7 @@ fn parse_dollar_pipe() {
         assert!(matches!(
             value,
             Expr {
-                kind: ExprKind::CommandPipe(_),
+                node: ExprKind::CommandPipe(_),
                 ..
             }
         ));
@@ -26,7 +26,7 @@ fn parse_dollar_pipe() {
     }
 
     assert!(
-        matches!(func.body[1], Stmt { kind: StmtKind::Print(Expr { kind: ExprKind::Var(ref v), .. }), .. } if v == "out")
+        matches!(func.body[1], Stmt { node: StmtKind::Print(Expr { node: ExprKind::Var(ref v), .. }), .. } if v == "out")
     );
 }
 

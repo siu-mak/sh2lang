@@ -9,7 +9,7 @@ fn parse_and_or_stmt() {
 
     // stmt0: run(...) && print(...)
     if let Stmt {
-        kind: StmtKind::AndThen { .. },
+        node: StmtKind::AndThen { .. },
         ..
     } = &func.body[0]
     {
@@ -20,7 +20,7 @@ fn parse_and_or_stmt() {
 
     // stmt1: run(...) && print(...)
     if let Stmt {
-        kind: StmtKind::AndThen { .. },
+        node: StmtKind::AndThen { .. },
         ..
     } = &func.body[1]
     {
@@ -31,7 +31,7 @@ fn parse_and_or_stmt() {
 
     // stmt2: run(...) || print(...)
     if let Stmt {
-        kind: StmtKind::OrElse { .. },
+        node: StmtKind::OrElse { .. },
         ..
     } = &func.body[2]
     {
@@ -42,7 +42,7 @@ fn parse_and_or_stmt() {
 
     // stmt3: run(...) || print(...)
     if let Stmt {
-        kind: StmtKind::OrElse { .. },
+        node: StmtKind::OrElse { .. },
         ..
     } = &func.body[3]
     {

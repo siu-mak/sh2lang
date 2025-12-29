@@ -11,7 +11,7 @@ fn parse_set_var_basic() {
 
     match &func.body[0] {
         Stmt {
-            kind: StmtKind::Let { name, .. },
+            node: StmtKind::Let { name, .. },
             ..
         } => {
             assert_eq!(name, "x");
@@ -21,7 +21,7 @@ fn parse_set_var_basic() {
 
     match &func.body[1] {
         Stmt {
-            kind: StmtKind::Set { target, .. },
+            node: StmtKind::Set { target, .. },
             ..
         } => {
             assert!(matches!(target, LValue::Var(name) if name == "x"));
@@ -30,7 +30,7 @@ fn parse_set_var_basic() {
     }
 
     if let Stmt {
-        kind: StmtKind::Print(_),
+        node: StmtKind::Print(_),
         ..
     } = &func.body[2]
     {

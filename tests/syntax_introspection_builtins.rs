@@ -11,17 +11,17 @@ fn parse_introspection_builtins() {
 
     // stmt0: with env { FOO = "bar" } { if env("FOO") == "bar" ... }
     if let Stmt {
-        kind: StmtKind::WithEnv { bindings, body },
+        node: StmtKind::WithEnv { bindings, body },
         ..
     } = &func.body[0]
     {
         assert_eq!(bindings.len(), 1);
         assert_eq!(bindings[0].0, "FOO");
-        assert!(matches!(bindings[0].1, Expr { kind: ExprKind::Literal(ref s), .. } if s == "bar"));
+        assert!(matches!(bindings[0].1, Expr { node: ExprKind::Literal(ref s), .. } if s == "bar"));
         assert!(matches!(
             body[0],
             Stmt {
-                kind: StmtKind::If { .. },
+                node: StmtKind::If { .. },
                 ..
             }
         ));
@@ -31,12 +31,12 @@ fn parse_introspection_builtins() {
 
     // stmt1: if len(pwd()) > 0 { ... }
     if let Stmt {
-        kind: StmtKind::If { cond, .. },
+        node: StmtKind::If { cond, .. },
         ..
     } = &func.body[1]
     {
         if let Expr {
-            kind: ExprKind::Compare { left, op, right },
+            node: ExprKind::Compare { left, op, right },
             ..
         } = cond
         {
@@ -44,14 +44,14 @@ fn parse_introspection_builtins() {
             assert!(matches!(
                 **right,
                 Expr {
-                    kind: ExprKind::Number(0),
+                    node: ExprKind::Number(0),
                     ..
                 }
             ));
             assert!(matches!(
                 **left,
                 Expr {
-                    kind: ExprKind::Len(_),
+                    node: ExprKind::Len(_),
                     ..
                 }
             ));
@@ -64,12 +64,12 @@ fn parse_introspection_builtins() {
 
     // stmt2: if len(argv0()) > 0 { ... }
     if let Stmt {
-        kind: StmtKind::If { cond, .. },
+        node: StmtKind::If { cond, .. },
         ..
     } = &func.body[2]
     {
         if let Expr {
-            kind: ExprKind::Compare { left, op, right },
+            node: ExprKind::Compare { left, op, right },
             ..
         } = cond
         {
@@ -77,14 +77,14 @@ fn parse_introspection_builtins() {
             assert!(matches!(
                 **right,
                 Expr {
-                    kind: ExprKind::Number(0),
+                    node: ExprKind::Number(0),
                     ..
                 }
             ));
             assert!(matches!(
                 **left,
                 Expr {
-                    kind: ExprKind::Len(_),
+                    node: ExprKind::Len(_),
                     ..
                 }
             ));
@@ -97,12 +97,12 @@ fn parse_introspection_builtins() {
 
     // stmt3: if argc() == 0 { ... }
     if let Stmt {
-        kind: StmtKind::If { cond, .. },
+        node: StmtKind::If { cond, .. },
         ..
     } = &func.body[3]
     {
         if let Expr {
-            kind: ExprKind::Compare { left, op, right },
+            node: ExprKind::Compare { left, op, right },
             ..
         } = cond
         {
@@ -110,14 +110,14 @@ fn parse_introspection_builtins() {
             assert!(matches!(
                 **left,
                 Expr {
-                    kind: ExprKind::Argc,
+                    node: ExprKind::Argc,
                     ..
                 }
             ));
             assert!(matches!(
                 **right,
                 Expr {
-                    kind: ExprKind::Number(0),
+                    node: ExprKind::Number(0),
                     ..
                 }
             ));
@@ -130,14 +130,14 @@ fn parse_introspection_builtins() {
 
     // stmt4: if self_pid() > 0 && ppid() > 0 { ... }
     if let Stmt {
-        kind: StmtKind::If { cond, .. },
+        node: StmtKind::If { cond, .. },
         ..
     } = &func.body[4]
     {
         assert!(matches!(
             cond,
             Expr {
-                kind: ExprKind::And(_, _),
+                node: ExprKind::And(_, _),
                 ..
             }
         ));
@@ -147,12 +147,12 @@ fn parse_introspection_builtins() {
 
     // stmt5: if uid() >= 0 { ... }
     if let Stmt {
-        kind: StmtKind::If { cond, .. },
+        node: StmtKind::If { cond, .. },
         ..
     } = &func.body[5]
     {
         if let Expr {
-            kind: ExprKind::Compare { left, op, right },
+            node: ExprKind::Compare { left, op, right },
             ..
         } = cond
         {
@@ -160,14 +160,14 @@ fn parse_introspection_builtins() {
             assert!(matches!(
                 **left,
                 Expr {
-                    kind: ExprKind::Uid,
+                    node: ExprKind::Uid,
                     ..
                 }
             ));
             assert!(matches!(
                 **right,
                 Expr {
-                    kind: ExprKind::Number(0),
+                    node: ExprKind::Number(0),
                     ..
                 }
             ));

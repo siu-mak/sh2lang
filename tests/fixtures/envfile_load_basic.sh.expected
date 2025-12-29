@@ -2,7 +2,7 @@ __sh2_err_handler() { printf "Error in %s\n" "${__sh2_loc:-unknown}" >&2; }
 trap '__sh2_err_handler' ERR
 __sh2_load_envfile() { if [ -r "$1" ]; then awk '{ sub(/^[[:space:]]+/, ""); sub(/[[:space:]]+$/, ""); if($0=="" || substr($0,1,1)=="#") next; if(substr($0,1,7)=="export ") sub(/^export[[:space:]]+/, ""); idx=index($0,"="); if(idx==0) next; k=substr($0,1,idx-1); v=substr($0,idx+1); sub(/^[[:space:]]+/, "", k); sub(/[[:space:]]+$/, "", k); sub(/^[[:space:]]+/, "", v); sub(/[[:space:]]+$/, "", v); len=length(v); if(len>=2){ f=substr(v,1,1); l=substr(v,len,1); if((f=="\047" && l=="\047") || (f=="\"" && l=="\"")){ v=substr(v,2,len-2) } } printf "%s\t%s\n", k, v }' "$1" 2>/dev/null || true; fi; }
 main() {
-  __sh2_loc="tests/fixtures/envfile_load_basic.sh2:2"
+  __sh2_loc="tests/fixtures/envfile_load_basic.sh2:2:3"
   m="$( __sh2_load_envfile 'env.meta' )"
   printf '%s\n' "$m"
 }

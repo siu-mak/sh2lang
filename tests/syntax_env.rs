@@ -11,22 +11,22 @@ fn parse_env_basic() {
     // with env { FOO = "bar" } { print(env("FOO")) }
     // body[0] is WithEnv
     if let Stmt {
-        kind: StmtKind::WithEnv { body, .. },
+        node: StmtKind::WithEnv { body, .. },
         ..
     } = &func.body[0]
     {
         // body of WithEnv block
         if let Stmt {
-            kind:
+            node:
                 StmtKind::Print(Expr {
-                    kind: ExprKind::Env(inner),
+                    node: ExprKind::Env(inner),
                     ..
                 }),
             ..
         } = &body[0]
         {
             if let Expr {
-                kind: ExprKind::Literal(s),
+                node: ExprKind::Literal(s),
                 ..
             } = &**inner
             {

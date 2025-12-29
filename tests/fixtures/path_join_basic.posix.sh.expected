@@ -1,6 +1,6 @@
 __sh2_path_join() { out=''; for p in "$@"; do [ -z "$p" ] && continue; case "$p" in /*) out="$p";; *) if [ -z "$out" ]; then out="$p"; else while [ "${out%/}" != "$out" ]; do out="${out%/}"; done; while [ "${p#/}" != "$p" ]; do p="${p#/}"; done; out="${out}/${p}"; fi;; esac; done; printf '%s' "$out"; }
 main() {
-  __sh2_loc="tests/fixtures/path_join_basic.sh2:3"
+  __sh2_loc="tests/fixtures/path_join_basic.sh2:3:5"
   p="$( __sh2_path_join 'a' 'b' 'c' )"
   printf '%s\n' "$p"
 }

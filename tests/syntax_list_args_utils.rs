@@ -14,8 +14,8 @@ fn parse_list_args_utils() {
     assert!(matches!(
         test_fn.body[0],
         Stmt {
-            kind: StmtKind::Print(Expr {
-                kind: ExprKind::Argc,
+            node: StmtKind::Print(Expr {
+                node: ExprKind::Argc,
                 ..
             }),
             ..
@@ -26,8 +26,8 @@ fn parse_list_args_utils() {
     assert!(matches!(
         test_fn.body[1],
         Stmt {
-            kind: StmtKind::Print(Expr {
-                kind: ExprKind::Arg(1),
+            node: StmtKind::Print(Expr {
+                node: ExprKind::Arg(1),
                 ..
             }),
             ..
@@ -36,8 +36,8 @@ fn parse_list_args_utils() {
     assert!(matches!(
         test_fn.body[2],
         Stmt {
-            kind: StmtKind::Print(Expr {
-                kind: ExprKind::Arg(3),
+            node: StmtKind::Print(Expr {
+                node: ExprKind::Arg(3),
                 ..
             }),
             ..
@@ -48,8 +48,8 @@ fn parse_list_args_utils() {
     assert!(matches!(
         test_fn.body[3],
         Stmt {
-            kind: StmtKind::Print(Expr {
-                kind: ExprKind::Index { .. },
+            node: StmtKind::Print(Expr {
+                node: ExprKind::Index { .. },
                 ..
             }),
             ..
@@ -58,8 +58,8 @@ fn parse_list_args_utils() {
     assert!(matches!(
         test_fn.body[4],
         Stmt {
-            kind: StmtKind::Print(Expr {
-                kind: ExprKind::Index { .. },
+            node: StmtKind::Print(Expr {
+                node: ExprKind::Index { .. },
                 ..
             }),
             ..
@@ -70,8 +70,8 @@ fn parse_list_args_utils() {
     assert!(matches!(
         test_fn.body[5],
         Stmt {
-            kind: StmtKind::Print(Expr {
-                kind: ExprKind::Join { .. },
+            node: StmtKind::Print(Expr {
+                node: ExprKind::Join { .. },
                 ..
             }),
             ..
@@ -80,8 +80,8 @@ fn parse_list_args_utils() {
     assert!(matches!(
         test_fn.body[6],
         Stmt {
-            kind: StmtKind::Print(Expr {
-                kind: ExprKind::Count(_),
+            node: StmtKind::Print(Expr {
+                node: ExprKind::Count(_),
                 ..
             }),
             ..
@@ -92,7 +92,7 @@ fn parse_list_args_utils() {
     assert!(matches!(
         test_fn.body[7],
         Stmt {
-            kind: StmtKind::For { .. },
+            node: StmtKind::For { .. },
             ..
         }
     ));
@@ -102,7 +102,7 @@ fn parse_list_args_utils() {
 
     // let xs = ["a","b","c"]
     if let Stmt {
-        kind: StmtKind::Let { name, value },
+        node: StmtKind::Let { name, value },
         ..
     } = &main_fn.body[0]
     {
@@ -110,7 +110,7 @@ fn parse_list_args_utils() {
         assert!(matches!(
             value,
             Expr {
-                kind: ExprKind::List(_),
+                node: ExprKind::List(_),
                 ..
             }
         ));
@@ -122,8 +122,8 @@ fn parse_list_args_utils() {
     assert!(matches!(
         main_fn.body[1],
         Stmt {
-            kind: StmtKind::Print(Expr {
-                kind: ExprKind::Count(_),
+            node: StmtKind::Print(Expr {
+                node: ExprKind::Count(_),
                 ..
             }),
             ..
@@ -132,8 +132,8 @@ fn parse_list_args_utils() {
     assert!(matches!(
         main_fn.body[2],
         Stmt {
-            kind: StmtKind::Print(Expr {
-                kind: ExprKind::Index { .. },
+            node: StmtKind::Print(Expr {
+                node: ExprKind::Index { .. },
                 ..
             }),
             ..
@@ -142,8 +142,8 @@ fn parse_list_args_utils() {
     assert!(matches!(
         main_fn.body[3],
         Stmt {
-            kind: StmtKind::Print(Expr {
-                kind: ExprKind::Join { .. },
+            node: StmtKind::Print(Expr {
+                node: ExprKind::Join { .. },
                 ..
             }),
             ..
@@ -154,7 +154,7 @@ fn parse_list_args_utils() {
     assert!(matches!(
         main_fn.body[4],
         Stmt {
-            kind: StmtKind::For { .. },
+            node: StmtKind::For { .. },
             ..
         }
     ));
@@ -163,7 +163,7 @@ fn parse_list_args_utils() {
     assert!(matches!(
         main_fn.body[5],
         Stmt {
-            kind: StmtKind::Call { .. },
+            node: StmtKind::Call { .. },
             ..
         }
     ));

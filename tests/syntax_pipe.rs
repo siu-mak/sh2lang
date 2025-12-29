@@ -9,7 +9,7 @@ fn parse_pipe_basic() {
     assert!(matches!(
         func.body[0],
         Stmt {
-            kind: StmtKind::Pipe(_),
+            node: StmtKind::Pipe(_),
             ..
         }
     ));

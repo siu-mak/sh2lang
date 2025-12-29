@@ -7,9 +7,9 @@ fn parse_interpolated_dollar_basic() {
     let program = parse_fixture("interpolated_dollar_basic");
     let func = &program.functions[0];
     if let Stmt {
-        kind:
+        node:
             StmtKind::Print(Expr {
-                kind: ExprKind::Concat(_, _),
+                node: ExprKind::Concat(_, _),
                 ..
             }),
         ..

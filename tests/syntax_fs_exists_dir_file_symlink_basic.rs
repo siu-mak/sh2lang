@@ -11,40 +11,40 @@ fn parse_fs_exists_dir_file_symlink_basic() {
     assert!(matches!(
         &func.body[0],
         Stmt {
-            kind: StmtKind::Run(_),
+            node: StmtKind::Run(_),
             ..
         }
     ));
 
     if let Stmt {
-        kind: StmtKind::If { cond, .. },
+        node: StmtKind::If { cond, .. },
         ..
     } = &func.body[1]
     {
         fn has_pred(e: &Expr) -> (bool, bool, bool, bool) {
             match e {
                 Expr {
-                    kind: ExprKind::Exists(_),
+                    node: ExprKind::Exists(_),
                     ..
                 } => (true, false, false, false),
                 Expr {
-                    kind: ExprKind::IsFile(_),
+                    node: ExprKind::IsFile(_),
                     ..
                 } => (false, true, false, false),
                 Expr {
-                    kind: ExprKind::IsDir(_),
+                    node: ExprKind::IsDir(_),
                     ..
                 } => (false, false, true, false),
                 Expr {
-                    kind: ExprKind::IsSymlink(_),
+                    node: ExprKind::IsSymlink(_),
                     ..
                 } => (false, false, false, true),
                 Expr {
-                    kind: ExprKind::And(a, b),
+                    node: ExprKind::And(a, b),
                     ..
                 }
                 | Expr {
-                    kind: ExprKind::Or(a, b),
+                    node: ExprKind::Or(a, b),
                     ..
                 } => {
                     let (a1, a2, a3, a4) = has_pred(a);
@@ -52,7 +52,7 @@ fn parse_fs_exists_dir_file_symlink_basic() {
                     (a1 || b1, a2 || b2, a3 || b3, a4 || b4)
                 }
                 Expr {
-                    kind: ExprKind::Not(x),
+                    node: ExprKind::Not(x),
                     ..
                 } => has_pred(x),
                 _ => (false, false, false, false),

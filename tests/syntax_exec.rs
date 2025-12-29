@@ -10,7 +10,7 @@ fn parse_exec_basic() {
     assert_eq!(func.body.len(), 3);
 
     if let Stmt {
-        kind: StmtKind::Print(_),
+        node: StmtKind::Print(_),
         ..
     } = &func.body[0]
     {
@@ -18,7 +18,7 @@ fn parse_exec_basic() {
         panic!("Expected Print");
     }
     if let Stmt {
-        kind: StmtKind::Exec(_),
+        node: StmtKind::Exec(_),
         ..
     } = &func.body[1]
     {
@@ -26,7 +26,7 @@ fn parse_exec_basic() {
         panic!("Expected Exec");
     }
     if let Stmt {
-        kind: StmtKind::Print(_),
+        node: StmtKind::Print(_),
         ..
     } = &func.body[2]
     {

@@ -1,7 +1,7 @@
 __sh2_err_handler() { printf "Error in %s\n" "${__sh2_loc:-unknown}" >&2; }
 trap '__sh2_err_handler' ERR
 main() {
-  __sh2_loc="tests/fixtures/fs_exec_basic.sh2:2"
+  __sh2_loc="tests/fixtures/fs_exec_basic.sh2:2:3"
   'sh' '-c' 'rm -f exe noexe; echo '\''echo hi'\'' > exe; chmod +x exe; echo '\''echo hi'\'' > noexe; chmod 644 noexe'; __sh2_status=$?; (exit $__sh2_status)
   if [ -x 'exe' ] && ! [ -x 'noexe' ]; then
     printf '%s\n' 'ok'

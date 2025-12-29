@@ -9,7 +9,7 @@ fn parse_subshell_group_scope() {
 
     // stmt0: let x = "0"
     if let Stmt {
-        kind: StmtKind::Let { .. },
+        node: StmtKind::Let { .. },
         ..
     } = &func.body[0]
     {
@@ -20,7 +20,7 @@ fn parse_subshell_group_scope() {
 
     // stmt1: subshell { ... }
     if let Stmt {
-        kind: StmtKind::Subshell { body },
+        node: StmtKind::Subshell { body },
         ..
     } = &func.body[1]
     {
@@ -31,7 +31,7 @@ fn parse_subshell_group_scope() {
 
     // stmt2: print(x)
     if let Stmt {
-        kind: StmtKind::Print(_),
+        node: StmtKind::Print(_),
         ..
     } = &func.body[2]
     {
@@ -42,7 +42,7 @@ fn parse_subshell_group_scope() {
 
     // stmt3: group { ... }
     if let Stmt {
-        kind: StmtKind::Group { body },
+        node: StmtKind::Group { body },
         ..
     } = &func.body[3]
     {
@@ -53,7 +53,7 @@ fn parse_subshell_group_scope() {
 
     // stmt4: print(x)
     if let Stmt {
-        kind: StmtKind::Print(_),
+        node: StmtKind::Print(_),
         ..
     } = &func.body[4]
     {

@@ -141,9 +141,9 @@ fn resolve_span(
     file: &str,
     base: Option<&std::path::Path>,
 ) -> String {
-    let (line, _) = sm.line_col(span.start);
+    let (line, col) = sm.line_col(span.start);
     let display_file = crate::diag_path::display_path(file, base);
-    format!("{}:{}", display_file, line)
+    format!("{}:{}:{}", display_file, line, col)
 }
 
 /// Lower one AST statement into IR commands. Returns the updated context after this statement.
@@ -165,13 +165,13 @@ fn lower_stmt(
     } else {
         None
     };
-    match stmt.kind {
+    match stmt.node {
         ast::StmtKind::Let { name, value } => {
             // Special handling for try_run to allow it ONLY during strict let-binding lowering.
             if let ast::ExprKind::Call {
                 name: func_name,
                 args,
-            } = &value.kind
+            } = &value.node
             {
                 if func_name == "try_run" {
                     if args.is_empty() {
@@ -487,7 +487,7 @@ fn lower_stmt(
                     );
                 }
                 let arg = &args[0];
-                if let ast::ExprKind::List(elems) = &arg.kind {
+                if let ast::ExprKind::List(elems) = &arg.node {
                     let mut valid_cmds = Vec::new();
                     for e in elems {
                         valid_cmds.push(lower_expr(e.clone(), &mut ctx, sm, file));
@@ -514,16 +514,16 @@ fn lower_stmt(
                 let path = lower_expr(iter.next().unwrap(), &mut ctx, sm, file);
                 let content = lower_expr(iter.next().unwrap(), &mut ctx, sm, file);
                 let append = if iter.len() > 0 {
-                    if let ast::ExprKind::Bool(b) = iter.next().unwrap().kind {
+                    let arg = iter.next().unwrap();
+                    if let ast::ExprKind::Bool(b) = arg.node {
                         b
                     } else {
-                        // arg span? iter next span
                         panic!(
                             "{}",
                             sm.format_diagnostic(
                                 file,
                                 "write_file() third argument must be a boolean literal",
-                                stmt.span
+                                arg.span
                             )
                         );
                     }
@@ -558,7 +558,8 @@ fn lower_stmt(
                 let mut iter = args.into_iter();
                 let msg = lower_expr(iter.next().unwrap(), &mut ctx, sm, file);
                 let timestamp = if iter.len() > 0 {
-                    if let ast::ExprKind::Bool(b) = iter.next().unwrap().kind {
+                    let arg = iter.next().unwrap();
+                    if let ast::ExprKind::Bool(b) = arg.node {
                         b
                     } else {
                         panic!(
@@ -567,7 +568,7 @@ fn lower_stmt(
                                 file,
                                 format!("{}() second argument must be a boolean literal", name)
                                     .as_str(),
-                                stmt.span
+                                arg.span
                             )
                         );
                     }
@@ -719,7 +720,7 @@ fn lower_stmt(
                     ));
                 }
                 ast::LValue::Env(name) => {
-                    if matches!(&value.kind, ast::ExprKind::List(_) | ast::ExprKind::Args) {
+                    if matches!(&value.node, ast::ExprKind::List(_) | ast::ExprKind::Args) {
                         panic!("{}", sm.format_diagnostic(file, "set env.<NAME> requires a scalar string/number; lists/args are not supported", stmt.span));
                     }
 
@@ -767,7 +768,7 @@ fn lower_stmt(
 }
 
 fn lower_expr(e: ast::Expr, ctx: &mut LoweringContext, sm: &SourceMap, file: &str) -> ir::Val {
-    match e.kind {
+    match e.node {
         ast::ExprKind::Literal(s) => ir::Val::Literal(s),
         ast::ExprKind::Var(s) => ir::Val::Var(s),
         ast::ExprKind::Concat(l, r) => ir::Val::Concat(
@@ -776,8 +777,8 @@ fn lower_expr(e: ast::Expr, ctx: &mut LoweringContext, sm: &SourceMap, file: &st
         ),
         ast::ExprKind::Arith { left, op, right } => {
             if matches!(op, ast::ArithOp::Add) {
-                let l_is_lit = matches!(left.kind, ast::ExprKind::Literal(_));
-                let r_is_lit = matches!(right.kind, ast::ExprKind::Literal(_));
+                let l_is_lit = matches!(left.node, ast::ExprKind::Literal(_));
+                let r_is_lit = matches!(right.node, ast::ExprKind::Literal(_));
                 if l_is_lit || r_is_lit {
                     return ir::Val::Concat(
                         Box::new(lower_expr(*left, ctx, sm, file)),

@@ -9,9 +9,9 @@ fn parse_wait_list_basic() {
 
     // Check wait([p1, p2])
     if let Stmt {
-        kind:
+        node:
             StmtKind::Wait(Some(Expr {
-                kind: ExprKind::List(exprs),
+                node: ExprKind::List(exprs),
                 ..
             })),
         ..

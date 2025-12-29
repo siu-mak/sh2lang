@@ -9,15 +9,15 @@ fn parse_exec_stmt() {
 
     // stmt0: exec("sh", "-c", "echo exec_ok")
     if let Stmt {
-        kind: StmtKind::Exec(args),
+        node: StmtKind::Exec(args),
         ..
     } = &func.body[0]
     {
         assert_eq!(args.len(), 3);
-        assert!(matches!(args[0], Expr { kind: ExprKind::Literal(ref s), .. } if s == "sh"));
-        assert!(matches!(args[1], Expr { kind: ExprKind::Literal(ref s), .. } if s == "-c"));
+        assert!(matches!(args[0], Expr { node: ExprKind::Literal(ref s), .. } if s == "sh"));
+        assert!(matches!(args[1], Expr { node: ExprKind::Literal(ref s), .. } if s == "-c"));
         assert!(
-            matches!(args[2], Expr { kind: ExprKind::Literal(ref s), .. } if s == "echo exec_ok")
+            matches!(args[2], Expr { node: ExprKind::Literal(ref s), .. } if s == "echo exec_ok")
         );
     } else {
         panic!("Expected Exec(...)");

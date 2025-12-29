@@ -1,0 +1,5 @@
+Error: error: write_file() third argument must be a boolean literal
+--> diag_span_bad_option_loc.sh2:2:30
+ |
+ |     write_file("foo", "bar", invalid)
+ |                              ^^^^^^^

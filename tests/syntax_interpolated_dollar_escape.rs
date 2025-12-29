@@ -8,9 +8,9 @@ fn parse_interpolated_dollar_escape() {
     let func = &program.functions[0];
     // First print: "literal: {name}"
     if let Stmt {
-        kind:
+        node:
             StmtKind::Print(Expr {
-                kind: ExprKind::Literal(s),
+                node: ExprKind::Literal(s),
                 ..
             }),
         ..
@@ -22,9 +22,9 @@ fn parse_interpolated_dollar_escape() {
     }
     // Second print: "dollar: $"
     if let Stmt {
-        kind:
+        node:
             StmtKind::Print(Expr {
-                kind: ExprKind::Literal(s),
+                node: ExprKind::Literal(s),
                 ..
             }),
         ..
@@ -36,17 +36,17 @@ fn parse_interpolated_dollar_escape() {
     }
     // Third print: "interp: {name}" -> Concat or Var
     if let Stmt {
-        kind: StmtKind::Print(expr),
+        node: StmtKind::Print(expr),
         ..
     } = &func.body[3]
     {
         match expr {
             Expr {
-                kind: ExprKind::Concat(..),
+                node: ExprKind::Concat(..),
                 ..
             }
             | Expr {
-                kind: ExprKind::Var(_),
+                node: ExprKind::Var(_),
                 ..
             } => {} // Good
             other => panic!(

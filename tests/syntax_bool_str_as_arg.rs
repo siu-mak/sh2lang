@@ -9,18 +9,18 @@ fn parse_bool_str_as_arg() {
     // run("printf", "%s\n", bool_str(is_non_empty("empty")))
     // func body: [run, run(...)]
     if let Stmt {
-        kind: StmtKind::Run(RunCall { args, .. }),
+        node: StmtKind::Run(RunCall { args, .. }),
         ..
     } = &func.body[1]
     {
         // args: [printf, %s\n, bool_str(...)]
         if let Expr {
-            kind: ExprKind::BoolStr(inner),
+            node: ExprKind::BoolStr(inner),
             ..
         } = &args[2]
         {
             if let Expr {
-                kind: ExprKind::IsNonEmpty(_),
+                node: ExprKind::IsNonEmpty(_),
                 ..
             } = inner.as_ref()
             {

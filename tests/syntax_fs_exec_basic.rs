@@ -11,32 +11,32 @@ fn parse_fs_exec_basic() {
     assert!(matches!(
         &func.body[0],
         Stmt {
-            kind: StmtKind::Run(_),
+            node: StmtKind::Run(_),
             ..
         }
     ));
 
     if let Stmt {
-        kind: StmtKind::If { cond, .. },
+        node: StmtKind::If { cond, .. },
         ..
     } = &func.body[1]
     {
         fn has_is_exec(e: &Expr) -> bool {
             match e {
                 Expr {
-                    kind: ExprKind::IsExec(_),
+                    node: ExprKind::IsExec(_),
                     ..
                 } => true,
                 Expr {
-                    kind: ExprKind::And(a, b),
+                    node: ExprKind::And(a, b),
                     ..
                 }
                 | Expr {
-                    kind: ExprKind::Or(a, b),
+                    node: ExprKind::Or(a, b),
                     ..
                 } => has_is_exec(a) || has_is_exec(b),
                 Expr {
-                    kind: ExprKind::Not(x),
+                    node: ExprKind::Not(x),
                     ..
                 } => has_is_exec(x),
                 _ => false,

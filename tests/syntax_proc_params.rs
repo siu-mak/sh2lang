@@ -11,25 +11,25 @@ fn parse_proc_params_builtins() {
 
     // Check first If: argv0() == arg(0)
     if let Stmt {
-        kind: StmtKind::If { cond, .. },
+        node: StmtKind::If { cond, .. },
         ..
     } = &func.body[0]
     {
         if let Expr {
-            kind: ExprKind::Compare { left, op, right },
+            node: ExprKind::Compare { left, op, right },
             ..
         } = cond
         {
             assert!(matches!(
                 **left,
                 Expr {
-                    kind: ExprKind::Argv0,
+                    node: ExprKind::Argv0,
                     ..
                 }
             ));
             assert_eq!(*op, CompareOp::Eq);
             if let Expr {
-                kind: ExprKind::Arg(n),
+                node: ExprKind::Arg(n),
                 ..
             } = **right
             {
@@ -46,32 +46,32 @@ fn parse_proc_params_builtins() {
 
     // Check second If: argc() == count(args)
     if let Stmt {
-        kind: StmtKind::If { cond, .. },
+        node: StmtKind::If { cond, .. },
         ..
     } = &func.body[1]
     {
         if let Expr {
-            kind: ExprKind::Compare { left, op, right },
+            node: ExprKind::Compare { left, op, right },
             ..
         } = cond
         {
             assert!(matches!(
                 **left,
                 Expr {
-                    kind: ExprKind::Argc,
+                    node: ExprKind::Argc,
                     ..
                 }
             ));
             assert_eq!(*op, CompareOp::Eq);
             if let Expr {
-                kind: ExprKind::Count(inner),
+                node: ExprKind::Count(inner),
                 ..
             } = &**right
             {
                 assert!(matches!(
                     **inner,
                     Expr {
-                        kind: ExprKind::Args,
+                        node: ExprKind::Args,
                         ..
                     }
                 ));
@@ -87,30 +87,30 @@ fn parse_proc_params_builtins() {
 
     // Check third If: self_pid() == env("BASHPID")
     if let Stmt {
-        kind: StmtKind::If { cond, .. },
+        node: StmtKind::If { cond, .. },
         ..
     } = &func.body[2]
     {
         if let Expr {
-            kind: ExprKind::Compare { left, op, right },
+            node: ExprKind::Compare { left, op, right },
             ..
         } = cond
         {
             assert!(matches!(
                 **left,
                 Expr {
-                    kind: ExprKind::SelfPid,
+                    node: ExprKind::SelfPid,
                     ..
                 }
             ));
             assert_eq!(*op, CompareOp::Eq);
             if let Expr {
-                kind: ExprKind::Env(inner),
+                node: ExprKind::Env(inner),
                 ..
             } = &**right
             {
                 if let Expr {
-                    kind: ExprKind::Literal(s),
+                    node: ExprKind::Literal(s),
                     ..
                 } = &**inner
                 {

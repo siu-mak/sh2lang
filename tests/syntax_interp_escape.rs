@@ -8,9 +8,9 @@ fn parse_interp_escape() {
     let func = &program.functions[0];
     // should be a plain literal, not concat/var
     if let Stmt {
-        kind:
+        node:
             StmtKind::Print(Expr {
-                kind: ExprKind::Literal(s),
+                node: ExprKind::Literal(s),
                 ..
             }),
         ..

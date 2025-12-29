@@ -11,7 +11,7 @@ fn parse_exec_stops_execution() {
 
     // Check stmts
     if let Stmt {
-        kind: StmtKind::Print(_),
+        node: StmtKind::Print(_),
         ..
     } = &func.body[0]
     {
@@ -19,7 +19,7 @@ fn parse_exec_stops_execution() {
         panic!("Expected Print");
     }
     if let Stmt {
-        kind: StmtKind::Exec(_),
+        node: StmtKind::Exec(_),
         ..
     } = &func.body[1]
     {
@@ -27,7 +27,7 @@ fn parse_exec_stops_execution() {
         panic!("Expected Exec");
     }
     if let Stmt {
-        kind: StmtKind::Print(_),
+        node: StmtKind::Print(_),
         ..
     } = &func.body[2]
     {

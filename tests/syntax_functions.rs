@@ -17,7 +17,7 @@ fn parse_call_func() {
     assert!(matches!(
         func.body[0],
         Stmt {
-            kind: StmtKind::Call { .. },
+            node: StmtKind::Call { .. },
             ..
         }
     ));
@@ -30,7 +30,7 @@ fn parse_return_basic() {
     assert!(matches!(
         func.body[1],
         Stmt {
-            kind: StmtKind::Return(_),
+            node: StmtKind::Return(_),
             ..
         }
     ));
@@ -104,12 +104,12 @@ fn parse_return_status() {
     let program = parse_fixture("return_status");
     let func = &program.functions[0];
     if let Stmt {
-        kind: StmtKind::Return(Some(val)),
+        node: StmtKind::Return(Some(val)),
         ..
     } = &func.body[0]
     {
         if let Expr {
-            kind: ExprKind::Number(n),
+            node: ExprKind::Number(n),
             ..
         } = val
         {

@@ -9,14 +9,14 @@ fn parse_bool_literals() {
 
     // stmt0: if true { ... }
     if let Stmt {
-        kind: StmtKind::If { cond, .. },
+        node: StmtKind::If { cond, .. },
         ..
     } = &func.body[0]
     {
         assert!(matches!(
             cond,
             Expr {
-                kind: ExprKind::Bool(true),
+                node: ExprKind::Bool(true),
                 ..
             }
         ));
@@ -26,14 +26,14 @@ fn parse_bool_literals() {
 
     // stmt1: if false { ... }
     if let Stmt {
-        kind: StmtKind::If { cond, .. },
+        node: StmtKind::If { cond, .. },
         ..
     } = &func.body[1]
     {
         assert!(matches!(
             cond,
             Expr {
-                kind: ExprKind::Bool(false),
+                node: ExprKind::Bool(false),
                 ..
             }
         ));

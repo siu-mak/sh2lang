@@ -9,7 +9,7 @@ fn parse_try_catch_basic() {
     assert!(matches!(
         func.body[0],
         Stmt {
-            kind: StmtKind::TryCatch { .. },
+            node: StmtKind::TryCatch { .. },
             ..
         }
     ));

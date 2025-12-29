@@ -2,7 +2,7 @@ __sh2_err_handler() { printf "Error in %s\n" "${__sh2_loc:-unknown}" >&2; }
 trap '__sh2_err_handler' ERR
 main() {
   {
-    __sh2_loc="tests/fixtures/with_redirect_stdin_and_stdout_file.sh2:3"
+    __sh2_loc="tests/fixtures/with_redirect_stdin_and_stdout_file.sh2:3:5"
     'cat'; __sh2_status=$?; (exit $__sh2_status)
   } < 'in.txt' > 'out.txt'
 }

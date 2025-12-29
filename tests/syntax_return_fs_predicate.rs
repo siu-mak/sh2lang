@@ -9,18 +9,18 @@ fn parse_return_fs_predicate() {
     assert_eq!(check_func.name, "check");
     // return(is_non_empty(path))
     if let Stmt {
-        kind: StmtKind::Return(Some(expr)),
+        node: StmtKind::Return(Some(expr)),
         ..
     } = &check_func.body[0]
     {
         if let Expr {
-            kind: ExprKind::IsNonEmpty(path),
+            node: ExprKind::IsNonEmpty(path),
             ..
         } = expr
         {
             match &**path {
                 Expr {
-                    kind: ExprKind::Var(name),
+                    node: ExprKind::Var(name),
                     ..
                 } => assert_eq!(name, "path"),
                 _ => panic!("Expected path var"),

@@ -11,7 +11,7 @@ fn parse_concat_amp_basic() {
 
     // let x = "a" & "b"
     if let Stmt {
-        kind: StmtKind::Let { name, value },
+        node: StmtKind::Let { name, value },
         ..
     } = &func.body[0]
     {
@@ -19,7 +19,7 @@ fn parse_concat_amp_basic() {
         assert!(matches!(
             value,
             Expr {
-                kind: ExprKind::Concat(_, _),
+                node: ExprKind::Concat(_, _),
                 ..
             }
         ));
@@ -29,14 +29,14 @@ fn parse_concat_amp_basic() {
 
     // run("echo", "c" & "d") => second arg is Concat
     if let Stmt {
-        kind: StmtKind::Run(RunCall { args, .. }),
+        node: StmtKind::Run(RunCall { args, .. }),
         ..
     } = &func.body[2]
     {
         assert!(matches!(
             &args[1],
             Expr {
-                kind: ExprKind::Concat(_, _),
+                node: ExprKind::Concat(_, _),
                 ..
             }
         ));

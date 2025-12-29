@@ -9,14 +9,14 @@ fn parse_with_env_colon_basic() {
 
     // Check WithEnv bindings
     if let Stmt {
-        kind: StmtKind::WithEnv { bindings, .. },
+        node: StmtKind::WithEnv { bindings, .. },
         ..
     } = &func.body[0]
     {
         assert_eq!(bindings.len(), 2);
         assert_eq!(bindings[0].0, "FOO");
         if let Expr {
-            kind: ExprKind::Literal(s),
+            node: ExprKind::Literal(s),
             ..
         } = &bindings[0].1
         {
@@ -26,7 +26,7 @@ fn parse_with_env_colon_basic() {
         }
         assert_eq!(bindings[1].0, "BAZ");
         if let Expr {
-            kind: ExprKind::Literal(s),
+            node: ExprKind::Literal(s),
             ..
         } = &bindings[1].1
         {

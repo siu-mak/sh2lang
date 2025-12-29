@@ -1,7 +1,28 @@
 use crate::span::Span;
-
 use crate::span::SourceMap;
 use std::collections::HashMap;
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct Spanned<T> {
+    pub node: T,
+    pub span: Span,
+}
+
+impl<T> Spanned<T> {
+    pub fn new(node: T, span: Span) -> Self {
+        Self { node, span }
+    }
+
+    pub fn map<U, F: FnOnce(T) -> U>(self, f: F) -> Spanned<U> {
+        Spanned {
+            node: f(self.node),
+            span: self.span,
+        }
+    }
+}
+
+pub type Expr = Spanned<ExprKind>;
+pub type Stmt = Spanned<StmtKind>;
 
 #[derive(Debug, PartialEq)]
 pub struct Program {
@@ -47,11 +68,7 @@ pub enum LValue {
     Env(String),
 }
 
-#[derive(Debug, Clone, PartialEq)]
-pub struct Expr {
-    pub kind: ExprKind,
-    pub span: Span,
-}
+
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum ExprKind {
@@ -130,11 +147,7 @@ pub struct RunCall {
     pub allow_fail: bool,
 }
 
-#[derive(Debug, Clone, PartialEq)]
-pub struct Stmt {
-    pub kind: StmtKind,
-    pub span: Span,
-}
+
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum StmtKind {

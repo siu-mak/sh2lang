@@ -7,15 +7,15 @@ fn parse_capture_pipe() {
     let program = parse_fixture("capture_pipe");
     let func = &program.functions[0];
 
-    // stmt0: let out = capture(run(...) | run(...)) => Expr { kind: ExprKind::CommandPipe([...]), .. }
+    // stmt0: let out = capture(run(...) | run(...)) => Expr { node: ExprKind::CommandPipe([...]), .. }
     if let Stmt {
-        kind: StmtKind::Let { name, value },
+        node: StmtKind::Let { name, value },
         ..
     } = &func.body[0]
     {
         assert_eq!(name, "out");
         if let Expr {
-            kind: ExprKind::CommandPipe(segments),
+            node: ExprKind::CommandPipe(segments),
             ..
         } = value
         {
@@ -23,7 +23,7 @@ fn parse_capture_pipe() {
 
             // seg0
             if let Expr {
-                kind: ExprKind::Literal(ref s),
+                node: ExprKind::Literal(ref s),
                 ..
             } = segments[0][0]
             {
@@ -34,7 +34,7 @@ fn parse_capture_pipe() {
 
             // seg1
             if let Expr {
-                kind: ExprKind::Literal(ref s),
+                node: ExprKind::Literal(ref s),
                 ..
             } = segments[1][0]
             {
@@ -51,7 +51,7 @@ fn parse_capture_pipe() {
 
     // stmt1: print(out)
     assert!(
-        matches!(func.body[1], Stmt { kind: StmtKind::Print(Expr { kind: ExprKind::Var(ref v), .. }), .. } if v == "out")
+        matches!(func.body[1], Stmt { node: StmtKind::Print(Expr { node: ExprKind::Var(ref v), .. }), .. } if v == "out")
     );
 }
 

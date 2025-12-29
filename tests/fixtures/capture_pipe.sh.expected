@@ -1,7 +1,7 @@
 __sh2_err_handler() { printf "Error in %s\n" "${__sh2_loc:-unknown}" >&2; }
 trap '__sh2_err_handler' ERR
 main() {
-  __sh2_loc="tests/fixtures/capture_pipe.sh2:2"
+  __sh2_loc="tests/fixtures/capture_pipe.sh2:2:3"
   out="$( 'printf' 'hi\n' | 'sed' 's/hi/ok/' )"
   printf '%s\n' "$out"
 }

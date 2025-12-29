@@ -9,13 +9,13 @@ fn parse_env_export_unset_source() {
 
     // stmt0: export("X", "hello")
     if let Stmt {
-        kind: StmtKind::Export { name, value },
+        node: StmtKind::Export { name, value },
         ..
     } = &func.body[0]
     {
         assert_eq!(name, "X");
         let v = value.as_ref().expect("Expected export to have a value");
-        assert!(matches!(v, Expr { kind: ExprKind::Literal(s), .. } if s == "hello"));
+        assert!(matches!(v, Expr { node: ExprKind::Literal(s), .. } if s == "hello"));
     } else {
         panic!("Expected Export with value");
     }
@@ -24,26 +24,26 @@ fn parse_env_export_unset_source() {
     assert!(matches!(
         func.body[1],
         Stmt {
-            kind: StmtKind::Run(_),
+            node: StmtKind::Run(_),
             ..
         }
     ));
 
     // stmt2: let y = "yo"
     if let Stmt {
-        kind: StmtKind::Let { name, value },
+        node: StmtKind::Let { name, value },
         ..
     } = &func.body[2]
     {
         assert_eq!(name, "y");
-        assert!(matches!(value, Expr { kind: ExprKind::Literal(s), .. } if s == "yo"));
+        assert!(matches!(value, Expr { node: ExprKind::Literal(s), .. } if s == "yo"));
     } else {
         panic!("Expected let y = \"yo\"");
     }
 
     // stmt3: export("y") (no value)
     if let Stmt {
-        kind: StmtKind::Export { name, value },
+        node: StmtKind::Export { name, value },
         ..
     } = &func.body[3]
     {
@@ -57,14 +57,14 @@ fn parse_env_export_unset_source() {
     assert!(matches!(
         func.body[4],
         Stmt {
-            kind: StmtKind::Run(_),
+            node: StmtKind::Run(_),
             ..
         }
     ));
 
     // stmt5: unset("X")
     if let Stmt {
-        kind: StmtKind::Unset { name },
+        node: StmtKind::Unset { name },
         ..
     } = &func.body[5]
     {
@@ -77,14 +77,14 @@ fn parse_env_export_unset_source() {
     assert!(matches!(
         func.body[6],
         Stmt {
-            kind: StmtKind::Run(_),
+            node: StmtKind::Run(_),
             ..
         }
     ));
 
-    // stmt7: let f = capture("mktemp") => Expr { kind: ExprKind::Command([...]), .. }
+    // stmt7: let f = capture("mktemp") => Expr { node: ExprKind::Command([...]), .. }
     if let Stmt {
-        kind: StmtKind::Let { name, value },
+        node: StmtKind::Let { name, value },
         ..
     } = &func.body[7]
     {
@@ -92,7 +92,7 @@ fn parse_env_export_unset_source() {
         assert!(matches!(
             value,
             Expr {
-                kind: ExprKind::Command(_),
+                node: ExprKind::Command(_),
                 ..
             }
         ));
@@ -104,18 +104,18 @@ fn parse_env_export_unset_source() {
     assert!(matches!(
         func.body[8],
         Stmt {
-            kind: StmtKind::Sh(_),
+            node: StmtKind::Sh(_),
             ..
         }
     ));
 
     // stmt9: source(f)
     if let Stmt {
-        kind: StmtKind::Source { path },
+        node: StmtKind::Source { path },
         ..
     } = &func.body[9]
     {
-        assert!(matches!(path, Expr { kind: ExprKind::Var(v), .. } if v == "f"));
+        assert!(matches!(path, Expr { node: ExprKind::Var(v), .. } if v == "f"));
     } else {
         panic!("Expected Source(f)");
     }
@@ -124,7 +124,7 @@ fn parse_env_export_unset_source() {
     assert!(matches!(
         func.body[10],
         Stmt {
-            kind: StmtKind::Run(_),
+            node: StmtKind::Run(_),
             ..
         }
     ));

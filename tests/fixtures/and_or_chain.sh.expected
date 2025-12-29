@@ -2,13 +2,13 @@ __sh2_err_handler() { printf "Error in %s\n" "${__sh2_loc:-unknown}" >&2; }
 trap '__sh2_err_handler' ERR
 main() {
   {
-    __sh2_loc="tests/fixtures/and_or_chain.sh2:2"
+    __sh2_loc="tests/fixtures/and_or_chain.sh2:2:3"
     'true'; __sh2_status=$?; (exit $__sh2_status)
   } && {
     printf '%s\n' 'ok'
   }
   {
-    __sh2_loc="tests/fixtures/and_or_chain.sh2:3"
+    __sh2_loc="tests/fixtures/and_or_chain.sh2:3:3"
     'false'; __sh2_status=$?; (exit $__sh2_status)
   } || {
     printf '%s\n' 'fallback'

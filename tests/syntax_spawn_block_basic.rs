@@ -10,18 +10,18 @@ fn parse_spawn_block_basic() {
 
     // Check Spawn { stmt: Group { ... } }
     if let Stmt {
-        kind: StmtKind::Spawn { stmt },
+        node: StmtKind::Spawn { stmt },
         ..
     } = &func.body[0]
     {
         if let Stmt {
-            kind: StmtKind::Group { body },
+            node: StmtKind::Group { body },
             ..
         } = &**stmt
         {
             assert_eq!(body.len(), 1);
             if let Stmt {
-                kind: StmtKind::Run(..),
+                node: StmtKind::Run(..),
                 ..
             } = &body[0]
             {

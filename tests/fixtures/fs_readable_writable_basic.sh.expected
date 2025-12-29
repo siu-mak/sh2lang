@@ -1,7 +1,7 @@
 __sh2_err_handler() { printf "Error in %s\n" "${__sh2_loc:-unknown}" >&2; }
 trap '__sh2_err_handler' ERR
 main() {
-  __sh2_loc="tests/fixtures/fs_readable_writable_basic.sh2:2"
+  __sh2_loc="tests/fixtures/fs_readable_writable_basic.sh2:2:3"
   'sh' '-c' 'rm -f ro rw; : > ro; : > rw; chmod 444 ro; chmod 644 rw'; __sh2_status=$?; (exit $__sh2_status)
   if [ -r 'ro' ] && ! [ -w 'ro' ] && [ -r 'rw' ] && [ -w 'rw' ]; then
     printf '%s\n' 'ok'

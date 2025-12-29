@@ -8,14 +8,14 @@ fn parse_print_args() {
     let program = parse_fixture("print_args");
     let func = &program.functions[0];
     if let Stmt {
-        kind: StmtKind::Print(expr),
+        node: StmtKind::Print(expr),
         ..
     } = &func.body[0]
     {
         assert!(matches!(
             expr,
             Expr {
-                kind: ExprKind::Args,
+                node: ExprKind::Args,
                 ..
             }
         ));
@@ -94,9 +94,9 @@ fn parse_print_err_statement_inline() {
     let program = parser::parse(&tokens, &sm, "test");
     match &program.functions[0].body[0] {
         sh2c::ast::Stmt {
-            kind:
+            node:
                 StmtKind::PrintErr(sh2c::ast::Expr {
-                    kind: ExprKind::Literal(s),
+                    node: ExprKind::Literal(s),
                     ..
                 }),
             ..

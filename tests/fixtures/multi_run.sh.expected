@@ -1,9 +1,9 @@
 __sh2_err_handler() { printf "Error in %s\n" "${__sh2_loc:-unknown}" >&2; }
 trap '__sh2_err_handler' ERR
 main() {
-  __sh2_loc="tests/fixtures/multi_run.sh2:2"
+  __sh2_loc="tests/fixtures/multi_run.sh2:2:5"
   'echo' 'one'; __sh2_status=$?; (exit $__sh2_status)
-  __sh2_loc="tests/fixtures/multi_run.sh2:3"
+  __sh2_loc="tests/fixtures/multi_run.sh2:3:5"
   'echo' 'two'; __sh2_status=$?; (exit $__sh2_status)
 }
 __sh2_status=0

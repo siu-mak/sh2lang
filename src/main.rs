@@ -7,6 +7,9 @@ use std::process;
 
 fn main() {
     let args: Vec<String> = std::env::args().collect();
+    // Suppress default panic output (thread info, location) so we can control error formatting
+    std::panic::set_hook(Box::new(|_| {}));
+
     if args.len() < 2 {
         print_usage();
         process::exit(1);

@@ -9,8 +9,8 @@ fn parse_status_basic() {
 
     // Check print(status())
     if let Stmt {
-        kind: StmtKind::Print(Expr {
-            kind: ExprKind::Status,
+        node: StmtKind::Print(Expr {
+            node: ExprKind::Status,
             ..
         }),
         ..

@@ -11,26 +11,26 @@ fn parse_self_pid_arith() {
 
     // Check Let x = self_pid() + 1
     if let Stmt {
-        kind: StmtKind::Let { name, value },
+        node: StmtKind::Let { name, value },
         ..
     } = &func.body[0]
     {
         assert_eq!(name, "x");
         if let Expr {
-            kind: ExprKind::Arith { left, op, right },
+            node: ExprKind::Arith { left, op, right },
             ..
         } = value
         {
             assert!(matches!(
                 **left,
                 Expr {
-                    kind: ExprKind::SelfPid,
+                    node: ExprKind::SelfPid,
                     ..
                 }
             ));
             assert_eq!(*op, ArithOp::Add);
             if let Expr {
-                kind: ExprKind::Number(n),
+                node: ExprKind::Number(n),
                 ..
             } = **right
             {
@@ -47,17 +47,17 @@ fn parse_self_pid_arith() {
 
     // Check If x > self_pid()
     if let Stmt {
-        kind: StmtKind::If { cond, .. },
+        node: StmtKind::If { cond, .. },
         ..
     } = &func.body[1]
     {
         if let Expr {
-            kind: ExprKind::Compare { left, op, right },
+            node: ExprKind::Compare { left, op, right },
             ..
         } = cond
         {
             if let Expr {
-                kind: ExprKind::Var(v),
+                node: ExprKind::Var(v),
                 ..
             } = &**left
             {
@@ -69,7 +69,7 @@ fn parse_self_pid_arith() {
             assert!(matches!(
                 **right,
                 Expr {
-                    kind: ExprKind::SelfPid,
+                    node: ExprKind::SelfPid,
                     ..
                 }
             ));

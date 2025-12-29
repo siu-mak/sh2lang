@@ -9,12 +9,12 @@ fn parse_wait_pid_basic() {
 
     // Check let p = pid()
     if let Stmt {
-        kind:
+        node:
             StmtKind::Let {
                 name,
                 value:
                     Expr {
-                        kind: ExprKind::Pid,
+                        node: ExprKind::Pid,
                         ..
                     },
             },
@@ -28,9 +28,9 @@ fn parse_wait_pid_basic() {
 
     // Check wait(p)
     if let Stmt {
-        kind:
+        node:
             StmtKind::Wait(Some(Expr {
-                kind: ExprKind::Var(name),
+                node: ExprKind::Var(name),
                 ..
             })),
         ..

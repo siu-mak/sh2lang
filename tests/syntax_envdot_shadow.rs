@@ -11,9 +11,9 @@ fn parse_envdot_shadow() {
     // Check shadow function
     assert_eq!(func_shadow.name, "shadow");
     if let Stmt {
-        kind:
+        node:
             StmtKind::Print(Expr {
-                kind: ExprKind::EnvDot(name),
+                node: ExprKind::EnvDot(name),
                 ..
             }),
         ..
@@ -26,7 +26,7 @@ fn parse_envdot_shadow() {
 
     // Check main function has WithEnv
     if let Stmt {
-        kind: StmtKind::WithEnv { .. },
+        node: StmtKind::WithEnv { .. },
         ..
     } = &func_main.body[0]
     {

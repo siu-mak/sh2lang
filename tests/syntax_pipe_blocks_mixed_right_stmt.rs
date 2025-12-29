@@ -10,7 +10,7 @@ fn parse_pipe_blocks_mixed_right_stmt() {
 
     // Check Stmt::PipeBlocks { segments }
     if let Stmt {
-        kind: StmtKind::PipeBlocks { segments },
+        node: StmtKind::PipeBlocks { segments },
         ..
     } = &func.body[0]
     {
@@ -20,7 +20,7 @@ fn parse_pipe_blocks_mixed_right_stmt() {
         // Seg 1: run("grep", "b") (1 stmt)
         assert_eq!(segments[1].len(), 1);
         if let Stmt {
-            kind: StmtKind::Run(..),
+            node: StmtKind::Run(..),
             ..
         } = &segments[1][0]
         {

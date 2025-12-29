@@ -13,21 +13,21 @@ fn parse_spawn_wait_status_pid() {
     assert!(matches!(
         func.body[0],
         Stmt {
-            kind: StmtKind::Spawn { .. },
+            node: StmtKind::Spawn { .. },
             ..
         }
     ));
 
     // stmt1: if pid() > 0 { ... }
     if let Stmt {
-        kind: StmtKind::If { cond, .. },
+        node: StmtKind::If { cond, .. },
         ..
     } = &func.body[1]
     {
         assert!(matches!(
             cond,
             Expr {
-                kind: ExprKind::Compare {
+                node: ExprKind::Compare {
                     op: CompareOp::Gt,
                     ..
                 },
@@ -40,14 +40,14 @@ fn parse_spawn_wait_status_pid() {
 
     // stmt2: wait(pid())
     if let Stmt {
-        kind: StmtKind::Wait(Some(e)),
+        node: StmtKind::Wait(Some(e)),
         ..
     } = &func.body[2]
     {
         assert!(matches!(
             e,
             Expr {
-                kind: ExprKind::Pid,
+                node: ExprKind::Pid,
                 ..
             }
         ));
@@ -57,12 +57,12 @@ fn parse_spawn_wait_status_pid() {
 
     // stmt3: if status() == 7 { ... }
     if let Stmt {
-        kind: StmtKind::If { cond, .. },
+        node: StmtKind::If { cond, .. },
         ..
     } = &func.body[3]
     {
         if let Expr {
-            kind: ExprKind::Compare { left, op, right },
+            node: ExprKind::Compare { left, op, right },
             ..
         } = cond
         {
@@ -70,14 +70,14 @@ fn parse_spawn_wait_status_pid() {
             assert!(matches!(
                 **left,
                 Expr {
-                    kind: ExprKind::Status,
+                    node: ExprKind::Status,
                     ..
                 }
             ));
             assert!(matches!(
                 **right,
                 Expr {
-                    kind: ExprKind::Number(7),
+                    node: ExprKind::Number(7),
                     ..
                 }
             ));

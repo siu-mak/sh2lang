@@ -67,20 +67,29 @@ impl SourceMap {
     }
 
     pub fn format_diagnostic(&self, file: &str, msg: &str, span: Span) -> String {
-        let (line, col) = self.line_col(span.start);
-        let snippet = self.line_snippet(line);
+        let (start_line, start_col) = self.line_col(span.start);
+        let (end_line, _) = self.line_col(span.end);
+        let snippet = self.line_snippet(start_line);
         let mut arrow = String::new();
-        for _ in 0..(col - 1) {
+        for _ in 0..(start_col - 1) {
             arrow.push(' ');
         }
-        let len = max(1, span.end - span.start);
-        for _ in 0..len {
+
+        if start_line == end_line {
+            let len = max(1, span.end - span.start);
+            for _ in 0..len {
+                arrow.push('^');
+            }
+        } else {
             arrow.push('^');
+            arrow.push_str(" (spans multiple lines)");
         }
+
+        let display_file = crate::diag_path::display_path(file, None);
 
         format!(
             "error: {}\n--> {}:{}:{}\n |\n | {}\n | {}",
-            msg, file, line, col, snippet, arrow
+            msg, display_file, start_line, start_col, snippet, arrow
         )
     }
 }

@@ -12,7 +12,7 @@ fn parse_pid_basic() {
 
     // Check 2nd stmt: let p = pid()
     if let Stmt {
-        kind: StmtKind::Let { name, value },
+        node: StmtKind::Let { name, value },
         ..
     } = &func.body[1]
     {
@@ -20,7 +20,7 @@ fn parse_pid_basic() {
         assert!(matches!(
             value,
             Expr {
-                kind: ExprKind::Pid,
+                node: ExprKind::Pid,
                 ..
             }
         ));

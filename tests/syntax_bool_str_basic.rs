@@ -9,23 +9,23 @@ fn parse_bool_str_basic() {
     // print(bool_str(is_non_empty("nonempty")))
     // func body: [run, print(...)]
     if let Stmt {
-        kind: StmtKind::Print(expr),
+        node: StmtKind::Print(expr),
         ..
     } = &func.body[1]
     {
         if let Expr {
-            kind: ExprKind::BoolStr(inner),
+            node: ExprKind::BoolStr(inner),
             ..
         } = expr
         {
             if let Expr {
-                kind: ExprKind::IsNonEmpty(path),
+                node: ExprKind::IsNonEmpty(path),
                 ..
             } = &**inner
             {
                 match &**path {
                     Expr {
-                        kind: ExprKind::Literal(s),
+                        node: ExprKind::Literal(s),
                         ..
                     } => assert_eq!(s, "nonempty"),
                     _ => panic!("Expected literal"),

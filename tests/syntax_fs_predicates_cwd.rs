@@ -9,23 +9,23 @@ fn parse_fs_predicates_cwd() {
     let program = parse_fixture("fs_predicates_cwd");
     let func = &program.functions[0];
 
-    // stmt0: let d = capture("mktemp","-d")  => Expr { kind: ExprKind::Command([...]), .. }
+    // stmt0: let d = capture("mktemp","-d")  => Expr { node: ExprKind::Command([...]), .. }
     if let Stmt {
-        kind: StmtKind::Let { name, value },
+        node: StmtKind::Let { name, value },
         ..
     } = &func.body[0]
     {
         assert_eq!(name, "d");
         if let Expr {
-            kind: ExprKind::Command(args),
+            node: ExprKind::Command(args),
             ..
         } = value
         {
             assert_eq!(args.len(), 2);
             assert!(
-                matches!(args[0], Expr { kind: ExprKind::Literal(ref s), .. } if s == "mktemp")
+                matches!(args[0], Expr { node: ExprKind::Literal(ref s), .. } if s == "mktemp")
             );
-            assert!(matches!(args[1], Expr { kind: ExprKind::Literal(ref s), .. } if s == "-d"));
+            assert!(matches!(args[1], Expr { node: ExprKind::Literal(ref s), .. } if s == "-d"));
         } else {
             panic!("Expected Expr::Command for capture(\"mktemp\", \"-d\")");
         }
@@ -35,12 +35,12 @@ fn parse_fs_predicates_cwd() {
 
     // stmt1: with cwd d { sh("touch f.txt") }
     if let Stmt {
-        kind: StmtKind::WithCwd { path, body },
+        node: StmtKind::WithCwd { path, body },
         ..
     } = &func.body[1]
     {
         if let Expr {
-            kind: ExprKind::Var(v),
+            node: ExprKind::Var(v),
             ..
         } = path
         {
@@ -49,25 +49,25 @@ fn parse_fs_predicates_cwd() {
             panic!("Expected Var(d)");
         }
         assert_eq!(body.len(), 1);
-        assert!(matches!(body[0], Stmt { kind: StmtKind::Sh(ref s), .. } if s == "touch f.txt"));
+        assert!(matches!(body[0], Stmt { node: StmtKind::Sh(ref s), .. } if s == "touch f.txt"));
     } else {
         panic!("Expected WithCwd");
     }
 
     // stmt2: let f = d + "/f.txt"  (parses as Arith(Add); lower turns into Concat)
     if let Stmt {
-        kind: StmtKind::Let { name, value },
+        node: StmtKind::Let { name, value },
         ..
     } = &func.body[2]
     {
         assert_eq!(name, "f");
         if let Expr {
-            kind: ExprKind::Arith { left, op, right },
+            node: ExprKind::Arith { left, op, right },
             ..
         } = value
         {
             if let Expr {
-                kind: ExprKind::Var(v),
+                node: ExprKind::Var(v),
                 ..
             } = &**left
             {
@@ -77,7 +77,7 @@ fn parse_fs_predicates_cwd() {
             }
             assert_eq!(*op, ArithOp::Add);
             if let Expr {
-                kind: ExprKind::Literal(s),
+                node: ExprKind::Literal(s),
                 ..
             } = &**right
             {
@@ -94,7 +94,7 @@ fn parse_fs_predicates_cwd() {
 
     // stmt3: if exists(f) && is_file(f) && !is_dir(f) { ... } else { ... }
     if let Stmt {
-        kind: StmtKind::If { cond, .. },
+        node: StmtKind::If { cond, .. },
         ..
     } = &func.body[3]
     {
@@ -102,7 +102,7 @@ fn parse_fs_predicates_cwd() {
         assert!(matches!(
             cond,
             Expr {
-                kind: ExprKind::And(_, _),
+                node: ExprKind::And(_, _),
                 ..
             }
         ));
@@ -114,32 +114,32 @@ fn parse_fs_predicates_cwd() {
     assert!(matches!(
         func.body[4],
         Stmt {
-            kind: StmtKind::Cd { .. },
+            node: StmtKind::Cd { .. },
             ..
         }
     ));
 
     // stmt5: if pwd() == d { ... }
     if let Stmt {
-        kind: StmtKind::If { cond, .. },
+        node: StmtKind::If { cond, .. },
         ..
     } = &func.body[5]
     {
         if let Expr {
-            kind: ExprKind::Compare { left, op, right },
+            node: ExprKind::Compare { left, op, right },
             ..
         } = cond
         {
             assert!(matches!(
                 **left,
                 Expr {
-                    kind: ExprKind::Pwd,
+                    node: ExprKind::Pwd,
                     ..
                 }
             ));
             assert_eq!(*op, CompareOp::Eq);
             if let Expr {
-                kind: ExprKind::Var(v),
+                node: ExprKind::Var(v),
                 ..
             } = &**right
             {
@@ -158,7 +158,7 @@ fn parse_fs_predicates_cwd() {
     assert!(matches!(
         func.body[6],
         Stmt {
-            kind: StmtKind::Run(_),
+            node: StmtKind::Run(_),
             ..
         }
     ));

@@ -10,7 +10,7 @@ fn parse_pipe_blocks_basic() {
 
     // Check Stmt::PipeBlocks { segments }
     if let Stmt {
-        kind: StmtKind::PipeBlocks { segments },
+        node: StmtKind::PipeBlocks { segments },
         ..
     } = &func.body[0]
     {

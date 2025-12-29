@@ -7,9 +7,9 @@ fn parse_interp_basic() {
     let program = parse_fixture("interp_basic");
     let func = &program.functions[0];
     if let Stmt {
-        kind:
+        node:
             StmtKind::Print(Expr {
-                kind: ExprKind::Concat(_, _),
+                node: ExprKind::Concat(_, _),
                 ..
             }),
         ..

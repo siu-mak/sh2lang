@@ -12,7 +12,7 @@ fn parse_set_env_basic() {
 
     match &func.body[0] {
         Stmt {
-            kind: StmtKind::Set { target, .. },
+            node: StmtKind::Set { target, .. },
             ..
         } => {
             assert!(matches!(target, LValue::Env(name) if name == "FOO"));
@@ -22,12 +22,12 @@ fn parse_set_env_basic() {
 
     match &func.body[1] {
         Stmt {
-            kind: StmtKind::Print(e),
+            node: StmtKind::Print(e),
             ..
         } => assert!(matches!(
             e,
             Expr {
-                kind: ExprKind::Env(_),
+                node: ExprKind::Env(_),
                 ..
             }
         )),
@@ -36,11 +36,11 @@ fn parse_set_env_basic() {
 
     match &func.body[2] {
         Stmt {
-            kind: StmtKind::Run(_),
+            node: StmtKind::Run(_),
             ..
         }
         | Stmt {
-            kind: StmtKind::Pipe(_),
+            node: StmtKind::Pipe(_),
             ..
         } => {}
         _ => panic!("Expected Run or Pipe"),

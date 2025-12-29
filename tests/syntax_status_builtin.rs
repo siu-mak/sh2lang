@@ -13,26 +13,26 @@ fn parse_status_builtin() {
     assert!(matches!(
         func.body[0],
         Stmt {
-            kind: StmtKind::Run(_),
+            node: StmtKind::Run(_),
             ..
         }
     ));
 
     // stmt1: if status() == 0 { ... }
     if let Stmt {
-        kind: StmtKind::If { cond, .. },
+        node: StmtKind::If { cond, .. },
         ..
     } = &func.body[1]
     {
         if let Expr {
-            kind: ExprKind::Compare { left, op, right },
+            node: ExprKind::Compare { left, op, right },
             ..
         } = cond
         {
             assert!(matches!(
                 **left,
                 Expr {
-                    kind: ExprKind::Status,
+                    node: ExprKind::Status,
                     ..
                 }
             ));
@@ -40,7 +40,7 @@ fn parse_status_builtin() {
             assert!(matches!(
                 **right,
                 Expr {
-                    kind: ExprKind::Number(0),
+                    node: ExprKind::Number(0),
                     ..
                 }
             ));
@@ -55,26 +55,26 @@ fn parse_status_builtin() {
     assert!(matches!(
         func.body[2],
         Stmt {
-            kind: StmtKind::Run(_),
+            node: StmtKind::Run(_),
             ..
         }
     ));
 
     // stmt3: if status() != 0 { ... }
     if let Stmt {
-        kind: StmtKind::If { cond, .. },
+        node: StmtKind::If { cond, .. },
         ..
     } = &func.body[3]
     {
         if let Expr {
-            kind: ExprKind::Compare { left, op, right },
+            node: ExprKind::Compare { left, op, right },
             ..
         } = cond
         {
             assert!(matches!(
                 **left,
                 Expr {
-                    kind: ExprKind::Status,
+                    node: ExprKind::Status,
                     ..
                 }
             ));
@@ -82,7 +82,7 @@ fn parse_status_builtin() {
             assert!(matches!(
                 **right,
                 Expr {
-                    kind: ExprKind::Number(0),
+                    node: ExprKind::Number(0),
                     ..
                 }
             ));

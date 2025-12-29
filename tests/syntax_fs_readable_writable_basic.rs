@@ -11,32 +11,32 @@ fn parse_fs_readable_writable_basic() {
     assert!(matches!(
         &func.body[0],
         Stmt {
-            kind: StmtKind::Run(_),
+            node: StmtKind::Run(_),
             ..
         }
     ));
 
     if let Stmt {
-        kind: StmtKind::If { cond, .. },
+        node: StmtKind::If { cond, .. },
         ..
     } = &func.body[1]
     {
         fn has_rw(e: &Expr) -> (bool, bool) {
             match e {
                 Expr {
-                    kind: ExprKind::IsReadable(_),
+                    node: ExprKind::IsReadable(_),
                     ..
                 } => (true, false),
                 Expr {
-                    kind: ExprKind::IsWritable(_),
+                    node: ExprKind::IsWritable(_),
                     ..
                 } => (false, true),
                 Expr {
-                    kind: ExprKind::And(a, b),
+                    node: ExprKind::And(a, b),
                     ..
                 }
                 | Expr {
-                    kind: ExprKind::Or(a, b),
+                    node: ExprKind::Or(a, b),
                     ..
                 } => {
                     let (a1, a2) = has_rw(a);
@@ -44,7 +44,7 @@ fn parse_fs_readable_writable_basic() {
                     (a1 || b1, a2 || b2)
                 }
                 Expr {
-                    kind: ExprKind::Not(x),
+                    node: ExprKind::Not(x),
                     ..
                 } => has_rw(x),
                 _ => (false, false),

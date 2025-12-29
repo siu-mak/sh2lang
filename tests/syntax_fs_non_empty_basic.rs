@@ -9,17 +9,17 @@ fn parse_fs_non_empty_basic() {
 
     // Check first if condition: is_non_empty("nonempty")
     if let Stmt {
-        kind: StmtKind::If { cond, .. },
+        node: StmtKind::If { cond, .. },
         ..
     } = &func.body[1]
     {
         if let Expr {
-            kind: ExprKind::IsNonEmpty(path),
+            node: ExprKind::IsNonEmpty(path),
             ..
         } = cond
         {
             if let Expr {
-                kind: ExprKind::Literal(s),
+                node: ExprKind::Literal(s),
                 ..
             } = &**path
             {
@@ -37,22 +37,22 @@ fn parse_fs_non_empty_basic() {
     // Check later if condition: !is_non_empty("empty")
     // The 2nd if stmt is index 2 (run, if, if)
     if let Stmt {
-        kind: StmtKind::If { cond, .. },
+        node: StmtKind::If { cond, .. },
         ..
     } = &func.body[2]
     {
         if let Expr {
-            kind: ExprKind::Not(inner),
+            node: ExprKind::Not(inner),
             ..
         } = cond
         {
             if let Expr {
-                kind: ExprKind::IsNonEmpty(path),
+                node: ExprKind::IsNonEmpty(path),
                 ..
             } = &**inner
             {
                 if let Expr {
-                    kind: ExprKind::Literal(s),
+                    node: ExprKind::Literal(s),
                     ..
                 } = &**path
                 {

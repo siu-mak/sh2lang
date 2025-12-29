@@ -9,7 +9,7 @@ fn parse_case_wildcard() {
     assert!(matches!(
         func.body[1],
         Stmt {
-            kind: StmtKind::Case { .. },
+            node: StmtKind::Case { .. },
             ..
         }
     ));
