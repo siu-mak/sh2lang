@@ -1,5 +1,5 @@
 main() {
-  __sh2_loc="/srv/repos/rust/sh2c/tests/fixtures/truthiness_empty_var.sh2:2"
+  __sh2_loc="tests/fixtures/truthiness_empty_var.sh2:2"
   x=''
   if [ -n "$x" ]; then
     printf '%s\n' 'bad'

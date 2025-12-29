@@ -2,10 +2,10 @@ __sh2_err_handler() { printf "Error in %s\n" "${__sh2_loc:-unknown}" >&2; }
 trap '__sh2_err_handler' ERR
 main() {
   cd 'tmp'
-  __sh2_loc="/srv/repos/rust/sh2c/tests/fixtures/cd_basic.sh2:3"
+  __sh2_loc="tests/fixtures/cd_basic.sh2:3"
   'pwd'; __sh2_status=$?; (exit $__sh2_status)
   cd "$( 'pwd' )"
-  __sh2_loc="/srv/repos/rust/sh2c/tests/fixtures/cd_basic.sh2:5"
+  __sh2_loc="tests/fixtures/cd_basic.sh2:5"
   'echo' 'done'; __sh2_status=$?; (exit $__sh2_status)
 }
 __sh2_status=0

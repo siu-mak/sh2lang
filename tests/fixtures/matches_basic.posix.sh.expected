@@ -1,6 +1,6 @@
 __sh2_matches() { printf '%s\n' "$1" | grep -Eq -- "$2"; }
 main() {
-  __sh2_loc="/srv/repos/rust/sh2c/tests/fixtures/matches_basic.sh2:2"
+  __sh2_loc="tests/fixtures/matches_basic.sh2:2"
   s='hello'
   if __sh2_matches "$s" 'h.*o'; then
     printf '%s\n' 'yes'

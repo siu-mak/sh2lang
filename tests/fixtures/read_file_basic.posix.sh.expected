@@ -2,7 +2,7 @@ __sh2_read_file() { cat "$1" 2>/dev/null || true; }
 __sh2_write_file() { if [ "$3" = "true" ]; then printf '%s' "$2" >> "$1"; else printf '%s' "$2" > "$1"; fi; }
 main() {
   __sh2_write_file 'tmp_read_basic.txt' 'hello world' 'false'
-  __sh2_loc="/srv/repos/rust/sh2c/tests/fixtures/read_file_basic.sh2:4"
+  __sh2_loc="tests/fixtures/read_file_basic.sh2:4"
   s="$( __sh2_read_file 'tmp_read_basic.txt' )"
   printf '%s\n' "$s"
 }

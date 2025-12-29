@@ -1,6 +1,6 @@
 main() {
   if {
-    __sh2_loc="/srv/repos/rust/sh2c/tests/fixtures/run_allow_fail_does_not_trigger_try_catch.sh2:3"
+    __sh2_loc="tests/fixtures/run_allow_fail_does_not_trigger_try_catch.sh2:3"
     case $- in *e*) __e=1;; *) __e=0;; esac; set +e; 'sh' '-c' 'exit 7' ; __sh2_status=$?; if [ "$__e" = 1 ]; then set -e; fi; : &&
     printf '%s\n' 'OK'
   }; then

@@ -1,5 +1,5 @@
 main() {
-  __sh2_loc="/srv/repos/rust/sh2c/tests/fixtures/fs_exec_basic.sh2:2"
+  __sh2_loc="tests/fixtures/fs_exec_basic.sh2:2"
   'sh' '-c' 'rm -f exe noexe; echo '\''echo hi'\'' > exe; chmod +x exe; echo '\''echo hi'\'' > noexe; chmod 644 noexe'; __sh2_status=$?; if [ $__sh2_status -ne 0 ]; then printf 'Error in %s\n' "$__sh2_loc" >&2; exit $__sh2_status; fi
   if [ -x 'exe' ] && ! [ -x 'noexe' ]; then
     printf '%s\n' 'ok'

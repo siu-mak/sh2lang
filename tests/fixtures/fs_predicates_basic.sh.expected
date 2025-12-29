@@ -1,7 +1,7 @@
 __sh2_err_handler() { printf "Error in %s\n" "${__sh2_loc:-unknown}" >&2; }
 trap '__sh2_err_handler' ERR
 main() {
-  __sh2_loc="/srv/repos/rust/sh2c/tests/fixtures/fs_predicates_basic.sh2:2"
+  __sh2_loc="tests/fixtures/fs_predicates_basic.sh2:2"
   'sh' '-c' 'rm -rf tfile tlink; echo hi > tfile; chmod 600 tfile; chmod +x tfile; ln -s tfile tlink'; __sh2_status=$?; (exit $__sh2_status)
   if [ -L 'tlink' ] && [ -x 'tfile' ] && [ -r 'tfile' ] && [ -w 'tfile' ]; then
     printf '%s\n' 'ok'

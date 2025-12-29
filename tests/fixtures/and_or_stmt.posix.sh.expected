@@ -1,24 +1,24 @@
 main() {
   {
-    __sh2_loc="/srv/repos/rust/sh2c/tests/fixtures/and_or_stmt.sh2:2"
+    __sh2_loc="tests/fixtures/and_or_stmt.sh2:2"
     'sh' '-c' 'exit 0'; __sh2_status=$?; if [ $__sh2_status -ne 0 ]; then printf 'Error in %s\n' "$__sh2_loc" >&2; exit $__sh2_status; fi
   } && {
     printf '%s\n' 'and_ok'
   }
   {
-    __sh2_loc="/srv/repos/rust/sh2c/tests/fixtures/and_or_stmt.sh2:3"
+    __sh2_loc="tests/fixtures/and_or_stmt.sh2:3"
     'sh' '-c' 'exit 1'; __sh2_status=$?; if [ $__sh2_status -ne 0 ]; then printf 'Error in %s\n' "$__sh2_loc" >&2; exit $__sh2_status; fi
   } && {
     printf '%s\n' 'and_bad'
   }
   {
-    __sh2_loc="/srv/repos/rust/sh2c/tests/fixtures/and_or_stmt.sh2:5"
+    __sh2_loc="tests/fixtures/and_or_stmt.sh2:5"
     'sh' '-c' 'exit 1'; __sh2_status=$?; if [ $__sh2_status -ne 0 ]; then printf 'Error in %s\n' "$__sh2_loc" >&2; exit $__sh2_status; fi
   } || {
     printf '%s\n' 'or_ok'
   }
   {
-    __sh2_loc="/srv/repos/rust/sh2c/tests/fixtures/and_or_stmt.sh2:6"
+    __sh2_loc="tests/fixtures/and_or_stmt.sh2:6"
     'sh' '-c' 'exit 0'; __sh2_status=$?; if [ $__sh2_status -ne 0 ]; then printf 'Error in %s\n' "$__sh2_loc" >&2; exit $__sh2_status; fi
   } || {
     printf '%s\n' 'or_bad'

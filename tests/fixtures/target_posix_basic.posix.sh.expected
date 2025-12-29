@@ -1,12 +1,12 @@
 main() {
   msg="${1}"
-  __sh2_loc="/srv/repos/rust/sh2c/tests/fixtures/target_posix_basic.sh2:2"
+  __sh2_loc="tests/fixtures/target_posix_basic.sh2:2"
   'echo' "$msg"; __sh2_status=$?; if [ $__sh2_status -ne 0 ]; then printf 'Error in %s\n' "$__sh2_loc" >&2; exit $__sh2_status; fi
   VAR='set_via_env' 'print_env'
 }
 
 print_env() {
-  __sh2_loc="/srv/repos/rust/sh2c/tests/fixtures/target_posix_basic.sh2:9"
+  __sh2_loc="tests/fixtures/target_posix_basic.sh2:9"
   'echo' "${VAR}"; __sh2_status=$?; if [ $__sh2_status -ne 0 ]; then printf 'Error in %s\n' "$__sh2_loc" >&2; exit $__sh2_status; fi
 }
 __sh2_status=0

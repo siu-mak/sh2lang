@@ -1,6 +1,6 @@
 main() {
   if {
-    __sh2_loc="/srv/repos/rust/sh2c/tests/fixtures/pipe_fail_first.sh2:3"
+    __sh2_loc="tests/fixtures/pipe_fail_first.sh2:3"
     {
       case $- in *e*) __sh2_e=1;; *) __sh2_e=0;; esac; set +e;
       __sh2_saved_traps=$(trap);
@@ -32,7 +32,7 @@ main() {
   }; then
     :
   else
-    __sh2_loc="/srv/repos/rust/sh2c/tests/fixtures/pipe_fail_first.sh2:6"
+    __sh2_loc="tests/fixtures/pipe_fail_first.sh2:6"
     s="$__sh2_status"
     printf '%s\n' 'CAUGHT'
     printf '%s\n' "$s"

@@ -1,5 +1,5 @@
 main() {
-  __sh2_loc="/srv/repos/rust/sh2c/tests/fixtures/literal_arg_spaces.sh2:2"
+  __sh2_loc="tests/fixtures/literal_arg_spaces.sh2:2"
   'echo' 'a b  c'; __sh2_status=$?; if [ $__sh2_status -ne 0 ]; then printf 'Error in %s\n' "$__sh2_loc" >&2; exit $__sh2_status; fi
 }
 __sh2_status=0

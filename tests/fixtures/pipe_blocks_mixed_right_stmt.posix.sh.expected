@@ -1,5 +1,5 @@
 main() {
-  __sh2_loc="/srv/repos/rust/sh2c/tests/fixtures/pipe_blocks_mixed_right_stmt.sh2:2"
+  __sh2_loc="tests/fixtures/pipe_blocks_mixed_right_stmt.sh2:2"
   {
     case $- in *e*) __sh2_e=1;; *) __sh2_e=0;; esac; set +e;
     __sh2_saved_traps=$(trap);
@@ -18,7 +18,7 @@ main() {
     printf '%s\n' 'b'
   } )  > "${__sh2_base}_0" & __sh2_p0=$!;
     ( for fd in $__sh2_fds; do eval "exec $fd>&-"; done; {
-    __sh2_loc="/srv/repos/rust/sh2c/tests/fixtures/pipe_blocks_mixed_right_stmt.sh2:2"
+    __sh2_loc="tests/fixtures/pipe_blocks_mixed_right_stmt.sh2:2"
     'grep' 'b'; __sh2_status=$?; if [ $__sh2_status -ne 0 ]; then printf 'Error in %s\n' "$__sh2_loc" >&2; exit $__sh2_status; fi
   } )  < "${__sh2_base}_0" & __sh2_p1=$!;
     for fd in $__sh2_fds; do eval "exec $fd>&-"; done;

@@ -17,7 +17,11 @@ fn main() {
         println!("Processing {}", path.display());
         let result = panic::catch_unwind(|| {
             let program = loader::load_program_with_imports(&path);
-            let ir = lower::lower(program);
+            let opts = lower::LowerOptions {
+                include_diagnostics: true,
+                diag_base_dir: std::env::current_dir().ok(),
+            };
+            let ir = lower::lower_with_options(program, &opts);
             let bash_code = emit_with_target(&ir, TargetShell::Bash);
             let posix_code = emit_with_target(&ir, TargetShell::Posix);
             (bash_code, posix_code)

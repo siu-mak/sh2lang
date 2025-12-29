@@ -14,7 +14,11 @@ use sh2c::loader;
 
 pub fn compile_path_to_shell(path: &Path, target: TargetShell) -> String {
     let program = loader::load_program_with_imports(path);
-    let ir = lower::lower(program);
+    let opts = sh2c::lower::LowerOptions {
+        include_diagnostics: true,
+        diag_base_dir: std::env::current_dir().ok(),
+    };
+    let ir = lower::lower_with_options(program, &opts);
     codegen::emit_with_target(&ir, target)
 }
 
@@ -23,14 +27,17 @@ pub fn compile_to_bash(src: &str) -> String {
     // But they won't support imports.
     compile_to_shell(src, TargetShell::Bash)
 }
-
 pub fn compile_to_shell(src: &str, target: TargetShell) -> String {
     let sm = sh2c::span::SourceMap::new(src.to_string());
     let tokens = lexer::lex(&sm, src);
     let mut program = parser::parse(&tokens, &sm, "inline_test");
     program.source_maps.insert("inline_test".to_string(), sm);
     // Note: lower calls generally require accurate file info but here we use "inline_test"
-    let ir = lower::lower(program);
+    let opts = sh2c::lower::LowerOptions {
+        include_diagnostics: true,
+        diag_base_dir: std::env::current_dir().ok(),
+    };
+    let ir = lower::lower_with_options(program, &opts);
     codegen::emit_with_target(&ir, target)
 }
 

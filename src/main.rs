@@ -71,10 +71,16 @@ fn main() {
         // Loader handles reading, lexing, parsing, and resolving imports recursively
         let path = std::path::Path::new(&filename);
         let ast = loader::load_program_with_imports(path);
+        
+        // Base dir is the current working directory.
+        // This ensures relative paths in diagnostics are relative to where the compiler is run.
+        let diag_base_dir = std::env::current_dir().ok();
+
         let ir = lower::lower_with_options(
             ast,
             &lower::LowerOptions {
                 include_diagnostics,
+                diag_base_dir,
             },
         );
         codegen::emit_with_options(

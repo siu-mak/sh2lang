@@ -3,7 +3,7 @@ trap '__sh2_err_handler' ERR
 main() {
   set -e
   trap 'echo bye' EXIT
-  __sh2_loc="/srv/repos/rust/sh2c/tests/fixtures/sh_block.sh2:3"
+  __sh2_loc="tests/fixtures/sh_block.sh2:3"
   'echo' 'ok'; __sh2_status=$?; (exit $__sh2_status)
 }
 __sh2_status=0

@@ -1,5 +1,6 @@
 pub mod ast;
 pub mod codegen;
+pub mod diag_path;
 pub mod ir;
 pub mod lexer;
 pub mod loader;

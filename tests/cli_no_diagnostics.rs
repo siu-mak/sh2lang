@@ -61,9 +61,13 @@ fn cli_diagnostics_default_bash() {
         &[
              "__sh2_loc=",
              "__sh2_err_handler",
-             "trap '__sh2_err_handler' ERR"
+             "trap '__sh2_err_handler' ERR",
+             "tests/fixtures/no_diagnostics_basic.sh2"
         ],
-        &[],
+        &[
+             "/srv/", 
+             env!("CARGO_MANIFEST_DIR") // ensures absolute path to repo root isn't present
+        ],
     );
 }
 

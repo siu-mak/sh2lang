@@ -1,14 +1,14 @@
 __sh2_err_handler() { printf "Error in %s\n" "${__sh2_loc:-unknown}" >&2; }
 trap '__sh2_err_handler' ERR
 main() {
-  __sh2_loc="/srv/repos/rust/sh2c/tests/fixtures/truthy_capture.sh2:2"
+  __sh2_loc="tests/fixtures/truthy_capture.sh2:2"
   empty="$( 'printf' '%s' '' )"
   if [ -n "$empty" ]; then
     printf '%s\n' 'T_EMPTY'
   else
     printf '%s\n' 'F_EMPTY'
   fi
-  __sh2_loc="/srv/repos/rust/sh2c/tests/fixtures/truthy_capture.sh2:9"
+  __sh2_loc="tests/fixtures/truthy_capture.sh2:9"
   full="$( 'printf' '%s' 'hi' )"
   if [ -n "$full" ]; then
     printf '%s\n' 'T_FULL'

@@ -1,6 +1,6 @@
 main() {
-  ( __sh2_loc="/srv/repos/rust/sh2c/tests/fixtures/pid_wait_spawn.sh2:2"; 'sh' '-c' 'exit 0' ) &
-  __sh2_loc="/srv/repos/rust/sh2c/tests/fixtures/pid_wait_spawn.sh2:3"
+  ( __sh2_loc="tests/fixtures/pid_wait_spawn.sh2:2"; 'sh' '-c' 'exit 0' ) &
+  __sh2_loc="tests/fixtures/pid_wait_spawn.sh2:3"
   p="$!"
   wait "$p"; __sh2_status=$?; (exit $__sh2_status)
   if [ "$__sh2_status" = "0" ]; then

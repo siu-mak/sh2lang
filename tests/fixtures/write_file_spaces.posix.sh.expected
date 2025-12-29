@@ -1,9 +1,9 @@
 __sh2_read_file() { cat "$1" 2>/dev/null || true; }
 __sh2_write_file() { if [ "$3" = "true" ]; then printf '%s' "$2" >> "$1"; else printf '%s' "$2" > "$1"; fi; }
 main() {
-  __sh2_loc="/srv/repos/rust/sh2c/tests/fixtures/write_file_spaces.sh2:3"
+  __sh2_loc="tests/fixtures/write_file_spaces.sh2:3"
   'mkdir' '-p' 'dir with spaces'; __sh2_status=$?; if [ $__sh2_status -ne 0 ]; then printf 'Error in %s\n' "$__sh2_loc" >&2; exit $__sh2_status; fi
-  __sh2_loc="/srv/repos/rust/sh2c/tests/fixtures/write_file_spaces.sh2:4"
+  __sh2_loc="tests/fixtures/write_file_spaces.sh2:4"
   p='dir with spaces/file.txt'
   __sh2_write_file "$p" 'content' 'false'
   printf '%s\n' "$( __sh2_read_file "$p" )"

@@ -1,7 +1,7 @@
 __sh2_err_handler() { printf "Error in %s\n" "${__sh2_loc:-unknown}" >&2; }
 trap '__sh2_err_handler' ERR
 main() {
-  __sh2_loc="/srv/repos/rust/sh2c/tests/fixtures/truthiness_cmdsub_empty.sh2:2"
+  __sh2_loc="tests/fixtures/truthiness_cmdsub_empty.sh2:2"
   out="$( 'sh' '-c' 'printf '\''%s'\'' '\'''\''' )"
   if [ -n "$out" ]; then
     printf '%s\n' 'bad'

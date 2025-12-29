@@ -3,7 +3,7 @@ trap '__sh2_err_handler' ERR
 main() {
   (
     cd '/tmp'
-    __sh2_loc="/srv/repos/rust/sh2c/tests/fixtures/with_cwd.sh2:3"
+    __sh2_loc="tests/fixtures/with_cwd.sh2:3"
     'pwd'; __sh2_status=$?; (exit $__sh2_status)
   )
 }

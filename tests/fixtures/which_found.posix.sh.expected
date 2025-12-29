@@ -1,6 +1,6 @@
 __sh2_which() { command -v -- "$1" 2>/dev/null || true; }
 main() {
-  __sh2_loc="/srv/repos/rust/sh2c/tests/fixtures/which_found.sh2:3"
+  __sh2_loc="tests/fixtures/which_found.sh2:3"
   p="$( __sh2_which 'sh' )"
   if [ "$p" != '' ]; then
     printf '%s\n' 'OK'

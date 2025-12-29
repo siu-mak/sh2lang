@@ -3,7 +3,7 @@ trap '__sh2_err_handler' ERR
 __sh2_tmpfile() { if command -v mktemp >/dev/null 2>&1; then mktemp; else printf "%s/sh2_tmp_%s_%s" "${TMPDIR:-/tmp}" "$$" "$(awk 'BEGIN{srand();print int(rand()*1000000)}')"; fi; }
 __sh2_read_file() { cat "$1" 2>/dev/null || true; }
 main() {
-  __sh2_loc="/srv/repos/rust/sh2c/tests/fixtures/try_run_fields.sh2:2"
+  __sh2_loc="tests/fixtures/try_run_fields.sh2:2"
     r__tmp_out="$(__sh2_tmpfile)"
   r__tmp_err="$(__sh2_tmpfile)"
   case $- in *e*) __sh2__errexit_was_set=1;; *) __sh2__errexit_was_set=0;; esac; set +e; 'sh' '-c' 'printf '\''out'\''; printf '\''err'\'' 1>&2; exit 7' >"$r__tmp_out" 2>"$r__tmp_err"; r__status=$?; if [ "$__sh2__errexit_was_set" = 1 ]; then set -e; fi;

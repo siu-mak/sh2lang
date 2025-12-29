@@ -2,7 +2,7 @@ __sh2_err_handler() { printf "Error in %s\n" "${__sh2_loc:-unknown}" >&2; }
 trap '__sh2_err_handler' ERR
 main() {
   if {
-    __sh2_loc="/srv/repos/rust/sh2c/tests/fixtures/pipe_two_fail_rightmost_wins.sh2:3"
+    __sh2_loc="tests/fixtures/pipe_two_fail_rightmost_wins.sh2:3"
     if [[ -o pipefail ]]; then __p=1; else __p=0; fi; set -o pipefail; case $- in *e*) __e=1;; *) __e=0;; esac; set +e; 'sh' '-c' 'exit 3' | 'sh' '-c' 'exit 9' | 'sh' '-c' 'true' ; __sh2_status=$?; if [ "$__e" = 1 ]; then set -e; fi; if [ "$__p" = 0 ]; then set +o pipefail; fi; (exit $__sh2_status)
   }; then
     :

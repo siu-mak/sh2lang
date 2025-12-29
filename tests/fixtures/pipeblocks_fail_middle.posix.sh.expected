@@ -1,6 +1,6 @@
 main() {
   if {
-    __sh2_loc="/srv/repos/rust/sh2c/tests/fixtures/pipeblocks_fail_middle.sh2:3"
+    __sh2_loc="tests/fixtures/pipeblocks_fail_middle.sh2:3"
     {
       case $- in *e*) __sh2_e=1;; *) __sh2_e=0;; esac; set +e;
       __sh2_saved_traps=$(trap);
@@ -19,15 +19,15 @@ main() {
       __sh2_fds="$__sh2_fds $__sh2_fd";
       __sh2_fd=$((__sh2_fd + 1));
       ( for fd in $__sh2_fds; do eval "exec $fd>&-"; done; {
-      __sh2_loc="/srv/repos/rust/sh2c/tests/fixtures/pipeblocks_fail_middle.sh2:3"
+      __sh2_loc="tests/fixtures/pipeblocks_fail_middle.sh2:3"
       'sh' '-c' 'echo hi'; __sh2_status=$?; if [ $__sh2_status -ne 0 ]; then printf 'Error in %s\n' "$__sh2_loc" >&2; exit $__sh2_status; fi
     } )  > "${__sh2_base}_0" & __sh2_p0=$!;
       ( for fd in $__sh2_fds; do eval "exec $fd>&-"; done; {
-      __sh2_loc="/srv/repos/rust/sh2c/tests/fixtures/pipeblocks_fail_middle.sh2:3"
+      __sh2_loc="tests/fixtures/pipeblocks_fail_middle.sh2:3"
       'sh' '-c' 'exit 7'; __sh2_status=$?; if [ $__sh2_status -ne 0 ]; then printf 'Error in %s\n' "$__sh2_loc" >&2; exit $__sh2_status; fi
     } )  < "${__sh2_base}_0" > "${__sh2_base}_1" & __sh2_p1=$!;
       ( for fd in $__sh2_fds; do eval "exec $fd>&-"; done; {
-      __sh2_loc="/srv/repos/rust/sh2c/tests/fixtures/pipeblocks_fail_middle.sh2:3"
+      __sh2_loc="tests/fixtures/pipeblocks_fail_middle.sh2:3"
       'sh' '-c' 'cat'; __sh2_status=$?; if [ $__sh2_status -ne 0 ]; then printf 'Error in %s\n' "$__sh2_loc" >&2; exit $__sh2_status; fi
     } )  < "${__sh2_base}_1" & __sh2_p2=$!;
       for fd in $__sh2_fds; do eval "exec $fd>&-"; done;
@@ -48,7 +48,7 @@ main() {
   }; then
     :
   else
-    __sh2_loc="/srv/repos/rust/sh2c/tests/fixtures/pipeblocks_fail_middle.sh2:6"
+    __sh2_loc="tests/fixtures/pipeblocks_fail_middle.sh2:6"
     s="$__sh2_status"
     printf '%s\n' 'CAUGHT'
     printf '%s\n' "$s"

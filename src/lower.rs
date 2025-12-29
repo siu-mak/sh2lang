@@ -35,15 +35,19 @@ impl LoweringContext {
     }
 }
 
+use std::path::PathBuf;
+
 #[derive(Clone, Debug)]
 pub struct LowerOptions {
     pub include_diagnostics: bool,
+    pub diag_base_dir: Option<PathBuf>,
 }
 
 impl Default for LowerOptions {
     fn default() -> Self {
         Self {
             include_diagnostics: true,
+            diag_base_dir: None,
         }
     }
 }
@@ -132,9 +136,15 @@ fn lower_block(
     ctx
 }
 
-fn resolve_span(span: Span, sm: &SourceMap, file: &str) -> String {
+fn resolve_span(
+    span: Span,
+    sm: &SourceMap,
+    file: &str,
+    base: Option<&std::path::Path>,
+) -> String {
     let (line, _) = sm.line_col(span.start);
-    format!("{}:{}", file, line)
+    let display_file = crate::diag_path::display_path(file, base);
+    format!("{}:{}", display_file, line)
 }
 
 /// Lower one AST statement into IR commands. Returns the updated context after this statement.
@@ -147,7 +157,12 @@ fn lower_stmt(
     opts: &LowerOptions,
 ) -> LoweringContext {
     let loc = if opts.include_diagnostics {
-        Some(resolve_span(stmt.span, sm, file))
+        Some(resolve_span(
+            stmt.span,
+            sm,
+            file,
+            opts.diag_base_dir.as_deref(),
+        ))
     } else {
         None
     };

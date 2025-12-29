@@ -1,5 +1,5 @@
 main() {
-  __sh2_loc="/srv/repos/rust/sh2c/tests/fixtures/interpolated_string_dollar_escape.sh2:2"
+  __sh2_loc="tests/fixtures/interpolated_string_dollar_escape.sh2:2"
   name='world'
   printf '%s\n' 'literal: $name'
   printf '%s\n' 'literal2: ${name}'

@@ -1,11 +1,11 @@
 __sh2_err_handler() { printf "Error in %s\n" "${__sh2_loc:-unknown}" >&2; }
 trap '__sh2_err_handler' ERR
 main() {
-  __sh2_loc="/srv/repos/rust/sh2c/tests/fixtures/spawn_async_file.sh2:2"
+  __sh2_loc="tests/fixtures/spawn_async_file.sh2:2"
   f='flag.txt'
-  __sh2_loc="/srv/repos/rust/sh2c/tests/fixtures/spawn_async_file.sh2:3"
+  __sh2_loc="tests/fixtures/spawn_async_file.sh2:3"
   'rm' '-f' "$f"; __sh2_status=$?; (exit $__sh2_status)
-  ( __sh2_loc="/srv/repos/rust/sh2c/tests/fixtures/spawn_async_file.sh2:4"; 'sh' '-c' 'sleep 0.05; echo x > flag.txt' ) &
+  ( __sh2_loc="tests/fixtures/spawn_async_file.sh2:4"; 'sh' '-c' 'sleep 0.05; echo x > flag.txt' ) &
   if [ -e "$f" ]; then
     printf '%s\n' 'WRONG_EARLY'
   else

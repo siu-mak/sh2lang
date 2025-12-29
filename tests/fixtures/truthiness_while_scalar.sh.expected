@@ -1,11 +1,11 @@
 __sh2_err_handler() { printf "Error in %s\n" "${__sh2_loc:-unknown}" >&2; }
 trap '__sh2_err_handler' ERR
 main() {
-  __sh2_loc="/srv/repos/rust/sh2c/tests/fixtures/truthiness_while_scalar.sh2:2"
+  __sh2_loc="tests/fixtures/truthiness_while_scalar.sh2:2"
   x='go'
   while [ -n "$x" ]; do
     printf '%s\n' 'loop'
-    __sh2_loc="/srv/repos/rust/sh2c/tests/fixtures/truthiness_while_scalar.sh2:5"
+    __sh2_loc="tests/fixtures/truthiness_while_scalar.sh2:5"
     x=''
   done
   printf '%s\n' 'done'

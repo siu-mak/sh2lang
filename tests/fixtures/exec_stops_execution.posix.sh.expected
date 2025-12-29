@@ -1,6 +1,6 @@
 main() {
   printf '%s\n' 'before'
-  __sh2_loc="/srv/repos/rust/sh2c/tests/fixtures/exec_stops_execution.sh2:3"
+  __sh2_loc="tests/fixtures/exec_stops_execution.sh2:3"
   exec 'sh' '-c' 'echo exec'
   printf '%s\n' 'after'
 }

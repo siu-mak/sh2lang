@@ -1,7 +1,7 @@
 __sh2_err_handler() { printf "Error in %s\n" "${__sh2_loc:-unknown}" >&2; }
 trap '__sh2_err_handler' ERR
 main() {
-  __sh2_loc="/srv/repos/rust/sh2c/tests/fixtures/bool_str_basic.sh2:2"
+  __sh2_loc="tests/fixtures/bool_str_basic.sh2:2"
   'sh' '-c' 'rm -f empty nonempty; : > empty; echo hi > nonempty'; __sh2_status=$?; (exit $__sh2_status)
   printf '%s\n' "$( if [ -s 'nonempty' ]; then printf "%s" "true"; else printf "%s" "false"; fi )"
   printf '%s\n' "$( if [ -s 'empty' ]; then printf "%s" "true"; else printf "%s" "false"; fi )"

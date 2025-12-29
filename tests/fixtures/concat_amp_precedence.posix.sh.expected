@@ -1,5 +1,5 @@
 main() {
-  __sh2_loc="/srv/repos/rust/sh2c/tests/fixtures/concat_amp_precedence.sh2:2"
+  __sh2_loc="tests/fixtures/concat_amp_precedence.sh2:2"
   s='n='"$(( ( 1 + 2 ) ))"
   printf '%s\n' "$s"
 }

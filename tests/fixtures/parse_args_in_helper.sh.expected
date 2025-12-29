@@ -22,7 +22,7 @@ __sh2_args_positionals() { printf '%s' "$1" | awk '/^P\t/ { sub(/^P\t/, ""); pri
 __sh2_args_flag_get() { printf '%s' "$1" | awk -v k="$2" -F '\t' '{ if (sub(/^F\t/, "")) { if ($1==k) v=$2 } else if ($1==k) v=$2 } END { printf "%s", v }'; }
 __sh2_list_get() { printf '%s' "$1" | awk -v i="$2" 'NR==i+1 { printf "%s", $0; exit }'; }
 show() {
-  __sh2_loc="/srv/repos/rust/sh2c/tests/fixtures/parse_args_in_helper.sh2:2"
+  __sh2_loc="tests/fixtures/parse_args_in_helper.sh2:2"
   a="${__sh2_parsed_args}"
   printf '%s\n' 'k='"$( __sh2_args_flag_get "$( __sh2_args_flags "$a" )" '--k' )"
   printf '%s\n' 'p0='"$( __sh2_list_get "$( __sh2_args_positionals "$a" )" $(( 0 )) )"

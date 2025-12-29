@@ -1,7 +1,7 @@
 main() {
   (
     cd '/tmp'
-    __sh2_loc="/srv/repos/rust/sh2c/tests/fixtures/with_cwd_check.sh2:3"
+    __sh2_loc="tests/fixtures/with_cwd_check.sh2:3"
     p="$( 'pwd' )"
     if [ "$p" = '/tmp' ]; then
       printf '%s\n' 'yes'

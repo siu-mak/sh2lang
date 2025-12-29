@@ -1,5 +1,5 @@
 main() {
-  __sh2_loc="/srv/repos/rust/sh2c/tests/fixtures/case_wildcard.sh2:2"
+  __sh2_loc="tests/fixtures/case_wildcard.sh2:2"
   x='foo'
   case "$x" in
     'bar')

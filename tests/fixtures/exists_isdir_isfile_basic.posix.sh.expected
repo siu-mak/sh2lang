@@ -1,5 +1,5 @@
 main() {
-  __sh2_loc="/srv/repos/rust/sh2c/tests/fixtures/exists_isdir_isfile_basic.sh2:2"
+  __sh2_loc="tests/fixtures/exists_isdir_isfile_basic.sh2:2"
   'sh' '-c' 'rm -rf tdir tfile; mkdir tdir; echo hi > tfile'; __sh2_status=$?; if [ $__sh2_status -ne 0 ]; then printf 'Error in %s\n' "$__sh2_loc" >&2; exit $__sh2_status; fi
   if [ -e 'tfile' ] && [ -f 'tfile' ] && [ -d 'tdir' ]; then
     printf '%s\n' 'ok'
