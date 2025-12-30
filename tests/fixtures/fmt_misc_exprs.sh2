@@ -1,0 +1,8 @@
+func main() {
+    print(uid())
+    print(ppid())
+    print(pwd())
+    print(argv0())
+    print(argc())
+    print(self_pid())
+}

@@ -1,0 +1,4 @@
+func main() {
+    let x = capture(run(echo, "hi"))
+    let y = capture(run(echo, "hi") | run(grep, "h"))
+}

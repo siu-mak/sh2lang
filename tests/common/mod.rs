@@ -810,6 +810,7 @@ pub fn assert_parse_error_matches_snapshot(fixture_name: &str) {
 pub fn strip_spans_program(p: &mut sh2c::ast::Program) {
     p.span = sh2c::span::Span::new(0, 0);
     p.source_maps.clear();
+    p.entry_file = String::new(); // Clear file path for comparison
     for f in &mut p.functions {
         strip_spans_fn(f);
     }
@@ -820,6 +821,7 @@ pub fn strip_spans_program(p: &mut sh2c::ast::Program) {
 
 pub fn strip_spans_fn(f: &mut sh2c::ast::Function) {
     f.span = sh2c::span::Span::new(0, 0);
+    f.file = String::new(); // Clear file path for comparison
     for s in &mut f.body {
         strip_spans_stmt(s);
     }

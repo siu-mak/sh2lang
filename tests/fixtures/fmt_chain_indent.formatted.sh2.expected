@@ -1,0 +1,9 @@
+func main() {
+    run(echo, "a") && run(echo, "b")
+    if true {
+        print("x")
+    }
+    || print("err")
+    run(a) && run(b)
+    && run(c)
+}

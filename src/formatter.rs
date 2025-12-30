@@ -57,71 +57,39 @@ fn format_block(stmts: &[Stmt], depth: usize, force_newline: bool) -> String {
         if i > 0 {
             out.push('\n');
         }
-        // Handle Stmt chaining (AndThen/OrElse) specifically to allow single-line
-        if is_chaining_stmt(stmt) && is_simple_chain(stmt) {
-             out.push_str(&format_stmt_chain(stmt, depth));
-        } else {
-             out.push_str(&indent);
-             out.push_str(&format_stmt(stmt, depth));
-        }
+        out.push_str(&indent);
+        out.push_str(&format_stmt(stmt, depth));
     }
     out
 }
 
-fn is_chaining_stmt(stmt: &Stmt) -> bool {
-    matches!(stmt.node, StmtKind::AndThen { .. } | StmtKind::OrElse { .. })
-}
 
-// Simple heuristic: if chain depth < 3 and components are simple, keep on one line
-// For now, just check if it's a chain. The `format_stmt` will handle chaining logic or we separate it.
-// Let's delegate to format_stmt.
-fn is_simple_chain(_stmt: &Stmt) -> bool {
-    // For now, we always format chain consistently.
-    // Actually, task says: "keep on one line when both sides are single “atom” statements"
-    true 
-}
 
-fn format_stmt_chain(stmt: &Stmt, depth: usize) -> String {
-    let indent = indent_str(depth);
+// Check if a statement is "simple atomic" for chaining
+fn is_simple_atom(stmt: &Stmt) -> bool {
     match &stmt.node {
-        StmtKind::AndThen { left, right } => {
-             // For simplicity, we treat left as a block and right as a block. 
-             // If they are single atoms, we join with " && ".
-             // But StmtKind::AndThen has Vec<Stmt> left and right? That implies nesting?
-             // Ah, parse_stmt produces AndThen with left=vec![left], right=vec![right].
-             // It seems it merges?
-             // Let's verify parser logic. Parser loops `left = ... AndThen { left: vec![left], right: vec![right] }`
-             // So if we have `a && b && c`, it groups `(a && b) && c` or `a && (b && c)`.
-             // Actually currently parser makes linear chains? 
-             // Let's just flatten effectively or recursively format.
-             
-             let l_str = format_block_inline(left, depth);
-             let r_str = format_block_inline(right, depth);
-             format!("{} && {}", l_str, r_str)
-        }
-        StmtKind::OrElse { left, right } => {
-             let l_str = format_block_inline(left, depth);
-             let r_str = format_block_inline(right, depth);
-             format!("{} || {}", l_str, r_str)
-        }
-        _ => format!("{}{}", indent, format_stmt(stmt, depth)),
+        StmtKind::Let { .. } |
+        StmtKind::Run(_) |
+        StmtKind::Exec(_) |
+        StmtKind::Print(_) |
+        StmtKind::PrintErr(_) |
+        StmtKind::Call { .. } |
+        StmtKind::Set { .. } |
+        StmtKind::Return(_) |
+        StmtKind::Exit(_) |
+        StmtKind::Break |
+        StmtKind::Continue |
+        StmtKind::Cd { .. } |
+        StmtKind::Export { .. } |
+        StmtKind::Unset { .. } |
+        StmtKind::Source { .. } |
+        StmtKind::Sh(_) |
+        StmtKind::Wait(_) => true,
+        _ => false,
     }
 }
 
-// Format a block without surrounding newlines/indent if it's single line
-fn format_block_inline(stmts: &[Stmt], depth: usize) -> String {
-    let mut parts = Vec::new();
-    let _indent = indent_str(depth);
-    for stmt in stmts {
-        if is_chaining_stmt(stmt) {
-            parts.push(format_stmt_chain(stmt, depth).trim().to_string());
-        } else {
-            parts.push(format_stmt(stmt, depth)); // format_stmt returns string with no indentation? No, plan said indent.
-            // My format_stmt returns unindented string? I should separate indentation.
-        }
-    }
-    parts.join("; ")
-}
+
 
 // Refactored: format_stmt returns content *without* leading indentation
 // The caller adds indentation unless it's inline.
@@ -210,17 +178,10 @@ fn format_stmt(stmt: &Stmt, depth: usize) -> String {
              format!("{}({})", name, parts.join(", "))
         }
         StmtKind::AndThen { left, right } => {
-             // Inline chaining logic reuse or recurse?
-             // Since format_stmt strips indentation, we return formatted chain
-             // But we need to handle block logic inside format_stmt_chain carefully
-             let l = format_block_inline(left, depth);
-             let r = format_block_inline(right, depth);
-             format!("{} && {}", l, r)
+             format_chain(left, right, "&&", depth)
         }
         StmtKind::OrElse { left, right } => {
-             let l = format_block_inline(left, depth);
-             let r = format_block_inline(right, depth);
-             format!("{} || {}", l, r)
+             format_chain(left, right, "||", depth)
         }
         StmtKind::Set { target, value } => {
              match target {
@@ -385,30 +346,20 @@ fn format_expr_prec(kind: &ExprKind, min_prec: u8) -> String {
              format!("{}({})", name, parts.join(", "))
         }
         ExprKind::Command(args) => {
-             // $(...) uses Command
-             // We reformatted it back to args?
-             // Arg list in command sub: split?
+             // $(...) uses Command. Parser expects `capture(run(...))` or `capture(run(...) | ...)`
              let parts: Vec<String> = args.iter().map(format_expr).collect();
-             // Since it's capture, we might output `capture("cmd", "arg")` or `$(...)`?
-             // Parser `parse_primary` handles `$(...)` as `capture` token or just `capture(...)`
-             // Wait, lexer has `Capture` token?
-             // `ExprKind::Command` stores `Vec<Expr>`.
-             // `capture(cmd, arg)` is the canonical form.
-             format!("capture({})", parts.join(", "))
+             format!("capture(run({}))", parts.join(", "))
         }
         ExprKind::CommandPipe(segs) => {
-             // pipe segments
+             // pipe segments: each segment is a run() call separated by |
              let seg_strs: Vec<String> = segs.iter().map(|s| {
                  let args: Vec<String> = s.iter().map(format_expr).collect();
-                 args.join(", ") 
+                 format!("run({})", args.join(", ")) 
              }).collect();
              format!("capture({})", seg_strs.join(" | "))
         }
         ExprKind::Arg(n) => format!("arg({})", n),
-        ExprKind::Args => "args".to_string(),
         ExprKind::Env(e) => format!("env({})", format_expr(e)),
-        ExprKind::Status => "status()".to_string(),
-        ExprKind::Pid => "pid()".to_string(),
         ExprKind::Exists(e) => format!("exists({})", format_expr(e)),
         ExprKind::IsDir(e) => format!("is_dir({})", format_expr(e)),
         ExprKind::IsFile(e) => format!("is_file({})", format_expr(e)),
@@ -434,8 +385,48 @@ fn format_expr_prec(kind: &ExprKind, min_prec: u8) -> String {
         ExprKind::IsReadable(e) => format!("is_readable({})", format_expr(e)),
         ExprKind::IsWritable(e) => format!("is_writable({})", format_expr(e)),
         ExprKind::IsNonEmpty(e) => format!("is_non_empty({})", format_expr(e)),
-        _ => format!("<<UNIMPLEMENTED {:?}>>", kind),
+
+        ExprKind::Uid => "uid()".to_string(),
+        ExprKind::Ppid => "ppid()".to_string(),
+        ExprKind::Pwd => "pwd()".to_string(),
+        ExprKind::SelfPid => "self_pid()".to_string(),
+        ExprKind::Argv0 => "argv0()".to_string(),
+        ExprKind::Argc => "argc()".to_string(),
+        ExprKind::Status => "status()".to_string(),
+        ExprKind::Args => "args".to_string(),
+        ExprKind::Pid => "pid()".to_string(),
+        _ => panic!("Formatting unimplemented for ExprKind: {:?}", kind),
     }
+}
+
+fn format_chain(left: &[Stmt], right: &[Stmt], op: &str, depth: usize) -> String {
+    let is_simple = left.len() == 1 && right.len() == 1 
+        && is_simple_atom(&left[0]) && is_simple_atom(&right[0]);
+
+    if is_simple {
+        return format!("{} {} {}", format_stmt(&left[0], depth), op, format_stmt(&right[0], depth));
+    }
+
+    let mut out = String::new();
+    
+    // Left side
+    for (i, s) in left.iter().enumerate() {
+        if i > 0 { out.push_str("\n"); out.push_str(&indent_str(depth)); }
+        out.push_str(&format_stmt(s, depth));
+    }
+    
+    out.push('\n');
+    out.push_str(&indent_str(depth));
+    out.push_str(op);
+    out.push(' ');
+    
+    // Right side
+    for (i, s) in right.iter().enumerate() {
+        if i > 0 { out.push_str("\n"); out.push_str(&indent_str(depth)); }
+        out.push_str(&format_stmt(s, depth));
+    }
+    
+    out
 }
 
 fn wrap_parens(min_prec: u8, op_prec: u8, s: String) -> String {
