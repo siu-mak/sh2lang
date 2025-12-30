@@ -1,0 +1,28 @@
+[
+    Function {
+        name: "main",
+        params: [],
+        commands: [
+            Assign(
+                "x",
+                Number(
+                    1,
+                ),
+                None,
+            ),
+            Exec {
+                args: [
+                    Var(
+                        "echo",
+                    ),
+                    Var(
+                        "x",
+                    ),
+                ],
+                allow_fail: false,
+                loc: None,
+            },
+        ],
+        file: "",
+    },
+]

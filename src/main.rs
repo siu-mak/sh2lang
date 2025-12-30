@@ -38,6 +38,10 @@ fn main() {
     let mut filename: Option<String> = None;
     let mut target = TargetShell::Bash;
     let mut include_diagnostics = true;
+    let mut emit_ast = false;
+    let mut emit_ir = false;
+    let mut emit_sh = false;
+    let mut check = false;
 
     let mut i = 1;
     while i < args.len() {
@@ -61,6 +65,18 @@ fn main() {
         } else if arg == "--no-diagnostics" {
             include_diagnostics = false;
             i += 1;
+        } else if arg == "--emit-ast" {
+            emit_ast = true;
+            i += 1;
+        } else if arg == "--emit-ir" {
+            emit_ir = true;
+            i += 1;
+        } else if arg == "--emit-sh" {
+            emit_sh = true;
+            i += 1;
+        } else if arg == "--check" {
+            check = true;
+            i += 1;
         } else if arg.starts_with("-") {
             eprintln!("Unexpected argument: {}", arg);
             process::exit(1);
@@ -74,6 +90,11 @@ fn main() {
         }
     }
 
+    if (emit_ast as u8 + emit_ir as u8 + emit_sh as u8 + check as u8) > 1 {
+        eprintln!("Error: multple action flags specified. Only one of --emit-ast, --emit-ir, --emit-sh, --check allowed.");
+        process::exit(1);
+    }
+
     let filename = match filename {
         Some(f) => f,
         None => {
@@ -82,15 +103,17 @@ fn main() {
         }
     };
 
-    let _src = match fs::read_to_string(&filename) {
-        Ok(s) => s,
-        Err(e) => {
-            eprintln!("Failed to read {}: {}", filename, e);
-            process::exit(1);
-        }
-    };
+    // The _src variable is no longer used, as loader::load_program_with_imports
+    // handles reading the file content internally.
+    // let _src = match fs::read_to_string(&filename) {
+    //     Ok(s) => s,
+    //     Err(e) => {
+    //         eprintln!("Failed to read {}: {}", filename, e);
+    //         process::exit(1);
+    //     }
+    // };
 
-    let result = std::panic::catch_unwind(|| -> Result<String, String> {
+    let result = std::panic::catch_unwind(|| -> Result<(), String> {
         // Loader handles reading, lexing, parsing, and resolving imports recursively
         let path = std::path::Path::new(&filename);
         
@@ -100,8 +123,15 @@ fn main() {
         let diag_base_dir = path.parent()
             .map(|p| std::fs::canonicalize(p).unwrap_or_else(|_| p.to_path_buf()));
             
-        let ast = loader::load_program_with_imports(path)
+        let mut ast = loader::load_program_with_imports(path)
             .map_err(|d| d.format(diag_base_dir.as_deref()))?;
+
+        if emit_ast {
+            ast.strip_spans();
+            // Use debug formatting for deterministic snapshot structure
+            println!("{:#?}", ast);
+            return Ok(());
+        }
 
         let ir = lower::lower_with_options(
             ast,
@@ -110,17 +140,50 @@ fn main() {
                 diag_base_dir: diag_base_dir.clone(), // Clone since Option is Copy but PathBuf isn't
             },
         );
-        Ok(codegen::emit_with_options(
+
+        if emit_ir {
+            // IR is typically Vec<Function>. Iterate and strip.
+            // The `lower` function returns `Vec<sh2c::ir::Function>`.
+            let mut ir_stripped = ir; // Take ownership to modify
+            for f in &mut ir_stripped {
+                 f.strip_spans();
+            }
+            println!("{:#?}", ir_stripped);
+            return Ok(());
+        }
+
+        if check {
+            // We lowered successfully. Now verify codegen doesn't panic/error.
+            // The check flag should not produce any shell output.
+            let _ = codegen::emit_with_options(
+                &ir,
+                codegen::CodegenOptions {
+                    target,
+                    include_diagnostics,
+                },
+            );
+            println!("OK");
+            return Ok(());
+        }
+
+        // Default behavior or --emit-sh
+        // Both print the generated shell script to stdout.
+        let out = codegen::emit_with_options(
             &ir,
             codegen::CodegenOptions {
                 target,
                 include_diagnostics,
             },
-        ))
+        );
+        
+        print!("{}", out);
+        Ok(())
     });
 
     match result {
-        Ok(Ok(out)) => print!("{}", out),
+        Ok(Ok(_)) => {
+            // Success, output already printed or no output expected for check/emit-ast/emit-ir
+        },
         Ok(Err(msg)) => {
             // It's a structured diagnostic message
              eprintln!("{}", msg);

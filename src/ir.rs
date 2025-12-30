@@ -234,3 +234,79 @@ pub enum Pattern {
     Glob(String),
     Wildcard,
 }
+
+impl Function {
+    pub fn strip_spans(&mut self) {
+        self.file.clear();
+        for cmd in &mut self.commands {
+            cmd.strip_spans();
+        }
+    }
+}
+
+impl Cmd {
+    pub fn strip_spans(&mut self) {
+        match self {
+            Cmd::Assign(_, _, loc) => *loc = None,
+            Cmd::Exec { loc, .. } => *loc = None,
+            Cmd::Pipe(_, loc) => *loc = None,
+            Cmd::PipeBlocks(blocks, loc) => {
+                *loc = None;
+                for block in blocks {
+                    for cmd in block { cmd.strip_spans(); }
+                }
+            }
+            Cmd::ExecReplace(_, loc) => *loc = None,
+            
+            // Recursive cases
+            Cmd::If { then_body, elifs, else_body, .. } => {
+                for c in then_body { c.strip_spans(); }
+                for (_, body) in elifs { for c in body { c.strip_spans(); } }
+                for c in else_body { c.strip_spans(); }
+            }
+            Cmd::While { body, .. } => for c in body { c.strip_spans(); },
+            Cmd::For { body, .. } => for c in body { c.strip_spans(); },
+            Cmd::ForMap { body, .. } => for c in body { c.strip_spans(); },
+            Cmd::Case { arms, .. } => for (_, body) in arms { for c in body { c.strip_spans(); } },
+            Cmd::WithEnv { body, .. } => for c in body { c.strip_spans(); },
+            Cmd::WithLog { body, .. } => for c in body { c.strip_spans(); },
+            Cmd::WithCwd { body, .. } => for c in body { c.strip_spans(); },
+            Cmd::Subshell { body } => for c in body { c.strip_spans(); },
+            Cmd::Group { body } => for c in body { c.strip_spans(); },
+            Cmd::WithRedirect { body, .. } => for c in body { c.strip_spans(); },
+            Cmd::Spawn(cmd) => cmd.strip_spans(),
+            Cmd::TryCatch { try_body, catch_body } => {
+                for c in try_body { c.strip_spans(); }
+                for c in catch_body { c.strip_spans(); }
+            }
+            Cmd::AndThen { left, right } => {
+                for c in left { c.strip_spans(); }
+                for c in right { c.strip_spans(); }
+            }
+            Cmd::OrElse { left, right } => {
+                for c in left { c.strip_spans(); }
+                for c in right { c.strip_spans(); }
+            }
+            
+            // No spans/recursion needed
+            Cmd::Print(_) => {},
+            Cmd::PrintErr(_) => {},
+            Cmd::Break => {},
+            Cmd::Continue => {},
+            Cmd::Return(_) => {},
+            Cmd::Require(_) => {},
+            Cmd::Exit(_) => {},
+            Cmd::WriteFile { .. } => {},
+            Cmd::Log { .. } => {},
+            Cmd::Cd(_) => {},
+            Cmd::Raw(_) => {},
+            Cmd::Call { .. } => {},
+            Cmd::Wait(_) => {},
+            Cmd::Export { .. } => {},
+            Cmd::Unset(_) => {},
+            Cmd::Source(_) => {},
+            Cmd::SaveEnvfile { .. } => {},
+
+        }
+    }
+}
