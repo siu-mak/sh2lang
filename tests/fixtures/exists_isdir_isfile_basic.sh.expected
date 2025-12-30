@@ -1,6 +1,8 @@
-__sh2_err_handler() { local s=$?; printf "Error in %s\n" "${__sh2_loc:-unknown}" >&2; return $s; }
+__sh2_err_handler() { local s=$?; if [[ "${BASH_COMMAND}" == *"(exit "* ]]; then return $s; fi; printf "Error in %s\n" "${__sh2_loc:-unknown}" >&2; return $s; }
+set -o errtrace
 trap '__sh2_err_handler' ERR
 main() {
+  local __sh2_loc=""
   __sh2_loc="tests/fixtures/exists_isdir_isfile_basic.sh2:2:3"
   'sh' '-c' 'rm -rf tdir tfile; mkdir tdir; echo hi > tfile'; __sh2_status=$?; (exit $__sh2_status)
   if [ -e 'tfile' ] && [ -f 'tfile' ] && [ -d 'tdir' ]; then

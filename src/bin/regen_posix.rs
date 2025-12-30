@@ -41,7 +41,7 @@ fn main() {
         };
 
         println!("Regenerating: {}", final_path.display());
-        let program = loader::load_program_with_imports(&final_path);
+        let program = loader::load_program_with_imports(&final_path).unwrap();
         let ir = lower::lower(program);
         let posix_code = emit_with_target(&ir, TargetShell::Posix);
 

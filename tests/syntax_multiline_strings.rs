@@ -27,7 +27,7 @@ fn parse_unterminated_cooked() {
     let src = std::fs::read_to_string("tests/fixtures/multiline_unterminated.sh2").unwrap();
     use sh2c::span::SourceMap;
     let sm = SourceMap::new(src.clone());
-    let _ = lex(&sm, &src);
+    let _ = lex(&sm, &src).expect("Unterminated triple-quoted string");
 }
 
 #[test]

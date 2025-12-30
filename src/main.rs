@@ -90,35 +90,42 @@ fn main() {
         }
     };
 
-    let result = std::panic::catch_unwind(|| {
+    let result = std::panic::catch_unwind(|| -> Result<String, String> {
         // Loader handles reading, lexing, parsing, and resolving imports recursively
         let path = std::path::Path::new(&filename);
-        let ast = loader::load_program_with_imports(path);
         
         // Base dir is the input file's parent directory.
         // This ensures paths are relative to the script location, which is more
         // robust than CWD if the compiler is run from elsewhere.
         let diag_base_dir = path.parent()
             .map(|p| std::fs::canonicalize(p).unwrap_or_else(|_| p.to_path_buf()));
+            
+        let ast = loader::load_program_with_imports(path)
+            .map_err(|d| d.format(diag_base_dir.as_deref()))?;
 
         let ir = lower::lower_with_options(
             ast,
             &lower::LowerOptions {
                 include_diagnostics,
-                diag_base_dir,
+                diag_base_dir: diag_base_dir.clone(), // Clone since Option is Copy but PathBuf isn't
             },
         );
-        codegen::emit_with_options(
+        Ok(codegen::emit_with_options(
             &ir,
             codegen::CodegenOptions {
                 target,
                 include_diagnostics,
             },
-        )
+        ))
     });
 
     match result {
-        Ok(out) => print!("{}", out),
+        Ok(Ok(out)) => print!("{}", out),
+        Ok(Err(msg)) => {
+            // It's a structured diagnostic message
+             eprintln!("{}", msg);
+             process::exit(2);
+        }
         Err(e) => {
             let msg = if let Some(s) = e.downcast_ref::<&str>() {
                 (*s).to_string()

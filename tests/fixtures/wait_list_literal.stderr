@@ -1,0 +1,2 @@
+/tmp/sh2_test_2760507_1767933907072052370/script.sh: line 2: wait: pid 123 is not a child of this shell
+/tmp/sh2_test_2760507_1767933907072052370/script.sh: line 2: wait: pid 456 is not a child of this shell

@@ -1,4 +1,4 @@
-use crate::ast::{Function, Program};
+use crate::ast::{Function, Program, Stmt};
 use crate::lexer;
 use crate::parser;
 use crate::span::SourceMap;
@@ -6,43 +6,39 @@ use std::collections::{HashMap, HashSet};
 use std::fs;
 use std::path::{Path, PathBuf};
 
-pub fn load_program_with_imports(entry_path: &Path) -> Program {
-    load(entry_path)
-}
+use crate::span::Diagnostic;
 
 struct Loader {
-    // Canonical paths currently being visited (for cycle detection)
-    visiting: HashSet<PathBuf>,
-    // Stack of paths being visited (for error reporting)
-    stack: Vec<PathBuf>,
-    // Canonical paths already fully loaded (idempotency)
     loaded: HashSet<PathBuf>,
-    // All loaded functions, keyed by name (for conflict detection)
-    // Value is (Function definition, Source file path)
-    functions: HashMap<String, (Function, PathBuf)>,
-    // To preserve deterministic order of functions: store names in order of definition/loading
-    function_order: Vec<String>,
-    // Top level statements from the entry file
-    entry_top_level: Vec<crate::ast::Stmt>,
-    // Collected source maps
+    visiting: HashSet<PathBuf>,
+    stack: Vec<PathBuf>,
     source_maps: HashMap<String, SourceMap>,
+    functions: HashMap<String, (Function, PathBuf)>,
+    function_order: Vec<String>,
+    entry_top_level: Vec<Stmt>,
 }
 
 impl Loader {
     fn new() -> Self {
         Loader {
+            loaded: HashSet::new(),
             visiting: HashSet::new(),
             stack: Vec::new(),
-            loaded: HashSet::new(),
+            source_maps: HashMap::new(),
             functions: HashMap::new(),
             function_order: Vec::new(),
             entry_top_level: Vec::new(),
-            source_maps: HashMap::new(),
         }
     }
 }
 
-fn load_program_with_imports_impl(loader: &mut Loader, entry_path: &Path, is_entry: bool) {
+pub fn load_program_with_imports(entry_path: &Path) -> Result<Program, Diagnostic> {
+    load(entry_path)
+}
+
+// ...
+
+fn load_program_with_imports_impl(loader: &mut Loader, entry_path: &Path, is_entry: bool) -> Result<(), Diagnostic> {
     let canonical_path = match fs::canonicalize(entry_path) {
         Ok(p) => p,
         Err(e) => panic!("Failed to resolve path {}: {}", entry_path.display(), e),
@@ -50,12 +46,18 @@ fn load_program_with_imports_impl(loader: &mut Loader, entry_path: &Path, is_ent
 
     // Idempotency: If already loaded, do nothing (no-op).
     if loader.loaded.contains(&canonical_path) {
-        return;
+        return Ok(());
     }
 
     // Cycle detection
     if loader.visiting.contains(&canonical_path) {
-        // Construct detailed cycle path
+        // ... same cycle panic ...
+        // Keeping panic for internal invariants/loader errors not related to syntax for now? 
+        // Or should I use Diagnostic? 
+        // Cycle is a "user error" in imports. 
+        // Prompt said "parse/lex errors". Imports are semantic. Keep panic for now to reduce scope.
+        // But formatting it as Diagnostic would be nice. 
+        // Let's keep panic as it's not strictly "parser".
         let mut cycle_msg = String::new();
         for p in &loader.stack {
             cycle_msg.push_str(&format!("{} -> ", p.display()));
@@ -79,8 +81,8 @@ fn load_program_with_imports_impl(loader: &mut Loader, entry_path: &Path, is_ent
 
     let sm_ref = loader.source_maps.get(&file_str).unwrap();
 
-    let tokens = lexer::lex(sm_ref, &file_str);
-    let program = parser::parse(&tokens, sm_ref, &file_str);
+    let tokens = lexer::lex(sm_ref, &file_str)?;
+    let program = parser::parse(&tokens, sm_ref, &file_str)?;
 
     let base_dir = canonical_path.parent().unwrap_or(Path::new("."));
     for import_str in program.imports {
@@ -88,12 +90,13 @@ fn load_program_with_imports_impl(loader: &mut Loader, entry_path: &Path, is_ent
         if import_path.extension().is_none() {
             import_path.set_extension("sh2");
         }
-        load_program_with_imports_impl(loader, &import_path, false);
+        load_program_with_imports_impl(loader, &import_path, false)?;
     }
-
+    
+    // ... rest of loop ...
     for func in program.functions {
-        // Reserved name check
-        if matches!(
+        // ... (keep panics for semantics) ...
+         if matches!(
             func.name.as_str(),
             "trim" | "before" | "after" | "replace" | "split"
         ) {
@@ -120,7 +123,6 @@ fn load_program_with_imports_impl(loader: &mut Loader, entry_path: &Path, is_ent
 
     if is_entry {
         loader.entry_top_level = program.top_level;
-        // Also capture the program span if needed? Program span is just file span.
     } else {
         if !program.top_level.is_empty() {
             panic!(
@@ -133,11 +135,12 @@ fn load_program_with_imports_impl(loader: &mut Loader, entry_path: &Path, is_ent
     loader.visiting.remove(&canonical_path);
     loader.stack.pop();
     loader.loaded.insert(canonical_path);
+    Ok(())
 }
 
-pub fn load(entry_path: &Path) -> Program {
+pub fn load(entry_path: &Path) -> Result<Program, Diagnostic> {
     let mut loader = Loader::new();
-    load_program_with_imports_impl(&mut loader, entry_path, true);
+    load_program_with_imports_impl(&mut loader, entry_path, true)?;
 
     // Construct final program in deterministic order
     let mut functions = Vec::new();
@@ -146,27 +149,19 @@ pub fn load(entry_path: &Path) -> Program {
         functions.push(func);
     }
 
-    // We need a span for the final merged program.
-    // It's conceptually the entry file's span, or a synthetic one.
-    // Using 0..0 is fine as Program span isn't used much?
-    // Or we should grab it from loader.
-    // But we don't store the entry program struct.
-    // Let's just make a dummy span 0..0 for now, or use empty.
+    // ... same span logic ...
     let span = crate::span::Span { start: 0, end: 0 };
-
-    // We need the entry file name.
-    // Since load_program_with_imports_impl canonicalizes, we should too to match keys.
     let entry_file = fs::canonicalize(entry_path)
         .unwrap()
         .to_string_lossy()
         .to_string();
 
-    Program {
+    Ok(Program {
         imports: vec![],
         functions,
         top_level: loader.entry_top_level,
         span,
         source_maps: loader.source_maps,
         entry_file,
-    }
+    })
 }

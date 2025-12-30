@@ -91,8 +91,8 @@ fn parse_simple_function_inline() {
     "#;
     use sh2c::parser;
     let sm = sh2c::span::SourceMap::new(src.to_string());
-    let tokens = sh2c::lexer::lex(&sm, "test");
-    let ast = parser::parse(&tokens, &sm, "test");
+    let tokens = sh2c::lexer::lex(&sm, "test").unwrap();
+    let ast = parser::parse(&tokens, &sm, "test").unwrap();
     assert_eq!(ast.functions.len(), 1);
     assert_eq!(ast.functions[0].name, "hello");
 }

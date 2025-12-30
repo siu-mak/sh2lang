@@ -4,7 +4,7 @@ main() {
   __sh2_loc="tests/fixtures/try_run_fields.sh2:2:3"
     r__tmp_out="$(__sh2_tmpfile)"
   r__tmp_err="$(__sh2_tmpfile)"
-  case $- in *e*) __sh2__errexit_was_set=1;; *) __sh2__errexit_was_set=0;; esac; set +e; 'sh' '-c' 'printf '\''out'\''; printf '\''err'\'' 1>&2; exit 7' >"$r__tmp_out" 2>"$r__tmp_err"; r__status=$?; if [ "$__sh2__errexit_was_set" = 1 ]; then set -e; fi;
+  if 'sh' '-c' 'printf '\''out'\''; printf '\''err'\'' 1>&2; exit 7' >"${r__tmp_out}" 2>"${r__tmp_err}"; then r__status=0; else r__status=$?; fi;
   r__stdout="$(__sh2_read_file "$r__tmp_out")"
   r__stderr="$(__sh2_read_file "$r__tmp_err")"
   rm -f "$r__tmp_out" "$r__tmp_err"

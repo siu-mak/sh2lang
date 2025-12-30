@@ -409,6 +409,9 @@ pub fn emit_with_options(funcs: &[Function], opts: CodegenOptions) -> String {
             out.push('\n');
         }
         out.push_str(&format!("{}() {{\n", f.name));
+        if usage.loc && opts.target == TargetShell::Bash {
+            out.push_str("  local __sh2_loc=\"\"\n");
+        }
         for (idx, param) in f.params.iter().enumerate() {
             match opts.target {
                 TargetShell::Bash => {
@@ -990,7 +993,11 @@ fn emit_cmd(
                 ));
 
                 // Run (allow fail semantics)
-                out.push_str(&format!("{pad}case $- in *e*) __sh2__errexit_was_set=1;; *) __sh2__errexit_was_set=0;; esac; set +e; {} >\"${name}__tmp_out\" 2>\"${name}__tmp_err\"; {name}__status=$?; if [ \"$__sh2__errexit_was_set\" = 1 ]; then set -e; fi;\n", cmd, name=name));
+                // Use 'if' to suppress ERR trap and capture status
+                out.push_str(&format!(
+                    "{pad}if {} >\"${{{}__tmp_out}}\" 2>\"${{{}__tmp_err}}\"; then {}__status=0; else {}__status=$?; fi;\n",
+                    cmd, name, name, name, name
+                ));
 
                 // Read output
                 out.push_str(&format!(
@@ -1047,8 +1054,9 @@ fn emit_cmd(
 
             if *allow_fail {
                 // allow_fail: suppresses script failure (returns 0), captures real status in __sh2_status
+                // We use || to suppress 'set -e' and 'trap ERR' for the command.
                 out.push_str(&format!(
-                    "case $- in *e*) __e=1;; *) __e=0;; esac; set +e; {} ; __sh2_status=$?; if [ \"$__e\" = 1 ]; then set -e; fi; :\n",
+                    "__sh2_status=0; {} || __sh2_status=$?; :\n",
                     shell_cmd
                 ));
             } else {
@@ -1159,19 +1167,25 @@ fn emit_cmd(
                             .collect::<Vec<_>>()
                             .join(" ");
 
-                        if *allow_fail && i < last_idx {
-                             // Non-final segment: suppress failure
-                            pipe_str.push_str(&format!("{{ {{ {}; }} || true; }}", cmd_str));
+                        if *allow_fail {
+                            if i < last_idx {
+                                // Non-final segment: suppress failure
+                                pipe_str.push_str(&format!("if {}; then :; else true; fi", cmd_str));
+                            } else {
+                                // Final segment: suppress ERR trap via 'if' context, preserve exit status
+                                pipe_str.push_str(&format!("if {}; then :; else exit $?; fi", cmd_str));
+                            }
                         } else {
                             pipe_str.push_str(&cmd_str);
                         }
                     }
 
-                    // Wrap in subshell to isolate set -o pipefail and set +e
-                    out.push_str(&format!(
-                         "( set -o pipefail; set +e; {} ); __sh2_status=$?; ",
-                         pipe_str
-                     ));
+                     // Wrap in subshell to isolate set -o pipefail and set +e
+                     // Use 'if' to capture status while suppressing ERR trap for the pipeline itself.
+                     out.push_str(&format!(
+                          "if ( set -o pipefail; set +e; {} ); then __sh2_status=0; else __sh2_status=$?; fi; ",
+                          pipe_str
+                      ));
 
                     // Return
                     if allow_fail_last {
@@ -1224,7 +1238,7 @@ fn emit_cmd(
                     }
 
                     out.push_str(&format!(
-                        "( set -o pipefail; set +e; {} ); __sh2_status=$?; ",
+                        "if ( set -o pipefail; set +e; {} ); then __sh2_status=0; else __sh2_status=$?; fi; ",
                         pipe_str
                     ));
 
@@ -2044,7 +2058,8 @@ fn emit_prelude(target: TargetShell, usage: &PreludeUsage) -> String {
     match target {
         TargetShell::Bash => {
             if usage.loc {
-                s.push_str("__sh2_err_handler() { local s=$?; printf \"Error in %s\\n\" \"${__sh2_loc:-unknown}\" >&2; return $s; }\n");
+                s.push_str("__sh2_err_handler() { local s=$?; if [[ \"${BASH_COMMAND}\" == *\"(exit \"* ]]; then return $s; fi; printf \"Error in %s\\n\" \"${__sh2_loc:-unknown}\" >&2; return $s; }\n");
+                s.push_str("set -o errtrace\n");
                 s.push_str("trap '__sh2_err_handler' ERR\n");
             }
             if usage.matches {

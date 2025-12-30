@@ -15,7 +15,13 @@ fn main() {
 
     for path in files {
         println!("Processing {}", path.display());
-        let program = loader::load_program_with_imports(&path);
+        let program = match loader::load_program_with_imports(&path) {
+            Ok(p) => p,
+            Err(e) => {
+                println!("Skipping {} (loading failed: {})", path.display(), e.msg);
+                continue;
+            }
+        };
         let opts = lower::LowerOptions {
             include_diagnostics: true,
             diag_base_dir: Some(fs::canonicalize(PathBuf::from(env!("CARGO_MANIFEST_DIR"))).unwrap()),

@@ -2,13 +2,13 @@ mod common;
 mod expr;
 mod stmt;
 
-use self::common::Parser;
+use self::common::{ParsResult, Parser};
 use crate::ast::*;
 use crate::lexer::{Token, TokenKind};
 use crate::span::SourceMap;
 use std::collections::HashMap;
 
-pub fn parse(tokens: &[Token], sm: &SourceMap, file: &str) -> Program {
+pub fn parse(tokens: &[Token], sm: &SourceMap, file: &str) -> ParsResult<Program> {
     let mut parser = Parser::new(tokens, sm, file);
     let mut imports = Vec::new();
     let mut functions = Vec::new();
@@ -25,18 +25,18 @@ pub fn parse(tokens: &[Token], sm: &SourceMap, file: &str) -> Program {
                 parser.error(
                     "Expected string literal after import",
                     parser.current_span(),
-                );
+                )?;
             }
         } else if parser.match_kind(TokenKind::Func) {
             let start = parser.previous_span(); // 'func' span
             let name = if let Some(TokenKind::Ident(s)) = parser.peek_kind() {
                 s.clone()
             } else {
-                parser.error("Expected function name", parser.current_span());
+                parser.error("Expected function name", parser.current_span())?
             };
             parser.advance();
 
-            parser.expect(TokenKind::LParen);
+            parser.expect(TokenKind::LParen)?;
             let mut params = Vec::new();
             if !parser.match_kind(TokenKind::RParen) {
                 loop {
@@ -44,25 +44,25 @@ pub fn parse(tokens: &[Token], sm: &SourceMap, file: &str) -> Program {
                         params.push(p.clone());
                         parser.advance();
                     } else {
-                        parser.error("Expected parameter name", parser.current_span());
+                        parser.error("Expected parameter name", parser.current_span())?;
                     }
                     if !parser.match_kind(TokenKind::Comma) {
                         break;
                     }
                 }
-                parser.expect(TokenKind::RParen);
+                parser.expect(TokenKind::RParen)?;
             }
 
-            parser.expect(TokenKind::LBrace);
+            parser.expect(TokenKind::LBrace)?;
             let mut body = Vec::new();
             while !parser.match_kind(TokenKind::RBrace) {
                 if parser.match_kind(TokenKind::Import) {
                     parser.error(
                         "import is only allowed at top-level",
                         parser.previous_span(),
-                    );
+                    )?;
                 }
-                body.push(parser.parse_stmt());
+                body.push(parser.parse_stmt()?);
             }
             // RBrace consumed
             let end = parser.previous_span();
@@ -76,7 +76,7 @@ pub fn parse(tokens: &[Token], sm: &SourceMap, file: &str) -> Program {
                 file: file.to_string(),
             });
         } else {
-            top_level.push(parser.parse_stmt());
+            top_level.push(parser.parse_stmt()?);
         }
     }
 
@@ -87,12 +87,12 @@ pub fn parse(tokens: &[Token], sm: &SourceMap, file: &str) -> Program {
         start_span // Empty file?
     };
 
-    Program {
+    Ok(Program {
         imports,
         functions,
         top_level,
         span,
         source_maps: HashMap::new(),  // Filled by loader later
         entry_file: file.to_string(), // Initial parse sets this, loader might override or correct it
-    }
+    })
 }

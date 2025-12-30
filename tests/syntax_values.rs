@@ -140,8 +140,8 @@ fn parses_comparison() {
     "#;
 
     let sm = sh2c::span::SourceMap::new(src.to_string());
-    let tokens = sh2c::lexer::lex(&sm, "test");
-    let program = parser::parse(&tokens, &sm, "test");
+    let tokens = sh2c::lexer::lex(&sm, "test").unwrap();
+    let program = parser::parse(&tokens, &sm, "test").unwrap();
     let func = &program.functions[0];
 
     match &func.body[0] {
@@ -190,8 +190,8 @@ fn precedence_compare_concat() {
 
     // (("a" + b) == c)
     let sm = sh2c::span::SourceMap::new(src.to_string());
-    let tokens = sh2c::lexer::lex(&sm, "test");
-    let program = parser::parse(&tokens, &sm, "test");
+    let tokens = sh2c::lexer::lex(&sm, "test").unwrap();
+    let program = parser::parse(&tokens, &sm, "test").unwrap();
     let func = &program.functions[0];
 
     if let ast::Stmt {
@@ -233,8 +233,8 @@ fn codegen_comparison() {
     "#;
     use sh2c::{codegen, lower};
     let sm = sh2c::span::SourceMap::new(src.to_string());
-    let tokens = sh2c::lexer::lex(&sm, "test");
-    let mut ast = parser::parse(&tokens, &sm, "test");
+    let tokens = sh2c::lexer::lex(&sm, "test").unwrap();
+    let mut ast = parser::parse(&tokens, &sm, "test").unwrap();
     ast.source_maps.insert("test".to_string(), sm.clone());
     let ir = lower::lower(ast);
     let out = codegen::emit(&ir);
@@ -253,8 +253,8 @@ fn exec_comparison() {
     "#;
     use sh2c::{codegen, lower};
     let sm = sh2c::span::SourceMap::new(src.to_string());
-    let tokens = sh2c::lexer::lex(&sm, "test");
-    let mut ast = parser::parse(&tokens, &sm, "test");
+    let tokens = sh2c::lexer::lex(&sm, "test").unwrap();
+    let mut ast = parser::parse(&tokens, &sm, "test").unwrap();
     ast.source_maps.insert("test".to_string(), sm.clone());
     let ir = lower::lower(ast);
     let bash = codegen::emit(&ir);
@@ -273,8 +273,8 @@ fn parses_concatenation() {
     "#;
 
     let sm = sh2c::span::SourceMap::new(src.to_string());
-    let tokens = sh2c::lexer::lex(&sm, "test");
-    let program = parser::parse(&tokens, &sm, "test");
+    let tokens = sh2c::lexer::lex(&sm, "test").unwrap();
+    let program = parser::parse(&tokens, &sm, "test").unwrap();
     let func = &program.functions[0];
 
     match &func.body[0] {
@@ -321,8 +321,8 @@ fn parses_chained_concatenation() {
         }
     "#;
     let sm = sh2c::span::SourceMap::new(src.to_string());
-    let tokens = sh2c::lexer::lex(&sm, "test");
-    let program = parser::parse(&tokens, &sm, "test");
+    let tokens = sh2c::lexer::lex(&sm, "test").unwrap();
+    let program = parser::parse(&tokens, &sm, "test").unwrap();
     let func = &program.functions[0];
     // "a" + b + "c" -> (("a" + b) + "c")
     if let ast::Stmt {
@@ -389,8 +389,8 @@ fn codegen_concatenation() {
     "#;
     use sh2c::{codegen, lower};
     let sm = sh2c::span::SourceMap::new(src.to_string());
-    let tokens = sh2c::lexer::lex(&sm, "test");
-    let mut ast = parser::parse(&tokens, &sm, "test");
+    let tokens = sh2c::lexer::lex(&sm, "test").unwrap();
+    let mut ast = parser::parse(&tokens, &sm, "test").unwrap();
     ast.source_maps.insert("test".to_string(), sm.clone());
     let ir = lower::lower(ast);
     let out = codegen::emit(&ir);
@@ -408,8 +408,8 @@ fn exec_concatenation() {
     "#;
     use sh2c::{codegen, lower};
     let sm = sh2c::span::SourceMap::new(src.to_string());
-    let tokens = sh2c::lexer::lex(&sm, "test");
-    let mut ast = parser::parse(&tokens, &sm, "test");
+    let tokens = sh2c::lexer::lex(&sm, "test").unwrap();
+    let mut ast = parser::parse(&tokens, &sm, "test").unwrap();
     ast.source_maps.insert("test".to_string(), sm.clone());
     let ir = lower::lower(ast);
     let bash = codegen::emit(&ir);
@@ -428,8 +428,8 @@ fn parses_let_statement() {
     "#;
     use sh2c::{ast, parser};
     let sm = sh2c::span::SourceMap::new(src.to_string());
-    let tokens = sh2c::lexer::lex(&sm, "test");
-    let program = parser::parse(&tokens, &sm, "test");
+    let tokens = sh2c::lexer::lex(&sm, "test").unwrap();
+    let program = parser::parse(&tokens, &sm, "test").unwrap();
     let func = &program.functions[0];
     match &func.body[0] {
         ast::Stmt {
@@ -461,8 +461,8 @@ fn codegen_let_and_usage() {
     "#;
     use sh2c::{codegen, lower, parser};
     let sm = sh2c::span::SourceMap::new(src.to_string());
-    let tokens = sh2c::lexer::lex(&sm, "test");
-    let mut ast = parser::parse(&tokens, &sm, "test");
+    let tokens = sh2c::lexer::lex(&sm, "test").unwrap();
+    let mut ast = parser::parse(&tokens, &sm, "test").unwrap();
     ast.source_maps.insert("test".to_string(), sm.clone());
     let ir = lower::lower(ast);
     let out = codegen::emit(&ir);
@@ -480,8 +480,8 @@ fn exec_let_variable() {
     "#;
     use sh2c::{codegen, lower, parser};
     let sm = sh2c::span::SourceMap::new(src.to_string());
-    let tokens = sh2c::lexer::lex(&sm, "test");
-    let mut ast = parser::parse(&tokens, &sm, "test");
+    let tokens = sh2c::lexer::lex(&sm, "test").unwrap();
+    let mut ast = parser::parse(&tokens, &sm, "test").unwrap();
     ast.source_maps.insert("test".to_string(), sm.clone());
     let ir = lower::lower(ast);
     let bash = codegen::emit(&ir);
@@ -500,8 +500,8 @@ fn let_alias_variable() {
     "#;
     use sh2c::{codegen, lower, parser};
     let sm = sh2c::span::SourceMap::new(src.to_string());
-    let tokens = sh2c::lexer::lex(&sm, "test");
-    let mut ast = parser::parse(&tokens, &sm, "test");
+    let tokens = sh2c::lexer::lex(&sm, "test").unwrap();
+    let mut ast = parser::parse(&tokens, &sm, "test").unwrap();
     ast.source_maps.insert("test".to_string(), sm.clone());
     let ir = lower::lower(ast);
     let out = codegen::emit(&ir);

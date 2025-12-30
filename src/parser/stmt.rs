@@ -1,14 +1,14 @@
-use super::common::Parser;
+use super::common::{ParsResult, Parser};
 use crate::ast::*;
 use crate::lexer::TokenKind;
 
 impl<'a> Parser<'a> {
-    pub fn parse_stmt(&mut self) -> Stmt {
-        let mut left = self.parse_stmt_atom();
+    pub fn parse_stmt(&mut self) -> ParsResult<Stmt> {
+        let mut left = self.parse_stmt_atom()?;
 
         loop {
             if self.match_kind(TokenKind::AndAnd) {
-                let right = self.parse_stmt_atom();
+                let right = self.parse_stmt_atom()?;
                 let span = left.span.merge(right.span);
                 left = Stmt {
                     node: StmtKind::AndThen {
@@ -18,7 +18,7 @@ impl<'a> Parser<'a> {
                     span,
                 };
             } else if self.match_kind(TokenKind::OrOr) {
-                let right = self.parse_stmt_atom();
+                let right = self.parse_stmt_atom()?;
                 let span = left.span.merge(right.span);
                 left = Stmt {
                     node: StmtKind::OrElse {
@@ -31,15 +31,15 @@ impl<'a> Parser<'a> {
                 break;
             }
         }
-        left
+        Ok(left)
     }
 
-    fn parse_stmt_atom(&mut self) -> Stmt {
+    fn parse_stmt_atom(&mut self) -> ParsResult<Stmt> {
         let start_span = self.current_span();
         let kind = self.peek_kind().cloned();
 
         if kind.is_none() {
-            self.error("Expected statement, got EOF", start_span);
+            self.error("Expected statement, got EOF", start_span)?;
         }
         let kind = kind.unwrap();
 
@@ -49,29 +49,25 @@ impl<'a> Parser<'a> {
                 let name = if let Some(TokenKind::Ident(s)) = self.peek_kind() {
                     s.clone()
                 } else {
-                    self.error("Expected variable name after let", self.current_span());
+                    self.error("Expected variable name after let", self.current_span())?
                 };
                 self.advance();
-                self.expect(TokenKind::Equals);
-                let value = self.parse_expr();
+                self.expect(TokenKind::Equals)?;
+                let value = self.parse_expr()?;
                 StmtKind::Let { name, value }
             }
             TokenKind::Run => {
-                // We dispatch to helper that does NOT consume Run token?
-                // Old parser: `parse_run_call` expected Run.
-                // So we can call it.
-
                 let mut segments = Vec::new();
-                segments.push(self.parse_run_call());
+                segments.push(self.parse_run_call()?);
 
                 while self.match_kind(TokenKind::Pipe) {
                     if self.peek_kind() == Some(&TokenKind::Run) {
-                        segments.push(self.parse_run_call());
+                        segments.push(self.parse_run_call()?);
                     } else {
                         self.error(
                             "expected run(...) after '|' in pipeline",
                             self.current_span(),
-                        );
+                        )?;
                     }
                 }
 
@@ -83,53 +79,53 @@ impl<'a> Parser<'a> {
             }
             TokenKind::Exec => {
                 self.advance();
-                self.expect(TokenKind::LParen);
+                self.expect(TokenKind::LParen)?;
                 let mut args = Vec::new();
                 if !self.match_kind(TokenKind::RParen) {
                     loop {
-                        args.push(self.parse_expr());
+                        args.push(self.parse_expr()?);
                         if !self.match_kind(TokenKind::Comma) {
                             break;
                         }
                     }
-                    self.expect(TokenKind::RParen);
+                    self.expect(TokenKind::RParen)?;
                 }
                 if args.is_empty() {
-                    self.error("exec requires at least one argument", self.current_span());
+                    self.error("exec requires at least one argument", self.current_span())?;
                 }
                 StmtKind::Exec(args)
             }
             TokenKind::Print => {
                 self.advance();
-                self.expect(TokenKind::LParen);
-                let expr = self.parse_expr();
-                self.expect(TokenKind::RParen);
+                self.expect(TokenKind::LParen)?;
+                let expr = self.parse_expr()?;
+                self.expect(TokenKind::RParen)?;
                 StmtKind::Print(expr)
             }
             TokenKind::PrintErr => {
                 self.advance();
-                self.expect(TokenKind::LParen);
-                let expr = self.parse_expr();
-                self.expect(TokenKind::RParen);
+                self.expect(TokenKind::LParen)?;
+                let expr = self.parse_expr()?;
+                self.expect(TokenKind::RParen)?;
                 StmtKind::PrintErr(expr)
             }
             TokenKind::If => {
                 self.advance();
-                let cond = self.parse_expr();
-                self.expect(TokenKind::LBrace);
+                let cond = self.parse_expr()?;
+                self.expect(TokenKind::LBrace)?;
                 let mut then_body = Vec::new();
                 while !self.match_kind(TokenKind::RBrace) {
-                    then_body.push(self.parse_stmt());
+                    then_body.push(self.parse_stmt()?);
                 }
 
                 let mut elifs = Vec::new();
                 loop {
                     if self.match_kind(TokenKind::Elif) {
-                        let cond = self.parse_expr();
-                        self.expect(TokenKind::LBrace);
+                        let cond = self.parse_expr()?;
+                        self.expect(TokenKind::LBrace)?;
                         let mut body = Vec::new();
                         while !self.match_kind(TokenKind::RBrace) {
-                            body.push(self.parse_stmt());
+                            body.push(self.parse_stmt()?);
                         }
                         elifs.push(Elif { cond, body });
                     } else if self.peek_kind() == Some(&TokenKind::Else) {
@@ -138,11 +134,11 @@ impl<'a> Parser<'a> {
                         if self.tokens.get(self.pos + 1).map(|t| &t.kind) == Some(&TokenKind::If) {
                             self.advance(); // else
                             self.advance(); // if
-                            let cond = self.parse_expr();
-                            self.expect(TokenKind::LBrace);
+                            let cond = self.parse_expr()?;
+                            self.expect(TokenKind::LBrace)?;
                             let mut body = Vec::new();
                             while !self.match_kind(TokenKind::RBrace) {
-                                body.push(self.parse_stmt());
+                                body.push(self.parse_stmt()?);
                             }
                             elifs.push(Elif { cond, body });
                         } else {
@@ -154,10 +150,10 @@ impl<'a> Parser<'a> {
                 }
 
                 let else_body = if self.match_kind(TokenKind::Else) {
-                    self.expect(TokenKind::LBrace);
+                    self.expect(TokenKind::LBrace)?;
                     let mut body = Vec::new();
                     while !self.match_kind(TokenKind::RBrace) {
-                        body.push(self.parse_stmt());
+                        body.push(self.parse_stmt()?);
                     }
                     Some(body)
                 } else {
@@ -173,8 +169,8 @@ impl<'a> Parser<'a> {
             }
             TokenKind::Case => {
                 self.advance();
-                let expr = self.parse_expr();
-                self.expect(TokenKind::LBrace);
+                let expr = self.parse_expr()?;
+                self.expect(TokenKind::LBrace)?;
                 let mut arms = Vec::new();
                 while !self.match_kind(TokenKind::RBrace) {
                     let mut patterns = Vec::new();
@@ -186,7 +182,7 @@ impl<'a> Parser<'a> {
                         } else if let Some(TokenKind::Ident(s)) = self.peek_kind() {
                             if s == "glob" {
                                 self.advance();
-                                self.expect(TokenKind::LParen);
+                                self.expect(TokenKind::LParen)?;
                                 if let Some(TokenKind::String(p)) = self.peek_kind() {
                                     patterns.push(Pattern::Glob(p.clone()));
                                     self.advance();
@@ -194,30 +190,30 @@ impl<'a> Parser<'a> {
                                     self.error(
                                         "Expected string literal for glob",
                                         self.current_span(),
-                                    );
+                                    )?;
                                 }
-                                self.expect(TokenKind::RParen);
+                                self.expect(TokenKind::RParen)?;
                             } else {
                                 self.error(
                                     "Expected string, glob(\"...\"), or _",
                                     self.current_span(),
-                                );
+                                )?;
                             }
                         } else if self.match_kind(TokenKind::Underscore) {
                             patterns.push(Pattern::Wildcard);
                         } else {
-                            self.error("Expected pattern", self.current_span());
+                            self.error("Expected pattern", self.current_span())?;
                         }
 
                         if !self.match_kind(TokenKind::Pipe) {
                             break;
                         }
                     }
-                    self.expect(TokenKind::Arrow);
-                    self.expect(TokenKind::LBrace);
+                    self.expect(TokenKind::Arrow)?;
+                    self.expect(TokenKind::LBrace)?;
                     let mut body = Vec::new();
                     while !self.match_kind(TokenKind::RBrace) {
-                        body.push(self.parse_stmt());
+                        body.push(self.parse_stmt()?);
                     }
                     arms.push(CaseArm { patterns, body });
                 }
@@ -225,11 +221,11 @@ impl<'a> Parser<'a> {
             }
             TokenKind::While => {
                 self.advance();
-                let cond = self.parse_expr();
-                self.expect(TokenKind::LBrace);
+                let cond = self.parse_expr()?;
+                self.expect(TokenKind::LBrace)?;
                 let mut body = Vec::new();
                 while !self.match_kind(TokenKind::RBrace) {
-                    body.push(self.parse_stmt());
+                    body.push(self.parse_stmt()?);
                 }
                 StmtKind::While { cond, body }
             }
@@ -239,30 +235,30 @@ impl<'a> Parser<'a> {
                     let key_var = if let Some(TokenKind::Ident(s)) = self.peek_kind() {
                         s.clone()
                     } else {
-                        self.error("Expected ident", self.current_span())
+                        self.error("Expected ident", self.current_span())?
                     };
                     self.advance();
-                    self.expect(TokenKind::Comma);
+                    self.expect(TokenKind::Comma)?;
                     let val_var = if let Some(TokenKind::Ident(s)) = self.peek_kind() {
                         s.clone()
                     } else {
-                        self.error("Expected ident", self.current_span())
+                        self.error("Expected ident", self.current_span())?
                     };
                     self.advance();
-                    self.expect(TokenKind::RParen);
-                    self.expect(TokenKind::In);
+                    self.expect(TokenKind::RParen)?;
+                    self.expect(TokenKind::In)?;
 
                     let map = if let Some(TokenKind::Ident(s)) = self.peek_kind() {
                         s.clone()
                     } else {
-                        self.error("Expected map ident", self.current_span())
+                        self.error("Expected map ident", self.current_span())?
                     };
                     self.advance();
 
-                    self.expect(TokenKind::LBrace);
+                    self.expect(TokenKind::LBrace)?;
                     let mut body = Vec::new();
                     while !self.match_kind(TokenKind::RBrace) {
-                        body.push(self.parse_stmt());
+                        body.push(self.parse_stmt()?);
                     }
                     StmtKind::ForMap {
                         key_var,
@@ -274,31 +270,31 @@ impl<'a> Parser<'a> {
                     let var = if let Some(TokenKind::Ident(s)) = self.peek_kind() {
                         s.clone()
                     } else {
-                        self.error("Expected ident", self.current_span())
+                        self.error("Expected ident", self.current_span())?
                     };
                     self.advance();
-                    self.expect(TokenKind::In);
+                    self.expect(TokenKind::In)?;
 
                     let items = if self.match_kind(TokenKind::LParen) {
                         let mut items = Vec::new();
                         if !self.match_kind(TokenKind::RParen) {
                             loop {
-                                items.push(self.parse_expr());
+                                items.push(self.parse_expr()?);
                                 if !self.match_kind(TokenKind::Comma) {
                                     break;
                                 }
                             }
-                            self.expect(TokenKind::RParen);
+                            self.expect(TokenKind::RParen)?;
                         }
                         items
                     } else {
-                        vec![self.parse_expr()]
+                        vec![self.parse_expr()?]
                     };
 
-                    self.expect(TokenKind::LBrace);
+                    self.expect(TokenKind::LBrace)?;
                     let mut body = Vec::new();
                     while !self.match_kind(TokenKind::RBrace) {
-                        body.push(self.parse_stmt());
+                        body.push(self.parse_stmt()?);
                     }
                     StmtKind::For { var, items, body }
                 }
@@ -314,7 +310,7 @@ impl<'a> Parser<'a> {
             TokenKind::Return => {
                 self.advance();
                 let val = if is_expr_start(self.peek_kind()) {
-                    Some(self.parse_expr())
+                    Some(self.parse_expr()?)
                 } else {
                     None
                 };
@@ -323,7 +319,7 @@ impl<'a> Parser<'a> {
             TokenKind::Exit => {
                 self.advance();
                 let code = if is_expr_start(self.peek_kind()) {
-                    Some(self.parse_expr())
+                    Some(self.parse_expr()?)
                 } else {
                     None
                 };
@@ -332,83 +328,83 @@ impl<'a> Parser<'a> {
             TokenKind::With => {
                 self.advance();
                 if self.match_kind(TokenKind::Env) {
-                    self.expect(TokenKind::LBrace);
+                    self.expect(TokenKind::LBrace)?;
                     let mut bindings = Vec::new();
                     while !self.match_kind(TokenKind::RBrace) {
                         let name = if let Some(TokenKind::Ident(s)) = self.peek_kind() {
                             s.clone()
                         } else {
-                            self.error("Expected ident", self.current_span())
+                            self.error("Expected ident", self.current_span())?
                         };
                         self.advance();
                         if self.match_kind(TokenKind::Colon) || self.match_kind(TokenKind::Equals) {
                             // consumed
                         } else {
-                            self.error("Expected : or = after env key", self.current_span());
+                            self.error("Expected : or = after env key", self.current_span())?;
                         }
-                        let val = self.parse_expr();
+                        let val = self.parse_expr()?;
                         bindings.push((name, val));
                         self.match_kind(TokenKind::Comma);
                     }
-                    self.expect(TokenKind::LBrace);
+                    self.expect(TokenKind::LBrace)?;
                     let mut body = Vec::new();
                     while !self.match_kind(TokenKind::RBrace) {
-                        body.push(self.parse_stmt());
+                        body.push(self.parse_stmt()?);
                     }
                     StmtKind::WithEnv { bindings, body }
                 } else if self.match_kind(TokenKind::Cwd) {
-                    let path = self.parse_expr();
-                    self.expect(TokenKind::LBrace);
+                    let path = self.parse_expr()?;
+                    self.expect(TokenKind::LBrace)?;
                     let mut body = Vec::new();
                     while !self.match_kind(TokenKind::RBrace) {
-                        body.push(self.parse_stmt());
+                        body.push(self.parse_stmt()?);
                     }
                     StmtKind::WithCwd { path, body }
                 } else if self.match_kind(TokenKind::Redirect) {
-                    self.expect(TokenKind::LBrace);
+                    self.expect(TokenKind::LBrace)?;
                     let mut stdout = None;
                     let mut stderr = None;
                     let mut stdin = None;
                     while !self.match_kind(TokenKind::RBrace) {
                         if self.match_kind(TokenKind::Stdout) {
-                            self.expect(TokenKind::Colon);
-                            let t = self.parse_redirect_target();
+                            self.expect(TokenKind::Colon)?;
+                            let t = self.parse_redirect_target()?;
                             if let RedirectTarget::HereDoc { .. } = t {
-                                self.error("heredoc only allowed for stdin", self.previous_span());
+                                self.error("heredoc only allowed for stdin", self.previous_span())?;
                             }
                             stdout = Some(t);
                         } else if self.match_kind(TokenKind::Stderr) {
-                            self.expect(TokenKind::Colon);
-                            let t = self.parse_redirect_target();
+                            self.expect(TokenKind::Colon)?;
+                            let t = self.parse_redirect_target()?;
                             if let RedirectTarget::HereDoc { .. } = t {
-                                self.error("heredoc only allowed for stdin", self.previous_span());
+                                self.error("heredoc only allowed for stdin", self.previous_span())?;
                             }
                             stderr = Some(t);
                         } else if self.match_kind(TokenKind::Stdin) {
-                            self.expect(TokenKind::Colon);
-                            let t = self.parse_redirect_target();
+                            self.expect(TokenKind::Colon)?;
+                            let t = self.parse_redirect_target()?;
                             match t {
                                 RedirectTarget::HereDoc { .. } => {}
                                 RedirectTarget::File { append, .. } => {
                                     if append {
-                                        self.error("Cannot append to stdin", self.previous_span());
+                                        self.error("Cannot append to stdin", self.previous_span())?;
                                     }
                                 }
                                 _ => self.error(
                                     "stdin can only be redirected from a file or heredoc",
                                     self.previous_span(),
-                                ),
+                                )?,
                             }
                             stdin = Some(t);
                         } else {
-                            self.error("Expected stdout, stderr, or stdin", self.current_span());
+                            self.error("Expected stdout, stderr, or stdin", self.current_span())?;
                         }
                         self.match_kind(TokenKind::Comma);
                     }
-                    self.expect(TokenKind::LBrace);
+                    self.expect(TokenKind::LBrace)?;
                     let mut body = Vec::new();
                     while !self.match_kind(TokenKind::RBrace) {
-                        body.push(self.parse_stmt());
+                        body.push(self.parse_stmt()?);
                     }
                     StmtKind::WithRedirect {
                         stdout,
@@ -417,35 +413,35 @@ impl<'a> Parser<'a> {
                         body,
                     }
                 } else if self.match_kind(TokenKind::Log) {
-                    self.expect(TokenKind::LParen);
-                    let path = self.parse_expr();
+                    self.expect(TokenKind::LParen)?;
+                    let path = self.parse_expr()?;
                     let mut append = false;
                     while self.match_kind(TokenKind::Comma) {
                         if self.match_kind(TokenKind::Append) {
-                            self.expect(TokenKind::Equals);
+                            self.expect(TokenKind::Equals)?;
                             if self.match_kind(TokenKind::True) {
                                 append = true;
                             } else if self.match_kind(TokenKind::False) {
                                 append = false;
                             } else {
-                                self.error("append must be true/false", self.current_span());
+                                self.error("append must be true/false", self.current_span())?;
                             }
                         } else {
-                            self.error("Expected option name (e.g. append)", self.current_span());
+                            self.error("Expected option name (e.g. append)", self.current_span())?;
                         }
                     }
-                    self.expect(TokenKind::RParen);
-                    self.expect(TokenKind::LBrace);
+                    self.expect(TokenKind::RParen)?;
+                    self.expect(TokenKind::LBrace)?;
                     let mut body = Vec::new();
                     while !self.match_kind(TokenKind::RBrace) {
-                        body.push(self.parse_stmt());
+                        body.push(self.parse_stmt()?);
                     }
                     StmtKind::WithLog { path, append, body }
                 } else {
                     self.error(
                         "Expected 'env', 'cwd', 'redirect', or 'log' after 'with'",
                         self.current_span(),
-                    );
+                    )?
                 }
             }
             TokenKind::Spawn => {
@@ -453,7 +449,7 @@ impl<'a> Parser<'a> {
                 if self.match_kind(TokenKind::LBrace) {
                     let mut body = Vec::new();
                     while !self.match_kind(TokenKind::RBrace) {
-                        body.push(self.parse_stmt());
+                        body.push(self.parse_stmt()?);
                     }
                     StmtKind::Spawn {
                         stmt: Box::new(Stmt {
@@ -462,7 +458,7 @@ impl<'a> Parser<'a> {
                         }),
                     }
                 } else {
-                    let stmt = self.parse_stmt();
+                    let stmt = self.parse_stmt()?;
                     StmtKind::Spawn {
                         stmt: Box::new(stmt),
                     }
@@ -470,27 +466,27 @@ impl<'a> Parser<'a> {
             }
             TokenKind::Wait => {
                 self.advance();
-                self.expect(TokenKind::LParen);
+                self.expect(TokenKind::LParen)?;
                 let expr = if is_expr_start(self.peek_kind()) {
-                    Some(self.parse_expr())
+                    Some(self.parse_expr()?)
                 } else {
                     None
                 };
-                self.expect(TokenKind::RParen);
+                self.expect(TokenKind::RParen)?;
                 StmtKind::Wait(expr)
             }
             TokenKind::Try => {
                 self.advance();
-                self.expect(TokenKind::LBrace);
+                self.expect(TokenKind::LBrace)?;
                 let mut try_body = Vec::new();
                 while !self.match_kind(TokenKind::RBrace) {
-                    try_body.push(self.parse_stmt());
+                    try_body.push(self.parse_stmt()?);
                 }
-                self.expect(TokenKind::Catch);
-                self.expect(TokenKind::LBrace);
+                self.expect(TokenKind::Catch)?;
+                self.expect(TokenKind::LBrace)?;
                 let mut catch_body = Vec::new();
                 while !self.match_kind(TokenKind::RBrace) {
-                    catch_body.push(self.parse_stmt());
+                    catch_body.push(self.parse_stmt()?);
                 }
                 StmtKind::TryCatch {
                     try_body,
@@ -499,62 +495,62 @@ impl<'a> Parser<'a> {
             }
             TokenKind::Cd => {
                 self.advance();
-                self.expect(TokenKind::LParen);
-                let path = self.parse_expr();
-                self.expect(TokenKind::RParen);
+                self.expect(TokenKind::LParen)?;
+                let path = self.parse_expr()?;
+                self.expect(TokenKind::RParen)?;
                 StmtKind::Cd { path }
             }
             TokenKind::Export => {
                 self.advance();
-                self.expect(TokenKind::LParen);
+                self.expect(TokenKind::LParen)?;
                 let name = if let Some(TokenKind::String(s)) = self.peek_kind() {
                     s.clone()
                 } else {
-                    self.error("Expected string", self.current_span())
+                    self.error("Expected string", self.current_span())?
                 };
                 self.advance();
                 let value = if self.match_kind(TokenKind::Comma) {
-                    Some(self.parse_expr())
+                    Some(self.parse_expr()?)
                 } else {
                     None
                 };
-                self.expect(TokenKind::RParen);
+                self.expect(TokenKind::RParen)?;
                 StmtKind::Export { name, value }
             }
             TokenKind::Unset => {
                 self.advance();
-                self.expect(TokenKind::LParen);
+                self.expect(TokenKind::LParen)?;
                 let name = if let Some(TokenKind::String(s)) = self.peek_kind() {
                     s.clone()
                 } else {
-                    self.error("Expected string", self.current_span())
+                    self.error("Expected string", self.current_span())?
                 };
                 self.advance();
-                self.expect(TokenKind::RParen);
+                self.expect(TokenKind::RParen)?;
                 StmtKind::Unset { name }
             }
             TokenKind::Source => {
                 self.advance();
-                self.expect(TokenKind::LParen);
-                let path = self.parse_expr();
-                self.expect(TokenKind::RParen);
+                self.expect(TokenKind::LParen)?;
+                let path = self.parse_expr()?;
+                self.expect(TokenKind::RParen)?;
                 StmtKind::Source { path }
             }
             TokenKind::Subshell => {
                 self.advance();
-                self.expect(TokenKind::LBrace);
+                self.expect(TokenKind::LBrace)?;
                 let mut body = Vec::new();
                 while !self.match_kind(TokenKind::RBrace) {
-                    body.push(self.parse_stmt());
+                    body.push(self.parse_stmt()?);
                 }
                 StmtKind::Subshell { body }
             }
             TokenKind::Group => {
                 self.advance();
-                self.expect(TokenKind::LBrace);
+                self.expect(TokenKind::LBrace)?;
                 let mut body = Vec::new();
                 while !self.match_kind(TokenKind::RBrace) {
-                    body.push(self.parse_stmt());
+                    body.push(self.parse_stmt()?);
                 }
                 StmtKind::Group { body }
             }
@@ -564,10 +560,10 @@ impl<'a> Parser<'a> {
                     let s = if let Some(TokenKind::String(s)) = self.peek_kind() {
                         s.clone()
                     } else {
-                        self.error("Expected string", self.current_span())
+                        self.error("Expected string", self.current_span())?
                     };
                     self.advance();
-                    self.expect(TokenKind::RParen);
+                    self.expect(TokenKind::RParen)?;
                     StmtKind::Sh(s)
                 } else if self.match_kind(TokenKind::LBrace) {
                     let mut lines = Vec::new();
@@ -579,17 +575,17 @@ impl<'a> Parser<'a> {
                             self.error(
                                 "Expected string literal in sh {{ ... }}",
                                 self.current_span(),
-                            );
+                            )?;
                         }
                         if !self.match_kind(TokenKind::Comma) {
                             if self.peek_kind() != Some(&TokenKind::RBrace) {
-                                self.error("Expected comma or closing brace", self.current_span());
+                                self.error("Expected comma or closing brace", self.current_span())?;
                             }
                         }
                     }
                     StmtKind::ShBlock(lines)
                 } else {
-                    self.error("Expected ( or {{ after sh", self.current_span());
+                    self.error("Expected ( or {{ after sh", self.current_span())?
                 }
             }
             TokenKind::Set => {
@@ -599,64 +595,64 @@ impl<'a> Parser<'a> {
                     self.advance();
                     LValue::Var(name)
                 } else if self.match_kind(TokenKind::Env) {
-                    self.expect(TokenKind::Dot);
+                    self.expect(TokenKind::Dot)?;
                     let name = if let Some(TokenKind::Ident(s)) = self.peek_kind() {
                         s.clone()
                     } else {
-                        self.error("Expected ident", self.current_span())
+                        self.error("Expected ident", self.current_span())?
                     };
                     self.advance();
                     LValue::Env(name)
                 } else {
-                    self.error("Expected ident or env.VAR", self.current_span());
+                    self.error("Expected ident or env.VAR", self.current_span())?
                 };
-                self.expect(TokenKind::Equals);
-                let value = self.parse_expr();
+                self.expect(TokenKind::Equals)?;
+                let value = self.parse_expr()?;
                 StmtKind::Set { target, value }
             }
             TokenKind::PipeKw => {
                 self.advance();
                 let mut segments = Vec::new();
 
-                segments.push(self.parse_pipe_segment());
+                segments.push(self.parse_pipe_segment()?);
                 if !self.match_kind(TokenKind::Pipe) {
-                    self.error("pipe requires at least two segments", self.current_span());
+                    self.error("pipe requires at least two segments", self.current_span())?;
                 }
-                segments.push(self.parse_pipe_segment());
+                segments.push(self.parse_pipe_segment()?);
 
                 while self.match_kind(TokenKind::Pipe) {
-                    segments.push(self.parse_pipe_segment());
+                    segments.push(self.parse_pipe_segment()?);
                 }
                 StmtKind::PipeBlocks { segments }
             }
             TokenKind::Ident(name) => {
                 let name = name.clone();
                 self.advance();
-                self.expect(TokenKind::LParen);
+                self.expect(TokenKind::LParen)?;
                 let mut args = Vec::new();
                 if !self.match_kind(TokenKind::RParen) {
                     loop {
-                        args.push(self.parse_expr());
+                        args.push(self.parse_expr()?);
                         if !self.match_kind(TokenKind::Comma) {
                             break;
                         }
                     }
-                    self.expect(TokenKind::RParen);
+                    self.expect(TokenKind::RParen)?;
                 }
                 StmtKind::Call { name, args }
             }
-            _ => self.error(&format!("Expected statement, got {:?}", kind), start_span),
+            _ => self.error(&format!("Expected statement, got {:?}", kind), start_span)?,
         };
 
-        Stmt {
+        Ok(Stmt {
             node: stmt_kind,
             span: start_span.merge(self.previous_span()),
-        }
+        })
     }
 
-    fn parse_run_call(&mut self) -> RunCall {
-        self.expect(TokenKind::Run);
-        self.expect(TokenKind::LParen);
+    fn parse_run_call(&mut self) -> ParsResult<RunCall> {
+        self.expect(TokenKind::Run)?;
+        self.expect(TokenKind::LParen)?;
         let mut args = Vec::new();
         let mut options = Vec::new();
 
@@ -677,8 +673,8 @@ impl<'a> Parser<'a> {
                 };
                 self.advance(); // consume ident
                 let name_span = start_span.merge(self.previous_span());
-                self.expect(TokenKind::Equals);
-                let value = self.parse_expr();
+                self.expect(TokenKind::Equals)?;
+                let value = self.parse_expr()?;
                 
                 options.push(RunOption {
                     name,
@@ -686,34 +682,34 @@ impl<'a> Parser<'a> {
                     span: name_span,
                 });
             } else {
-                args.push(self.parse_expr());
+                args.push(self.parse_expr()?);
             }
 
             self.match_kind(TokenKind::Comma);
         }
-        RunCall { args, options }
+        Ok(RunCall { args, options })
     }
 
-    fn parse_pipe_segment(&mut self) -> Vec<Stmt> {
+    fn parse_pipe_segment(&mut self) -> ParsResult<Vec<Stmt>> {
         if self.match_kind(TokenKind::LBrace) {
             let mut body = Vec::new();
             while !self.match_kind(TokenKind::RBrace) {
-                body.push(self.parse_stmt());
+                body.push(self.parse_stmt()?);
             }
-            body
+            Ok(body)
         } else {
-            vec![self.parse_stmt_atom()]
+            Ok(vec![self.parse_stmt_atom()?])
         }
     }
 
-    fn parse_redirect_target(&mut self) -> RedirectTarget {
+    fn parse_redirect_target(&mut self) -> ParsResult<RedirectTarget> {
         if self.match_kind(TokenKind::File) {
-            self.expect(TokenKind::LParen);
-            let path = self.parse_expr();
+            self.expect(TokenKind::LParen)?;
+            let path = self.parse_expr()?;
             let mut append = false;
             if self.match_kind(TokenKind::Comma) {
                 if self.match_kind(TokenKind::Append) {
-                    self.expect(TokenKind::Equals);
+                    self.expect(TokenKind::Equals)?;
                     if self.match_kind(TokenKind::True) {
                         append = true;
                     } else if self.match_kind(TokenKind::False) {
@@ -726,36 +722,36 @@ impl<'a> Parser<'a> {
                             self.advance();
                             append = false;
                         } else {
-                            self.error("append must be bool", self.current_span());
+                            self.error("append must be bool", self.current_span())?;
                         }
                     } else {
-                        self.error("append must be bool", self.current_span());
+                        self.error("append must be bool", self.current_span())?;
                     }
                 }
             }
-            self.expect(TokenKind::RParen);
-            RedirectTarget::File { path, append }
+            self.expect(TokenKind::RParen)?;
+            Ok(RedirectTarget::File { path, append })
         } else if self.match_kind(TokenKind::Stdout) {
-            RedirectTarget::Stdout
+            Ok(RedirectTarget::Stdout)
         } else if self.match_kind(TokenKind::Stderr) {
-            RedirectTarget::Stderr
+            Ok(RedirectTarget::Stderr)
         } else if let Some(TokenKind::Ident(s)) = self.peek_kind() {
             if s == "heredoc" {
                 self.advance();
-                self.expect(TokenKind::LParen);
+                self.expect(TokenKind::LParen)?;
                 let content = if let Some(TokenKind::String(s)) = self.peek_kind() {
                     s.clone()
                 } else {
-                    self.error("Expected string", self.current_span())
+                    self.error("Expected string", self.current_span())?
                 };
                 self.advance();
-                self.expect(TokenKind::RParen);
-                RedirectTarget::HereDoc { content }
+                self.expect(TokenKind::RParen)?;
+                Ok(RedirectTarget::HereDoc { content })
             } else {
-                self.error("Expected redirect target", self.current_span());
+                self.error("Expected redirect target", self.current_span())?
             }
         } else {
-            self.error("Expected redirect target", self.current_span());
+            self.error("Expected redirect target", self.current_span())?
         }
     }
 }

@@ -1,6 +1,8 @@
-__sh2_err_handler() { local s=$?; printf "Error in %s\n" "${__sh2_loc:-unknown}" >&2; return $s; }
+__sh2_err_handler() { local s=$?; if [[ "${BASH_COMMAND}" == *"(exit "* ]]; then return $s; fi; printf "Error in %s\n" "${__sh2_loc:-unknown}" >&2; return $s; }
+set -o errtrace
 trap '__sh2_err_handler' ERR
 main() {
+  local __sh2_loc=""
   local __sh2_e=0; case $- in *e*) __sh2_e=1;; *) __sh2_e=0;; esac; set +e
   local __sh2_err=$(trap -p ERR || true); trap - ERR
   if {

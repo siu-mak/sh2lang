@@ -90,8 +90,8 @@ fn parse_print_err_statement_inline() {
     "#;
     use sh2c::parser;
     let sm = sh2c::span::SourceMap::new(src.to_string());
-    let tokens = sh2c::lexer::lex(&sm, "test");
-    let program = parser::parse(&tokens, &sm, "test");
+    let tokens = sh2c::lexer::lex(&sm, "test").unwrap();
+    let program = parser::parse(&tokens, &sm, "test").unwrap();
     match &program.functions[0].body[0] {
         sh2c::ast::Stmt {
             node:
@@ -128,8 +128,8 @@ fn codegen_with_redirect_cyclic() {
     let src = include_str!("fixtures/with_redirect_cyclic.sh2");
     use sh2c::{codegen, lower, parser};
     let sm = sh2c::span::SourceMap::new(src.to_string());
-    let tokens = sh2c::lexer::lex(&sm, "test");
-    let mut ast = parser::parse(&tokens, &sm, "test");
+    let tokens = sh2c::lexer::lex(&sm, "test").unwrap();
+    let mut ast = parser::parse(&tokens, &sm, "test").unwrap();
     ast.source_maps.insert("test".to_string(), sm);
     let ir = lower::lower(ast);
     codegen::emit(&ir);

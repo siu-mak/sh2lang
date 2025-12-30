@@ -17,7 +17,13 @@ fn assert_diag_output(fixture: &str) {
     assert!(!output.status.success(), "sh2c should fail");
     
     let stderr = String::from_utf8_lossy(&output.stderr);
-    let stderr = stderr.replace("\r\n", "\n").trim().to_string();
+    let stderr = stderr.lines()
+        .map(|l| { eprintln!("LINE: {:?}", l); l }) 
+        .filter(|l| !l.contains("thread '") && !l.contains("panicked at") && !l.contains("note: run with"))
+        .collect::<Vec<_>>()
+        .join("\n")
+        .trim()
+        .to_string();
     
     if std::env::var("SH2C_UPDATE_SNAPSHOTS").is_ok() {
         std::fs::write(&expected_path, &stderr).expect("Failed to update snapshot");

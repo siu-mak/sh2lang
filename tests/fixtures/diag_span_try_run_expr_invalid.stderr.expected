@@ -1,8 +1,6 @@
-thread 'main' (2464574) panicked at src/lower.rs:1038:17:
 diag_span_try_run_expr_invalid.sh2:2:11: try_run() must be bound via let (e.g., let r = try_run(...))
     print(try_run(cmd))
           ^~~~~~~~~~~~
-note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
 Error: diag_span_try_run_expr_invalid.sh2:2:11: try_run() must be bound via let (e.g., let r = try_run(...))
     print(try_run(cmd))
           ^~~~~~~~~~~~

@@ -20,6 +20,24 @@ impl Span {
 }
 
 #[derive(Debug, Clone, PartialEq)]
+pub struct Diagnostic {
+    pub msg: String,
+    pub span: Span,
+    pub sm: Option<SourceMap>,
+    pub file: Option<String>,
+}
+
+impl Diagnostic {
+    pub fn format(&self, base: Option<&std::path::Path>) -> String {
+        if let (Some(sm), Some(file)) = (&self.sm, &self.file) {
+            sm.format_diagnostic(file, base, &self.msg, self.span)
+        } else {
+            format!("error: {}", self.msg)
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
 pub struct SourceMap {
     src: String,
     line_starts: Vec<usize>,
@@ -49,7 +67,14 @@ impl SourceMap {
             .line_starts
             .binary_search(&pos)
             .unwrap_or_else(|x| x - 1);
-        let col = pos - self.line_starts[line_idx] + 1;
+        
+        let line_start = self.line_starts[line_idx];
+        // Calculate column by counting characters from line start to pos
+        let col = if pos >= line_start {
+             self.src[line_start..min(pos, self.src.len())].chars().count() + 1
+        } else {
+             1
+        };
         (line_idx + 1, col)
     }
 
@@ -63,6 +88,7 @@ impl SourceMap {
         } else {
             self.line_starts[line] - 1 // Exclude newline
         };
+        if start > end { return ""; }
         &self.src[start..end]
     }
 
@@ -75,7 +101,7 @@ impl SourceMap {
 
         if start_line != end_line {
             // Multi-line adjustment: skip leading whitespace if we point to it
-            if let Some(first_non_ws) = snippet.chars().position(|c| !c.is_whitespace()) {
+             if let Some(first_non_ws) = snippet.chars().position(|c| !c.is_whitespace()) {
                  let first_non_ws_col = first_non_ws + 1;
                  if start_col < first_non_ws_col {
                      arrow_col = first_non_ws_col;
@@ -90,7 +116,20 @@ impl SourceMap {
         }
 
         if start_line == end_line {
-            let len = max(1, span.end - span.start);
+            // Calculate length in characters
+            let line_start = self.line_starts[start_line - 1];
+            // Safe slicing
+            let start_clamp = max(line_start, span.start);
+            let end_clamp = min(self.src.len(), span.end);
+            
+            // Only measure length if valid range on this line
+            let len = if end_clamp > start_clamp {
+                self.src[start_clamp..end_clamp].chars().count()
+            } else {
+                0 
+            };
+            
+            let len = max(1, len);
             arrow.push('^');
             if len > 1 {
                 for _ in 0..(len - 1) {

@@ -33,9 +33,20 @@ impl<'a> Parser<'a> {
         }
         t
     }
+}
 
-    pub fn error(&self, msg: &str, span: Span) -> ! {
-        panic!("{}", self.sm.format_diagnostic(self.file, None, msg, span));
+use crate::span::Diagnostic;
+
+pub type ParsResult<T> = Result<T, Diagnostic>;
+
+impl<'a> Parser<'a> {
+    pub fn error<T>(&self, msg: &str, span: Span) -> ParsResult<T> {
+        Err(Diagnostic {
+            msg: msg.to_string(),
+            span,
+            sm: Some(self.sm.clone()),
+            file: Some(self.file.to_string()),
+        })
     }
 
     pub fn previous_span(&self) -> Span {
@@ -61,20 +72,22 @@ impl<'a> Parser<'a> {
         }
     }
 
-    pub fn expect(&mut self, kind: TokenKind) {
+    pub fn expect(&mut self, kind: TokenKind) -> ParsResult<()> {
         if let Some(t) = self.peek() {
             if t.kind == kind {
                 self.advance();
+                Ok(())
             } else {
-                self.error(&format!("Expected {:?}, got {:?}", kind, t.kind), t.span);
+                self.error(&format!("Expected {:?}, got {:?}", kind, t.kind), t.span)
             }
         } else {
             self.error(
                 &format!("Expected {:?}, got EOF", kind),
                 self.current_span(),
-            );
+            )
         }
     }
+// ...
 
     pub fn match_kind(&mut self, kind: TokenKind) -> bool {
         if let Some(t) = self.peek() {

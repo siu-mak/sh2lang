@@ -193,8 +193,8 @@ fn parse_if_statement_inline() {
     "#;
     use sh2c::parser;
     let sm = sh2c::span::SourceMap::new(src.to_string());
-    let tokens = sh2c::lexer::lex(&sm, "test");
-    let ast = parser::parse(&tokens, &sm, "test");
+    let tokens = sh2c::lexer::lex(&sm, "test").unwrap();
+    let ast = parser::parse(&tokens, &sm, "test").unwrap();
     match &ast.functions[0].body[0] {
         sh2c::ast::Stmt {
             node:
@@ -235,8 +235,8 @@ fn parse_nested_if_inline() {
     "#;
     use sh2c::parser;
     let sm = sh2c::span::SourceMap::new(src.to_string());
-    let tokens = sh2c::lexer::lex(&sm, "test");
-    let ast = parser::parse(&tokens, &sm, "test");
+    let tokens = sh2c::lexer::lex(&sm, "test").unwrap();
+    let ast = parser::parse(&tokens, &sm, "test").unwrap();
     match &ast.functions[0].body[0] {
         sh2c::ast::Stmt {
             node: StmtKind::If { then_body, .. },

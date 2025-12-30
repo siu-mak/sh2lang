@@ -1,43 +1,43 @@
-use super::common::Parser;
+use super::common::{ParsResult, Parser};
 use crate::ast::*;
 use crate::lexer::TokenKind;
 use crate::span::Span;
 
 impl<'a> Parser<'a> {
-    pub fn parse_expr(&mut self) -> Expr {
+    pub fn parse_expr(&mut self) -> ParsResult<Expr> {
         self.parse_or()
     }
 
-    fn parse_or(&mut self) -> Expr {
-        let mut left = self.parse_and();
+    fn parse_or(&mut self) -> ParsResult<Expr> {
+        let mut left = self.parse_and()?;
 
         while self.match_kind(TokenKind::OrOr) {
-            let right = self.parse_and();
+            let right = self.parse_and()?;
             let span = left.span.merge(right.span);
             left = Expr {
                 node: ExprKind::Or(Box::new(left), Box::new(right)),
                 span,
             };
         }
-        left
+        Ok(left)
     }
 
-    fn parse_and(&mut self) -> Expr {
-        let mut left = self.parse_comparison();
+    fn parse_and(&mut self) -> ParsResult<Expr> {
+        let mut left = self.parse_comparison()?;
 
         while self.match_kind(TokenKind::AndAnd) {
-            let right = self.parse_comparison();
+            let right = self.parse_comparison()?;
             let span = left.span.merge(right.span);
             left = Expr {
                 node: ExprKind::And(Box::new(left), Box::new(right)),
                 span,
             };
         }
-        left
+        Ok(left)
     }
 
-    fn parse_comparison(&mut self) -> Expr {
-        let left = self.parse_concat();
+    fn parse_comparison(&mut self) -> ParsResult<Expr> {
+        let left = self.parse_concat()?;
 
         if let Some(kind) = self.peek_kind() {
             let op = match kind {
@@ -52,36 +52,36 @@ impl<'a> Parser<'a> {
 
             if let Some(op) = op {
                 self.advance();
-                let right = self.parse_concat();
+                let right = self.parse_concat()?;
                 let span = left.span.merge(right.span);
-                return Expr {
+                return Ok(Expr {
                     node: ExprKind::Compare {
                         left: Box::new(left),
                         op,
                         right: Box::new(right),
                     },
                     span,
-                };
+                });
             }
         }
-        left
+        Ok(left)
     }
 
-    fn parse_concat(&mut self) -> Expr {
-        let mut left = self.parse_sum();
+    fn parse_concat(&mut self) -> ParsResult<Expr> {
+        let mut left = self.parse_sum()?;
         while self.match_kind(TokenKind::Amp) {
-            let right = self.parse_sum();
+            let right = self.parse_sum()?;
             let span = left.span.merge(right.span);
             left = Expr {
                 node: ExprKind::Concat(Box::new(left), Box::new(right)),
                 span,
             };
         }
-        left
+        Ok(left)
     }
 
-    fn parse_sum(&mut self) -> Expr {
-        let mut left = self.parse_term();
+    fn parse_sum(&mut self) -> ParsResult<Expr> {
+        let mut left = self.parse_term()?;
 
         loop {
             let op = match self.peek_kind() {
@@ -90,7 +90,7 @@ impl<'a> Parser<'a> {
                 _ => break,
             };
             self.advance();
-            let right = self.parse_term();
+            let right = self.parse_term()?;
             let span = left.span.merge(right.span);
             left = Expr {
                 node: ExprKind::Arith {
@@ -101,11 +101,11 @@ impl<'a> Parser<'a> {
                 span,
             };
         }
-        left
+        Ok(left)
     }
 
-    fn parse_term(&mut self) -> Expr {
-        let mut left = self.parse_unary();
+    fn parse_term(&mut self) -> ParsResult<Expr> {
+        let mut left = self.parse_unary()?;
 
         loop {
             let op = match self.peek_kind() {
@@ -115,7 +115,7 @@ impl<'a> Parser<'a> {
                 _ => break,
             };
             self.advance();
-            let right = self.parse_unary();
+            let right = self.parse_unary()?;
             let span = left.span.merge(right.span);
             left = Expr {
                 node: ExprKind::Arith {
@@ -126,22 +126,22 @@ impl<'a> Parser<'a> {
                 span,
             };
         }
-        left
+        Ok(left)
     }
 
-    fn parse_unary(&mut self) -> Expr {
+    fn parse_unary(&mut self) -> ParsResult<Expr> {
         let start = self.current_span();
         if self.match_kind(TokenKind::Bang) {
-            let expr = self.parse_unary();
+            let expr = self.parse_unary()?;
             let span = start.merge(expr.span);
-            Expr {
+            Ok(Expr {
                 node: ExprKind::Not(Box::new(expr)),
                 span,
-            }
+            })
         } else if self.match_kind(TokenKind::Minus) {
-            let right = self.parse_unary();
+            let right = self.parse_unary()?;
             let span = start.merge(right.span);
-            Expr {
+            Ok(Expr {
                 node: ExprKind::Arith {
                     left: Box::new(Expr {
                         node: ExprKind::Number(0),
@@ -151,14 +151,14 @@ impl<'a> Parser<'a> {
                     right: Box::new(right),
                 },
                 span,
-            }
+            })
         } else {
             self.parse_primary()
         }
     }
 
-    fn parse_primary(&mut self) -> Expr {
-        let mut expr = self.parse_atom();
+    fn parse_primary(&mut self) -> ParsResult<Expr> {
+        let mut expr = self.parse_atom()?;
 
         loop {
             let start = expr.span;
@@ -205,7 +205,8 @@ impl<'a> Parser<'a> {
                         span,
                     };
                 } else {
-                    self.error("Expected identifier after dot", self.current_span());
+                    self.error("Expected identifier after dot", self.current_span())?;
+                    unreachable!() // or let it propagate, but ? already returns
                 }
             } else if self.match_kind(TokenKind::LBracket) {
                 // Map indexing check: var["key"]
@@ -213,13 +214,12 @@ impl<'a> Parser<'a> {
                 if let ExprKind::Var(ref name) = expr.node {
                     if let Some(TokenKind::String(key)) = self.peek_kind() {
                         // Need to check if next is RBracket without consuming
-                        // self.peek() is String. self.tokens[pos+1] should be RBracket
                         if self.pos + 1 < self.tokens.len()
                             && self.tokens[self.pos + 1].kind == TokenKind::RBracket
                         {
                             self.advance(); // String
                             let key = key.clone();
-                            self.expect(TokenKind::RBracket);
+                            self.expect(TokenKind::RBracket)?;
                             let end = self.previous_span();
                             let span = start.merge(end);
                             expr = Expr {
@@ -235,8 +235,8 @@ impl<'a> Parser<'a> {
                 }
 
                 if !is_map {
-                    let index = self.parse_expr();
-                    self.expect(TokenKind::RBracket);
+                    let index = self.parse_expr()?;
+                    self.expect(TokenKind::RBracket)?;
                     let end = self.previous_span();
                     let span = start.merge(end);
                     expr = Expr {
@@ -251,37 +251,37 @@ impl<'a> Parser<'a> {
                 break;
             }
         }
-        expr
+        Ok(expr)
     }
 
-    fn parse_atom(&mut self) -> Expr {
+    fn parse_atom(&mut self) -> ParsResult<Expr> {
         let t = self.advance();
         if t.is_none() {
-            self.error("Unexpected EOF", self.current_span());
+            self.error("Unexpected EOF", self.current_span())?;
         }
         let t = t.unwrap();
         let span = t.span;
 
         match &t.kind {
             TokenKind::Input => {
-                self.expect(TokenKind::LParen);
-                let prompt = self.parse_expr();
-                self.expect(TokenKind::RParen);
+                self.expect(TokenKind::LParen)?;
+                let prompt = self.parse_expr()?;
+                self.expect(TokenKind::RParen)?;
                 let full_span = span.merge(self.previous_span());
-                Expr {
+                Ok(Expr {
                     node: ExprKind::Input(Box::new(prompt)),
                     span: full_span,
-                }
+                })
             }
             TokenKind::Confirm => {
-                self.expect(TokenKind::LParen);
-                let prompt = self.parse_expr();
-                self.expect(TokenKind::RParen);
+                self.expect(TokenKind::LParen)?;
+                let prompt = self.parse_expr()?;
+                self.expect(TokenKind::RParen)?;
                 let full_span = span.merge(self.previous_span());
-                Expr {
+                Ok(Expr {
                     node: ExprKind::Confirm(Box::new(prompt)),
                     span: full_span,
-                }
+                })
             }
             TokenKind::LBrace => {
                 let mut entries = Vec::new();
@@ -292,15 +292,15 @@ impl<'a> Parser<'a> {
                         self.error(
                             "Expected string literal key in map literal",
                             self.current_span(),
-                        );
+                        )?
                     };
                     self.advance();
-                    self.expect(TokenKind::Colon);
-                    let val = self.parse_expr();
+                    self.expect(TokenKind::Colon)?;
+                    let val = self.parse_expr()?;
                     entries.push((key, val));
                     if !self.match_kind(TokenKind::Comma) {
                         if self.peek_kind() != Some(&TokenKind::RBrace) {
-                            self.error("Expected comma or closing brace", self.current_span());
+                            self.error("Expected comma or closing brace", self.current_span())?;
                         }
                     }
                 }
@@ -308,23 +308,23 @@ impl<'a> Parser<'a> {
                 // Wait, match_kind consumes if true.
                 // Loop check: !match_kind(RBrace) -> if RBrace, consumes and breaks.
                 let full_span = span.merge(self.previous_span());
-                Expr {
+                Ok(Expr {
                     node: ExprKind::MapLiteral(entries),
                     span: full_span,
-                }
+                })
             }
             TokenKind::LParen => {
-                let e = self.parse_expr();
-                self.expect(TokenKind::RParen);
+                let e = self.parse_expr()?;
+                self.expect(TokenKind::RParen)?;
                 // Parenthesized expression span shouldn't be extended? Or should it?
                 // Using 'e.span' discards parens. Usually we want inner span or outer?
                 // Let's keep inner span for now or extend?
                 // Most parsers keep parens in span.
                 let full_span = span.merge(self.previous_span());
-                Expr {
+                Ok(Expr {
                     node: e.node,
                     span: full_span,
-                }
+                })
             }
             TokenKind::String(s) => self.parse_interpolated_string(s, span),
             TokenKind::Ident(s) => {
@@ -333,12 +333,12 @@ impl<'a> Parser<'a> {
                     let mut args = Vec::new();
                     if !self.match_kind(TokenKind::RParen) {
                         loop {
-                            args.push(self.parse_expr());
+                            args.push(self.parse_expr()?);
                             if !self.match_kind(TokenKind::Comma) {
                                 break;
                             }
                         }
-                        self.expect(TokenKind::RParen);
+                        self.expect(TokenKind::RParen)?;
                     }
                     let full_span = span.merge(self.previous_span());
 
@@ -350,7 +350,7 @@ impl<'a> Parser<'a> {
                                 self.error(
                                     &format!("{} requires exactly 2 arguments", s),
                                     full_span,
-                                );
+                                )?;
                             }
                         }
                         "replace" => {
@@ -358,7 +358,7 @@ impl<'a> Parser<'a> {
                                 self.error(
                                     &format!("{} requires exactly 3 arguments", s),
                                     full_span,
-                                );
+                                )?;
                             }
                         }
                         "trim" => {
@@ -366,21 +366,21 @@ impl<'a> Parser<'a> {
                                 self.error(
                                     &format!("{} requires exactly 1 argument", s),
                                     full_span,
-                                );
+                                )?;
                             }
                         }
                         _ => {}
                     }
 
-                    Expr {
+                    Ok(Expr {
                         node: ExprKind::Call { name: s, args },
                         span: full_span,
-                    }
+                    })
                 } else {
-                    Expr {
+                    Ok(Expr {
                         node: ExprKind::Var(s),
                         span,
-                    }
+                    })
                 }
             }
             TokenKind::Dollar => {
@@ -397,171 +397,171 @@ impl<'a> Parser<'a> {
                 let mut exprs = Vec::new();
                 if !self.match_kind(TokenKind::RBracket) {
                     loop {
-                        exprs.push(self.parse_expr());
+                        exprs.push(self.parse_expr()?);
                         if !self.match_kind(TokenKind::Comma) {
                             break;
                         }
                     }
-                    self.expect(TokenKind::RBracket);
+                    self.expect(TokenKind::RBracket)?;
                 }
                 let full_span = span.merge(self.previous_span());
-                Expr {
+                Ok(Expr {
                     node: ExprKind::List(exprs),
                     span: full_span,
-                }
+                })
             }
-            TokenKind::Args => Expr {
+            TokenKind::Args => Ok(Expr {
                 node: ExprKind::Args,
                 span,
-            },
+            }),
             TokenKind::Capture => self.parse_command_substitution(span),
             TokenKind::Exists => {
-                self.expect(TokenKind::LParen);
-                let path = self.parse_expr();
-                self.expect(TokenKind::RParen);
-                Expr {
+                self.expect(TokenKind::LParen)?;
+                let path = self.parse_expr()?;
+                self.expect(TokenKind::RParen)?;
+                Ok(Expr {
                     node: ExprKind::Exists(Box::new(path)),
                     span: span.merge(self.previous_span()),
-                }
+                })
             }
             TokenKind::IsDir => {
-                self.expect(TokenKind::LParen);
-                let path = self.parse_expr();
-                self.expect(TokenKind::RParen);
-                Expr {
+                self.expect(TokenKind::LParen)?;
+                let path = self.parse_expr()?;
+                self.expect(TokenKind::RParen)?;
+                Ok(Expr {
                     node: ExprKind::IsDir(Box::new(path)),
                     span: span.merge(self.previous_span()),
-                }
+                })
             }
             TokenKind::IsFile => {
-                self.expect(TokenKind::LParen);
-                let path = self.parse_expr();
-                self.expect(TokenKind::RParen);
-                Expr {
+                self.expect(TokenKind::LParen)?;
+                let path = self.parse_expr()?;
+                self.expect(TokenKind::RParen)?;
+                Ok(Expr {
                     node: ExprKind::IsFile(Box::new(path)),
                     span: span.merge(self.previous_span()),
-                }
+                })
             }
             TokenKind::IsSymlink => {
-                self.expect(TokenKind::LParen);
-                let path = self.parse_expr();
-                self.expect(TokenKind::RParen);
-                Expr {
+                self.expect(TokenKind::LParen)?;
+                let path = self.parse_expr()?;
+                self.expect(TokenKind::RParen)?;
+                Ok(Expr {
                     node: ExprKind::IsSymlink(Box::new(path)),
                     span: span.merge(self.previous_span()),
-                }
+                })
             }
             TokenKind::IsExec => {
-                self.expect(TokenKind::LParen);
-                let path = self.parse_expr();
-                self.expect(TokenKind::RParen);
-                Expr {
+                self.expect(TokenKind::LParen)?;
+                let path = self.parse_expr()?;
+                self.expect(TokenKind::RParen)?;
+                Ok(Expr {
                     node: ExprKind::IsExec(Box::new(path)),
                     span: span.merge(self.previous_span()),
-                }
+                })
             }
             TokenKind::IsReadable => {
-                self.expect(TokenKind::LParen);
-                let path = self.parse_expr();
-                self.expect(TokenKind::RParen);
-                Expr {
+                self.expect(TokenKind::LParen)?;
+                let path = self.parse_expr()?;
+                self.expect(TokenKind::RParen)?;
+                Ok(Expr {
                     node: ExprKind::IsReadable(Box::new(path)),
                     span: span.merge(self.previous_span()),
-                }
+                })
             }
             TokenKind::IsWritable => {
-                self.expect(TokenKind::LParen);
-                let path = self.parse_expr();
-                self.expect(TokenKind::RParen);
-                Expr {
+                self.expect(TokenKind::LParen)?;
+                let path = self.parse_expr()?;
+                self.expect(TokenKind::RParen)?;
+                Ok(Expr {
                     node: ExprKind::IsWritable(Box::new(path)),
                     span: span.merge(self.previous_span()),
-                }
+                })
             }
             TokenKind::IsNonEmpty => {
-                self.expect(TokenKind::LParen);
-                let path = self.parse_expr();
-                self.expect(TokenKind::RParen);
-                Expr {
+                self.expect(TokenKind::LParen)?;
+                let path = self.parse_expr()?;
+                self.expect(TokenKind::RParen)?;
+                Ok(Expr {
                     node: ExprKind::IsNonEmpty(Box::new(path)),
                     span: span.merge(self.previous_span()),
-                }
+                })
             }
             TokenKind::BoolStr => {
-                self.expect(TokenKind::LParen);
-                let expr = self.parse_expr();
-                self.expect(TokenKind::RParen);
-                Expr {
+                self.expect(TokenKind::LParen)?;
+                let expr = self.parse_expr()?;
+                self.expect(TokenKind::RParen)?;
+                Ok(Expr {
                     node: ExprKind::BoolStr(Box::new(expr)),
                     span: span.merge(self.previous_span()),
-                }
+                })
             }
             TokenKind::Len => {
-                self.expect(TokenKind::LParen);
-                let expr = self.parse_expr();
-                self.expect(TokenKind::RParen);
-                Expr {
+                self.expect(TokenKind::LParen)?;
+                let expr = self.parse_expr()?;
+                self.expect(TokenKind::RParen)?;
+                Ok(Expr {
                     node: ExprKind::Len(Box::new(expr)),
                     span: span.merge(self.previous_span()),
-                }
+                })
             }
             TokenKind::Arg => {
-                self.expect(TokenKind::LParen);
+                self.expect(TokenKind::LParen)?;
                 let n = if let Some(TokenKind::Number(n)) = self.peek_kind() {
                     *n
                 } else {
-                    self.error("Expected number in arg(n)", self.current_span());
+                    self.error("Expected number in arg(n)", self.current_span())?
                 };
                 self.advance();
-                self.expect(TokenKind::RParen);
-                Expr {
+                self.expect(TokenKind::RParen)?;
+                Ok(Expr {
                     node: ExprKind::Arg(n),
                     span: span.merge(self.previous_span()),
-                }
+                })
             }
             TokenKind::Index => {
-                self.expect(TokenKind::LParen);
-                let list = self.parse_expr();
-                self.expect(TokenKind::Comma);
-                let index = self.parse_expr();
-                self.expect(TokenKind::RParen);
-                Expr {
+                self.expect(TokenKind::LParen)?;
+                let list = self.parse_expr()?;
+                self.expect(TokenKind::Comma)?;
+                let index = self.parse_expr()?;
+                self.expect(TokenKind::RParen)?;
+                Ok(Expr {
                     node: ExprKind::Index {
                         list: Box::new(list),
                         index: Box::new(index),
                     },
                     span: span.merge(self.previous_span()),
-                }
+                })
             }
             TokenKind::Join => {
-                self.expect(TokenKind::LParen);
-                let list = self.parse_expr();
-                self.expect(TokenKind::Comma);
-                let sep = self.parse_expr();
-                self.expect(TokenKind::RParen);
-                Expr {
+                self.expect(TokenKind::LParen)?;
+                let list = self.parse_expr()?;
+                self.expect(TokenKind::Comma)?;
+                let sep = self.parse_expr()?;
+                self.expect(TokenKind::RParen)?;
+                Ok(Expr {
                     node: ExprKind::Join {
                         list: Box::new(list),
                         sep: Box::new(sep),
                     },
                     span: span.merge(self.previous_span()),
-                }
+                })
             }
             TokenKind::Status => {
-                self.expect(TokenKind::LParen);
-                self.expect(TokenKind::RParen);
-                Expr {
+                self.expect(TokenKind::LParen)?;
+                self.expect(TokenKind::RParen)?;
+                Ok(Expr {
                     node: ExprKind::Status,
                     span: span.merge(self.previous_span()),
-                }
+                })
             }
             TokenKind::Pid => {
-                self.expect(TokenKind::LParen);
-                self.expect(TokenKind::RParen);
-                Expr {
+                self.expect(TokenKind::LParen)?;
+                self.expect(TokenKind::RParen)?;
+                Ok(Expr {
                     node: ExprKind::Pid,
                     span: span.merge(self.previous_span()),
-                }
+                })
             }
             TokenKind::Env => {
                 // Check if dot
@@ -570,105 +570,105 @@ impl<'a> Parser<'a> {
                     if let Some(TokenKind::Ident(name)) = self.peek_kind() {
                         let name = name.clone();
                         self.advance();
-                        Expr {
+                        Ok(Expr {
                             node: ExprKind::EnvDot(name),
                             span: span.merge(self.previous_span()),
-                        }
+                        })
                     } else {
-                        self.error("Expected identifier after env.", self.current_span());
+                        self.error("Expected identifier after env.", self.current_span())?
                     }
                 } else {
-                    self.expect(TokenKind::LParen);
-                    let name_expr = self.parse_expr();
-                    self.expect(TokenKind::RParen);
-                    Expr {
+                    self.expect(TokenKind::LParen)?;
+                    let name_expr = self.parse_expr()?;
+                    self.expect(TokenKind::RParen)?;
+                    Ok(Expr {
                         node: ExprKind::Env(Box::new(name_expr)),
                         span: span.merge(self.previous_span()),
-                    }
+                    })
                 }
             }
             TokenKind::Uid => {
-                self.expect(TokenKind::LParen);
-                self.expect(TokenKind::RParen);
-                Expr {
+                self.expect(TokenKind::LParen)?;
+                self.expect(TokenKind::RParen)?;
+                Ok(Expr {
                     node: ExprKind::Uid,
                     span: span.merge(self.previous_span()),
-                }
+                })
             }
             TokenKind::Ppid => {
-                self.expect(TokenKind::LParen);
-                self.expect(TokenKind::RParen);
-                Expr {
+                self.expect(TokenKind::LParen)?;
+                self.expect(TokenKind::RParen)?;
+                Ok(Expr {
                     node: ExprKind::Ppid,
                     span: span.merge(self.previous_span()),
-                }
+                })
             }
             TokenKind::Pwd => {
-                self.expect(TokenKind::LParen);
-                self.expect(TokenKind::RParen);
-                Expr {
+                self.expect(TokenKind::LParen)?;
+                self.expect(TokenKind::RParen)?;
+                Ok(Expr {
                     node: ExprKind::Pwd,
                     span: span.merge(self.previous_span()),
-                }
+                })
             }
             TokenKind::SelfPid => {
-                self.expect(TokenKind::LParen);
-                self.expect(TokenKind::RParen);
-                Expr {
+                self.expect(TokenKind::LParen)?;
+                self.expect(TokenKind::RParen)?;
+                Ok(Expr {
                     node: ExprKind::SelfPid,
                     span: span.merge(self.previous_span()),
-                }
+                })
             }
             TokenKind::Argv0 => {
-                self.expect(TokenKind::LParen);
-                self.expect(TokenKind::RParen);
-                Expr {
+                self.expect(TokenKind::LParen)?;
+                self.expect(TokenKind::RParen)?;
+                Ok(Expr {
                     node: ExprKind::Argv0,
                     span: span.merge(self.previous_span()),
-                }
+                })
             }
             TokenKind::Argc => {
-                self.expect(TokenKind::LParen);
-                self.expect(TokenKind::RParen);
-                Expr {
+                self.expect(TokenKind::LParen)?;
+                self.expect(TokenKind::RParen)?;
+                Ok(Expr {
                     node: ExprKind::Argc,
                     span: span.merge(self.previous_span()),
-                }
+                })
             }
             TokenKind::Count => {
-                self.expect(TokenKind::LParen);
-                let inner = self.parse_expr();
-                self.expect(TokenKind::RParen);
-                Expr {
+                self.expect(TokenKind::LParen)?;
+                let inner = self.parse_expr()?;
+                self.expect(TokenKind::RParen)?;
+                Ok(Expr {
                     node: ExprKind::Count(Box::new(inner)),
                     span: span.merge(self.previous_span()),
-                }
+                })
             }
-            TokenKind::True => Expr {
+            TokenKind::True => Ok(Expr {
                 node: ExprKind::Bool(true),
                 span,
-            },
-            TokenKind::False => Expr {
+            }),
+            TokenKind::False => Ok(Expr {
                 node: ExprKind::Bool(false),
                 span,
-            },
-            TokenKind::Number(n) => Expr {
+            }),
+            TokenKind::Number(n) => Ok(Expr {
                 node: ExprKind::Number(*n),
                 span,
-            },
+            }),
             _ => {
-                self.error(&format!("Expected expression, got {:?}", t.kind), span);
+                self.error(&format!("Expected expression, got {:?}", t.kind), span)
             }
         }
     }
 
-    fn parse_command_substitution(&mut self, start_span: Span) -> Expr {
-        self.expect(TokenKind::LParen);
+    fn parse_command_substitution(&mut self, start_span: Span) -> ParsResult<Expr> {
+        self.expect(TokenKind::LParen)?;
         let mut segments: Vec<Vec<Expr>> = Vec::new();
         loop {
             let mut args: Vec<Expr> = Vec::new();
             if self.match_kind(TokenKind::Run) {
-                self.expect(TokenKind::LParen);
+                self.expect(TokenKind::LParen)?;
                 loop {
                     // run(...) arguments loop
                     if self.peek_kind() == Some(&TokenKind::RParen) {
@@ -680,13 +680,13 @@ impl<'a> Parser<'a> {
                         let next_t = self.tokens.get(self.pos + 1);
                         if let Some(nt) = next_t {
                             if nt.kind == TokenKind::Equals {
-                                self.error("run options like allow_fail=... are not supported inside command substitution", self.current_span());
+                                self.error("run options like allow_fail=... are not supported inside command substitution", self.current_span())?;
                             }
                         }
                     }
-                    args.push(self.parse_expr());
+                    args.push(self.parse_expr()?);
                     if !self.match_kind(TokenKind::Comma) {
-                        self.expect(TokenKind::RParen);
+                        self.expect(TokenKind::RParen)?;
                         break;
                     }
                 }
@@ -698,15 +698,15 @@ impl<'a> Parser<'a> {
                     node: ExprKind::Literal(name),
                     span: name_span,
                 });
-                self.expect(TokenKind::LParen);
+                self.expect(TokenKind::LParen)?;
                 loop {
                     if self.peek_kind() == Some(&TokenKind::RParen) {
                         self.advance();
                         break;
                     }
-                    args.push(self.parse_expr());
+                    args.push(self.parse_expr()?);
                     if !self.match_kind(TokenKind::Comma) {
-                        self.expect(TokenKind::RParen);
+                        self.expect(TokenKind::RParen)?;
                         break;
                     }
                 }
@@ -728,36 +728,36 @@ impl<'a> Parser<'a> {
                     }
 
                     if self.match_kind(TokenKind::Comma) {}
-                    args.push(self.parse_expr());
+                    args.push(self.parse_expr()?);
                 }
             } else {
                 self.error(
                     "Expected run(...), function call, or string literal command name",
                     self.current_span(),
-                );
+                )?;
             }
             segments.push(args);
             if !self.match_kind(TokenKind::Pipe) {
                 break;
             }
         }
-        self.expect(TokenKind::RParen);
+        self.expect(TokenKind::RParen)?;
         let full_span = start_span.merge(self.previous_span());
 
         if segments.len() == 1 {
-            Expr {
+            Ok(Expr {
                 node: ExprKind::Command(segments.pop().unwrap()),
                 span: full_span,
-            }
+            })
         } else {
-            Expr {
+            Ok(Expr {
                 node: ExprKind::CommandPipe(segments),
                 span: full_span,
-            }
+            })
         }
     }
 
-    fn parse_interpolated_string(&mut self, raw: &str, span: Span) -> Expr {
+    fn parse_interpolated_string(&mut self, raw: &str, span: Span) -> ParsResult<Expr> {
         // Implementation from old parser.rs, but constructing Exprs with relative spans would be hard
         // because we don't track byte offsets inside string literal content easily without recalculating.
         // For now, attach the WHOLE string span to every part or try to sub-span?
@@ -799,29 +799,25 @@ impl<'a> Parser<'a> {
                 i += 1;
                 continue;
             }
-            if raw[i..].starts_with("$") && raw.len() > i + 1 {
-                let next_char = raw[i + 1..].chars().next().unwrap();
-                if next_char.is_ascii_alphabetic() || next_char == '_' {
-                    if !buf.is_empty() {
-                        parts.push(Expr {
-                            node: ExprKind::Literal(std::mem::take(&mut buf)),
-                            span,
-                        });
-                    }
-                    let start = i + 1;
-                    let mut end = start;
-                    for c in raw[start..].chars() {
-                        if !c.is_ascii_alphanumeric() && c != '_' {
-                            break;
-                        }
-                        end += c.len_utf8();
-                    }
-                    let ident = &raw[start..end];
+            if raw[i..].starts_with('$') {
+                if !buf.is_empty() {
+                    parts.push(Expr {
+                        node: ExprKind::Literal(std::mem::take(&mut buf)),
+                        span,
+                    });
+                }
+                let start = i + 1;
+                // find end of ident
+                let len = raw[start..]
+                    .find(|c: char| !c.is_alphanumeric() && c != '_')
+                    .unwrap_or(raw.len() - start);
+                if len > 0 {
+                    let ident = &raw[start..start + len];
                     parts.push(Expr {
                         node: ExprKind::Var(ident.to_string()),
                         span,
                     });
-                    i = end;
+                    i = start + len;
                     continue;
                 }
             }
@@ -837,10 +833,10 @@ impl<'a> Parser<'a> {
             });
         }
         if parts.is_empty() {
-            return Expr {
+            return Ok(Expr {
                 node: ExprKind::Literal(String::new()),
                 span,
-            };
+            });
         }
 
         let mut expr = parts[0].clone();
@@ -850,27 +846,19 @@ impl<'a> Parser<'a> {
                 span,
             };
         }
-        expr
+        Ok(expr)
     }
 
-    fn parse_brace_interpolated_string(&mut self, raw: &str, span: Span) -> Expr {
+    fn parse_brace_interpolated_string(&mut self, raw: &str, span: Span) -> ParsResult<Expr> {
         let mut parts: Vec<Expr> = Vec::new();
         let mut i = 0;
         let mut buf = String::new();
 
         while i < raw.len() {
-            if raw[i..].starts_with("\\{")
-                || raw[i..].starts_with("\\}")
-                || raw[i..].starts_with("\\$")
-            {
-                let ch = raw[i + 1..].chars().next().unwrap();
-                buf.push(ch);
-                i += 1 + ch.len_utf8();
-                continue;
-            }
-
-            if raw[i..].starts_with("{") {
+            if raw[i..].starts_with('{') {
+                // Potential start of interpolation
                 let start = i + 1;
+                // find closing '}'
                 if let Some(end_rel) = raw[start..].find('}') {
                     let end = start + end_rel;
                     let ident = &raw[start..end];
@@ -881,22 +869,16 @@ impl<'a> Parser<'a> {
                                 span,
                             });
                         }
-                        if ident == "args" {
-                            parts.push(Expr {
-                                node: ExprKind::Args,
-                                span,
-                            });
-                        } else {
-                            parts.push(Expr {
-                                node: ExprKind::Var(ident.to_string()),
-                                span,
-                            });
-                        }
+                        parts.push(Expr {
+                            node: ExprKind::Var(ident.to_string()),
+                            span,
+                        });
                         i = end + 1;
                         continue;
                     }
                 }
             }
+            
             let ch = raw[i..].chars().next().unwrap();
             buf.push(ch);
             i += ch.len_utf8();
@@ -909,10 +891,10 @@ impl<'a> Parser<'a> {
             });
         }
         if parts.is_empty() {
-            return Expr {
+            return Ok(Expr {
                 node: ExprKind::Literal(String::new()),
                 span,
-            };
+            });
         }
 
         let mut expr = parts[0].clone();
@@ -922,7 +904,7 @@ impl<'a> Parser<'a> {
                 span,
             };
         }
-        expr
+        Ok(expr)
     }
 }
 

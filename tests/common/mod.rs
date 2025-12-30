@@ -13,7 +13,8 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use sh2c::loader;
 
 pub fn compile_path_to_shell(path: &Path, target: TargetShell) -> String {
-    let program = loader::load_program_with_imports(path);
+    let program = loader::load_program_with_imports(path)
+        .unwrap_or_else(|d| panic!("{}", d.format(path.parent())));
     let opts = sh2c::lower::LowerOptions {
         include_diagnostics: true,
         diag_base_dir: Some(std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))),
@@ -29,8 +30,19 @@ pub fn compile_to_bash(src: &str) -> String {
 }
 pub fn compile_to_shell(src: &str, target: TargetShell) -> String {
     let sm = sh2c::span::SourceMap::new(src.to_string());
-    let tokens = lexer::lex(&sm, src);
-    let mut program = parser::parse(&tokens, &sm, "inline_test");
+    let tokens = lexer::lex(&sm, src); // lex doesn't return Result in signature? 
+    // Wait, I updated lexer::lex to return Result in lexer.rs Step 1905? 
+    // Step 1905 updated Lexer::error, but NOT lex function signature explicitly in replacement.
+    // Step 1859 updated loader.rs to use `?` on lexer::lex. Implying it returns Result.
+    // If lexer::lex was NOT updated to return Result, loader.rs would fail.
+    // But loader.rs compiled. So lexer::lex MUST returning Result (or I am confused).
+    // Let's check lexer.rs source View 1896 line 44: `pub fn lex... -> Result`.
+    // Yes, it returns Result.
+    // So tokens line 32 needs unwrap.
+    let tokens = tokens.unwrap_or_else(|d| panic!("{}", d.format(None))); 
+
+    let mut program = parser::parse(&tokens, &sm, "inline_test")
+        .unwrap_or_else(|d| panic!("{}", d.format(None)));
     program.source_maps.insert("inline_test".to_string(), sm);
     // Note: lower calls generally require accurate file info but here we use "inline_test"
     let opts = sh2c::lower::LowerOptions {
@@ -45,8 +57,8 @@ pub fn parse_fixture(fixture_name: &str) -> ast::Program {
     let sh2_path = format!("tests/fixtures/{}.sh2", fixture_name);
     let src = fs::read_to_string(&sh2_path).expect("Failed to read fixture");
     let sm = sh2c::span::SourceMap::new(src.clone());
-    let tokens = lexer::lex(&sm, &src);
-    parser::parse(&tokens, &sm, &sh2_path)
+    let tokens = lexer::lex(&sm, &src).unwrap_or_else(|d| panic!("{}", d.format(None)));
+    parser::parse(&tokens, &sm, &sh2_path).unwrap_or_else(|d| panic!("{}", d.format(None)))
 }
 
 pub fn assert_codegen_matches_snapshot(fixture_name: &str) {
@@ -278,9 +290,18 @@ pub fn assert_exec_matches_fixture(fixture_name: &str) {
 
 pub fn assert_exec_matches_fixture_target(fixture_name: &str, target: TargetShell) {
     let sh2_path = format!("tests/fixtures/{}.sh2", fixture_name);
-    let stdout_path = format!("tests/fixtures/{}.stdout", fixture_name);
-    let stderr_path = format!("tests/fixtures/{}.stderr", fixture_name);
-    let status_path = format!("tests/fixtures/{}.status", fixture_name);
+    let target_str = match target {
+        TargetShell::Bash => "bash",
+        TargetShell::Posix => "posix",
+    };
+    let stdout_path_tgt = format!("tests/fixtures/{}.{}.stdout", fixture_name, target_str);
+    let stderr_path_tgt = format!("tests/fixtures/{}.{}.stderr", fixture_name, target_str);
+    let status_path_tgt = format!("tests/fixtures/{}.{}.status", fixture_name, target_str);
+    
+    let stdout_path = if Path::new(&stdout_path_tgt).exists() { stdout_path_tgt } else { format!("tests/fixtures/{}.stdout", fixture_name) };
+    let stderr_path = if Path::new(&stderr_path_tgt).exists() { stderr_path_tgt } else { format!("tests/fixtures/{}.stderr", fixture_name) };
+    let status_path = if Path::new(&status_path_tgt).exists() { status_path_tgt } else { format!("tests/fixtures/{}.status", fixture_name) };
+
     let args_path = format!("tests/fixtures/{}.args", fixture_name);
     let env_path = format!("tests/fixtures/{}.env", fixture_name);
     let stdin_path = format!("tests/fixtures/{}.stdin", fixture_name);
@@ -290,10 +311,12 @@ pub fn assert_exec_matches_fixture_target(fixture_name: &str, target: TargetShel
         panic!("Fixture {} does not exist", sh2_path);
     }
 
-    // Only run if at least one expectation file exists
+    // Only run if at least one expectation file exists (checked generically or target specific)
     if !Path::new(&stdout_path).exists()
         && !Path::new(&stderr_path).exists()
         && !Path::new(&status_path).exists()
+         // Also allow running if Update is requested, to create new snapshots? 
+         // But maybe limit to existing checks to avoid creating garbage for partial tests.
     {
         return;
     }
@@ -436,7 +459,10 @@ pub fn assert_exec_matches_fixture_target(fixture_name: &str, target: TargetShel
         fs_setup,
     );
 
-    if Path::new(&stdout_path).exists() {
+    if Path::new(&stdout_path).exists() || std::env::var("SH2C_UPDATE_SNAPSHOTS").is_ok() {
+        if std::env::var("SH2C_UPDATE_SNAPSHOTS").is_ok() {
+            fs::write(&stdout_path, &stdout).expect("Failed to update stdout snapshot");
+        }
         let expected_stdout = fs::read_to_string(&stdout_path)
             .expect("Failed to read stdout fixture")
             .replace("\r\n", "\n");
@@ -449,7 +475,10 @@ pub fn assert_exec_matches_fixture_target(fixture_name: &str, target: TargetShel
         );
     }
 
-    if Path::new(&stderr_path).exists() {
+    if Path::new(&stderr_path).exists() || std::env::var("SH2C_UPDATE_SNAPSHOTS").is_ok() {
+        if std::env::var("SH2C_UPDATE_SNAPSHOTS").is_ok() {
+            fs::write(&stderr_path, &stderr).expect("Failed to update stderr snapshot");
+        }
         let expected_stderr = fs::read_to_string(&stderr_path)
             .expect("Failed to read stderr fixture")
             .replace("\r\n", "\n");
@@ -755,7 +784,18 @@ pub fn assert_parse_error_matches_snapshot(fixture_name: &str) {
         }
     };
     
-    let output = err_msg.trim().replace("\r\n", "\n");
+    // Sanitize panic message (strip thread info/stack trace pointers if present)
+    // The test harness or panic handler might erroneously include this info in the payload or we are catching something weird.
+    // We want to keep the diagnostic part.
+    // Heuristic: remove lines likely to be panic metadata.
+    let lines: Vec<&str> = err_msg.lines()
+        .filter(|l| {
+             !l.contains("thread '") 
+             && !l.contains("panicked at") 
+             && !l.starts_with("note: run with")
+        })
+        .collect();
+    let output = lines.join("\n").trim().replace("\r\n", "\n");
 
     let expected = if std::env::var("SH2C_UPDATE_SNAPSHOTS").is_ok() {
         fs::write(&expected_path, &output).expect("Failed to update snapshot");

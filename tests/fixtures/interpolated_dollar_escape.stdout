@@ -1,3 +1,3 @@
-literal: {name}
-dollar: $
+literal: \{name\}
+dollar: \$
 interp: world

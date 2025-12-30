@@ -1,8 +1,6 @@
-thread 'main' (2464572) panicked at src/lower.rs:568:25:
 diag_span_bad_option_loc.sh2:2:30: write_file() third argument must be a boolean literal
     write_file("foo", "bar", invalid)
                              ^~~~~~~
-note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
 Error: diag_span_bad_option_loc.sh2:2:30: write_file() third argument must be a boolean literal
     write_file("foo", "bar", invalid)
                              ^~~~~~~

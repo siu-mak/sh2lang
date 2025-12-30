@@ -1,7 +1,9 @@
 __sh2_split() { awk -v s="$1" -v sep="$2" 'BEGIN { if(sep=="") { printf "%s", s; exit } len=length(sep); while(i=index(s, sep)) { printf "%s\n", substr(s, 1, i-1); s=substr(s, i+len) } printf "%s", s }'; }
-__sh2_err_handler() { local s=$?; printf "Error in %s\n" "${__sh2_loc:-unknown}" >&2; return $s; }
+__sh2_err_handler() { local s=$?; if [[ "${BASH_COMMAND}" == *"(exit "* ]]; then return $s; fi; printf "Error in %s\n" "${__sh2_loc:-unknown}" >&2; return $s; }
+set -o errtrace
 trap '__sh2_err_handler' ERR
 main() {
+  local __sh2_loc=""
   __sh2_loc="tests/fixtures/string_split_basic.sh2:2:5"
   s='a,,b'
   printf '%s\n' "$( __sh2_split "$s" ',' )"
