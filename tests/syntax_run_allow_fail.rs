@@ -15,6 +15,12 @@ fn exec_run_disallow_fail_try() {
 }
 
 #[test]
+fn exec_run_allow_fail_works() {
+    assert_exec_matches_fixture_target("run_allow_fail_works", TargetShell::Bash);
+    assert_exec_matches_fixture_target("run_allow_fail_works", TargetShell::Posix);
+}
+
+#[test]
 fn exec_run_allow_fail_pipe_segment() {
     assert_exec_matches_fixture_target("run_allow_fail_pipe_segment", TargetShell::Bash);
     assert_exec_matches_fixture_target("run_allow_fail_pipe_segment", TargetShell::Posix);
@@ -49,12 +55,12 @@ fn compile_panic_run_allow_fail_unknown_option() {
     assert_codegen_panics_target(
         "run_allow_fail_unknown_option",
         TargetShell::Bash,
-        "Expected expression, got Equals",
+        "unknown run option: nope",
     );
     assert_codegen_panics_target(
         "run_allow_fail_unknown_option",
         TargetShell::Posix,
-        "Expected expression, got Equals",
+        "unknown run option: nope",
     );
 }
 
@@ -63,12 +69,12 @@ fn compile_panic_run_allow_fail_non_bool() {
     assert_codegen_panics_target(
         "run_allow_fail_non_bool",
         TargetShell::Bash,
-        "allow_fail must be bool",
+        "allow_fail must be true/false literal",
     );
     assert_codegen_panics_target(
         "run_allow_fail_non_bool",
         TargetShell::Posix,
-        "allow_fail must be bool",
+        "allow_fail must be true/false literal",
     );
 }
 
@@ -77,12 +83,12 @@ fn compile_panic_run_allow_fail_duplicate() {
     assert_codegen_panics_target(
         "run_allow_fail_duplicate",
         TargetShell::Bash,
-        "allow_fail duplicate",
+        "allow_fail specified more than once",
     );
     assert_codegen_panics_target(
         "run_allow_fail_duplicate",
         TargetShell::Posix,
-        "allow_fail duplicate",
+        "allow_fail specified more than once",
     );
 }
 
@@ -91,12 +97,12 @@ fn compile_panic_run_allow_fail_duplicate_first_false() {
     assert_codegen_panics_target(
         "run_allow_fail_duplicate_first_false",
         TargetShell::Bash,
-        "allow_fail duplicate",
+        "allow_fail specified more than once",
     );
     assert_codegen_panics_target(
         "run_allow_fail_duplicate_first_false",
         TargetShell::Posix,
-        "allow_fail duplicate",
+        "allow_fail specified more than once",
     );
 }
 

@@ -443,8 +443,9 @@ pub fn assert_exec_matches_fixture_target(fixture_name: &str, target: TargetShel
         assert_eq!(
             stdout.trim(),
             expected_stdout.trim(),
-            "Stdout mismatch for {}",
-            fixture_name
+            "Stdout mismatch for {}.\nStderr:\n{}",
+            fixture_name,
+            stderr
         );
     }
 

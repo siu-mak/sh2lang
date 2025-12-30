@@ -50,7 +50,7 @@ fn cli_target_default_is_bash() {
     // Note: CLI uses script parent as base, so paths are basename-only here.
    
      let expected = r#"
-__sh2_err_handler() { printf "Error in %s\n" "${__sh2_loc:-unknown}" >&2; }
+__sh2_err_handler() { local s=$?; printf "Error in %s\n" "${__sh2_loc:-unknown}" >&2; return $s; }
 trap '__sh2_err_handler' ERR
 main() {
   __sh2_loc="cli_target_basic.sh2:2:3"
@@ -70,7 +70,7 @@ main "$@"
 #[test]
 fn cli_target_explicit_bash() {
     let expected = r#"
-__sh2_err_handler() { printf "Error in %s\n" "${__sh2_loc:-unknown}" >&2; }
+__sh2_err_handler() { local s=$?; printf "Error in %s\n" "${__sh2_loc:-unknown}" >&2; return $s; }
 trap '__sh2_err_handler' ERR
 main() {
   __sh2_loc="cli_target_basic.sh2:2:3"
@@ -90,7 +90,7 @@ main "$@"
 #[test]
 fn cli_target_explicit_bash_equal() {
     let expected = r#"
-__sh2_err_handler() { printf "Error in %s\n" "${__sh2_loc:-unknown}" >&2; }
+__sh2_err_handler() { local s=$?; printf "Error in %s\n" "${__sh2_loc:-unknown}" >&2; return $s; }
 trap '__sh2_err_handler' ERR
 main() {
   __sh2_loc="cli_target_basic.sh2:2:3"

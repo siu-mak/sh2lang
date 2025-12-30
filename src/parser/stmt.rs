@@ -658,39 +658,40 @@ impl<'a> Parser<'a> {
         self.expect(TokenKind::Run);
         self.expect(TokenKind::LParen);
         let mut args = Vec::new();
-        let mut allow_fail = false;
-        let mut seen_allow_fail = false;
+        let mut options = Vec::new();
 
         while !self.match_kind(TokenKind::RParen) {
-            // Check for named arg allow_fail=...
-            if let Some(TokenKind::Ident(name)) = self.peek_kind() {
-                if name == "allow_fail" {
-                    if self.tokens.get(self.pos + 1).map(|t| &t.kind) == Some(&TokenKind::Equals) {
-                        self.advance(); // name
-                        self.advance(); // =
-                        if seen_allow_fail {
-                            self.error("allow_fail duplicate", self.current_span());
-                        }
-                        seen_allow_fail = true;
+            // Check for named arg: IDENT = ...
+            let is_named_arg = if let Some(TokenKind::Ident(_)) = self.peek_kind() {
+                self.tokens.get(self.pos + 1).map(|t| &t.kind) == Some(&TokenKind::Equals)
+            } else {
+                false
+            };
 
-                        if self.match_kind(TokenKind::True) {
-                            allow_fail = true;
-                        } else if self.match_kind(TokenKind::False) {
-                            allow_fail = false;
-                        } else {
-                            self.error("allow_fail must be bool", self.current_span());
-                        }
-
-                        self.match_kind(TokenKind::Comma);
-                        continue;
-                    }
-                }
+            if is_named_arg {
+                let start_span = self.current_span();
+                let name = if let Some(TokenKind::Ident(s)) = self.peek_kind() {
+                    s.clone()
+                } else {
+                    unreachable!()
+                };
+                self.advance(); // consume ident
+                let name_span = start_span.merge(self.previous_span());
+                self.expect(TokenKind::Equals);
+                let value = self.parse_expr();
+                
+                options.push(RunOption {
+                    name,
+                    value,
+                    span: name_span,
+                });
+            } else {
+                args.push(self.parse_expr());
             }
 
-            args.push(self.parse_expr());
             self.match_kind(TokenKind::Comma);
         }
-        RunCall { args, allow_fail }
+        RunCall { args, options }
     }
 
     fn parse_pipe_segment(&mut self) -> Vec<Stmt> {

@@ -142,9 +142,16 @@ pub enum ExprKind {
 }
 
 #[derive(Debug, Clone, PartialEq)]
+pub struct RunOption {
+    pub name: String,
+    pub value: Expr,
+    pub span: Span,
+}
+
+#[derive(Debug, Clone, PartialEq)]
 pub struct RunCall {
     pub args: Vec<Expr>,
-    pub allow_fail: bool,
+    pub options: Vec<RunOption>,
 }
 
 

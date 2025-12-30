@@ -219,9 +219,28 @@ fn lower_stmt<'a>(
                 .into_iter()
                 .map(|a| lower_expr(a, &mut ctx, sm, file))
                 .collect();
+
+            let mut allow_fail = false;
+            let mut seen_allow_fail = false;
+            for opt in run_call.options {
+                if opt.name == "allow_fail" {
+                    if seen_allow_fail {
+                        panic!("{}", sm.format_diagnostic(file, opts.diag_base_dir.as_deref(), "allow_fail specified more than once", opt.span));
+                    }
+                    seen_allow_fail = true;
+                    if let ast::ExprKind::Bool(b) = opt.value.node {
+                        allow_fail = b;
+                    } else {
+                        panic!("{}", sm.format_diagnostic(file, opts.diag_base_dir.as_deref(), "allow_fail must be true/false literal", opt.value.span));
+                    }
+                } else {
+                    panic!("{}", sm.format_diagnostic(file, opts.diag_base_dir.as_deref(), format!("unknown run option: {}", opt.name).as_str(), opt.span));
+                }
+            }
+
             out.push(ir::Cmd::Exec {
                 args: ir_args,
-                allow_fail: run_call.allow_fail,
+                allow_fail,
                 loc,
             });
             ctx
@@ -364,7 +383,26 @@ fn lower_stmt<'a>(
                     .into_iter()
                     .map(|a| lower_expr(a, &mut ctx, sm, file))
                     .collect();
-                lowered_segments.push((lowered_args, run_call.allow_fail));
+
+                let mut allow_fail = false;
+                let mut seen_allow_fail = false;
+                for opt in run_call.options {
+                    if opt.name == "allow_fail" {
+                        if seen_allow_fail {
+                            panic!("{}", sm.format_diagnostic(file, opts.diag_base_dir.as_deref(), "allow_fail specified more than once", opt.span));
+                        }
+                        seen_allow_fail = true;
+                        if let ast::ExprKind::Bool(b) = opt.value.node {
+                            allow_fail = b;
+                        } else {
+                            panic!("{}", sm.format_diagnostic(file, opts.diag_base_dir.as_deref(), "allow_fail must be true/false literal", opt.value.span));
+                        }
+                    } else {
+                        panic!("{}", sm.format_diagnostic(file, opts.diag_base_dir.as_deref(), format!("unknown run option: {}", opt.name).as_str(), opt.span));
+                    }
+                }
+
+                lowered_segments.push((lowered_args, allow_fail));
             }
             out.push(ir::Cmd::Pipe(lowered_segments, loc));
             ctx

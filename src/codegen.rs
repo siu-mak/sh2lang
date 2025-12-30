@@ -1692,7 +1692,15 @@ fn emit_cmd(cmd: &Cmd, out: &mut String, indent: usize, target: TargetShell) {
             try_body,
             catch_body,
         } => {
-            // Use if { try } then : else catch fi to preserve $? in catch block
+            // Save errexit state and disable it so that 'run' commands don't exit the shell
+            out.push_str(&format!(
+                "{pad}local __sh2_e=0; case $- in *e*) __sh2_e=1;; *) __sh2_e=0;; esac; set +e\n"
+            ));
+            
+            if matches!(target, TargetShell::Bash) {
+                out.push_str(&format!("{pad}local __sh2_err=$(trap -p ERR || true); trap - ERR\n"));
+            }
+
             out.push_str(&format!("{pad}if {{\n"));
             if try_body.is_empty() {
                 out.push_str(&format!("{pad}  :\n"));
@@ -1705,13 +1713,21 @@ fn emit_cmd(cmd: &Cmd, out: &mut String, indent: usize, target: TargetShell) {
                     if i > 0 {
                         out.push_str(" &&\n");
                     }
-                    out.push_str(cmd_str);
+                    out.push_str(&format!("{{ {}; }}", cmd_str));
                 }
                 out.push('\n');
             }
+            // Restore trap and set -e in both branches
+            let restore = if matches!(target, TargetShell::Bash) {
+                r#"if [ -n "$__sh2_err" ]; then eval "$__sh2_err"; fi; if [ "$__sh2_e" = 1 ]; then set -e; fi"#
+            } else {
+                r#"if [ "$__sh2_e" = 1 ]; then set -e; fi"#
+            };
+
             out.push_str(&format!("{pad}}}; then\n"));
-            out.push_str(&format!("{pad}  :\n"));
+            out.push_str(&format!("{pad}  {}\n", restore));
             out.push_str(&format!("{pad}else\n"));
+            out.push_str(&format!("{pad}  {}\n", restore));
 
             if catch_body.is_empty() {
                 out.push_str(&format!("{pad}  :\n"));
@@ -1994,7 +2010,7 @@ fn emit_prelude(target: TargetShell, usage: &PreludeUsage) -> String {
     match target {
         TargetShell::Bash => {
             if usage.loc {
-                s.push_str("__sh2_err_handler() { printf \"Error in %s\\n\" \"${__sh2_loc:-unknown}\" >&2; }\n");
+                s.push_str("__sh2_err_handler() { local s=$?; printf \"Error in %s\\n\" \"${__sh2_loc:-unknown}\" >&2; return $s; }\n");
                 s.push_str("trap '__sh2_err_handler' ERR\n");
             }
             if usage.matches {
