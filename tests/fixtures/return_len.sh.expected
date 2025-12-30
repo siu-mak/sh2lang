@@ -1,5 +1,5 @@
 main() {
-  return "$( printf "%s" 'abc' | awk '{ print length($0) }' )"
+  return "$( printf "%s" 'abc' | awk 'BEGIN{l=0} {l=length($0)} END{print l}' )"
 }
 __sh2_status=0
 main "$@"

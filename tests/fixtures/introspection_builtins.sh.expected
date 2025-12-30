@@ -7,12 +7,12 @@ main() {
       printf '%s\n' 'env_bad'
     fi
   )
-  if [ "$( printf "%s" "$PWD" | awk '{ print length($0) }' )" -gt "0" ]; then
+  if [ "$( printf "%s" "$PWD" | awk 'BEGIN{l=0} {l=length($0)} END{print l}' )" -gt "0" ]; then
     printf '%s\n' 'pwd_ok'
   else
     printf '%s\n' 'pwd_bad'
   fi
-  if [ "$( printf "%s" "$0" | awk '{ print length($0) }' )" -gt "0" ]; then
+  if [ "$( printf "%s" "$0" | awk 'BEGIN{l=0} {l=length($0)} END{print l}' )" -gt "0" ]; then
     printf '%s\n' 'argv0_ok'
   else
     printf '%s\n' 'argv0_bad'
