@@ -153,27 +153,27 @@ fn main() {
 
         if check {
             // We lowered successfully. Now verify codegen doesn't panic/error.
-            // The check flag should not produce any shell output.
-            let _ = codegen::emit_with_options(
+            // For POSIX target, this also validates no bash-only constructs are emitted.
+            codegen::emit_with_options_checked(
                 &ir,
                 codegen::CodegenOptions {
                     target,
                     include_diagnostics,
                 },
-            );
+            )?; // Propagate lint errors
             println!("OK");
             return Ok(());
         }
 
         // Default behavior or --emit-sh
         // Both print the generated shell script to stdout.
-        let out = codegen::emit_with_options(
+        let out = codegen::emit_with_options_checked(
             &ir,
             codegen::CodegenOptions {
                 target,
                 include_diagnostics,
             },
-        );
+        )?; // Propagate lint errors
         
         print!("{}", out);
         Ok(())

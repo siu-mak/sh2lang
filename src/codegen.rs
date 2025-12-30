@@ -1,3 +1,6 @@
+pub mod posix_lint;
+pub use posix_lint::{PosixLint, PosixLintKind, lint_script, render_lints};
+
 use crate::ir::{Cmd, Function, LogLevel, RedirectTarget, Val};
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -431,6 +434,22 @@ pub fn emit_with_options(funcs: &[Function], opts: CodegenOptions) -> String {
     }
     out.push_str("__sh2_status=0\nmain \"$@\"\n");
     out
+}
+
+/// Emit shell script with POSIX compatibility checking
+/// Returns Ok(script) if successful, or Err(lint_message) if POSIX lints fail
+pub fn emit_with_options_checked(funcs: &[Function], opts: CodegenOptions) -> Result<String, String> {
+    let out = emit_with_options(funcs, opts);
+    
+    // Run POSIX lints if targeting POSIX
+    if opts.target == TargetShell::Posix {
+        let lints = lint_script(&out);
+        if !lints.is_empty() {
+            return Err(render_lints(&lints));
+        }
+    }
+    
+    Ok(out)
 }
 
 // Helper to escape single quotes within a string literal for safe shell quoting
