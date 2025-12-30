@@ -1,18 +1,21 @@
 __sh2_err_handler() { local s=$?; printf "Error in %s\n" "${__sh2_loc:-unknown}" >&2; return $s; }
 trap '__sh2_err_handler' ERR
 main() {
+  __sh2_loc="tests/fixtures/try_catch_nounset.sh2:3:5"
+  'set' '-u'; __sh2_status=$?; (exit $__sh2_status)
   local __sh2_e=0; case $- in *e*) __sh2_e=1;; *) __sh2_e=0;; esac; set +e
   local __sh2_err=$(trap -p ERR || true); trap - ERR
   if {
     {
-      'false'; __sh2_status=$?; (exit $__sh2_status)
+      'sh' '-c' 'exit 77'; __sh2_status=$?; (exit $__sh2_status)
     }
   }; then
     if [ -n "$__sh2_err" ]; then eval "$__sh2_err"; fi; if [ "$__sh2_e" = 1 ]; then set -e; fi
   else
     if [ -n "$__sh2_err" ]; then eval "$__sh2_err"; fi; if [ "$__sh2_e" = 1 ]; then set -e; fi
-    printf '%s\n' 'failed' >&2
+    printf '%s\n' 'caught'
   fi
+  printf '%s\n' 'done'
 }
 __sh2_status=0
 main "$@"

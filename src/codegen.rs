@@ -1707,14 +1707,16 @@ fn emit_cmd(
             try_body,
             catch_body,
         } => {
-            // Save errexit state and disable it so that 'run' commands don't exit the shell
+            // Setup: Save errexit state and disable it.
+            // Bash: also save ERR trap.
             match target {
                 TargetShell::Bash => {
                     out.push_str(&format!(
                         "{pad}local __sh2_e=0; case $- in *e*) __sh2_e=1;; *) __sh2_e=0;; esac; set +e\n"
                     ));
-                    // Safely capture and un-set ERR trap
-                    out.push_str(&format!("{pad}local __sh2_err=$(trap -p ERR || true); trap - ERR\n"));
+                    out.push_str(&format!(
+                        "{pad}local __sh2_err=$(trap -p ERR || true); trap - ERR\n"
+                    ));
                 }
                 TargetShell::Posix => {
                     out.push_str(&format!(
@@ -1723,35 +1725,44 @@ fn emit_cmd(
                 }
             }
 
+            // Try body
             out.push_str(&format!("{pad}if {{\n"));
             if try_body.is_empty() {
                 out.push_str(&format!("{pad}  :\n"));
             } else {
                 for (i, cmd) in try_body.iter().enumerate() {
-                    let mut cmd_buf = String::new();
-                    // Pass true to indicate we are in a condition context (suppress exit)
-                    emit_cmd(cmd, &mut cmd_buf, indent + 2, target, true);
-                    let cmd_str = cmd_buf.trim_end();
-
                     if i > 0 {
-                        out.push_str(" &&\n");
+                        out.push_str(&format!("{pad}  }} && {{\n"));
+                    } else {
+                        out.push_str(&format!("{pad}  {{\n"));
                     }
-                    out.push_str(&format!("{{ {}; }}", cmd_str));
+                    // Emit command directly with increased indent and in condition context
+                    emit_cmd(cmd, out, indent + 4, target, true);
                 }
-                out.push('\n');
+                out.push_str(&format!("{pad}  }}\n"));
             }
-            // Restore trap and set -e in both branches
-            let restore = if matches!(target, TargetShell::Bash) {
-                r#"if [ -n "$__sh2_err" ]; then eval "$__sh2_err"; fi; if [ "$__sh2_e" = 1 ]; then set -e; fi"#
-            } else {
-                r#"if [ "$__sh2_e" = 1 ]; then set -e; fi"#
+            out.push_str(&format!("{pad}}}; then\n"));
+
+            // Helper to emit restoration logic
+            let emit_restore = |out: &mut String| match target {
+                TargetShell::Bash => {
+                    out.push_str(&format!(
+                        "{pad}  if [ -n \"$__sh2_err\" ]; then eval \"$__sh2_err\"; fi; if [ \"$__sh2_e\" = 1 ]; then set -e; fi\n"
+                    ));
+                }
+                TargetShell::Posix => {
+                    // Safe reference to __sh2_e using :-0 to prevent nounset errors if somehow undefined
+                    out.push_str(&format!(
+                        "{pad}  if [ \"${{__sh2_e:-0}}\" = 1 ]; then set -e; fi\n"
+                    ));
+                }
             };
 
-            out.push_str(&format!("{pad}}}; then\n"));
-            out.push_str(&format!("{pad}  {}\n", restore));
+            emit_restore(out);
             out.push_str(&format!("{pad}else\n"));
-            out.push_str(&format!("{pad}  {}\n", restore));
+            emit_restore(out);
 
+            // Catch body
             if catch_body.is_empty() {
                 out.push_str(&format!("{pad}  :\n"));
             }

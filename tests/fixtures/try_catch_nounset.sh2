@@ -1,0 +1,14 @@
+func main() {
+    # Enable nounset. 
+    run("set", "-u")
+
+    try {
+        # This failure should trigger catch.
+        # Strict POSIX test: safe references only.
+        run("sh", "-c", "exit 77")
+    } catch {
+        print("caught")
+    }
+    
+    print("done")
+}

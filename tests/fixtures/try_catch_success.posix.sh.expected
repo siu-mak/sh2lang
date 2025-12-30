@@ -1,9 +1,13 @@
 main() {
+  case $- in *e*) __sh2_e=1;; *) __sh2_e=0;; esac; set +e
   if {
-    printf '%s\n' 'ok'
+    {
+      printf '%s\n' 'ok'
+    }
   }; then
-    :
+    if [ "${__sh2_e:-0}" = 1 ]; then set -e; fi
   else
+    if [ "${__sh2_e:-0}" = 1 ]; then set -e; fi
     printf '%s\n' 'no' >&2
   fi
 }
