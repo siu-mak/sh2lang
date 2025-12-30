@@ -1,0 +1,113 @@
+// Sample sh2 code demonstrating various syntax features for editor testing
+
+import "lib/helpers"
+
+func main() {
+    // Basic variables and strings
+    let x = 1
+    let name = "world"
+    let raw = r"raw\nstring"
+    let interp = $"Hello {name}!"
+    let complex = $"Result: {x + 1}"
+    
+    // Boolean literals
+    let flag = true
+    let debug = false
+    
+    // Builtins
+    print($"Current dir: {pwd()}")
+    print_err("Error message")
+    let user_id = uid()
+    let parent = ppid()
+    
+    // Control flow
+    if x == 1 {
+        print("one")
+    } elif x == 2 {
+        print("two")
+    } else {
+        print("other")
+    }
+    
+    // Loops
+    while x < 10 {
+        set x = x + 1
+    }
+    
+    for item in ["a", "b", "c"] {
+        print(item)
+    }
+    
+    // Case statement
+    case name {
+        "alice" | "bob" => {
+            print("Known user")
+        }
+        glob("test_*") => {
+            print("Test user")
+        }
+        _ => {
+            print("Unknown")
+        }
+    }
+    
+    // Try-catch
+    try {
+        run(command, "--fail")
+    } catch {
+        print_err("Command failed")
+    }
+    
+    // With blocks
+    with env { PATH = "/usr/bin" } {
+        run(echo, "Modified env")
+    }
+    
+    with cwd("/tmp") {
+        run(pwd)
+    }
+    
+    with log("output.log", append=true) {
+        print("Logged")
+    }
+    
+    with redirect { stdout: file("out.txt"), stderr: stderr } {
+        run(echo, "Redirected")
+    }
+    
+    // Heredoc
+    with redirect { stdin: heredoc("line1\nline2\n") } {
+        run(cat)
+    }
+    
+    // Pipelines
+    run(echo, "hello") | run(grep, "h")
+    
+    // Spawn and wait
+    spawn {
+        run(sleep, "1")
+    }
+    wait
+    
+    // Operators and expressions
+    let sum = x + 10
+    let product = sum * 2
+    let result = (x > 5) && (name != "")
+    let concat = "Hello" & " " & "World"
+    
+    // Built-in functions
+    if exists("/tmp/file") && is_file("/tmp/file") {
+        let content = capture(run(cat, "/tmp/file"))
+        let lines = count(content)
+    }
+    
+    // Index and field access
+    let first = args[0]
+    let val = env.HOME
+    
+    // Statement chaining
+    run(echo, "first") && run(echo, "second")
+    run(false) || print_err("Failed")
+    
+    return 0
+}

@@ -1,0 +1,34 @@
+{
+    "name": "sh2",
+    "displayName": "sh2",
+    "description": "Syntax highlighting for sh2 shell scripting language",
+    "version": "0.1.0",
+    "engines": {
+        "vscode": "^1.60.0"
+    },
+    "categories": [
+        "Programming Languages"
+    ],
+    "contributes": {
+        "languages": [
+            {
+                "id": "sh2",
+                "aliases": [
+                    "sh2",
+                    "SH2"
+                ],
+                "extensions": [
+                    ".sh2"
+                ],
+                "configuration": "./language-configuration.json"
+            }
+        ],
+        "grammars": [
+            {
+                "language": "sh2",
+                "scopeName": "source.sh2",
+                "path": "./syntaxes/sh2.tmLanguage.json"
+            }
+        ]
+    }
+}

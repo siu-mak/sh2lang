@@ -1,0 +1,178 @@
+{
+    "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+    "name": "sh2",
+    "scopeName": "source.sh2",
+    "patterns": [
+        {
+            "include": "#comments"
+        },
+        {
+            "include": "#keywords"
+        },
+        {
+            "include": "#builtins"
+        },
+        {
+            "include": "#literals"
+        },
+        {
+            "include": "#strings"
+        },
+        {
+            "include": "#numbers"
+        },
+        {
+            "include": "#operators"
+        },
+        {
+            "include": "#punctuation"
+        }
+    ],
+    "repository": {
+        "comments": {
+            "patterns": [
+                {
+                    "name": "comment.line.double-slash.sh2",
+                    "match": "//.*$"
+                }
+            ]
+        },
+        "keywords": {
+            "patterns": [
+                {
+                    "name": "keyword.control.sh2",
+                    "match": "\\b(func|let|if|elif|else|while|for|in|try|catch|with|env|cwd|log|redirect|subshell|group|spawn|return|exit|break|continue|case|import|set)\\b"
+                }
+            ]
+        },
+        "builtins": {
+            "patterns": [
+                {
+                    "name": "support.function.builtin.sh2",
+                    "match": "\\b(run|exec|print|print_err|capture|status|pid|ppid|uid|pwd|self_pid|argv0|argc|arg|args|exists|is_dir|is_file|is_symlink|is_exec|is_readable|is_writable|is_non_empty|len|count|join|input|confirm|export|unset|source|sh|wait|cd|heredoc|file|stdout|stderr|stdin|glob|bool_str)\\b"
+                }
+            ]
+        },
+        "literals": {
+            "patterns": [
+                {
+                    "name": "constant.language.boolean.sh2",
+                    "match": "\\b(true|false)\\b"
+                }
+            ]
+        },
+        "strings": {
+            "patterns": [
+                {
+                    "name": "string.quoted.double.interpolated.sh2",
+                    "begin": "\\$\"",
+                    "end": "\"",
+                    "patterns": [
+                        {
+                            "name": "meta.embedded.expression.sh2",
+                            "begin": "\\{",
+                            "end": "\\}",
+                            "patterns": [
+                                {
+                                    "include": "$self"
+                                }
+                            ]
+                        },
+                        {
+                            "name": "constant.character.escape.sh2",
+                            "match": "\\\\."
+                        }
+                    ]
+                },
+                {
+                    "name": "string.quoted.double.raw.sh2",
+                    "begin": "r\"",
+                    "end": "\""
+                },
+                {
+                    "name": "string.quoted.double.sh2",
+                    "begin": "\"",
+                    "end": "\"",
+                    "patterns": [
+                        {
+                            "name": "constant.character.escape.sh2",
+                            "match": "\\\\."
+                        }
+                    ]
+                }
+            ]
+        },
+        "numbers": {
+            "patterns": [
+                {
+                    "name": "constant.numeric.sh2",
+                    "match": "\\b[0-9]+\\b"
+                }
+            ]
+        },
+        "operators": {
+            "patterns": [
+                {
+                    "name": "keyword.operator.comparison.sh2",
+                    "match": "(==|!=|<=|>=|<|>)"
+                },
+                {
+                    "name": "keyword.operator.logical.sh2",
+                    "match": "(&&|\\|\\|)"
+                },
+                {
+                    "name": "keyword.operator.arithmetic.sh2",
+                    "match": "(\\+|-|\\*|/|%)"
+                },
+                {
+                    "name": "keyword.operator.assignment.sh2",
+                    "match": "="
+                },
+                {
+                    "name": "keyword.operator.concat.sh2",
+                    "match": "&"
+                },
+                {
+                    "name": "keyword.operator.arrow.sh2",
+                    "match": "=>"
+                },
+                {
+                    "name": "keyword.operator.pipe.sh2",
+                    "match": "\\|"
+                },
+                {
+                    "name": "keyword.operator.not.sh2",
+                    "match": "!"
+                }
+            ]
+        },
+        "punctuation": {
+            "patterns": [
+                {
+                    "name": "punctuation.separator.dot.sh2",
+                    "match": "\\."
+                },
+                {
+                    "name": "punctuation.separator.colon.sh2",
+                    "match": ":"
+                },
+                {
+                    "name": "punctuation.separator.comma.sh2",
+                    "match": ","
+                },
+                {
+                    "name": "punctuation.brackets.round.sh2",
+                    "match": "[()]"
+                },
+                {
+                    "name": "punctuation.brackets.square.sh2",
+                    "match": "[\\[\\]]"
+                },
+                {
+                    "name": "punctuation.brackets.curly.sh2",
+                    "match": "[{}]"
+                }
+            ]
+        }
+    }
+}
