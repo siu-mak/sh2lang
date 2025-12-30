@@ -1,0 +1,3 @@
+parse_err_eof_after_keyword.sh2:2:7: Unexpected EOF
+    if
+      ^

@@ -727,3 +727,42 @@ pub fn assert_exec_matches_fixture_target_with_flags(
         );
     }
 }
+
+pub fn assert_parse_error_matches_snapshot(fixture_name: &str) {
+    let sh2_path = format!("tests/fixtures/{}.sh2", fixture_name);
+    let expected_path = format!("tests/fixtures/{}.stderr.expected", fixture_name);
+
+    // Suppress panic printing to stderr during test execution to keep output clean?
+    // Rust test harness captures stdout/stderr, but panics print to stderr.
+    // We can't easily suppress it without a panic hook, but for now we let it print.
+    
+    let result = std::panic::catch_unwind(|| {
+        // We use compile_path_to_shell which invokes loading/parsing.
+        // It should panic on parse error.
+        compile_path_to_shell(Path::new(&sh2_path), TargetShell::Bash)
+    });
+
+    let err_msg = match result {
+        Ok(_) => panic!("Expected parsing/codegen to fail for {}", fixture_name),
+        Err(err) => {
+             if let Some(s) = err.downcast_ref::<&str>() {
+                s.to_string()
+            } else if let Some(s) = err.downcast_ref::<String>() {
+                s.clone()
+            } else {
+                "Unknown panic message".to_string()
+            }
+        }
+    };
+    
+    let output = err_msg.trim().replace("\r\n", "\n");
+
+    let expected = if std::env::var("SH2C_UPDATE_SNAPSHOTS").is_ok() {
+        fs::write(&expected_path, &output).expect("Failed to update snapshot");
+        output.clone()
+    } else {
+        fs::read_to_string(&expected_path).unwrap_or_else(|_| "".to_string()) 
+    };
+
+    assert_eq!(output, expected.trim(), "Error message mismatch for {}", fixture_name);
+}

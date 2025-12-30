@@ -75,7 +75,7 @@ impl SourceMap {
 
         if start_line != end_line {
             // Multi-line adjustment: skip leading whitespace if we point to it
-             if let Some(first_non_ws) = snippet.chars().position(|c| !c.is_whitespace()) {
+            if let Some(first_non_ws) = snippet.chars().position(|c| !c.is_whitespace()) {
                  let first_non_ws_col = first_non_ws + 1;
                  if start_col < first_non_ws_col {
                      arrow_col = first_non_ws_col;
@@ -84,25 +84,29 @@ impl SourceMap {
         }
 
         let mut arrow = String::new();
+        // Indent to column
         for _ in 0..(arrow_col - 1) {
             arrow.push(' ');
         }
 
         if start_line == end_line {
             let len = max(1, span.end - span.start);
-            for _ in 0..len {
-                arrow.push('^');
+            arrow.push('^');
+            if len > 1 {
+                for _ in 0..(len - 1) {
+                    arrow.push('~');
+                }
             }
         } else {
+            // Multi-line: just point at start
             arrow.push('^');
-            arrow.push_str(" (spans multiple lines)");
         }
 
         let display_file = crate::diag_path::display_path(file, base);
 
         format!(
-            "error: {}\n--> {}:{}:{}\n |\n | {}\n | {}",
-            msg, display_file, start_line, start_col, snippet, arrow
+            "{}:{}:{}: {}\n{}\n{}",
+            display_file, start_line, start_col, msg, snippet, arrow
         )
     }
 }
