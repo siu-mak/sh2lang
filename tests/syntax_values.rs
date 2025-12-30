@@ -234,7 +234,8 @@ fn codegen_comparison() {
     use sh2c::{codegen, lower};
     let sm = sh2c::span::SourceMap::new(src.to_string());
     let tokens = sh2c::lexer::lex(&sm, "test");
-    let ast = parser::parse(&tokens, &sm, "test");
+    let mut ast = parser::parse(&tokens, &sm, "test");
+    ast.source_maps.insert("test".to_string(), sm.clone());
     let ir = lower::lower(ast);
     let out = codegen::emit(&ir);
     assert!(out.contains("[ \"$x\" != 'bar' ]"));
@@ -253,7 +254,8 @@ fn exec_comparison() {
     use sh2c::{codegen, lower};
     let sm = sh2c::span::SourceMap::new(src.to_string());
     let tokens = sh2c::lexer::lex(&sm, "test");
-    let ast = parser::parse(&tokens, &sm, "test");
+    let mut ast = parser::parse(&tokens, &sm, "test");
+    ast.source_maps.insert("test".to_string(), sm.clone());
     let ir = lower::lower(ast);
     let bash = codegen::emit(&ir);
     let (stdout, _, _) = common::run_bash_script(&bash, &[], &[]);
@@ -388,7 +390,8 @@ fn codegen_concatenation() {
     use sh2c::{codegen, lower};
     let sm = sh2c::span::SourceMap::new(src.to_string());
     let tokens = sh2c::lexer::lex(&sm, "test");
-    let ast = parser::parse(&tokens, &sm, "test");
+    let mut ast = parser::parse(&tokens, &sm, "test");
+    ast.source_maps.insert("test".to_string(), sm.clone());
     let ir = lower::lower(ast);
     let out = codegen::emit(&ir);
     assert!(out.contains("'hello '\"$name\""));
@@ -406,7 +409,8 @@ fn exec_concatenation() {
     use sh2c::{codegen, lower};
     let sm = sh2c::span::SourceMap::new(src.to_string());
     let tokens = sh2c::lexer::lex(&sm, "test");
-    let ast = parser::parse(&tokens, &sm, "test");
+    let mut ast = parser::parse(&tokens, &sm, "test");
+    ast.source_maps.insert("test".to_string(), sm.clone());
     let ir = lower::lower(ast);
     let bash = codegen::emit(&ir);
     let (stdout, _, _) = common::run_bash_script(&bash, &[], &[]);
@@ -458,7 +462,8 @@ fn codegen_let_and_usage() {
     use sh2c::{codegen, lower, parser};
     let sm = sh2c::span::SourceMap::new(src.to_string());
     let tokens = sh2c::lexer::lex(&sm, "test");
-    let ast = parser::parse(&tokens, &sm, "test");
+    let mut ast = parser::parse(&tokens, &sm, "test");
+    ast.source_maps.insert("test".to_string(), sm.clone());
     let ir = lower::lower(ast);
     let out = codegen::emit(&ir);
     assert!(out.contains("msg='hello'"));
@@ -476,7 +481,8 @@ fn exec_let_variable() {
     use sh2c::{codegen, lower, parser};
     let sm = sh2c::span::SourceMap::new(src.to_string());
     let tokens = sh2c::lexer::lex(&sm, "test");
-    let ast = parser::parse(&tokens, &sm, "test");
+    let mut ast = parser::parse(&tokens, &sm, "test");
+    ast.source_maps.insert("test".to_string(), sm.clone());
     let ir = lower::lower(ast);
     let bash = codegen::emit(&ir);
     let (stdout, _, _) = common::run_bash_script(&bash, &[], &[]);
@@ -495,7 +501,8 @@ fn let_alias_variable() {
     use sh2c::{codegen, lower, parser};
     let sm = sh2c::span::SourceMap::new(src.to_string());
     let tokens = sh2c::lexer::lex(&sm, "test");
-    let ast = parser::parse(&tokens, &sm, "test");
+    let mut ast = parser::parse(&tokens, &sm, "test");
+    ast.source_maps.insert("test".to_string(), sm.clone());
     let ir = lower::lower(ast);
     let out = codegen::emit(&ir);
     assert!(out.contains("b=\"$a\""));

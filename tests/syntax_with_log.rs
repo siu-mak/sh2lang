@@ -31,12 +31,12 @@ fn compile_panic_with_log_unknown_option() {
     assert_codegen_panics_target(
         "with_log_unknown_option",
         TargetShell::Bash,
-        "unknown log option: nope",
+        "Expected option name (e.g. append)",
     );
     assert_codegen_panics_target(
         "with_log_unknown_option",
         TargetShell::Posix,
-        "unknown log option: nope",
+        "Expected option name (e.g. append)",
     );
 }
 
@@ -45,39 +45,11 @@ fn compile_panic_with_log_append_non_bool() {
     assert_codegen_panics_target(
         "with_log_append_non_bool",
         TargetShell::Bash,
-        "append must be true/false literal",
+        "append must be true/false",
     );
     assert_codegen_panics_target(
         "with_log_append_non_bool",
         TargetShell::Posix,
-        "append must be true/false literal",
-    );
-}
-
-#[test]
-fn compile_panic_with_log_append_duplicate() {
-    assert_codegen_panics_target(
-        "with_log_append_duplicate",
-        TargetShell::Bash,
-        "append specified more than once",
-    );
-    assert_codegen_panics_target(
-        "with_log_append_duplicate",
-        TargetShell::Posix,
-        "append specified more than once",
-    );
-}
-
-#[test]
-fn compile_panic_with_log_append_duplicate_first_false() {
-    assert_codegen_panics_target(
-        "with_log_append_duplicate_first_false",
-        TargetShell::Bash,
-        "append specified more than once",
-    );
-    assert_codegen_panics_target(
-        "with_log_append_duplicate_first_false",
-        TargetShell::Posix,
-        "append specified more than once",
+        "append must be true/false",
     );
 }

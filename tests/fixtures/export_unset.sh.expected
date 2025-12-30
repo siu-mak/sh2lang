@@ -1,4 +1,4 @@
-__sh2_err_handler() { printf "Error in %s\n" "${__sh2_loc:-unknown}" >&2; }
+__sh2_err_handler() { local s=$?; printf "Error in %s\n" "${__sh2_loc:-unknown}" >&2; return $s; }
 trap '__sh2_err_handler' ERR
 main() {
   export FOO='bar'
@@ -6,7 +6,7 @@ main() {
   unset FOO
   {
     __sh2_loc="tests/fixtures/export_unset.sh2:5:3"
-    if [[ -o pipefail ]]; then __p=1; else __p=0; fi; set -o pipefail; case $- in *e*) __e=1;; *) __e=0;; esac; set +e; 'env' | 'grep' 'BAZ' ; __sh2_status=$?; if [ "$__e" = 1 ]; then set -e; fi; if [ "$__p" = 0 ]; then set +o pipefail; fi; (exit $__sh2_status)
+    ( set -o pipefail; set +e; 'env' | 'grep' 'BAZ' ); __sh2_status=$?; (exit $__sh2_status)
   } || {
     printf '%s\n' 'no baz'
   }

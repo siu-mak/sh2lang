@@ -1,7 +1,7 @@
-__sh2_err_handler() { printf "Error in %s\n" "${__sh2_loc:-unknown}" >&2; }
+__sh2_err_handler() { local s=$?; printf "Error in %s\n" "${__sh2_loc:-unknown}" >&2; return $s; }
 trap '__sh2_err_handler' ERR
 main() {
-  __sh2_loc="tests/fixtures/wait_pid_var.sh2:2"
+  __sh2_loc="tests/fixtures/wait_pid_var.sh2:2:3"
   p='1234'
   wait "$p"; __sh2_status=$?; (exit $__sh2_status)
 }

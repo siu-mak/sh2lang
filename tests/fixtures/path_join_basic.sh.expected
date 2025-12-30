@@ -1,4 +1,4 @@
-__sh2_err_handler() { printf "Error in %s\n" "${__sh2_loc:-unknown}" >&2; }
+__sh2_err_handler() { local s=$?; printf "Error in %s\n" "${__sh2_loc:-unknown}" >&2; return $s; }
 trap '__sh2_err_handler' ERR
 __sh2_path_join() { out=''; for p in "$@"; do [ -z "$p" ] && continue; case "$p" in /*) out="$p";; *) if [ -z "$out" ]; then out="$p"; else while [ "${out%/}" != "$out" ]; do out="${out%/}"; done; while [ "${p#/}" != "$p" ]; do p="${p#/}"; done; out="${out}/${p}"; fi;; esac; done; printf '%s' "$out"; }
 main() {

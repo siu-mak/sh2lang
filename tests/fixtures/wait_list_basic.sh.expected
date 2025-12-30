@@ -1,21 +1,21 @@
-__sh2_err_handler() { printf "Error in %s\n" "${__sh2_loc:-unknown}" >&2; }
+__sh2_err_handler() { local s=$?; printf "Error in %s\n" "${__sh2_loc:-unknown}" >&2; return $s; }
 trap '__sh2_err_handler' ERR
 main() {
   ( 
     {
-      __sh2_loc="tests/fixtures/wait_list_basic.sh2:2"
+      __sh2_loc="tests/fixtures/wait_list_basic.sh2:2:11"
       'sh' '-c' 'sleep 0.05'; __sh2_status=$?; (exit $__sh2_status)
     }
   ) &
-  __sh2_loc="tests/fixtures/wait_list_basic.sh2:3"
+  __sh2_loc="tests/fixtures/wait_list_basic.sh2:3:3"
   p1="$!"
   ( 
     {
-      __sh2_loc="tests/fixtures/wait_list_basic.sh2:4"
+      __sh2_loc="tests/fixtures/wait_list_basic.sh2:4:11"
       'sh' '-c' 'sleep 0.05'; __sh2_status=$?; (exit $__sh2_status)
     }
   ) &
-  __sh2_loc="tests/fixtures/wait_list_basic.sh2:5"
+  __sh2_loc="tests/fixtures/wait_list_basic.sh2:5:3"
   p2="$!"
   wait "$p1" "$p2"; __sh2_status=$?; (exit $__sh2_status)
   printf '%s\n' 'done'

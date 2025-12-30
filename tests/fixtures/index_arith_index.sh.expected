@@ -1,9 +1,9 @@
-__sh2_err_handler() { printf "Error in %s\n" "${__sh2_loc:-unknown}" >&2; }
+__sh2_err_handler() { local s=$?; printf "Error in %s\n" "${__sh2_loc:-unknown}" >&2; return $s; }
 trap '__sh2_err_handler' ERR
 main() {
-  __sh2_loc="tests/fixtures/index_arith_index.sh2:2"
+  __sh2_loc="tests/fixtures/index_arith_index.sh2:2:5"
   xs=('a' 'b' 'c')
-  __sh2_loc="tests/fixtures/index_arith_index.sh2:3"
+  __sh2_loc="tests/fixtures/index_arith_index.sh2:3:5"
   i="0"
   printf '%s\n' "${xs[( i + 2 )]}"
 }

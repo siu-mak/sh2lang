@@ -1,17 +1,17 @@
 __sh2_trim() { awk -v s="$1" 'BEGIN { sub(/^[[:space:]]+/, "", s); sub(/[[:space:]]+$/, "", s); printf "%s", s }'; }
 __sh2_replace() { awk -v s="$1" -v old="$2" -v new="$3" 'BEGIN { if(old=="") { printf "%s", s; exit } len=length(old); while(i=index(s, old)) { printf "%s%s", substr(s, 1, i-1), new; s=substr(s, i+len) } printf "%s", s }'; }
-__sh2_err_handler() { printf "Error in %s\n" "${__sh2_loc:-unknown}" >&2; }
+__sh2_err_handler() { local s=$?; printf "Error in %s\n" "${__sh2_loc:-unknown}" >&2; return $s; }
 trap '__sh2_err_handler' ERR
 main() {
-  __sh2_loc="tests/fixtures/string_utils_multiline.sh2:2"
+  __sh2_loc="tests/fixtures/string_utils_multiline.sh2:2:5"
   s='one
 two
 three'
-  __sh2_loc="tests/fixtures/string_utils_multiline.sh2:5"
+  __sh2_loc="tests/fixtures/string_utils_multiline.sh2:5:5"
   r="$( __sh2_replace "$s" '
 ' '|' )"
   printf '%s\n' "$r"
-  __sh2_loc="tests/fixtures/string_utils_multiline.sh2:8"
+  __sh2_loc="tests/fixtures/string_utils_multiline.sh2:8:5"
   t='  line1
   line2  '
   printf '%s\n' '>'"$( __sh2_trim "$t" )"'<'

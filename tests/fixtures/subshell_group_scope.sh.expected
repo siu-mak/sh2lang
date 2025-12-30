@@ -1,15 +1,15 @@
-__sh2_err_handler() { printf "Error in %s\n" "${__sh2_loc:-unknown}" >&2; }
+__sh2_err_handler() { local s=$?; printf "Error in %s\n" "${__sh2_loc:-unknown}" >&2; return $s; }
 trap '__sh2_err_handler' ERR
 main() {
-  __sh2_loc="tests/fixtures/subshell_group_scope.sh2:2"
+  __sh2_loc="tests/fixtures/subshell_group_scope.sh2:2:3"
   x='0'
   (
-    __sh2_loc="tests/fixtures/subshell_group_scope.sh2:5"
+    __sh2_loc="tests/fixtures/subshell_group_scope.sh2:5:5"
     x='1'
   )
   printf '%s\n' "$x"
   {
-    __sh2_loc="tests/fixtures/subshell_group_scope.sh2:10"
+    __sh2_loc="tests/fixtures/subshell_group_scope.sh2:10:5"
     x='2'
   }
   printf '%s\n' "$x"

@@ -1,13 +1,13 @@
 __sh2_coalesce() { if [ -n "$1" ]; then printf '%s' "$1"; else printf '%s' "$2"; fi; }
-__sh2_err_handler() { printf "Error in %s\n" "${__sh2_loc:-unknown}" >&2; }
+__sh2_err_handler() { local s=$?; printf "Error in %s\n" "${__sh2_loc:-unknown}" >&2; return $s; }
 trap '__sh2_err_handler' ERR
 main() {
-  __sh2_loc="tests/fixtures/string_coalesce_basic.sh2:2"
+  __sh2_loc="tests/fixtures/string_coalesce_basic.sh2:2:5"
   a=''
-  __sh2_loc="tests/fixtures/string_coalesce_basic.sh2:3"
+  __sh2_loc="tests/fixtures/string_coalesce_basic.sh2:3:5"
   b='fallback'
   printf '%s\n' "$( __sh2_coalesce "$a" "$b" )"
-  __sh2_loc="tests/fixtures/string_coalesce_basic.sh2:6"
+  __sh2_loc="tests/fixtures/string_coalesce_basic.sh2:6:5"
   c='x'
   printf '%s\n' "$( __sh2_coalesce "$c" "$b" )"
 }
