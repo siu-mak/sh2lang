@@ -1,7 +1,7 @@
 __sh2_err_handler() { printf "Error in %s\n" "${__sh2_loc:-unknown}" >&2; }
 trap '__sh2_err_handler' ERR
 main() {
-  __sh2_loc="tests/fixtures/redirect_io.sh2:3"
+  __sh2_loc="tests/fixtures/redirect_io.sh2:3:3"
   f="$( 'mktemp' )"
   {
     printf '%s\n' 'out'
@@ -9,30 +9,30 @@ main() {
   {
     printf '%s\n' 'err' >&2
   } 2>> "$f"
-  __sh2_loc="tests/fixtures/redirect_io.sh2:14"
+  __sh2_loc="tests/fixtures/redirect_io.sh2:14:3"
   'cat' "$f"; __sh2_status=$?; (exit $__sh2_status)
   {
     printf '%s\n' 'e2s' >&2
   } 2>&1
-  __sh2_loc="tests/fixtures/redirect_io.sh2:22"
+  __sh2_loc="tests/fixtures/redirect_io.sh2:22:3"
   infile="$( 'mktemp' )"
   echo hello > $infile
   {
-    __sh2_loc="tests/fixtures/redirect_io.sh2:25"
+    __sh2_loc="tests/fixtures/redirect_io.sh2:25:5"
     'cat'; __sh2_status=$?; (exit $__sh2_status)
   } < "$infile"
-  __sh2_loc="tests/fixtures/redirect_io.sh2:29"
+  __sh2_loc="tests/fixtures/redirect_io.sh2:29:3"
   f2="$( 'mktemp' )"
   {
     printf '%s\n' 'swap_ok'
   } 2> "$f2" 1>&2
-  __sh2_loc="tests/fixtures/redirect_io.sh2:33"
+  __sh2_loc="tests/fixtures/redirect_io.sh2:33:3"
   'cat' "$f2"; __sh2_status=$?; (exit $__sh2_status)
-  __sh2_loc="tests/fixtures/redirect_io.sh2:36"
+  __sh2_loc="tests/fixtures/redirect_io.sh2:36:3"
   'rm' '-f' "$f"; __sh2_status=$?; (exit $__sh2_status)
-  __sh2_loc="tests/fixtures/redirect_io.sh2:37"
+  __sh2_loc="tests/fixtures/redirect_io.sh2:37:3"
   'rm' '-f' "$infile"; __sh2_status=$?; (exit $__sh2_status)
-  __sh2_loc="tests/fixtures/redirect_io.sh2:38"
+  __sh2_loc="tests/fixtures/redirect_io.sh2:38:3"
   'rm' '-f' "$f2"; __sh2_status=$?; (exit $__sh2_status)
 }
 __sh2_status=0

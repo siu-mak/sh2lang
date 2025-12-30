@@ -1122,7 +1122,7 @@ fn emit_cmd(cmd: &Cmd, out: &mut String, indent: usize, target: TargetShell) {
             if let Some(l) = loc {
                 out.push_str(&format!("{}__sh2_loc=\"{}\"\n", pad, l));
             }
-            // Bash: normal pipeline with PIPESTATUS
+            // Bash: use subshell with pipefail for robust status capture
             // POSIX: manual pipeline with FIFOs via helper
 
             let last_idx = segments.len() - 1;
@@ -1145,20 +1145,20 @@ fn emit_cmd(cmd: &Cmd, out: &mut String, indent: usize, target: TargetShell) {
                             .join(" ");
 
                         if *allow_fail && i < last_idx {
-                            // Non-final segment: suppress failure so it doesn't abort early
+                             // Non-final segment: suppress failure
                             pipe_str.push_str(&format!("{{ {{ {}; }} || true; }}", cmd_str));
                         } else {
                             pipe_str.push_str(&cmd_str);
                         }
                     }
 
+                    // Wrap in subshell to isolate set -o pipefail and set +e
                     out.push_str(&format!(
-                         "if [[ -o pipefail ]]; then __p=1; else __p=0; fi; set -o pipefail; case $- in *e*) __e=1;; *) __e=0;; esac; set +e; {} ; __sh2_status=$?; if [ \"$__e\" = 1 ]; then set -e; fi; if [ \"$__p\" = 0 ]; then set +o pipefail; fi; ",
+                         "( set -o pipefail; set +e; {} ); __sh2_status=$?; ",
                          pipe_str
                      ));
 
                     // Return
-                    // If last stage is allowed to fail, the whole statement succeeds.
                     if allow_fail_last {
                         out.push_str(":\n");
                     } else {
@@ -1209,7 +1209,7 @@ fn emit_cmd(cmd: &Cmd, out: &mut String, indent: usize, target: TargetShell) {
                     }
 
                     out.push_str(&format!(
-                        "if [[ -o pipefail ]]; then __p=1; else __p=0; fi; set -o pipefail; case $- in *e*) __e=1;; *) __e=0;; esac; set +e; {} ; __sh2_status=$?; if [ \"$__e\" = 1 ]; then set -e; fi; if [ \"$__p\" = 0 ]; then set +o pipefail; fi; ",
+                        "( set -o pipefail; set +e; {} ); __sh2_status=$?; ",
                         pipe_str
                     ));
 
@@ -1828,7 +1828,7 @@ fn emit_posix_pipeline(
     stages: &[String],
     allow_fails: &[bool],
     allow_fail_last: bool,
-    has_loc: bool,
+    _has_loc: bool,
 ) {
     // POSIX sh manual pipeline using FIFOs to simulate pipefail without deadlocks.
     // This implementation:
@@ -1954,14 +1954,9 @@ fn emit_posix_pipeline(
         match target {
             TargetShell::Bash => out.push_str(&format!("{}(exit $__sh2_status)\n", indent_pad)),
             TargetShell::Posix => {
-                out.push_str(&format!(
-                    "{}if [ \"$__sh2_status\" -ne 0 ]; then ",
-                    indent_pad
-                ));
-                if has_loc {
-                    out.push_str("printf 'Error in %s\\n' \"$__sh2_loc\" >&2; ");
-                }
-                out.push_str("exit $__sh2_status; fi\n");
+                // Do not explicitly exit (which kills script if no subshell) or print (because we lack trap ERR equivalent)
+                // Just relying on (exit) to set status and trigger errexit if enabled.
+                out.push_str(&format!("{}(exit $__sh2_status)\n", indent_pad));
             }
         }
     }
