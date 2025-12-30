@@ -41,6 +41,17 @@ fn test_ebnf_grammar_exists() {
     assert!(content.contains("expression"));
 }
 
+/// Extract exact tokens from a TextMate regex pattern like \b(token1|token2|token3)\b
+fn extract_tokens_from_pattern(pattern: &str) -> Vec<String> {
+    // Find the first capturing group content (inside parentheses)
+    let start = pattern.find('(').expect("Pattern should contain parentheses");
+    let end = pattern.rfind(')').expect("Pattern should contain parentheses");
+    let inner = &pattern[start + 1..end];
+    
+    // Split by | and collect tokens
+    inner.split('|').map(|s| s.to_string()).collect()
+}
+
 #[test]
 fn test_textmate_keywords_coverage() {
     use sh2c::lang_spec::KEYWORDS;
@@ -56,14 +67,30 @@ fn test_textmate_keywords_coverage() {
         .as_str()
         .expect("Missing keyword match pattern");
     
-    // Check that all keywords appear in the pattern
+    // Extract exact tokens from pattern
+    let pattern_tokens = extract_tokens_from_pattern(keyword_pattern);
+    
+    // Check for duplicates
+    let mut seen = std::collections::HashSet::new();
+    for token in &pattern_tokens {
+        assert!(
+            seen.insert(token),
+            "Duplicate token '{}' found in keyword pattern",
+            token
+        );
+    }
+    
+    // Check that all keywords appear as exact tokens (not substrings)
     for keyword in KEYWORDS {
         assert!(
-            keyword_pattern.contains(keyword),
-            "Keyword '{}' not found in TextMate grammar pattern",
+            pattern_tokens.contains(&keyword.to_string()),
+            "Keyword '{}' not found as exact token in TextMate grammar pattern",
             keyword
         );
     }
+    
+    // Optionally check no extra tokens (or allow extras for editor-specific needs)
+    // For now, just ensure all required keywords are present
 }
 
 #[test]
@@ -81,11 +108,24 @@ fn test_textmate_builtins_coverage() {
         .as_str()
         .expect("Missing builtin match pattern");
     
-    // Check that all builtins appear in the pattern
+    // Extract exact tokens from pattern
+    let pattern_tokens = extract_tokens_from_pattern(builtin_pattern);
+    
+    // Check for duplicates
+    let mut seen = std::collections::HashSet::new();
+    for token in &pattern_tokens {
+        assert!(
+            seen.insert(token),
+            "Duplicate token '{}' found in builtin pattern",
+            token
+        );
+    }
+    
+    // Check that all builtins appear as exact tokens
     for builtin in BUILTINS {
         assert!(
-            builtin_pattern.contains(builtin),
-            "Builtin '{}' not found in TextMate grammar pattern",
+            pattern_tokens.contains(&builtin.to_string()),
+            "Builtin '{}' not found as exact token in TextMate grammar pattern",
             builtin
         );
     }
@@ -94,6 +134,27 @@ fn test_textmate_builtins_coverage() {
 #[test]
 fn test_artifact_snapshots() {
     let update_snapshots = std::env::var("SH2C_UPDATE_SNAPSHOTS").is_ok();
+    
+    // Test VS Code package.json snapshot
+    {
+        let actual = fs::read_to_string("editors/vscode/package.json")
+            .expect("Failed to read package.json");
+        let expected_path = "tests/fixtures/editor_package.json.expected";
+        
+        if update_snapshots {
+            fs::write(expected_path, &actual)
+                .expect("Failed to write snapshot");
+        }
+        
+        let expected = fs::read_to_string(expected_path)
+            .unwrap_or_default();
+        
+        assert_eq!(
+            actual.trim(),
+            expected.trim(),
+            "VS Code package.json doesn't match snapshot"
+        );
+    }
     
     // Test TextMate grammar snapshot
     {
