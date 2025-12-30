@@ -1,0 +1,29 @@
+// Test boolean truthiness and conditions
+func main() {
+    // Test true/false literals
+    if true {
+        print("true-ok")
+    }
+    
+    if !false {
+        print("not-false-ok")
+    }
+    
+    // Test comparisons
+    if 5 > 3 {
+        print("gt-ok")
+    }
+    
+    if 2 == 2 {
+        print("eq-ok")
+    }
+    
+    // Test logical operators
+    if true && true {
+        print("and-ok")
+    }
+    
+    if false || true {
+        print("or-ok")
+    }
+}

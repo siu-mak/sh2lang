@@ -1,0 +1,22 @@
+// Test string operations and stdlib helpers
+func main() {
+    // Test concat
+    let a = "hello"
+    let b = "world"
+    let c = a & " " & b
+    print(c)
+    
+    // Test len
+    print(len("test"))
+    
+    // Test empty string
+    let empty = ""
+    if len(empty) == 0 {
+        print("empty-ok")
+    }
+    
+    // Test string in condition
+    if "nonempty" {
+        print("bool-ok")
+    }
+}

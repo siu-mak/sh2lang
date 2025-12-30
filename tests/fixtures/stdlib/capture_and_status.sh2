@@ -1,0 +1,22 @@
+// Test capture and status
+func main() {
+    // Test successful capture
+    let out = capture(run("echo", "hello"))
+    print(out)
+    
+    // Test status after success
+    run("true")
+    if status() == 0 {
+        print("status-0-ok")
+    }
+    
+    // Test status after failure
+    run("false")
+    if status() != 0 {
+        print("status-nonzero-ok")
+    }
+    
+    // Test capture with multiline
+    let lines = capture(run("printf", "line1\\nline2"))
+    print(lines)
+}
