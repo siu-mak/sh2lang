@@ -2,7 +2,6 @@ use sh2c::codegen;
 use sh2c::codegen::TargetShell;
 use sh2c::loader;
 use sh2c::lower;
-use std::fs;
 use std::process;
 
 fn main() {
@@ -91,7 +90,7 @@ fn main() {
     }
 
     if (emit_ast as u8 + emit_ir as u8 + emit_sh as u8 + check as u8) > 1 {
-        eprintln!("Error: multple action flags specified. Only one of --emit-ast, --emit-ir, --emit-sh, --check allowed.");
+        eprintln!("error: multiple action flags specified (choose only one of: --emit-ast, --emit-ir, --emit-sh, --check)");
         process::exit(1);
     }
 
