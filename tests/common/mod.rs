@@ -806,3 +806,162 @@ pub fn assert_parse_error_matches_snapshot(fixture_name: &str) {
 
     assert_eq!(output, expected.trim(), "Error message mismatch for {}", fixture_name);
 }
+
+pub fn strip_spans_program(p: &mut sh2c::ast::Program) {
+    p.span = sh2c::span::Span::new(0, 0);
+    p.source_maps.clear();
+    for f in &mut p.functions {
+        strip_spans_fn(f);
+    }
+    for s in &mut p.top_level {
+        strip_spans_stmt(s);
+    }
+}
+
+pub fn strip_spans_fn(f: &mut sh2c::ast::Function) {
+    f.span = sh2c::span::Span::new(0, 0);
+    for s in &mut f.body {
+        strip_spans_stmt(s);
+    }
+}
+
+pub fn strip_spans_stmt(s: &mut sh2c::ast::Stmt) {
+    s.span = sh2c::span::Span::new(0, 0);
+    match &mut s.node {
+        sh2c::ast::StmtKind::Let { value, .. } => strip_spans_expr(value),
+        sh2c::ast::StmtKind::Run(call) => strip_spans_run_call(call),
+        sh2c::ast::StmtKind::Exec(args) => for a in args { strip_spans_expr(a); },
+        sh2c::ast::StmtKind::Print(e) => strip_spans_expr(e),
+        sh2c::ast::StmtKind::PrintErr(e) => strip_spans_expr(e),
+        sh2c::ast::StmtKind::If { cond, then_body, elifs, else_body } => {
+            strip_spans_expr(cond);
+            for s in then_body { strip_spans_stmt(s); }
+            for e in elifs {
+                strip_spans_expr(&mut e.cond);
+                for s in &mut e.body { strip_spans_stmt(s); }
+            }
+            if let Some(body) = else_body {
+                for s in body { strip_spans_stmt(s); }
+            }
+        }
+        sh2c::ast::StmtKind::While { cond, body } => {
+            strip_spans_expr(cond);
+            for s in body { strip_spans_stmt(s); }
+        }
+        sh2c::ast::StmtKind::For { items, body, .. } => {
+            for e in items { strip_spans_expr(e); }
+            for s in body { strip_spans_stmt(s); }
+        }
+        sh2c::ast::StmtKind::ForMap { body, .. } => {
+            for s in body { strip_spans_stmt(s); }
+        }
+        sh2c::ast::StmtKind::TryCatch { try_body, catch_body } => {
+            for s in try_body { strip_spans_stmt(s); }
+            for s in catch_body { strip_spans_stmt(s); }
+        }
+        sh2c::ast::StmtKind::Pipe(segments) => {
+            for c in segments { strip_spans_run_call(c); }
+        }
+        sh2c::ast::StmtKind::PipeBlocks { segments } => {
+            for seg in segments { for s in seg { strip_spans_stmt(s); } }
+        }
+        sh2c::ast::StmtKind::Return(Some(e)) => strip_spans_expr(e),
+        sh2c::ast::StmtKind::Exit(Some(e)) => strip_spans_expr(e),
+        sh2c::ast::StmtKind::Cd { path } => strip_spans_expr(path),
+        sh2c::ast::StmtKind::Export { value: Some(v), .. } => strip_spans_expr(v),
+        sh2c::ast::StmtKind::Source { path } => strip_spans_expr(path),
+        sh2c::ast::StmtKind::Call { args, .. } => for a in args { strip_spans_expr(a); },
+        sh2c::ast::StmtKind::AndThen { left, right } => {
+            for s in left { strip_spans_stmt(s); }
+            for s in right { strip_spans_stmt(s); }
+        }
+        sh2c::ast::StmtKind::OrElse { left, right } => {
+            for s in left { strip_spans_stmt(s); }
+            for s in right { strip_spans_stmt(s); }
+        }
+        sh2c::ast::StmtKind::WithEnv { bindings, body } => {
+             for (_, v) in bindings { strip_spans_expr(v); }
+             for s in body { strip_spans_stmt(s); }
+        }
+        sh2c::ast::StmtKind::WithCwd { path, body } => {
+             strip_spans_expr(path);
+             for s in body { strip_spans_stmt(s); }
+        }
+        sh2c::ast::StmtKind::WithLog { path, body, .. } => {
+             strip_spans_expr(path);
+             for s in body { strip_spans_stmt(s); }
+        }
+        sh2c::ast::StmtKind::WithRedirect { stdout, stderr, stdin, body } => {
+            if let Some(t) = stdout { strip_spans_redirect(t); }
+            if let Some(t) = stderr { strip_spans_redirect(t); }
+            if let Some(t) = stdin { strip_spans_redirect(t); }
+            for s in body { strip_spans_stmt(s); }
+        }
+        sh2c::ast::StmtKind::Subshell { body } => {
+             for s in body { strip_spans_stmt(s); }
+        }
+        sh2c::ast::StmtKind::Group { body } => {
+             for s in body { strip_spans_stmt(s); }
+        }
+        sh2c::ast::StmtKind::Spawn { stmt } => strip_spans_stmt(stmt),
+        sh2c::ast::StmtKind::Wait(Some(e)) => strip_spans_expr(e),
+        sh2c::ast::StmtKind::Set { value, .. } => strip_spans_expr(value),
+        sh2c::ast::StmtKind::Case { expr, arms } => {
+            strip_spans_expr(expr);
+            for arm in arms {
+                for s in &mut arm.body { strip_spans_stmt(s); }
+            }
+        },
+        _ => {}
+    }
+}
+
+pub fn strip_spans_expr(e: &mut sh2c::ast::Expr) {
+    e.span = sh2c::span::Span::new(0, 0);
+    match &mut e.node {
+        sh2c::ast::ExprKind::Command(args) => for a in args { strip_spans_expr(a); },
+        sh2c::ast::ExprKind::CommandPipe(segs) => for s in segs { for a in s { strip_spans_expr(a); } },
+        sh2c::ast::ExprKind::Concat(l, r) => { strip_spans_expr(l); strip_spans_expr(r); },
+        sh2c::ast::ExprKind::Arith { left, right, .. } => { strip_spans_expr(left); strip_spans_expr(right); },
+        sh2c::ast::ExprKind::Compare { left, right, .. } => { strip_spans_expr(left); strip_spans_expr(right); },
+        sh2c::ast::ExprKind::And(l, r) => { strip_spans_expr(l); strip_spans_expr(r); },
+        sh2c::ast::ExprKind::Or(l, r) => { strip_spans_expr(l); strip_spans_expr(r); },
+        sh2c::ast::ExprKind::Not(e) => strip_spans_expr(e),
+        sh2c::ast::ExprKind::Exists(e) => strip_spans_expr(e),
+        sh2c::ast::ExprKind::IsDir(e) => strip_spans_expr(e),
+        sh2c::ast::ExprKind::IsFile(e) => strip_spans_expr(e),
+        sh2c::ast::ExprKind::IsSymlink(e) => strip_spans_expr(e),
+        sh2c::ast::ExprKind::IsExec(e) => strip_spans_expr(e),
+        sh2c::ast::ExprKind::IsReadable(e) => strip_spans_expr(e),
+        sh2c::ast::ExprKind::IsWritable(e) => strip_spans_expr(e),
+        sh2c::ast::ExprKind::IsNonEmpty(e) => strip_spans_expr(e),
+        sh2c::ast::ExprKind::BoolStr(e) => strip_spans_expr(e),
+        sh2c::ast::ExprKind::Len(e) => strip_spans_expr(e),
+        sh2c::ast::ExprKind::Index { list, index } => { strip_spans_expr(list); strip_spans_expr(index); },
+        sh2c::ast::ExprKind::Field { base, .. } => strip_spans_expr(base),
+        sh2c::ast::ExprKind::Join { list, sep } => { strip_spans_expr(list); strip_spans_expr(sep); },
+        sh2c::ast::ExprKind::Count(e) => strip_spans_expr(e),
+        sh2c::ast::ExprKind::List(items) => for i in items { strip_spans_expr(i); },
+        sh2c::ast::ExprKind::Env(e) => strip_spans_expr(e),
+        sh2c::ast::ExprKind::Input(e) => strip_spans_expr(e),
+        sh2c::ast::ExprKind::Confirm(e) => strip_spans_expr(e),
+        sh2c::ast::ExprKind::Call { args, .. } => for a in args { strip_spans_expr(a); },
+        sh2c::ast::ExprKind::MapLiteral(entries) => for (_, v) in entries { strip_spans_expr(v); },
+        _ => {}
+    }
+}
+
+pub fn strip_spans_run_call(c: &mut sh2c::ast::RunCall) {
+     for a in &mut c.args { strip_spans_expr(a); }
+     for o in &mut c.options { 
+         o.span = sh2c::span::Span::new(0, 0);
+         strip_spans_expr(&mut o.value);
+     }
+}
+
+pub fn strip_spans_redirect(t: &mut sh2c::ast::RedirectTarget) {
+     match t {
+         sh2c::ast::RedirectTarget::File { path, .. } => strip_spans_expr(path),
+         _ => {}
+     }
+}

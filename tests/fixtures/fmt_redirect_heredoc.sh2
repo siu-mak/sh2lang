@@ -1,0 +1,8 @@
+func main() {
+    with redirect {
+        stdin: heredoc("line1
+line2")
+    } {
+        run(cat)
+    }
+}
