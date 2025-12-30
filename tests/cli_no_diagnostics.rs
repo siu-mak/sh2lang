@@ -96,12 +96,13 @@ fn cli_diagnostics_default_bash() {
 
 #[test]
 fn cli_diagnostics_default_posix() {
-    // Using pipeline fixture to trigger "Error in ..." logic more explicitly if basic doesn't cover all cases,
-    // but basic run() should trigger it in posix codegen too.
+    // POSIX target with diagnostics should track location but NOT exit on run() failures
+    // run() should behave like bash: capture status and continue
     assert_cmd_output_contains(
         &["--target", "posix", "tests/fixtures/no_diagnostics_basic.sh2"],
         &[
-             "if [ $__sh2_status -ne 0 ]; then printf 'Error in %s\\n' \"$__sh2_loc\"",
+             "__sh2_loc=",  // Location tracking is present
+             "(exit $__sh2_status)",  // Status is captured but doesn't exit
         ],
         &[],
     );

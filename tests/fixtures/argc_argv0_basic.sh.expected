@@ -6,7 +6,7 @@ f() {
   else
     printf '%s\n' 'argc_bad'
   fi
-  if [ "$( printf "%s" "$0" | awk '{ print length($0) }' )" -gt "0" ]; then
+  if [ "$( printf "%s" "$0" | awk 'BEGIN{l=0} {l=length($0)} END{print l}' )" -gt "0" ]; then
     printf '%s\n' 'argv0_ok'
   else
     printf '%s\n' 'argv0_bad'

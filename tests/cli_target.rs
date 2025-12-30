@@ -120,7 +120,7 @@ main() {
   __sh2_loc="cli_target_basic.sh2:2:3"
   x='world'
   __sh2_loc="cli_target_basic.sh2:3:3"
-  'echo' 'hello' "$x"; __sh2_status=$?; if [ $__sh2_status -ne 0 ]; then printf 'Error in %s\n' "$__sh2_loc" >&2; exit $__sh2_status; fi
+  'echo' 'hello' "$x"; __sh2_status=$?; (exit $__sh2_status)
 }
 __sh2_status=0
 main "$@"

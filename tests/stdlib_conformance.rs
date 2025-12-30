@@ -1,7 +1,23 @@
 use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::process::Command;
 use assert_cmd::Command as AssertCommand;
+
+/// Normalize text for deterministic comparison
+fn normalize(s: &str) -> String {
+    // Convert CRLF to LF and ensure consistent line endings
+    s.replace("\r\n", "\n")
+}
+
+/// Check if dash is available and functional
+fn has_dash() -> bool {
+    Command::new("dash")
+        .arg("-c")
+        .arg("exit 0")
+        .output()
+        .map(|o| o.status.success())
+        .unwrap_or(false)
+}
 
 /// Conformance test context for a single fixture
 struct ConformanceTest {
@@ -49,8 +65,8 @@ impl ConformanceTest {
             .expect(&format!("Failed to execute {}", shell));
         
         ExecutionResult {
-            stdout: String::from_utf8_lossy(&output.stdout).to_string(),
-            stderr: String::from_utf8_lossy(&output.stderr).to_string(),
+            stdout: normalize(&String::from_utf8_lossy(&output.stdout)),
+            stderr: normalize(&String::from_utf8_lossy(&output.stderr)),
             status: output.status.code().unwrap_or(-1),
         }
     }
@@ -66,10 +82,10 @@ impl ConformanceTest {
         self.test_target("posix", "bash", update_snapshots);
         
         // Test posix target under dash (if available)
-        if Command::new("dash").arg("--version").output().is_ok() {
+        if has_dash() {
             self.test_target_dash("posix", "dash", update_snapshots);
         } else {
-            eprintln!("Warning: dash not available, skipping dash conformance tests");
+            eprintln!("Warning: dash not available, skipping dash conformance tests for {}", self.name);
         }
     }
     
@@ -105,11 +121,11 @@ impl ConformanceTest {
         let stdout_path = format!("{}.stdout.expected", base_path);
         self.verify_snapshot(&stdout_path, &result.stdout, update_snapshots, "stdout");
         
-        // Stderr
+        // Stderr  
         let stderr_path = format!("{}.stderr.expected", base_path);
         self.verify_snapshot(&stderr_path, &result.stderr, update_snapshots, "stderr");
         
-        // Status
+        // Status (always as "{code}\n")
         let status_path = format!("{}.status.expected", base_path);
         let status_str = format!("{}\n", result.status);
         self.verify_snapshot(&status_path, &status_str, update_snapshots, "status");
@@ -122,8 +138,12 @@ impl ConformanceTest {
             let expected = fs::read_to_string(path)
                 .unwrap_or_else(|_| panic!("Missing snapshot file: {}", path));
             
+            // For stdout/stderr, normalize both sides before comparison
+            let actual_normalized = normalize(actual);
+            let expected_normalized = normalize(&expected);
+            
             assert_eq!(
-                actual, expected,
+                actual_normalized, expected_normalized,
                 "{} {} mismatch for {}",
                 self.name, desc, path
             );

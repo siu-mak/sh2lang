@@ -496,7 +496,7 @@ fn emit_val(v: &Val, target: TargetShell) -> String {
         }
         Val::Len(inner) => {
             format!(
-                "\"$( printf \"%s\" {} | awk '{{ print length($0) }}' )\"",
+                "\"$( printf \"%s\" {} | awk 'BEGIN{{l=0}} {{l=length($0)}} END{{print l}}' )\"",
                 emit_val(inner, target)
             )
         }
@@ -1092,11 +1092,8 @@ fn emit_cmd(
                             // We use (exit $s) to set $? and trigger errexit if active (which catch handles).
                             out.push_str("(exit $__sh2_status)\n");
                         } else {
-                            out.push_str("if [ $__sh2_status -ne 0 ]; then ");
-                            if loc.is_some() {
-                                out.push_str("printf 'Error in %s\\n' \"$__sh2_loc\" >&2; ");
-                            }
-                            out.push_str("exit $__sh2_status; fi\n");
+                            // For POSIX, like bash: just set $? for try/catch contexts
+                            out.push_str("(exit $__sh2_status)\n");
                         }
                     }
                 }
