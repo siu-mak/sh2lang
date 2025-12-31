@@ -1,1 +1,11 @@
 error: multiple action flags specified (choose only one of: --emit-ast, --emit-ir, --emit-sh, --check)
+Usage: sh2c [flags] <script.sh2> [flags]
+Flags:
+  --target <bash|posix>  Select output shell dialect (default: bash)
+  -o, --out <file>       Write output to file instead of stdout (auto-chmod +x)
+  --check                Check syntax and semantics without emitting code
+  --no-diagnostics       Disable error location reporting and traps
+  --emit-ast             Emit AST (debug)
+  --emit-ir              Emit IR (debug)
+  --emit-sh              Emit Shell (default)
+  -h, --help             Print help information

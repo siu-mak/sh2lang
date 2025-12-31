@@ -26,6 +26,7 @@ enum Mode {
 struct CliError {
     code: i32,
     msg: String,
+    show_usage: bool,
 }
 
 impl fmt::Display for CliError {
@@ -36,20 +37,70 @@ impl fmt::Display for CliError {
 
 impl CliError {
     fn compile(msg: impl Into<String>) -> Self {
-        Self { code: 2, msg: msg.into() }
+        Self { code: 2, msg: msg.into(), show_usage: false }
     }
     
     fn io(msg: impl Into<String>) -> Self {
-        Self { code: 1, msg: msg.into() }
+        Self { code: 1, msg: msg.into(), show_usage: false }
     }
+
+    fn usage(msg: impl Into<String>) -> Self {
+        Self { code: 1, msg: msg.into(), show_usage: true }
+    }
+
+    fn usage_with_code(msg: impl Into<String>, code: i32) -> Self {
+        Self { code, msg: msg.into(), show_usage: true }
+    }
+}
+
+fn usage_text() -> &'static str {
+    "Usage: sh2c [flags] <script.sh2> [flags]\n\
+     Flags:\n\
+     \x20 --target <bash|posix>  Select output shell dialect (default: bash)\n\
+     \x20 -o, --out <file>       Write output to file instead of stdout (auto-chmod +x)\n\
+     \x20 --check                Check syntax and semantics without emitting code\n\
+     \x20 --no-diagnostics       Disable error location reporting and traps\n\
+     \x20 --emit-ast             Emit AST (debug)\n\
+     \x20 --emit-ir              Emit IR (debug)\n\
+     \x20 --emit-sh              Emit Shell (default)\n\
+     \x20 -h, --help             Print help information"
 }
 
 fn main() {
     let args: Vec<String> = std::env::args().collect();
+    
+    let config = match parse_args(args) {
+        Ok(c) => c,
+        Err(e) => {
+            // Usage errors print "error: ..." to stderr
+            // Then usage to stderr (consistent with previous behavior)
+            eprintln!("{}", e.msg);
+            if e.show_usage {
+                eprintln!("{}", usage_text());
+            }
+            process::exit(e.code);
+        }
+    };
 
+    if let Err(e) = compile(config) {
+        eprintln!("{}", e.msg);
+        if e.show_usage {
+            eprintln!("{}", usage_text());
+        }
+        process::exit(e.code);
+    }
+}
+
+fn parse_args(args: Vec<String>) -> Result<Config, CliError> {
+    // If no arguments (len < 2 implies only binary name), print usage and exit.
+    // Original behavior exit 1.
+    // We treat it as error.
     if args.len() < 2 {
-        print_usage();
-        process::exit(1);
+        // "error: missing input file" seems reasonable?
+        // Or just print usage and exit 1?
+        // Requirement 2: "Usage errors (CLI/flag parsing errors)... missing filename... Behavior: prints error... prints usage... exit 1"
+        // Implicitly "no args" is "missing filename".
+        return Err(CliError::usage("error: missing input file"));
     }
 
     let mut filename: Option<String> = None;
@@ -66,21 +117,22 @@ fn main() {
     let mut i = 1;
     while i < args.len() {
         let arg = &args[i];
-        if arg == "--target" {
+        if arg == "-h" || arg == "--help" {
+            println!("{}", usage_text());
+            process::exit(0);
+        } else if arg == "--target" {
             if i + 1 < args.len() {
-                target = parse_target(&args[i + 1]);
+                target = parse_target(&args[i + 1])?;
                 i += 2;
             } else {
-                eprintln!("error: --target requires an argument");
-                process::exit(1);
+                return Err(CliError::usage("error: --target requires an argument"));
             }
         } else if arg.starts_with("--target=") {
             let val = &arg["--target=".len()..];
             if val.is_empty() {
-                eprintln!("error: --target requires an argument");
-                process::exit(1);
+                return Err(CliError::usage("error: --target requires an argument"));
             }
-            target = parse_target(val);
+            target = parse_target(val)?;
             i += 1;
         } else if arg == "--no-diagnostics" {
             include_diagnostics = false;
@@ -90,8 +142,7 @@ fn main() {
                 out_path = Some(args[i + 1].clone());
                 i += 2;
             } else {
-                eprintln!("error: {} requires an argument", arg);
-                process::exit(1);
+                return Err(CliError::usage(format!("error: {} requires an argument", arg)));
             }
         } else if arg == "--emit-ast" {
             emit_ast = true;
@@ -106,12 +157,10 @@ fn main() {
             check = true;
             i += 1;
         } else if arg.starts_with("-") {
-            eprintln!("error: Unexpected argument: {}", arg);
-            process::exit(1);
+             return Err(CliError::usage(format!("error: Unexpected argument: {}", arg)));
         } else {
             if filename.is_some() {
-                eprintln!("error: Unexpected argument: {} (script already specified)", arg);
-                process::exit(1);
+                 return Err(CliError::usage(format!("error: Unexpected argument: {} (script already specified)", arg)));
             }
             filename = Some(arg.clone());
             i += 1;
@@ -119,14 +168,11 @@ fn main() {
     }
 
     if check && out_path.is_some() {
-        eprintln!("error: --check cannot be used with --out");
-        print_usage();
-        process::exit(2);
+        return Err(CliError::usage_with_code("error: --check cannot be used with --out", 2));
     }
 
     if (emit_ast as u8 + emit_ir as u8 + emit_sh as u8 + check as u8) > 1 {
-        eprintln!("error: multiple action flags specified (choose only one of: --emit-ast, --emit-ir, --emit-sh, --check)");
-        process::exit(1);
+         return Err(CliError::usage("error: multiple action flags specified (choose only one of: --emit-ast, --emit-ir, --emit-sh, --check)"));
     }
     
     if emit_ast { mode = Mode::EmitAst; }
@@ -137,22 +183,24 @@ fn main() {
     let filename = match filename {
         Some(f) => f,
         None => {
-            print_usage();
-            process::exit(1);
+             return Err(CliError::usage("error: missing input file"));
         }
     };
 
-    let config = Config {
+    Ok(Config {
         filename,
         target,
         include_diagnostics,
         mode,
         out_path,
-    };
+    })
+}
 
-    if let Err(e) = compile(config) {
-        eprintln!("{}", e.msg);
-        process::exit(e.code);
+fn parse_target(s: &str) -> Result<TargetShell, CliError> {
+    match s {
+        "bash" => Ok(TargetShell::Bash),
+        "posix" => Ok(TargetShell::Posix),
+        _ => Err(CliError::usage(format!("Invalid target: {}. Supported: bash, posix", s))),
     }
 }
 
@@ -223,27 +271,4 @@ fn compile(config: Config) -> Result<(), CliError> {
     }
     
     Ok(())
-}
-
-fn parse_target(s: &str) -> TargetShell {
-    match s {
-        "bash" => TargetShell::Bash,
-        "posix" => TargetShell::Posix,
-        _ => {
-            eprintln!("Invalid target: {}. Supported: bash, posix", s);
-            process::exit(1);
-        }
-    }
-}
-
-fn print_usage() {
-    eprintln!("Usage: sh2c [flags] <script.sh2> [flags]");
-    eprintln!("Flags:");
-    eprintln!("  --target <bash|posix>  Select output shell dialect (default: bash)");
-    eprintln!("  -o, --out <file>       Write output to file instead of stdout (auto-chmod +x)");
-    eprintln!("  --check                Check syntax and semantics without emitting code");
-    eprintln!("  --no-diagnostics       Disable error location reporting and traps");
-    eprintln!("  --emit-ast             Emit AST (debug)");
-    eprintln!("  --emit-ir              Emit IR (debug)");
-    eprintln!("  --emit-sh              Emit Shell (default)");
 }
