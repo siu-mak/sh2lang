@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
+__sh2_uid="$(id -u 2>/dev/null || printf '%s' 0)"
 main() {
-  if [ "$UID" = "${UID}" ]; then
+  if [ "$__sh2_uid" = "${UID}" ]; then
     printf '%s\n' 'uid_ok'
   else
     printf '%s\n' 'uid_bad'

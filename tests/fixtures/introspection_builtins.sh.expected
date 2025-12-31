@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+__sh2_uid="$(id -u 2>/dev/null || printf '%s' 0)"
 main() {
   (
     export FOO='bar'
@@ -28,7 +29,7 @@ main() {
   else
     printf '%s\n' 'pid_bad'
   fi
-  if [ "$UID" -ge "0" ]; then
+  if [ "$__sh2_uid" -ge "0" ]; then
     printf '%s\n' 'uid_ok'
   else
     printf '%s\n' 'uid_bad'

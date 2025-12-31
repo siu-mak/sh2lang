@@ -58,6 +58,7 @@ pub struct PreludeUsage {
     pub home: bool,
     pub path_join: bool,
     pub loc: bool,
+    pub uid: bool,
 }
 
 fn scan_usage(funcs: &[Function], include_diagnostics: bool) -> PreludeUsage {
@@ -390,6 +391,9 @@ fn visit_val(val: &Val, usage: &mut PreludeUsage) {
                 visit_val(a, usage);
             }
         }
+        Val::Uid => {
+            usage.uid = true;
+        }
         _ => {}
     }
 }
@@ -640,10 +644,7 @@ fn emit_val(v: &Val, target: TargetShell) -> String {
             ),
             TargetShell::Posix => format!("\"${{{}-}}\"", name),
         },
-        Val::Uid => match target {
-            TargetShell::Bash => "\"$UID\"".to_string(),
-            TargetShell::Posix => panic!("uid() is not supported in POSIX sh target"),
-        },
+        Val::Uid => "\"$__sh2_uid\"".to_string(),
         Val::Ppid => match target {
             TargetShell::Bash => "\"$PPID\"".to_string(),
             TargetShell::Posix => panic!("ppid() is not supported in POSIX sh target"),
@@ -2217,6 +2218,9 @@ fn emit_prelude(target: TargetShell, usage: &PreludeUsage) -> String {
 "#);
     }
 
+    if usage.uid {
+        s.push_str("__sh2_uid=\"$(id -u 2>/dev/null || printf '%s' 0)\"\n");
+    }
     s
 }
 
