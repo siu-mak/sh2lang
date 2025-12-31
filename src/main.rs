@@ -4,12 +4,15 @@ use sh2c::loader;
 use sh2c::lower;
 use std::process;
 use std::error::Error;
+#[cfg(unix)]
+use std::os::unix::fs::PermissionsExt;
 
 struct Config {
     filename: String,
     target: TargetShell,
     include_diagnostics: bool,
     mode: Mode,
+    out_path: Option<String>,
 }
 
 enum Mode {
@@ -32,6 +35,7 @@ fn main() {
     let mut target = TargetShell::Bash;
     let mut include_diagnostics = true;
     let mut mode = Mode::Default;
+    let mut out_path: Option<String> = None;
     
     let mut emit_ast = false;
     let mut emit_ir = false;
@@ -60,6 +64,14 @@ fn main() {
         } else if arg == "--no-diagnostics" {
             include_diagnostics = false;
             i += 1;
+        } else if arg == "-o" || arg == "--out" {
+            if i + 1 < args.len() {
+                out_path = Some(args[i + 1].clone());
+                i += 2;
+            } else {
+                eprintln!("error: {} requires an argument", arg);
+                process::exit(1);
+            }
         } else if arg == "--emit-ast" {
             emit_ast = true;
             i += 1;
@@ -85,6 +97,12 @@ fn main() {
         }
     }
 
+    if check && out_path.is_some() {
+        eprintln!("error: --check cannot be used with --out");
+        print_usage();
+        process::exit(2);
+    }
+
     if (emit_ast as u8 + emit_ir as u8 + emit_sh as u8 + check as u8) > 1 {
         eprintln!("error: multiple action flags specified (choose only one of: --emit-ast, --emit-ir, --emit-sh, --check)");
         process::exit(1);
@@ -108,11 +126,18 @@ fn main() {
         target,
         include_diagnostics,
         mode,
+        out_path,
     };
 
     if let Err(e) = compile(config) {
-        eprintln!("{}", e);
-        process::exit(2);
+        let msg = e.to_string();
+        eprintln!("{}", msg);
+        
+        if msg.starts_with("Failed to write") {
+             process::exit(1);
+        } else {
+             process::exit(2);
+        }
     }
 }
 
@@ -126,7 +151,6 @@ fn compile(config: Config) -> Result<(), Box<dyn Error>> {
 
     if let Mode::EmitAst = config.mode {
         ast.strip_spans();
-        // Use debug formatting for deterministic snapshot structure
         println!("{:#?}", ast);
         return Ok(());
     }
@@ -168,7 +192,21 @@ fn compile(config: Config) -> Result<(), Box<dyn Error>> {
         },
     )?;
     
-    print!("{}", out);
+    if let Some(out_path) = config.out_path {
+        std::fs::write(&out_path, out).map_err(|e| format!("Failed to write to {}: {}", out_path, e))?;
+        
+        #[cfg(unix)]
+        {
+            if let Ok(metadata) = std::fs::metadata(&out_path) {
+                let mut perms = metadata.permissions();
+                perms.set_mode(perms.mode() | 0o111);
+                let _ = std::fs::set_permissions(&out_path, perms);
+            }
+        }
+    } else {
+        print!("{}", out);
+    }
+    
     Ok(())
 }
 
@@ -187,5 +225,10 @@ fn print_usage() {
     eprintln!("Usage: sh2c [flags] <script.sh2> [flags]");
     eprintln!("Flags:");
     eprintln!("  --target <bash|posix>  Select output shell dialect (default: bash)");
+    eprintln!("  -o, --out <file>       Write output to file instead of stdout (auto-chmod +x)");
+    eprintln!("  --check                Check syntax and semantics without emitting code");
     eprintln!("  --no-diagnostics       Disable error location reporting and traps");
+    eprintln!("  --emit-ast             Emit AST (debug)");
+    eprintln!("  --emit-ir              Emit IR (debug)");
+    eprintln!("  --emit-sh              Emit Shell (default)");
 }
