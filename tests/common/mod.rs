@@ -20,7 +20,7 @@ pub fn compile_path_to_shell(path: &Path, target: TargetShell) -> String {
         diag_base_dir: Some(std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))),
     };
     let ir = lower::lower_with_options(program, &opts);
-    codegen::emit_with_target(&ir, target)
+    codegen::emit_with_target(&ir, target).expect("Codegen failed")
 }
 
 pub fn compile_to_bash(src: &str) -> String {
@@ -50,7 +50,7 @@ pub fn compile_to_shell(src: &str, target: TargetShell) -> String {
         diag_base_dir: Some(std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))),
     };
     let ir = lower::lower_with_options(program, &opts);
-    codegen::emit_with_target(&ir, target)
+    codegen::emit_with_target(&ir, target).expect("Codegen failed")
 }
 
 pub fn parse_fixture(fixture_name: &str) -> ast::Program {

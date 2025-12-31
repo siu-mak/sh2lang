@@ -1,6 +1,3 @@
-diag_span_try_run_expr_invalid.sh2:2:11: try_run() must be bound via let (e.g., let r = try_run(...))
-    print(try_run(cmd))
-          ^~~~~~~~~~~~
 Error: diag_span_try_run_expr_invalid.sh2:2:11: try_run() must be bound via let (e.g., let r = try_run(...))
     print(try_run(cmd))
           ^~~~~~~~~~~~

@@ -43,7 +43,7 @@ fn main() {
         println!("Regenerating: {}", final_path.display());
         let program = loader::load_program_with_imports(&final_path).unwrap();
         let ir = lower::lower(program);
-        let posix_code = emit_with_target(&ir, TargetShell::Posix);
+        let posix_code = emit_with_target(&ir, TargetShell::Posix).expect("Failed to emit posix code");
 
         let expected_path = format!("{}.posix.sh.expected", fixture_base);
         fs::write(&expected_path, posix_code).expect("Failed to write expected file");

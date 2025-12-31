@@ -10,23 +10,11 @@ fn main() {
     // but show it for everything else or if backtrace is requested.
     let default_hook = std::panic::take_hook();
     std::panic::set_hook(Box::new(move |info| {
-        let msg = if let Some(s) = info.payload().downcast_ref::<&str>() {
-            Some(*s)
-        } else if let Some(s) = info.payload().downcast_ref::<String>() {
-            Some(s.as_str())
-        } else {
-            None
-        };
-
-        if let Some(msg) = msg {
-            if msg.starts_with("error: ") && std::env::var("RUST_BACKTRACE").is_err() {
-                // It's a structured diagnostic, let catch_unwind handle printing it cleanly.
-                return;
-            }
+        // If RUST_BACKTRACE is set, use the default hook (prints thread panic info + backtrace)
+        if std::env::var("RUST_BACKTRACE").is_ok() {
+            default_hook(info);
         }
-        
-        // Otherwise, it's an unexpected panic or backtrace is requested.
-        default_hook(info);
+        // Otherwise, stay silent. catch_unwind in main() will handle printing the error message.
     }));
 
     if args.len() < 2 {

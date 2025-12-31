@@ -1,6 +1,7 @@
 pub mod posix_lint;
 pub use posix_lint::{PosixLint, PosixLintKind, lint_script, render_lints};
 
+use crate::error::CompileError;
 use crate::ir::{Cmd, Function, LogLevel, RedirectTarget, Val};
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -399,10 +400,10 @@ fn visit_val(val: &Val, usage: &mut PreludeUsage) {
 }
 
 pub fn emit(funcs: &[Function]) -> String {
-    emit_with_target(funcs, TargetShell::Bash)
+    emit_with_target(funcs, TargetShell::Bash).expect("Failed to emit code")
 }
 
-pub fn emit_with_target(funcs: &[Function], target: TargetShell) -> String {
+pub fn emit_with_target(funcs: &[Function], target: TargetShell) -> Result<String, CompileError> {
     emit_with_options(
         funcs,
         CodegenOptions {
@@ -412,50 +413,71 @@ pub fn emit_with_target(funcs: &[Function], target: TargetShell) -> String {
     )
 }
 
-pub fn emit_with_options(funcs: &[Function], opts: CodegenOptions) -> String {
-    let usage = scan_usage(funcs, opts.include_diagnostics);
-    let mut out = String::new();
+pub fn emit_with_options(funcs: &[Function], opts: CodegenOptions) -> Result<String, CompileError> {
+    std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        let usage = scan_usage(funcs, opts.include_diagnostics);
+        let mut out = String::new();
 
-    // Emit shebang as the very first line
-    out.push_str(shebang(opts.target));
-    out.push('\n');
+        // Emit shebang as the very first line
+        out.push_str(shebang(opts.target));
+        out.push('\n');
 
-    // Usage-aware prelude emission
-    out.push_str(&emit_prelude(opts.target, &usage));
+        // Usage-aware prelude emission
+        out.push_str(&emit_prelude(opts.target, &usage));
 
-    for (i, f) in funcs.iter().enumerate() {
-        if i > 0 {
-            out.push('\n');
-        }
-        out.push_str(&format!("{}() {{\n", f.name));
-        if usage.loc && opts.target == TargetShell::Bash {
-            out.push_str("  local __sh2_loc=\"\"\n");
-        }
-        for (idx, param) in f.params.iter().enumerate() {
-            match opts.target {
-                TargetShell::Bash => {
-                    out.push_str(&format!("  local {}=\"${{{}}}\"\n", param, idx + 1))
-                }
-                TargetShell::Posix => out.push_str(&format!("  {}=\"${{{}}}\"\n", param, idx + 1)),
+        for (i, f) in funcs.iter().enumerate() {
+            if i > 0 {
+                out.push('\n');
             }
+            out.push_str(&format!("{}() {{
+", f.name));
+            if usage.loc && opts.target == TargetShell::Bash {
+                out.push_str("  local __sh2_loc=\"\"
+");
+            }
+            for (idx, param) in f.params.iter().enumerate() {
+                match opts.target {
+                    TargetShell::Bash => {
+                        out.push_str(&format!("  local {}=\"${{{}}}\"
+", param, idx + 1))
+                    }
+                    TargetShell::Posix => out.push_str(&format!("  {}=\"${{{}}}\"
+", param, idx + 1)),
+                }
+            }
+            for cmd in &f.commands {
+                emit_cmd(cmd, &mut out, 2, opts.target, false);
+            }
+            out.push_str("}
+");
         }
-        for cmd in &f.commands {
-            emit_cmd(cmd, &mut out, 2, opts.target, false);
-        }
-        out.push_str("}\n");
-    }
 
-    if usage.parse_args {
-        out.push_str("\n__sh2_parsed_args=\"$(__sh2_parse_args \"$@\")\"\n");
-    }
-    out.push_str("__sh2_status=0\nmain \"$@\"\n");
-    out
+        if usage.parse_args {
+            out.push_str("
+__sh2_parsed_args=\"$(__sh2_parse_args \"$@\")\"
+");
+        }
+        out.push_str("__sh2_status=0
+main \"$@\"
+");
+        out
+    }))
+    .map_err(|e| {
+        let msg = if let Some(s) = e.downcast_ref::<&str>() {
+            (*s).to_string()
+        } else if let Some(s) = e.downcast_ref::<String>() {
+            s.clone()
+        } else {
+            "Unknown compiler error".to_string()
+        };
+        CompileError::new(msg).with_target(opts.target)
+    })
 }
 
 /// Emit shell script with POSIX compatibility checking
 /// Returns Ok(script) if successful, or Err(lint_message) if POSIX lints fail
 pub fn emit_with_options_checked(funcs: &[Function], opts: CodegenOptions) -> Result<String, String> {
-    let out = emit_with_options(funcs, opts);
+    let out = emit_with_options(funcs, opts).map_err(|e| e.to_string())?;
     
     // Run POSIX lints if targeting POSIX
     if opts.target == TargetShell::Posix {

@@ -39,10 +39,7 @@ fn main() {
         match ir_res {
             Ok(ir) => {
                 // Try Bash
-                let bash_res = panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-                    emit_with_target(&ir, TargetShell::Bash)
-                }));
-                if let Ok(bash) = bash_res {
+                if let Ok(bash) = emit_with_target(&ir, TargetShell::Bash) {
                      let bash_path = path.with_extension("sh.expected");
                      if let Err(e) = fs::write(&bash_path, bash) {
                          eprintln!("Failed to write {}: {}", bash_path.display(), e);
@@ -50,16 +47,11 @@ fn main() {
                 }
                 
                 // Try Posix
-                let posix_res = panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-                    emit_with_target(&ir, TargetShell::Posix)
-                }));
-                 if let Ok(posix) = posix_res {
+                if let Ok(posix) = emit_with_target(&ir, TargetShell::Posix) {
                      let posix_path = path.with_extension("posix.sh.expected");
                      if let Err(e) = fs::write(&posix_path, posix) {
                          eprintln!("Failed to write {}: {}", posix_path.display(), e);
                      }
-                } else {
-                     // print failure for posix only if needed, but silence is golden for non-portable tests
                 }
             }
             Err(_) => {
