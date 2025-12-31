@@ -3,7 +3,7 @@ use sh2c::codegen::TargetShell;
 use sh2c::loader;
 use sh2c::lower;
 use std::process;
-use std::error::Error;
+use std::fmt;
 #[cfg(unix)]
 use std::os::unix::fs::PermissionsExt;
 
@@ -21,6 +21,27 @@ enum Mode {
     EmitAst,
     EmitIr,
     EmitSh,
+}
+
+struct CliError {
+    code: i32,
+    msg: String,
+}
+
+impl fmt::Display for CliError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.msg)
+    }
+}
+
+impl CliError {
+    fn compile(msg: impl Into<String>) -> Self {
+        Self { code: 2, msg: msg.into() }
+    }
+    
+    fn io(msg: impl Into<String>) -> Self {
+        Self { code: 1, msg: msg.into() }
+    }
 }
 
 fn main() {
@@ -130,24 +151,18 @@ fn main() {
     };
 
     if let Err(e) = compile(config) {
-        let msg = e.to_string();
-        eprintln!("{}", msg);
-        
-        if msg.starts_with("Failed to write") {
-             process::exit(1);
-        } else {
-             process::exit(2);
-        }
+        eprintln!("{}", e.msg);
+        process::exit(e.code);
     }
 }
 
-fn compile(config: Config) -> Result<(), Box<dyn Error>> {
+fn compile(config: Config) -> Result<(), CliError> {
     let path = std::path::Path::new(&config.filename);
     let diag_base_dir = path.parent()
         .map(|p| std::fs::canonicalize(p).unwrap_or_else(|_| p.to_path_buf()));
         
     let mut ast = loader::load_program_with_imports(path)
-        .map_err(|d| d.format(diag_base_dir.as_deref()))?;
+        .map_err(|d| CliError::compile(d.format(diag_base_dir.as_deref())))?;
 
     if let Mode::EmitAst = config.mode {
         ast.strip_spans();
@@ -179,7 +194,7 @@ fn compile(config: Config) -> Result<(), Box<dyn Error>> {
                 target: config.target,
                 include_diagnostics: config.include_diagnostics,
             },
-        )?; 
+        ).map_err(|e| CliError::compile(e.to_string()))?;
         println!("OK");
         return Ok(());
     }
@@ -190,10 +205,10 @@ fn compile(config: Config) -> Result<(), Box<dyn Error>> {
             target: config.target,
             include_diagnostics: config.include_diagnostics,
         },
-    )?;
+    ).map_err(|e| CliError::compile(e.to_string()))?;
     
     if let Some(out_path) = config.out_path {
-        std::fs::write(&out_path, out).map_err(|e| format!("Failed to write to {}: {}", out_path, e))?;
+        std::fs::write(&out_path, out).map_err(|e| CliError::io(format!("Failed to write to {}: {}", out_path, e)))?;
         
         #[cfg(unix)]
         {

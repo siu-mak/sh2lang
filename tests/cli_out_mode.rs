@@ -9,23 +9,20 @@ fn writes_file_and_is_executable() {
     let mut cmd = Command::cargo_bin("sh2c").unwrap();
     let temp_dir = tempfile::tempdir().unwrap();
     let out_path = temp_dir.path().join("out.sh");
-    // Ensure we use absolute path for input if needed, or relative to CWD.
-    // assert_cmd runs from CWD? Usually yes.
     let input_path = "tests/fixtures/cli_target_basic.sh2";
 
     cmd.arg("--target")
         .arg("posix")
         .arg("--out")
-        .arg(&out_path)
+        .arg(out_path.to_str().unwrap())
         .arg(input_path)
         .assert()
         .success()
-        .stdout("");
+        .stdout(""); // stdout should be empty
 
     assert!(out_path.exists(), "Output file was not created");
     
     let content = fs::read_to_string(&out_path).unwrap();
-    // Verify content briefly
     assert!(content.starts_with("#!/bin/sh"), "Should have POSIX shebang");
 
     #[cfg(unix)]
@@ -45,7 +42,7 @@ fn check_and_out_is_error() {
 
     cmd.arg("--check")
         .arg("--out")
-        .arg(&out_path)
+        .arg(out_path.to_str().unwrap())
         .arg(input_path)
         .assert()
         .failure()
@@ -53,4 +50,23 @@ fn check_and_out_is_error() {
         .stderr(predicate::str::contains("--check cannot be used with --out"));
 
     assert!(!out_path.exists(), "Output file SHOULD NOT be created on conflict");
+}
+
+#[test]
+fn out_io_error_exit_1() {
+    let mut cmd = Command::cargo_bin("sh2c").unwrap();
+    let temp_dir = tempfile::tempdir().unwrap();
+    // Create a directory, which cannot be overwritten by fs::write
+    let dir_path = temp_dir.path().join("dirout");
+    fs::create_dir(&dir_path).unwrap();
+    let input_path = "tests/fixtures/cli_target_basic.sh2";
+
+    cmd.arg("--target")
+        .arg("posix")
+        .arg("--out")
+        .arg(dir_path.to_str().unwrap())
+        .arg(input_path)
+        .assert()
+        .failure()
+        .code(1); // I/O errors should be exit code 1
 }
