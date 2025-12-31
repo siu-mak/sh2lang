@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 main() {
   if [ 'a' = 'b' ]; then
     printf '%s\n' 'no'

@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 main() {
   if [ "$UID" = "${UID}" ]; then
     printf '%s\n' 'uid_ok'

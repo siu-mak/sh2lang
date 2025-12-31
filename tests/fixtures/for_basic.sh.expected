@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 main() {
   for x in 'a' 'b'; do
     printf '%s\n' "$x"

@@ -24,6 +24,14 @@ impl Default for CodegenOptions {
     }
 }
 
+/// Returns the appropriate shebang line for the target shell
+fn shebang(target: TargetShell) -> &'static str {
+    match target {
+        TargetShell::Bash => "#!/usr/bin/env bash",
+        TargetShell::Posix => "#!/bin/sh",
+    }
+}
+
 #[derive(Debug, Default, Clone)]
 pub struct PreludeUsage {
     pub coalesce: bool,
@@ -403,6 +411,10 @@ pub fn emit_with_target(funcs: &[Function], target: TargetShell) -> String {
 pub fn emit_with_options(funcs: &[Function], opts: CodegenOptions) -> String {
     let usage = scan_usage(funcs, opts.include_diagnostics);
     let mut out = String::new();
+
+    // Emit shebang as the very first line
+    out.push_str(shebang(opts.target));
+    out.push('\n');
 
     // Usage-aware prelude emission
     out.push_str(&emit_prelude(opts.target, &usage));

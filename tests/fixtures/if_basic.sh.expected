@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 main() {
   printf '%s\n' 'start'
   if [ -n "$registry" ]; then

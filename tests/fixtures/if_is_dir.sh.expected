@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 main() {
   if [ -d 'src' ]; then
     printf '%s\n' 'dir'

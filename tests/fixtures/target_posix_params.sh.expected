@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 main() {
   local a="${1}"
   local b="${2}"

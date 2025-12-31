@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 main() {
   if [ "5" -gt "3" ]; then
     printf '%s\n' 'yes'

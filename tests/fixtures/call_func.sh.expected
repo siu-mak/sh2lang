@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 show() {
   echo arg=$1
 }

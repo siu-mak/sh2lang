@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 main() {
   if [ "$UID" = "${UID}" ] && [ "$PPID" = "${PPID}" ] && [ "$PWD" = "${PWD}" ]; then
     printf '%s\n' 'ok'

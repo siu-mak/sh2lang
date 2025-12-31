@@ -1,3 +1,4 @@
+#!/bin/sh
 __sh2_home() { printf '%s' "${HOME-}"; }
 main() {
   printf '%s\n' "$( __sh2_home )"

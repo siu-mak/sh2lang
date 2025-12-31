@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 main() {
   if [ "$0" = "$0" ]; then
     printf '%s\n' 'argv0_ok'

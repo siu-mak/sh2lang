@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 main() {
   if true; then
     printf '%s\n' 't_ok'

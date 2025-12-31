@@ -1,3 +1,4 @@
+#!/bin/sh
 main() {
   msg="${1}"
   __sh2_loc="tests/fixtures/target_posix_basic.sh2:2:3"

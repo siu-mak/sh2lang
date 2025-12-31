@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 d_func() {
   printf '%s\n' 'D'
 }

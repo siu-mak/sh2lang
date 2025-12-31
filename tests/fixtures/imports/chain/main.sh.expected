@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 c_func() {
   printf '%s\n' 'C_WORKS'
 }

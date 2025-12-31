@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 show() {
   if [ "$#" = "3" ]; then
     printf '%s\n' 'argc_ok'

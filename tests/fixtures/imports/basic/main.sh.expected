@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 hello() {
   printf '%s\n' 'hi'
 }

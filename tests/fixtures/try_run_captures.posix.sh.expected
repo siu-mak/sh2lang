@@ -1,3 +1,4 @@
+#!/bin/sh
 __sh2_tmpfile() { if command -v mktemp >/dev/null 2>&1; then mktemp; else printf "%s/sh2_tmp_%s_%s" "${TMPDIR:-/tmp}" "$$" "$(awk 'BEGIN{srand();print int(rand()*1000000)}')"; fi; }
 __sh2_read_file() { cat "$1" 2>/dev/null || true; }
 main() {

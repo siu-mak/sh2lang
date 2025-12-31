@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 main() {
   if [ 'a' = 'a' ] && [ 'b' != 'c' ]; then
     printf '%s\n' 'ok'

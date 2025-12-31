@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 main() {
   if [ "1" = "1" ] && [ "2" = "2" ]; then
     printf '%s\n' 'yes'

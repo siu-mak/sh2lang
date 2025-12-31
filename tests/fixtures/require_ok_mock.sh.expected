@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 __sh2_require() { for c in "$@"; do if ! command -v -- "$c" >/dev/null 2>&1; then printf '%s\n' "missing required command: $c" >&2; exit 127; fi; done; }
 main() {
   __sh2_require 'mockcmd'

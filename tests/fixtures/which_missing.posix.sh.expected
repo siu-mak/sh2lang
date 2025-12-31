@@ -1,3 +1,4 @@
+#!/bin/sh
 __sh2_which() { command -v -- "$1" 2>/dev/null || true; }
 main() {
   printf '%s\n' "$( __sh2_which 'definitely_not_a_real_cmd_123' )"

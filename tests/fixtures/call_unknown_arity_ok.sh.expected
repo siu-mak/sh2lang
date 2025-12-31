@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 main() {
   printf '%s\n' "$( echo '1' '2' '3' )"
 }

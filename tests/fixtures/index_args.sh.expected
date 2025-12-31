@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 main() {
   printf '%s\n' "$( arr=("$@"); idx=$(( 0 )); printf "%s" "${arr[idx]}" )"
   printf '%s\n' "$( arr=("$@"); idx=$(( 2 )); printf "%s" "${arr[idx]}" )"

@@ -1,3 +1,4 @@
+#!/bin/sh
 main() {
   __sh2_loc="tests/fixtures/quote_args_splice.sh2:2:3"
   'printf' '%s

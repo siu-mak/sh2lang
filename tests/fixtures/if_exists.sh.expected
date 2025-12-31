@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 main() {
   if [ -e 'a.txt' ]; then
     printf '%s\n' 'yes'

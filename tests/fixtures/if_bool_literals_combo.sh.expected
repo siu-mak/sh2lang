@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 main() {
   if true && ! false; then
     printf '%s\n' 'ok'

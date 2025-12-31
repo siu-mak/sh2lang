@@ -1,3 +1,4 @@
+#!/bin/sh
 main() {
   case $- in *e*) __sh2_e=1;; *) __sh2_e=0;; esac; set +e
   if {

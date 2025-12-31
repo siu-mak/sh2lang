@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 tenth() {
   local a1="${1}"
   local a2="${2}"

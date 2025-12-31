@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 main() {
   if ! false; then return 0; else return 1; fi
 }

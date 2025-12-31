@@ -1,3 +1,4 @@
+#!/bin/sh
 hello() {
   printf '%s\n' 'hi'
 }
