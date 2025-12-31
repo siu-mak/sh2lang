@@ -3,12 +3,7 @@ pub use posix_lint::{PosixLint, PosixLintKind, lint_script, render_lints};
 
 use crate::error::CompileError;
 use crate::ir::{Cmd, Function, LogLevel, RedirectTarget, Val};
-
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub enum TargetShell {
-    Bash,
-    Posix,
-}
+pub use crate::target::TargetShell;
 
 #[derive(Clone, Debug, Copy)]
 pub struct CodegenOptions {
@@ -414,76 +409,59 @@ pub fn emit_with_target(funcs: &[Function], target: TargetShell) -> Result<Strin
 }
 
 pub fn emit_with_options(funcs: &[Function], opts: CodegenOptions) -> Result<String, CompileError> {
-    std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-        let usage = scan_usage(funcs, opts.include_diagnostics);
-        let mut out = String::new();
+    let usage = scan_usage(funcs, opts.include_diagnostics);
+    let mut out = String::new();
 
-        // Emit shebang as the very first line
-        out.push_str(shebang(opts.target));
-        out.push('\n');
+    // Emit shebang as the very first line
+    out.push_str(shebang(opts.target));
+    out.push('\n');
 
-        // Usage-aware prelude emission
-        out.push_str(&emit_prelude(opts.target, &usage));
+    // Usage-aware prelude emission
+    out.push_str(&emit_prelude(opts.target, &usage));
 
-        for (i, f) in funcs.iter().enumerate() {
-            if i > 0 {
-                out.push('\n');
-            }
-            out.push_str(&format!("{}() {{
-", f.name));
-            if usage.loc && opts.target == TargetShell::Bash {
-                out.push_str("  local __sh2_loc=\"\"
-");
-            }
-            for (idx, param) in f.params.iter().enumerate() {
-                match opts.target {
-                    TargetShell::Bash => {
-                        out.push_str(&format!("  local {}=\"${{{}}}\"
-", param, idx + 1))
-                    }
-                    TargetShell::Posix => out.push_str(&format!("  {}=\"${{{}}}\"
-", param, idx + 1)),
+    for (i, f) in funcs.iter().enumerate() {
+        if i > 0 {
+            out.push('\n');
+        }
+        out.push_str(&format!("{}() {{\n", f.name));
+        if usage.loc && opts.target == TargetShell::Bash {
+            out.push_str("  local __sh2_loc=\"\"\n");
+        }
+        for (idx, param) in f.params.iter().enumerate() {
+            match opts.target {
+                TargetShell::Bash => {
+                    out.push_str(&format!("  local {}=\"${{{}}}\"\n", param, idx + 1))
                 }
+                TargetShell::Posix => out.push_str(&format!("  {}=\"${{{}}}\"\n", param, idx + 1)),
             }
-            for cmd in &f.commands {
-                emit_cmd(cmd, &mut out, 2, opts.target, false);
-            }
-            out.push_str("}
-");
         }
+        for cmd in &f.commands {
+            emit_cmd(cmd, &mut out, 2, opts.target, false)?;
+        }
+        out.push_str("}\n");
+    }
 
-        if usage.parse_args {
-            out.push_str("
-__sh2_parsed_args=\"$(__sh2_parse_args \"$@\")\"
-");
-        }
-        out.push_str("__sh2_status=0
-main \"$@\"
-");
-        out
-    }))
-    .map_err(|e| {
-        let msg = if let Some(s) = e.downcast_ref::<&str>() {
-            (*s).to_string()
-        } else if let Some(s) = e.downcast_ref::<String>() {
-            s.clone()
-        } else {
-            "Unknown compiler error".to_string()
-        };
-        CompileError::new(msg).with_target(opts.target)
-    })
+    if usage.parse_args {
+        out.push_str("\n__sh2_parsed_args=\"$(__sh2_parse_args \"$@\")\"\n");
+    }
+    out.push_str("__sh2_status=0\nmain \"$@\"\n");
+    Ok(out)
 }
 
 /// Emit shell script with POSIX compatibility checking
 /// Returns Ok(script) if successful, or Err(lint_message) if POSIX lints fail
-pub fn emit_with_options_checked(funcs: &[Function], opts: CodegenOptions) -> Result<String, String> {
-    let out = emit_with_options(funcs, opts).map_err(|e| e.to_string())?;
+pub fn emit_with_options_checked(funcs: &[Function], opts: CodegenOptions) -> Result<String, CompileError> {
+    let out = emit_with_options(funcs, opts)?;
     
     // Run POSIX lints if targeting POSIX
     if opts.target == TargetShell::Posix {
         let lints = lint_script(&out);
         if !lints.is_empty() {
-            return Err(render_lints(&lints));
+            return Err(CompileError {
+                message: render_lints(&lints),
+                target: Some(opts.target),
+                location: None,
+            });
         }
     }
     
@@ -505,69 +483,69 @@ fn sh_single_quote(s: &str) -> String {
     out
 }
 
-fn emit_val(v: &Val, target: TargetShell) -> String {
+fn emit_val(v: &Val, target: TargetShell) -> Result<String, CompileError> {
     match v {
-        Val::Literal(s) => sh_single_quote(s),
-        Val::Var(s) => format!("\"${}\"", s),
-        Val::Concat(l, r) => format!("{}{}", emit_val(l, target), emit_val(r, target)),
-        Val::TryRun(_) => panic!("try_run() must be bound via let (e.g., let r = try_run(...))"),
-        Val::Which(arg) => format!("\"$( __sh2_which {} )\"", emit_word(arg, target)),
-        Val::ReadFile(arg) => format!("\"$( __sh2_read_file {} )\"", emit_word(arg, target)),
-        Val::Home => "\"$( __sh2_home )\"".to_string(),
+        Val::Literal(s) => Ok(sh_single_quote(s)),
+        Val::Var(s) => Ok(format!("\"${}\"", s)),
+        Val::Concat(l, r) => Ok(format!("{}{}", emit_val(l, target)?, emit_val(r, target)?)),
+        Val::TryRun(_) => Err(CompileError::unsupported("try_run() must be bound via let (e.g., let r = try_run(...))", target)),
+        Val::Which(arg) => Ok(format!("\"$( __sh2_which {} )\"", emit_word(arg, target)?)),
+        Val::ReadFile(arg) => Ok(format!("\"$( __sh2_read_file {} )\"", emit_word(arg, target)?)),
+        Val::Home => Ok("\"$( __sh2_home )\"".to_string()),
         Val::PathJoin(args) => {
-            let parts: Vec<String> = args.iter().map(|a| emit_word(a, target)).collect();
-            format!("\"$( __sh2_path_join {} )\"", parts.join(" "))
+            let parts: Vec<String> = args.iter().map(|a| emit_word(a, target)).collect::<Result<_, _>>()?;
+            Ok(format!("\"$( __sh2_path_join {} )\"", parts.join(" ")))
         }
         Val::Command(args) => {
-            let parts: Vec<String> = args.iter().map(|a| emit_word(a, target)).collect();
-            format!("\"$( {} )\"", parts.join(" "))
+            let parts: Vec<String> = args.iter().map(|a| emit_word(a, target)).collect::<Result<_, _>>()?;
+            Ok(format!("\"$( {} )\"", parts.join(" ")))
         }
         Val::CommandPipe(segments) => {
             let seg_strs: Vec<String> = segments
                 .iter()
                 .map(|seg| {
-                    let words: Vec<String> = seg.iter().map(|w| emit_word(w, target)).collect();
-                    words.join(" ")
+                    let words: Vec<String> = seg.iter().map(|w| emit_word(w, target)).collect::<Result<_, _>>()?;
+                    Ok(words.join(" "))
                 })
-                .collect();
-            format!("\"$( {} )\"", seg_strs.join(" | "))
+                .collect::<Result<_, CompileError>>()?;
+            Ok(format!("\"$( {} )\"", seg_strs.join(" | ")))
         }
         Val::Len(inner) => {
-            format!(
+            Ok(format!(
                 "\"$( printf \"%s\" {} | awk 'BEGIN{{l=0}} {{l=length($0)}} END{{print l}}' )\"",
-                emit_val(inner, target)
-            )
+                emit_val(inner, target)?
+            ))
         }
-        Val::Arg(n) => format!("\"${}\"", n),
-        Val::ParseArgs => "\"${__sh2_parsed_args}\"".to_string(),
-        Val::ArgsFlags(inner) => format!("\"$( __sh2_args_flags {} )\"", emit_val(inner, target)),
-        Val::ArgsPositionals(inner) => format!(
+        Val::Arg(n) => Ok(format!("\"${}\"", n)),
+        Val::ParseArgs => Ok("\"${__sh2_parsed_args}\"".to_string()),
+        Val::ArgsFlags(inner) => Ok(format!("\"$( __sh2_args_flags {} )\"", emit_val(inner, target)?)),
+        Val::ArgsPositionals(inner) => Ok(format!(
             "\"$( __sh2_args_positionals {} )\"",
-            emit_val(inner, target)
-        ),
+            emit_val(inner, target)?
+        )),
         Val::Index { list, index } => {
             match &**list {
                 Val::ArgsFlags(_) => {
-                    format!(
+                    Ok(format!(
                         "\"$( __sh2_args_flag_get {} {} )\"",
-                        emit_val(list, target),
-                        emit_val(index, target)
-                    )
+                        emit_val(list, target)?,
+                        emit_val(index, target)?
+                    ))
                 }
                 Val::ArgsPositionals(_) => {
-                    format!(
+                    Ok(format!(
                         "\"$( __sh2_list_get {} $(( {} )) )\"",
-                        emit_val(list, target),
-                        emit_index_expr(index, target)
-                    )
+                        emit_val(list, target)?,
+                        emit_index_expr(index, target)?
+                    ))
                 }
                 _ => {
                     if target == TargetShell::Posix {
-                        panic!("List indexing is not supported in POSIX sh target");
+                        return Err(CompileError::unsupported("List indexing is not supported in POSIX sh target", target));
                     }
                     match &**list {
                         Val::Var(name) => {
-                            format!("\"${{{}[{}]}}\"", name, emit_index_expr(index, target))
+                            Ok(format!("\"${{{}[{}]}}\"", name, emit_index_expr(index, target)?))
                         }
                         Val::List(elems) => {
                             let mut arr_str = String::new();
@@ -575,38 +553,36 @@ fn emit_val(v: &Val, target: TargetShell) -> String {
                                 if i > 0 {
                                     arr_str.push(' ');
                                 }
-                                arr_str.push_str(&emit_word(elem, target));
+                                arr_str.push_str(&emit_word(elem, target)?);
                             }
-                            // Force evaluation of index
-                            format!(
+                            Ok(format!(
                                 "\"$( arr=({}); idx=$(( {} )); printf \"%s\" \"${{arr[idx]}}\" )\"",
                                 arr_str,
-                                emit_index_expr(index, target)
-                            )
+                                emit_index_expr(index, target)?
+                            ))
                         }
                         Val::Args => {
-                            format!(
+                            Ok(format!(
                                 "\"$( arr=(\"$@\"); idx=$(( {} )); printf \"%s\" \"${{arr[idx]}}\" )\"",
-                                emit_index_expr(index, target)
-                            )
+                                emit_index_expr(index, target)?
+                            ))
                         }
-                        _ => panic!("Index implemented only for variables and list literals"),
+                        _ => Err(CompileError::internal("Index implemented only for variables and list literals", target)),
                     }
                 }
             }
         }
         Val::Join { list, sep } => {
             if target == TargetShell::Posix {
-                panic!("List join is not supported in POSIX sh target");
+                return Err(CompileError::unsupported("List join is not supported in POSIX sh target", target));
             }
             match &**list {
                 Val::Var(name) => {
-                    // Arrays: "$( IFS=<sep>; printf "%s" "${name[*]}" )"
-                    format!(
+                    Ok(format!(
                         "\"$( IFS={}; printf \"%s\" \"${{{}[*]}}\" )\"",
-                        emit_val(sep, target),
+                        emit_val(sep, target)?,
                         name
-                    )
+                    ))
                 }
                 Val::List(elems) => {
                     let mut arr_str = String::new();
@@ -614,89 +590,90 @@ fn emit_val(v: &Val, target: TargetShell) -> String {
                         if i > 0 {
                             arr_str.push(' ');
                         }
-                        arr_str.push_str(&emit_word(elem, target));
+                        arr_str.push_str(&emit_word(elem, target)?);
                     }
-                    format!(
+                    Ok(format!(
                         "\"$( arr=({}); IFS={}; printf \"%s\" \"${{arr[*]}}\" )\"",
                         arr_str,
-                        emit_val(sep, target)
-                    )
+                        emit_val(sep, target)?
+                    ))
                 }
                 Val::Args => {
-                    format!(
+                    Ok(format!(
                         "\"$( IFS={}; printf \"%s\" \"$*\" )\"",
-                        emit_val(sep, target)
-                    )
+                        emit_val(sep, target)?
+                    ))
                 }
-                _ => panic!("Join implemented only for variables and list literals"),
+                _ => Err(CompileError::internal("Join implemented only for variables and list literals", target)),
             }
         }
         Val::Count(inner) => match &**inner {
             Val::List(elems) => match target {
-                TargetShell::Bash => format!("\"{}\"", elems.len()),
-                TargetShell::Posix => panic!("List literals not supported in POSIX target"),
+                TargetShell::Bash => Ok(format!("\"{}\"", elems.len())),
+                TargetShell::Posix => Err(CompileError::unsupported("List literals not supported in POSIX target", target)),
             },
             Val::Var(name) => match target {
-                TargetShell::Bash => format!("\"${{#{}[@]}}\"", name),
-                TargetShell::Posix => panic!("Array count not supported in POSIX target"),
+                TargetShell::Bash => Ok(format!("\"${{#{}[@]}}\"", name)),
+                TargetShell::Posix => Err(CompileError::unsupported("Array count not supported in POSIX target", target)),
             },
-            Val::Args => "\"$#\"".to_string(),
-            _ => panic!("count(...) supports only list literals, list variables, and args"),
+            Val::Args => Ok("\"$#\"".to_string()),
+            _ => Err(CompileError::internal("count(...) supports only list literals, list variables, and args", target)),
         },
-        Val::Bool(_) => panic!(
-            "Cannot emit boolean value as string/word; booleans are only valid in conditions"
-        ),
-        Val::Number(n) => format!("\"{}\"", n),
-        Val::Status => "\"$__sh2_status\"".to_string(),
-        Val::Pid => "\"$!\"".to_string(),
+        Val::Bool(_) => Err(CompileError::internal(
+            "Cannot emit boolean value as string/word; booleans are only valid in conditions",
+            target
+        )),
+        Val::Number(n) => Ok(format!("\"{}\"", n)),
+        Val::Status => Ok("\"$__sh2_status\"".to_string()),
+        Val::Pid => Ok("\"$!\"".to_string()),
         Val::Env(inner) => match &**inner {
-            Val::Literal(s) => format!("\"${{{}}}\"", s),
+            Val::Literal(s) => Ok(format!("\"${{{}}}\"", s)),
             Val::Var(name) => match target {
-                TargetShell::Bash => format!("\"${{!{}}}\"", name),
-                TargetShell::Posix => panic!(
-                    "env(var_name) is not supported in POSIX sh target; use env(\"NAME\") or env.NAME"
-                ),
+                TargetShell::Bash => Ok(format!("\"${{!{}}}\"", name)),
+                TargetShell::Posix => Err(CompileError::unsupported(
+                    "env(var_name) is not supported in POSIX sh target; use env(\"NAME\") or env.NAME",
+                    target
+                )),
             },
-            _ => panic!("env(...) requires a string literal name or variable name"),
+            _ => Err(CompileError::internal("env(...) requires a string literal name or variable name", target)),
         },
         Val::EnvDot(name) => match target {
-            TargetShell::Bash => format!(
+            TargetShell::Bash => Ok(format!(
                 "\"$( ( typeset +x {0}; printenv {0} ) 2>/dev/null || printenv {0} 2>/dev/null || true )\"",
                 name
-            ),
-            TargetShell::Posix => format!("\"${{{}-}}\"", name),
+            )),
+            TargetShell::Posix => Ok(format!("\"${{{}-}}\"", name)),
         },
-        Val::Uid => "\"$__sh2_uid\"".to_string(),
+        Val::Uid => Ok("\"$__sh2_uid\"".to_string()),
         Val::Ppid => match target {
-            TargetShell::Bash => "\"$PPID\"".to_string(),
-            TargetShell::Posix => panic!("ppid() is not supported in POSIX sh target"),
+            TargetShell::Bash => Ok("\"$PPID\"".to_string()),
+            TargetShell::Posix => Err(CompileError::unsupported("ppid() is not supported in POSIX sh target", target)),
         },
         Val::Pwd => match target {
-            TargetShell::Bash => "\"$PWD\"".to_string(),
-            TargetShell::Posix => panic!("pwd() is not supported in POSIX sh target"),
+            TargetShell::Bash => Ok("\"$PWD\"".to_string()),
+            TargetShell::Posix => Err(CompileError::unsupported("pwd() is not supported in POSIX sh target", target)),
         },
-        Val::SelfPid => "\"$$\"".to_string(),
-        Val::Argv0 => "\"$0\"".to_string(),
-        Val::Argc => "\"$#\"".to_string(),
-        Val::Arith { .. } => format!("\"$(( {} ))\"", emit_arith_expr(v, target)),
+        Val::SelfPid => Ok("\"$$\"".to_string()),
+        Val::Argv0 => Ok("\"$0\"".to_string()),
+        Val::Argc => Ok("\"$#\"".to_string()),
+        Val::Arith { .. } => Ok(format!("\"$(( {} ))\"", emit_arith_expr(v, target)?)),
         Val::BoolStr(inner) => {
-            format!(
+            Ok(format!(
                 "\"$( if {}; then printf \"%s\" \"true\"; else printf \"%s\" \"false\"; fi )\"",
-                emit_cond(inner, target)
-            )
+                emit_cond(inner, target)?
+            ))
         }
         Val::Input(prompt) => match target {
             TargetShell::Bash => {
-                let p = emit_val(prompt, target);
-                // $( printf '%s' "Prompt" >&2; IFS= read -r __sh2_in; printf '%s' "$__sh2_in" )
-                format!(
+                let p = emit_val(prompt, target)?;
+                Ok(format!(
                     "\"$( printf '%s' {} >&2; IFS= read -r __sh2_in; printf '%s' \"$__sh2_in\" )\"",
                     p
-                )
+                ))
             }
-            TargetShell::Posix => panic!("input(...) is not supported in POSIX sh target"),
+            TargetShell::Posix => Err(CompileError::unsupported("input(...) is not supported in POSIX sh target", target)),
         },
-        Val::Args => panic!("args cannot be embedded/concatenated inside a word"),
+        Val::Args => Err(CompileError::internal("args cannot be embedded/concatenated inside a word", target)),
         Val::Call { name, args } => {
             let (func_name, needs_prefix) = if name == "default" {
                 ("coalesce", true)
@@ -706,39 +683,33 @@ fn emit_val(v: &Val, target: TargetShell) -> String {
                 (name.as_str(), false)
             };
 
-            let arg_strs: Vec<String> = args.iter().map(|a| emit_word(a, target)).collect();
+            let arg_strs: Vec<String> = args.iter().map(|a| emit_word(a, target)).collect::<Result<_, _>>()?;
             if needs_prefix {
-                format!("\"$( __sh2_{} {} )\"", func_name, arg_strs.join(" "))
+                Ok(format!("\"$( __sh2_{} {} )\"", func_name, arg_strs.join(" ")))
             } else {
-                format!("\"$( {} {} )\"", func_name, arg_strs.join(" "))
+                Ok(format!("\"$( {} {} )\"", func_name, arg_strs.join(" ")))
             }
         }
         Val::LoadEnvfile(path) => {
-            format!("\"$( __sh2_load_envfile {} )\"", emit_word(path, target))
+            Ok(format!("\"$( __sh2_load_envfile {} )\"", emit_word(path, target)?))
         }
         Val::JsonKv(blob) => {
-            format!("\"$( __sh2_json_kv {} )\"", emit_word(blob, target))
+            Ok(format!("\"$( __sh2_json_kv {} )\"", emit_word(blob, target)?))
         }
         Val::Matches(..) => {
-            format!(
+            Ok(format!(
                 "\"$( if {}; then printf \"%s\" \"true\"; else printf \"%s\" \"false\"; fi )\"",
-                emit_cond(v, target)
-            )
+                emit_cond(v, target)?
+            ))
         }
         Val::MapIndex { map, key } => {
             if target == TargetShell::Posix {
-                panic!("map/dict is only supported in Bash target");
+                return Err(CompileError::unsupported("map/dict is only supported in Bash target", target));
             }
-            // Emit ${map["key"]} with safe quoting
-            // We use simple double quotes because we control the key handling or use single quotes if key allows
-            // Actually, best is: "${map['key_escaped']}"
-            let escaped_key = sh_single_quote(key); // e.g. 'foo'
-            // The expansion: "${map['foo']}"
-            // Note: sh_single_quote wraps in '...', so escaped_key includes them.
-            // Bash associative array index handles quotes.
-            format!("\"${{{}[{}]}}\"", map, escaped_key)
+            let escaped_key = sh_single_quote(key);
+            Ok(format!("\"${{{}[{}]}}\"", map, escaped_key))
         }
-        Val::MapLiteral(_) => panic!("Map literal is only allowed in 'let' assignment"),
+        Val::MapLiteral(_) => Err(CompileError::unsupported("Map literal is only allowed in 'let' assignment", target)),
         Val::Compare { .. }
         | Val::And(..)
         | Val::Or(..)
@@ -752,18 +723,18 @@ fn emit_val(v: &Val, target: TargetShell) -> String {
         | Val::IsWritable(..)
         | Val::IsNonEmpty(..)
         | Val::List(..)
-        | Val::Confirm(..) => panic!("Cannot emit boolean/list value as string"),
+        | Val::Confirm(..) => Err(CompileError::internal("Cannot emit boolean/list value as string", target)),
     }
 }
 
-fn emit_word(v: &Val, target: TargetShell) -> String {
+fn emit_word(v: &Val, target: TargetShell) -> Result<String, CompileError> {
     if let Val::Args = v {
-        return "\"$@\"".to_string();
+        return Ok("\"$@\"".to_string());
     }
     emit_val(v, target)
 }
 
-fn emit_cond(v: &Val, target: TargetShell) -> String {
+fn emit_cond(v: &Val, target: TargetShell) -> Result<String, CompileError> {
     match v {
         Val::Compare { left, op, right } => {
             let (op_str, is_numeric) = match op {
@@ -778,24 +749,24 @@ fn emit_cond(v: &Val, target: TargetShell) -> String {
                 // For numeric, operands can be arith expressions or just numbers.
                 // emit_val returns quoted strings, which [ ... ] handles nicely for -lt etc.
                 // e.g. [ "1" -lt "2" ]
-                format!(
+                Ok(format!(
                     "[ {} {} {} ]",
-                    emit_val(left, target),
+                    emit_val(left, target)?,
                     op_str,
-                    emit_val(right, target)
-                )
+                    emit_val(right, target)?
+                ))
             } else {
-                format!(
+                Ok(format!(
                     "[ {} {} {} ]",
-                    emit_val(left, target),
+                    emit_val(left, target)?,
                     op_str,
-                    emit_val(right, target)
-                )
+                    emit_val(right, target)?
+                ))
             }
         }
         Val::And(left, right) => {
-            let mut l_str = emit_cond(left, target);
-            let mut r_str = emit_cond(right, target);
+            let mut l_str = emit_cond(left, target)?;
+            let mut r_str = emit_cond(right, target)?;
             // Wrap left if Or (for clarity/spec, even if bash left-associativity makes it implicit)
             // (A || B) && C -> ( A || B ) && C
             if let Val::Or(..) = **left {
@@ -806,118 +777,114 @@ fn emit_cond(v: &Val, target: TargetShell) -> String {
             if let Val::Or(..) = **right {
                 r_str = format!("( {} )", r_str);
             }
-            format!("{} && {}", l_str, r_str)
+            Ok(format!("{} && {}", l_str, r_str))
         }
         Val::Or(left, right) => {
-            let l_str = emit_cond(left, target);
-            let mut r_str = emit_cond(right, target);
+            let l_str = emit_cond(left, target)?;
+            let mut r_str = emit_cond(right, target)?;
             // If right is And, we must wrap it because && > || in sh2c but equal in bash.
             // A || B && C -> A || B && C (bash interprets as (A||B)&&C). We want A || (B&&C).
             if let Val::And(..) = **right {
                 r_str = format!("( {} )", r_str);
             }
-            format!("{} || {}", l_str, r_str)
+            Ok(format!("{} || {}", l_str, r_str))
         }
         Val::Not(expr) => {
-            let inner = emit_cond(expr, target);
+            let inner = emit_cond(expr, target)?;
             // If inner is binary, wrap it. ! (A && B) -> ! A && B (bash interprets as (!A) && B).
             match **expr {
-                Val::And(..) | Val::Or(..) => format!("! ( {} )", inner),
-                _ => format!("! {}", inner),
+                Val::And(..) | Val::Or(..) => Ok(format!("! ( {} )", inner)),
+                _ => Ok(format!("! {}", inner)),
             }
         }
         Val::Exists(path) => {
-            format!("[ -e {} ]", emit_val(path, target))
+            Ok(format!("[ -e {} ]", emit_val(path, target)?))
         }
         Val::IsDir(path) => {
-            format!("[ -d {} ]", emit_val(path, target))
+            Ok(format!("[ -d {} ]", emit_val(path, target)?))
         }
         Val::IsFile(path) => {
-            format!("[ -f {} ]", emit_val(path, target))
+            Ok(format!("[ -f {} ]", emit_val(path, target)?))
         }
         Val::IsSymlink(path) => {
-            format!("[ -L {} ]", emit_val(path, target))
+            Ok(format!("[ -L {} ]", emit_val(path, target)?))
         }
         Val::IsExec(path) => {
-            format!("[ -x {} ]", emit_val(path, target))
+            Ok(format!("[ -x {} ]", emit_val(path, target)?))
         }
         Val::IsReadable(path) => {
-            format!("[ -r {} ]", emit_val(path, target))
+            Ok(format!("[ -r {} ]", emit_val(path, target)?))
         }
         Val::IsWritable(path) => {
-            format!("[ -w {} ]", emit_val(path, target))
+            Ok(format!("[ -w {} ]", emit_val(path, target)?))
         }
         Val::IsNonEmpty(path) => {
-            format!("[ -s {} ]", emit_val(path, target))
+            Ok(format!("[ -s {} ]", emit_val(path, target)?))
         }
         Val::Confirm(prompt) => match target {
             TargetShell::Bash => {
-                let p = emit_val(prompt, target);
+                let p = emit_val(prompt, target)?;
                 // Subshell that loops until valid input
                 // Returns 0 for true, 1 for false
-                format!(
+                Ok(format!(
                     "( while true; do printf '%s' {} >&2; if ! IFS= read -r __sh2_ans; then exit 1; fi; case \"${{__sh2_ans,,}}\" in y|yes|true|1) exit 0 ;; n|no|false|0|\"\") exit 1 ;; esac; done )",
                     p
-                )
+                ))
             }
-            TargetShell::Posix => panic!("confirm(...) is not supported in POSIX sh target"),
+            TargetShell::Posix => Err(CompileError::unsupported("confirm(...) is not supported in POSIX sh target", target)),
         },
-        Val::Bool(true) => "true".to_string(),
-        Val::Bool(false) => "false".to_string(),
+        Val::Bool(true) => Ok("true".to_string()),
+        Val::Bool(false) => Ok("false".to_string()),
         Val::List(_) | Val::Args => {
-            panic!("args/list is not a valid condition; use count(...) > 0")
+            Err(CompileError::internal("args/list is not a valid condition; use count(...) > 0", target))
         }
         Val::Matches(text, regex) => {
-            format!(
+            Ok(format!(
                 "__sh2_matches {} {}",
-                emit_val(text, target),
-                emit_val(regex, target)
-            )
+                emit_val(text, target)?,
+                emit_val(regex, target)?
+            ))
         }
         // "Truthiness" fallback for scalar values: check if non-empty string.
-        v => format!("[ -n {} ]", emit_val(v, target)),
+        v => Ok(format!("[ -n {} ]", emit_val(v, target)?)),
     }
 }
 
-fn emit_index_expr(v: &Val, target: TargetShell) -> String {
+fn emit_index_expr(v: &Val, target: TargetShell) -> Result<String, CompileError> {
     emit_arith_expr(v, target)
 }
 
-// Helper for command substitution without outer double quotes (for use in arithmetic)
-fn emit_cmdsub_raw(args: &[Val], target: TargetShell) -> String {
-    let parts: Vec<String> = args.iter().map(|a| emit_word(a, target)).collect();
-    format!("$( {} )", parts.join(" "))
+fn emit_cmdsub_raw(args: &[Val], target: TargetShell) -> Result<String, CompileError> {
+    let parts: Vec<String> = args.iter().map(|a| emit_word(a, target)).collect::<Result<_, _>>()?;
+    Ok(format!("$( {} )", parts.join(" ")))
 }
 
-fn emit_cmdsub_pipe_raw(segments: &[Vec<Val>], target: TargetShell) -> String {
+fn emit_cmdsub_pipe_raw(segments: &[Vec<Val>], target: TargetShell) -> Result<String, CompileError> {
     let seg_strs: Vec<String> = segments
         .iter()
         .map(|seg| {
-            let words: Vec<String> = seg.iter().map(|w| emit_word(w, target)).collect();
-            words.join(" ")
+            let words: Vec<String> = seg.iter().map(|w| emit_word(w, target)).collect::<Result<_, _>>()?;
+            Ok(words.join(" "))
         })
-        .collect();
-    format!("$( {} )", seg_strs.join(" | "))
+        .collect::<Result<_, CompileError>>()?;
+    Ok(format!("$( {} )", seg_strs.join(" | ")))
 }
 
-fn emit_arith_expr(v: &Val, target: TargetShell) -> String {
+fn emit_arith_expr(v: &Val, target: TargetShell) -> Result<String, CompileError> {
     match v {
-        Val::Literal(s) => s.clone(),
-        Val::Number(n) => n.to_string(),
-        Val::Var(s) => s.clone(), // Bare variable for arithmetic context
-        Val::Arg(n) => format!("${}", n), // $1 etc
-        Val::Status => "$__sh2_status".to_string(),
-        Val::Pid => "$!".to_string(),
-        Val::Uid => match target {
-            TargetShell::Bash => "$UID".to_string(),
-            TargetShell::Posix => panic!("uid() is not supported in POSIX sh target"),
-        },
+        Val::Literal(s) => Ok(s.clone()),
+        Val::Number(n) => Ok(n.to_string()),
+        Val::Var(s) => Ok(s.clone()),
+        Val::Arg(n) => Ok(format!("${}", n)),
+        Val::Status => Ok("$__sh2_status".to_string()),
+        Val::Pid => Ok("$!".to_string()),
+        Val::Uid => Ok("$__sh2_uid".to_string()),
         Val::Ppid => match target {
-            TargetShell::Bash => "$PPID".to_string(),
-            TargetShell::Posix => panic!("ppid() is not supported in POSIX sh target"),
+            TargetShell::Bash => Ok("$PPID".to_string()),
+            TargetShell::Posix => Err(CompileError::unsupported("ppid() is not supported in POSIX sh target", target)),
         },
-        Val::SelfPid => "$$".to_string(),
-        Val::Argc => "$#".to_string(),
+        Val::SelfPid => Ok("$$".to_string()),
+        Val::Argc => Ok("$#".to_string()),
         Val::Arith { left, op, right } => {
             let op_str = match op {
                 crate::ir::ArithOp::Add => "+",
@@ -926,35 +893,35 @@ fn emit_arith_expr(v: &Val, target: TargetShell) -> String {
                 crate::ir::ArithOp::Div => "/",
                 crate::ir::ArithOp::Mod => "%",
             };
-            format!(
+            Ok(format!(
                 "( {} {} {} )",
-                emit_arith_expr(left, target),
+                emit_arith_expr(left, target)?,
                 op_str,
-                emit_arith_expr(right, target)
-            )
+                emit_arith_expr(right, target)?
+            ))
         }
         Val::Command(args) => emit_cmdsub_raw(args, target),
         Val::CommandPipe(segments) => emit_cmdsub_pipe_raw(segments, target),
         Val::Len(inner) => {
             // Raw command substitution: emits $( ... )
-            format!(
+            Ok(format!(
                 "$( printf \"%s\" {} | awk '{{ print length($0) }}' )",
-                emit_val(inner, target)
-            )
+                emit_val(inner, target)?
+            ))
         }
         Val::Count(inner) => match &**inner {
             Val::List(elems) => match target {
-                TargetShell::Bash => elems.len().to_string(),
-                TargetShell::Posix => panic!("List literals not supported in POSIX target"),
+                TargetShell::Bash => Ok(elems.len().to_string()),
+                TargetShell::Posix => Err(CompileError::unsupported("List literals not supported in POSIX target", target)),
             },
             Val::Var(name) => match target {
-                TargetShell::Bash => format!("${{#{}[@]}}", name),
-                TargetShell::Posix => panic!("Array count not supported in POSIX target"),
+                TargetShell::Bash => Ok(format!("${{#{}[@]}}", name)),
+                TargetShell::Posix => Err(CompileError::unsupported("Array count not supported in POSIX target", target)),
             },
-            Val::Args => "$#".to_string(),
-            _ => panic!("count(...) supports only list literals, list variables, and args"),
+            Val::Args => Ok("$#".to_string()),
+            _ => Err(CompileError::internal("count(...) supports only list literals, list variables, and args", target)),
         },
-        _ => panic!("Unsupported type in arithmetic expression"),
+        _ => Err(CompileError::internal("Unsupported type in arithmetic expression", target)),
     }
 }
 
@@ -964,7 +931,7 @@ fn emit_cmd(
     indent: usize,
     target: TargetShell,
     in_cond_ctx: bool,
-) {
+) -> Result<(), CompileError> {
     let pad = " ".repeat(indent);
 
     match cmd {
@@ -974,10 +941,10 @@ fn emit_cmd(
             }
             if target == TargetShell::Posix {
                 if matches!(val, Val::MapLiteral(_)) {
-                    panic!("map/dict is only supported in Bash target");
+                    return Err(CompileError::unsupported("map/dict is only supported in Bash target", target));
                 }
                 if matches!(val, Val::List(_) | Val::Args) {
-                    panic!("Array assignment is not supported in POSIX sh target");
+                    return Err(CompileError::unsupported("Array assignment is not supported in POSIX sh target", target));
                 }
             } else if let Val::MapLiteral(entries) = val {
                 // Bash Map Assignment
@@ -996,7 +963,7 @@ fn emit_cmd(
                 for (key, value) in entries {
                     out.push(' ');
                     out.push_str(&format!("[{}]=", sh_single_quote(key)));
-                    out.push_str(&emit_word(value, target));
+                    out.push_str(&emit_word(value, target)?);
 
                     if !keys_seen.contains(key) {
                         keys_seen.insert(key.clone());
@@ -1013,7 +980,7 @@ fn emit_cmd(
                     out.push_str(&sh_single_quote(key));
                 }
                 out.push_str(" )\n");
-                return;
+                return Ok(());
             }
 
             // Normal assignment
@@ -1025,14 +992,14 @@ fn emit_cmd(
                     if i > 0 {
                         out.push(' ');
                     }
-                    out.push_str(&emit_word(elem, target));
+                    out.push_str(&emit_word(elem, target)?);
                 }
                 out.push_str(")\n");
             } else if let Val::TryRun(args) = val {
                 let cmd = args
                     .iter()
                     .map(|a| emit_word(a, target))
-                    .collect::<Vec<_>>()
+                    .collect::<Result<Vec<_>, _>>()?
                     .join(" ");
                 // Mktemp
                 out.push_str(&format!(
@@ -1084,7 +1051,7 @@ fn emit_cmd(
             } else {
                 out.push_str(name);
                 out.push('=');
-                out.push_str(&emit_val(val, target));
+                out.push_str(&emit_val(val, target)?);
                 out.push('\n');
             }
         }
@@ -1103,7 +1070,7 @@ fn emit_cmd(
             let shell_cmd = args
                 .iter()
                 .map(|a| emit_word(a, target))
-                .collect::<Vec<_>>()
+                .collect::<Result<Vec<_>, _>>()?
                 .join(" ");
 
             if *allow_fail {
@@ -1136,21 +1103,21 @@ fn emit_cmd(
         }
 
         Cmd::ExecReplace(args, loc) => {
-            if let Some(l) = loc {
-                out.push_str(&format!("{}__sh2_loc=\"{}\"\n", pad, l));
-            }
-            out.push_str(&pad);
-            out.push_str("exec ");
-            let shell_args: Vec<String> = args.iter().map(|a| emit_word(a, target)).collect();
-            out.push_str(&shell_args.join(" "));
-            out.push('\n');
+             if let Some(l) = loc {
+                 out.push_str(&format!("{}__sh2_loc=\"{}\"\n", pad, l));
+             }
+             out.push_str(&pad);
+             out.push_str("exec ");
+             let shell_args: Vec<String> = args.iter().map(|a| emit_word(a, target)).collect::<Result<Vec<_>, _>>()?;
+             out.push_str(&shell_args.join(" "));
+             out.push('\n');
         }
         Cmd::Print(val) => {
             out.push_str(&pad);
             out.push_str("printf '%s\\n' ");
             match val {
                 Val::Args => out.push_str("\"$*\""),
-                _ => out.push_str(&emit_val(val, target)),
+                _ => out.push_str(&emit_val(val, target)?),
             }
             out.push('\n');
         }
@@ -1159,7 +1126,7 @@ fn emit_cmd(
             out.push_str("printf '%s\\n' ");
             match val {
                 Val::Args => out.push_str("\"$*\""),
-                _ => out.push_str(&emit_val(val, target)),
+                _ => out.push_str(&emit_val(val, target)?),
             }
             out.push_str(" >&2\n");
         }
@@ -1169,24 +1136,24 @@ fn emit_cmd(
             elifs,
             else_body,
         } => {
-            let cond_str = emit_cond(cond, target);
+            let cond_str = emit_cond(cond, target)?;
             out.push_str(&format!("{pad}if {cond_str}; then\n"));
             for c in then_body {
-                emit_cmd(c, out, indent + 2, target, in_cond_ctx);
+                emit_cmd(c, out, indent + 2, target, in_cond_ctx)?;
             }
 
             for (cond, body) in elifs {
-                let cond_str = emit_cond(cond, target);
+                let cond_str = emit_cond(cond, target)?;
                 out.push_str(&format!("{pad}elif {cond_str}; then\n"));
                 for c in body {
-                    emit_cmd(c, out, indent + 2, target, in_cond_ctx);
+                    emit_cmd(c, out, indent + 2, target, in_cond_ctx)?;
                 }
             }
 
             if !else_body.is_empty() {
                 out.push_str(&format!("{pad}else\n"));
                 for c in else_body {
-                    emit_cmd(c, out, indent + 2, target, in_cond_ctx);
+                    emit_cmd(c, out, indent + 2, target, in_cond_ctx)?;
                 }
             }
 
@@ -1215,7 +1182,7 @@ fn emit_cmd(
                         let cmd_str = args
                             .iter()
                             .map(|a| emit_word(a, target))
-                            .collect::<Vec<_>>()
+                            .collect::<Result<Vec<_>, _>>()?
                             .join(" ");
 
                         if *allow_fail {
@@ -1249,12 +1216,12 @@ fn emit_cmd(
                     let stages: Vec<String> = segments
                         .iter()
                         .map(|(args, _)| {
-                            args.iter()
+                            let parts = args.iter()
                                 .map(|a| emit_word(a, target))
-                                .collect::<Vec<_>>()
-                                .join(" ")
+                                .collect::<Result<Vec<_>, _>>()?;
+                            Ok(parts.join(" "))
                         })
-                        .collect();
+                        .collect::<Result<_, _>>()?;
                     let allow_fails: Vec<bool> = segments.iter().map(|(_, af)| *af).collect();
 
                     emit_posix_pipeline(
@@ -1283,7 +1250,7 @@ fn emit_cmd(
                         }
                         pipe_str.push_str("{\n");
                         for cmd in seg {
-                            emit_cmd(cmd, &mut pipe_str, indent + 2, target, false);
+                            emit_cmd(cmd, &mut pipe_str, indent + 2, target, false)?;
                         }
                         pipe_str.push_str(&format!("{pad}}}"));
                     }
@@ -1302,12 +1269,12 @@ fn emit_cmd(
                             let mut s = String::new();
                             s.push_str("{\n");
                             for cmd in seg {
-                                emit_cmd(cmd, &mut s, indent + 2, target, false);
+                                emit_cmd(cmd, &mut s, indent + 2, target, false)?;
                             }
                             s.push_str(&format!("{pad}}}"));
-                            s
+                            Ok(s)
                         })
-                        .collect();
+                        .collect::<Result<_, _>>()?;
                     let allow_fails = vec![false; segments.len()];
                     emit_posix_pipeline(
                         out,
@@ -1322,7 +1289,7 @@ fn emit_cmd(
             }
         }
         Cmd::Case { expr, arms } => {
-            out.push_str(&format!("{}case {} in\n", pad, emit_val(expr, target)));
+            out.push_str(&format!("{}case {} in\n", pad, emit_val(expr, target)?));
             for (patterns, body) in arms {
                 out.push_str(&pad);
                 out.push_str("  ");
@@ -1338,7 +1305,7 @@ fn emit_cmd(
                 out.push_str(")\n");
 
                 for cmd in body {
-                    emit_cmd(cmd, out, indent + 4, target, in_cond_ctx);
+                    emit_cmd(cmd, out, indent + 4, target, in_cond_ctx)?;
                 }
                 out.push_str(&format!("{}  ;;\n", pad));
             }
@@ -1346,10 +1313,10 @@ fn emit_cmd(
         }
 
         Cmd::While { cond, body } => {
-            let cond_str = emit_cond(cond, target);
+            let cond_str = emit_cond(cond, target)?;
             out.push_str(&format!("{pad}while {cond_str}; do\n"));
             for c in body {
-                emit_cmd(c, out, indent + 2, target, in_cond_ctx);
+                emit_cmd(c, out, indent + 2, target, in_cond_ctx)?;
             }
             out.push_str(&format!("{pad}done\n"));
         }
@@ -1358,7 +1325,7 @@ fn emit_cmd(
             out.push_str("__sh2_require");
             for cmd in cmds {
                 out.push(' ');
-                out.push_str(&emit_word(cmd, target));
+                out.push_str(&emit_word(cmd, target)?);
             }
             out.push('\n');
             out.push_str(&format!("{}__sh2_status=$?; (exit $__sh2_status)\n", pad));
@@ -1375,7 +1342,7 @@ fn emit_cmd(
                 LogLevel::Warn => out.push_str("'WARN' "),
                 LogLevel::Error => out.push_str("'ERROR' "),
             }
-            out.push_str(&emit_word(msg, target));
+            out.push_str(&emit_word(msg, target)?);
             out.push(' ');
             if *timestamp {
                 out.push_str("'true'\n");
@@ -1390,9 +1357,9 @@ fn emit_cmd(
         } => {
             out.push_str(&pad);
             out.push_str("__sh2_write_file ");
-            out.push_str(&emit_word(path, target));
+            out.push_str(&emit_word(path, target)?);
             out.push(' ');
-            out.push_str(&emit_word(content, target));
+            out.push_str(&emit_word(content, target)?);
             out.push(' ');
             if *append {
                 out.push_str("'true'");
@@ -1408,7 +1375,7 @@ fn emit_cmd(
                     Val::List(elems) => {
                         for elem in elems {
                             out.push(' ');
-                            out.push_str(&emit_val(elem, target));
+                            out.push_str(&emit_val(elem, target)?);
                         }
                     }
                     Val::Args => {
@@ -1416,19 +1383,19 @@ fn emit_cmd(
                     }
                     Val::Var(name) => {
                         if target == TargetShell::Posix {
-                            panic!("Iterating over array variable not supported in POSIX");
+                            return Err(CompileError::unsupported("Iterating over array variable not supported in POSIX", target));
                         }
                         out.push_str(&format!(" \"${{{}[@]}}\"", name));
                     }
                     _ => {
                         out.push(' ');
-                        out.push_str(&emit_val(item, target));
+                        out.push_str(&emit_val(item, target)?);
                     }
                 }
             }
             out.push_str("; do\n");
             for c in body {
-                emit_cmd(c, out, indent + 2, target, in_cond_ctx);
+                emit_cmd(c, out, indent + 2, target, in_cond_ctx)?;
             }
             out.push_str(&format!("{}done\n", pad));
         }
@@ -1439,7 +1406,7 @@ fn emit_cmd(
             body,
         } => {
             if target == TargetShell::Posix {
-                panic!("map/dict is only supported in Bash target");
+                return Err(CompileError::unsupported("map/dict is only supported in Bash target", target));
             }
             // Iterate over keys array for deterministic order
             // for __sh2_k in "${__sh2_keys_map[@]}"; do
@@ -1457,7 +1424,7 @@ fn emit_cmd(
             ));
 
             for c in body {
-                emit_cmd(c, out, indent + 2, target, in_cond_ctx);
+                emit_cmd(c, out, indent + 2, target, in_cond_ctx)?;
             }
 
             out.push_str(&format!("{pad}done\n"));
@@ -1471,13 +1438,13 @@ fn emit_cmd(
         Cmd::Return(val) => {
             if let Some(v) = val {
                 if is_boolean_expr(v) {
-                    let cond_str = emit_cond(v, target);
+                    let cond_str = emit_cond(v, target)?;
                     out.push_str(&format!(
                         "{pad}if {}; then return 0; else return 1; fi\n",
                         cond_str
                     ));
                 } else {
-                    out.push_str(&format!("{pad}return {}\n", emit_val(v, target)));
+                    out.push_str(&format!("{pad}return {}\n", emit_val(v, target)?));
                 }
             } else {
                 out.push_str(&format!("{pad}return\n"));
@@ -1486,13 +1453,13 @@ fn emit_cmd(
         Cmd::Exit(val) => {
             if let Some(v) = val {
                 if is_boolean_expr(v) {
-                    let cond_str = emit_cond(v, target);
+                    let cond_str = emit_cond(v, target)?;
                     out.push_str(&format!(
                         "{pad}if {}; then exit 0; else exit 1; fi\n",
                         cond_str
                     ));
                 } else {
-                    out.push_str(&format!("{pad}exit {}\n", emit_val(v, target)));
+                    out.push_str(&format!("{pad}exit {}\n", emit_val(v, target)?));
                 }
             } else {
                 out.push_str(&format!("{pad}exit\n"));
@@ -1504,33 +1471,33 @@ fn emit_cmd(
                 if let Cmd::Exec { args, .. } = &body[0] {
                     out.push_str(&pad);
                     for (k, v) in bindings {
-                        out.push_str(&format!("{}={} ", k, emit_val(v, target)));
+                        out.push_str(&format!("{}={} ", k, emit_val(v, target)?));
                     }
                     let shell_args: Vec<String> =
-                        args.iter().map(|a| emit_word(a, target)).collect();
+                        args.iter().map(|a| emit_word(a, target)).collect::<Result<Vec<_>, _>>()?;
                     out.push_str(&shell_args.join(" "));
                     out.push('\n');
-                    return;
+                    return Ok(());
                 }
             }
 
             // General case: Subshell
             out.push_str(&format!("{pad}(\n"));
             for (k, v) in bindings {
-                out.push_str(&format!("{}  export {}={}\n", pad, k, emit_val(v, target)));
+                out.push_str(&format!("{}  export {}={}\n", pad, k, emit_val(v, target)?));
             }
             for cmd in body {
-                emit_cmd(cmd, out, indent + 2, target, in_cond_ctx);
+                emit_cmd(cmd, out, indent + 2, target, in_cond_ctx)?;
             }
             out.push_str(&format!("{pad})\n"));
         }
         Cmd::WithLog { path, append, body } => {
             if target == TargetShell::Posix {
-                panic!("with log(...) is not supported in POSIX sh target");
+                return Err(CompileError::unsupported("with log(...) is not supported in POSIX sh target", target));
             }
 
             // Bash implementation using process substitution
-            let path_val = emit_val(path, target);
+            let path_val = emit_val(path, target)?;
 
             out.push_str(&format!("{pad}(\n"));
             out.push_str(&format!("{pad}  __sh2_log_path={}\n", path_val));
@@ -1553,22 +1520,22 @@ fn emit_cmd(
             ));
 
             for cmd in body {
-                emit_cmd(cmd, out, indent + 2, target, in_cond_ctx);
+                emit_cmd(cmd, out, indent + 2, target, in_cond_ctx)?;
             }
             out.push_str(&format!("{pad})\n"));
         }
         Cmd::WithCwd { path, body } => {
             out.push_str(&format!("{pad}(\n"));
-            out.push_str(&format!("{pad}  cd {}\n", emit_val(path, target)));
+            out.push_str(&format!("{pad}  cd {}\n", emit_val(path, target)?));
             for cmd in body {
-                emit_cmd(cmd, out, indent + 2, target, in_cond_ctx);
+                emit_cmd(cmd, out, indent + 2, target, in_cond_ctx)?;
             }
             out.push_str(&format!("{pad})\n"));
         }
         Cmd::Cd(path) => {
             out.push_str(&pad);
             out.push_str("cd ");
-            out.push_str(&emit_val(path, target));
+            out.push_str(&emit_val(path, target)?);
             out.push('\n');
         }
         Cmd::Raw(s) => {
@@ -1581,21 +1548,21 @@ fn emit_cmd(
             out.push_str(name);
             for arg in args {
                 out.push(' ');
-                out.push_str(&emit_word(arg, target));
+                out.push_str(&emit_word(arg, target)?);
             }
             out.push_str("; __sh2_status=$?; (exit $__sh2_status)\n");
         }
         Cmd::Subshell { body } => {
             out.push_str(&format!("{pad}(\n"));
             for cmd in body {
-                emit_cmd(cmd, out, indent + 2, target, in_cond_ctx);
+                emit_cmd(cmd, out, indent + 2, target, in_cond_ctx)?;
             }
             out.push_str(&format!("{pad})\n"));
         }
         Cmd::Group { body } => {
             out.push_str(&format!("{pad}{{\n"));
             for cmd in body {
-                emit_cmd(cmd, out, indent + 2, target, in_cond_ctx);
+                emit_cmd(cmd, out, indent + 2, target, in_cond_ctx)?;
             }
             out.push_str(&format!("{pad}}}\n"));
         }
@@ -1607,7 +1574,7 @@ fn emit_cmd(
         } => {
             out.push_str(&format!("{pad}{{\n"));
             for cmd in body {
-                emit_cmd(cmd, out, indent + 2, target, in_cond_ctx);
+                emit_cmd(cmd, out, indent + 2, target, in_cond_ctx)?;
             }
             out.push_str(&format!("{pad}}}")); // No newline yet, redirections follow
 
@@ -1620,12 +1587,12 @@ fn emit_cmd(
             if let Some(target_redir) = stdin {
                 match target_redir {
                     RedirectTarget::File { path, .. } => {
-                        out.push_str(&format!(" < {}", emit_val(path, target)));
+                        out.push_str(&format!(" < {}", emit_val(path, target)?));
                     }
                     RedirectTarget::HereDoc { content } => {
                         heredoc_content = Some(content);
                     }
-                    _ => panic!("stdin redirected to something invalid"),
+                    _ => return Err(CompileError::unsupported("stdin redirected to something invalid", target)),
                 }
             }
 
@@ -1641,19 +1608,19 @@ fn emit_cmd(
                     if matches!(stdout_target, RedirectTarget::Stderr)
                         && matches!(stderr_target, RedirectTarget::Stdout)
                     {
-                        panic!(
+                        return Err(CompileError::unsupported(
                             "Cyclic redirection: stdout to stderr AND stderr to stdout is not supported"
-                        );
+                        , target));
                     }
                 }
             }
 
-            let emit_stdout = |out: &mut String| {
+            let emit_stdout = |out: &mut String| -> Result<(), CompileError> {
                 if let Some(target_redir) = &stdout {
                     match target_redir {
                         RedirectTarget::File { path, append } => {
                             let op = if *append { ">>" } else { ">" };
-                            out.push_str(&format!(" {} {}", op, emit_val(path, target)));
+                            out.push_str(&format!(" {} {}", op, emit_val(path, target)?));
                         }
                         RedirectTarget::Stderr => {
                             out.push_str(" 1>&2");
@@ -1661,17 +1628,18 @@ fn emit_cmd(
                         RedirectTarget::Stdout => {
                             // no-op
                         }
-                        RedirectTarget::HereDoc { .. } => panic!("Heredoc not valid for stdout"),
+                        RedirectTarget::HereDoc { .. } => return Err(CompileError::unsupported("Heredoc not valid for stdout", target)),
                     }
                 }
+                Ok(())
             };
 
-            let emit_stderr = |out: &mut String| {
+            let emit_stderr = |out: &mut String| -> Result<(), CompileError> {
                 if let Some(target_redir) = &stderr {
                     match target_redir {
                         RedirectTarget::File { path, append } => {
                             let op = if *append { ">>" } else { ">" };
-                            out.push_str(&format!(" 2{} {}", op, emit_val(path, target)));
+                            out.push_str(&format!(" 2{} {}", op, emit_val(path, target)?));
                         }
                         RedirectTarget::Stdout => {
                             out.push_str(" 2>&1");
@@ -1679,17 +1647,18 @@ fn emit_cmd(
                         RedirectTarget::Stderr => {
                             // no-op
                         }
-                        RedirectTarget::HereDoc { .. } => panic!("Heredoc not valid for stderr"),
+                        RedirectTarget::HereDoc { .. } => return Err(CompileError::unsupported("Heredoc not valid for stderr", target)),
                     }
                 }
+                Ok(())
             };
 
             if emit_stdout_first {
-                emit_stdout(out);
-                emit_stderr(out);
+                emit_stdout(out)?;
+                emit_stderr(out)?;
             } else {
-                emit_stderr(out);
-                emit_stdout(out);
+                emit_stderr(out)?;
+                emit_stdout(out)?;
             }
 
             // Emit heredoc operator and content if present
@@ -1732,7 +1701,7 @@ fn emit_cmd(
                     let shell_cmd = args
                         .iter()
                         .map(|a| emit_word(a, target))
-                        .collect::<Vec<_>>()
+                        .collect::<Result<Vec<_>, _>>()?
                         .join(" ");
                     out.push_str(&shell_cmd);
                     out.push_str(" ) &\n");
@@ -1740,7 +1709,7 @@ fn emit_cmd(
                 _ => {
                     // Complex command (block, group, etc): emit with increased indent
                     out.push('\n');
-                    emit_cmd(cmd, out, indent + 2, target, false);
+                    emit_cmd(cmd, out, indent + 2, target, false)?;
                     out.push_str(&pad);
                     out.push_str(") &\n");
                 }
@@ -1754,14 +1723,14 @@ fn emit_cmd(
                         out.push_str(&format!("{pad}wait"));
                         for elem in elems {
                             out.push(' ');
-                            out.push_str(&emit_word(elem, target));
+                            out.push_str(&emit_word(elem, target)?);
                         }
                         out.push_str("; __sh2_status=$?; (exit $__sh2_status)\n");
                     }
                     _ => {
                         out.push_str(&format!(
                             "{pad}wait {}; __sh2_status=$?; (exit $__sh2_status)\n",
-                            emit_word(val, target)
+                            emit_word(val, target)?
                         ));
                     }
                 },
@@ -1802,7 +1771,7 @@ fn emit_cmd(
                         out.push_str(&format!("{pad}  {{\n"));
                     }
                     // Emit command directly with increased indent and in condition context
-                    emit_cmd(cmd, out, indent + 4, target, true);
+                    emit_cmd(cmd, out, indent + 4, target, true)?;
                 }
                 out.push_str(&format!("{pad}  }}\n"));
             }
@@ -1832,29 +1801,29 @@ fn emit_cmd(
                 out.push_str(&format!("{pad}  :\n"));
             }
             for cmd in catch_body {
-                emit_cmd(cmd, out, indent + 2, target, in_cond_ctx);
+                emit_cmd(cmd, out, indent + 2, target, in_cond_ctx)?;
             }
             out.push_str(&format!("{pad}fi\n"));
         }
         Cmd::AndThen { left, right } => {
             out.push_str(&format!("{pad}{{\n"));
             for cmd in left {
-                emit_cmd(cmd, out, indent + 2, target, in_cond_ctx);
+                emit_cmd(cmd, out, indent + 2, target, in_cond_ctx)?;
             }
             out.push_str(&format!("{pad}}} && {{\n"));
             for cmd in right {
-                emit_cmd(cmd, out, indent + 2, target, in_cond_ctx);
+                emit_cmd(cmd, out, indent + 2, target, in_cond_ctx)?;
             }
             out.push_str(&format!("{pad}}}\n"));
         }
         Cmd::OrElse { left, right } => {
             out.push_str(&format!("{pad}{{\n"));
             for cmd in left {
-                emit_cmd(cmd, out, indent + 2, target, in_cond_ctx);
+                emit_cmd(cmd, out, indent + 2, target, in_cond_ctx)?;
             }
             out.push_str(&format!("{pad}}} || {{\n"));
             for cmd in right {
-                emit_cmd(cmd, out, indent + 2, target, in_cond_ctx);
+                emit_cmd(cmd, out, indent + 2, target, in_cond_ctx)?;
             }
             out.push_str(&format!("{pad}}}\n"));
         }
@@ -1864,7 +1833,7 @@ fn emit_cmd(
             out.push_str(name);
             if let Some(v) = value {
                 out.push('=');
-                out.push_str(&emit_val(v, target));
+                out.push_str(&emit_val(v, target)?);
             }
             out.push('\n');
         }
@@ -1877,19 +1846,20 @@ fn emit_cmd(
         Cmd::Source(path) => {
             out.push_str(&pad);
             out.push_str(". ");
-            out.push_str(&emit_word(path, target));
+            out.push_str(&emit_word(path, target)?);
             out.push('\n');
         }
         Cmd::SaveEnvfile { path, env } => {
             out.push_str(&pad);
             out.push_str("__sh2_save_envfile ");
-            out.push_str(&emit_word(path, target));
+            out.push_str(&emit_word(path, target)?);
             out.push(' ');
-            out.push_str(&emit_val(env, target));
+            out.push_str(&emit_val(env, target)?);
             out.push_str("; __sh2_status=$?; (exit $__sh2_status)\n");
         }
     }
-}
+
+    Ok(())}
 
 fn is_boolean_expr(v: &Val) -> bool {
     matches!(

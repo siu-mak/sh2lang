@@ -1,4 +1,4 @@
-use crate::codegen::TargetShell;
+use crate::target::TargetShell;
 use std::fmt;
 
 #[derive(Debug, Clone)]
@@ -27,12 +27,24 @@ impl CompileError {
         self
     }
 
-    pub fn unsupported_feature(feature: impl Into<String>, target: TargetShell) -> Self {
+    pub fn unsupported(feature: impl Into<String>, target: TargetShell) -> Self {
         Self {
-            message: format!("{} is not supported in {:?} target", feature.into(), target),
+            message: format!("{} is not supported in {} target", feature.into(), target),
             target: Some(target),
             location: None,
         }
+    }
+
+    pub fn internal(msg: impl Into<String>, target: TargetShell) -> Self {
+        Self {
+            message: format!("Internal error: {}", msg.into()),
+            target: Some(target),
+            location: None,
+        }
+    }
+
+    pub fn unsupported_feature(feature: impl Into<String>, target: TargetShell) -> Self {
+        Self::unsupported(feature, target)
     }
 }
 

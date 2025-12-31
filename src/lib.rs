@@ -8,5 +8,6 @@ pub mod lower;
 pub mod ir;
 pub mod parser;
 pub mod span;
+pub mod target;
 pub mod formatter;
 pub mod lang_spec;
