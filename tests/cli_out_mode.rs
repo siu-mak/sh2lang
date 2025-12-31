@@ -70,3 +70,83 @@ fn out_io_error_exit_1() {
         .failure()
         .code(1); // I/O errors should be exit code 1
 }
+
+#[test]
+fn out_no_chmod_x_does_not_set_exec_bit() {
+    let mut cmd = Command::cargo_bin("sh2c").unwrap();
+    let temp_dir = tempfile::tempdir().unwrap();
+    let out_path = temp_dir.path().join("no_exec.sh");
+    let input_path = "tests/fixtures/cli_target_basic.sh2";
+
+    cmd.arg("--target")
+        .arg("posix")
+        .arg("--out")
+        .arg(out_path.to_str().unwrap())
+        .arg("--no-chmod-x")
+        .arg(input_path)
+        .assert()
+        .success()
+        .stdout("");
+
+    assert!(out_path.exists());
+    let content = fs::read_to_string(&out_path).unwrap();
+    assert!(content.starts_with("#!/bin/sh"));
+
+    #[cfg(unix)]
+    {
+        let metadata = fs::metadata(&out_path).unwrap();
+        let mode = metadata.permissions().mode();
+        // Check execute bit is NOT set
+        assert_eq!(mode & 0o111, 0, "File should NOT be executable with --no-chmod-x");
+    }
+}
+
+#[test]
+fn no_chmod_x_without_out_is_usage_error() {
+    let mut cmd = Command::cargo_bin("sh2c").unwrap();
+    let input_path = "tests/fixtures/cli_target_basic.sh2";
+
+    cmd.arg("--no-chmod-x")
+        .arg(input_path)
+        .assert()
+        .failure()
+        .code(1)
+        .stderr(predicate::str::contains("error: --no-chmod-x/--chmod-x require --out"))
+        .stderr(predicate::str::contains("Usage: sh2c").count(1));
+}
+
+#[test]
+fn chmod_x_explicit_ok() {
+    let mut cmd = Command::cargo_bin("sh2c").unwrap();
+    let temp_dir = tempfile::tempdir().unwrap();
+    let out_path = temp_dir.path().join("exec.sh");
+    let input_path = "tests/fixtures/cli_target_basic.sh2";
+
+    cmd.arg("--out")
+        .arg(out_path.to_str().unwrap())
+        .arg("--chmod-x")
+        .arg(input_path)
+        .assert()
+        .success();
+
+    #[cfg(unix)]
+    {
+        let metadata = fs::metadata(&out_path).unwrap();
+        let mode = metadata.permissions().mode();
+        assert_ne!(mode & 0o111, 0, "File should be executable");
+    }
+}
+
+#[test]
+fn conflicting_chmod_flags_error() {
+     let mut cmd = Command::cargo_bin("sh2c").unwrap();
+    let input_path = "tests/fixtures/cli_target_basic.sh2";
+    
+    cmd.arg("--no-chmod-x")
+       .arg("--chmod-x")
+       .arg(input_path)
+       .assert()
+       .failure()
+       .code(1)
+       .stderr(predicate::str::contains("error: --no-chmod-x cannot be used with --chmod-x"));
+}

@@ -5,6 +5,8 @@ Flags:
   -o, --out <file>       Write output to file instead of stdout (auto-chmod +x)
   --check                Check syntax and semantics without emitting code
   --no-diagnostics       Disable error location reporting and traps
+  --no-chmod-x           Do not set executable bit on output file
+  --chmod-x              Set executable bit on output file (default)
   --emit-ast             Emit AST (debug)
   --emit-ir              Emit IR (debug)
   --emit-sh              Emit Shell (default)
