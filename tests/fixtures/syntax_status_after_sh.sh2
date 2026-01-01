@@ -1,0 +1,7 @@
+func main() {
+    sh("false")
+    if status() == 0 {
+        exit(1)
+    }
+    print("ok")
+}

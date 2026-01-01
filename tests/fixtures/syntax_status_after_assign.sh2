@@ -1,0 +1,18 @@
+func main() {
+    # Capture command failure
+    let x = capture(run("false"))
+    # status() should be non-zero
+    if status() == 0 {
+         print_err("Expected status != 0 after let x = run(false)")
+         exit(1)
+    }
+
+    # Verify status is captured even if output is empty
+    let y = capture(run("true"))
+    if status() != 0 {
+         print_err("Expected status 0 after let y = run(true)")
+         exit(1)
+    }
+
+    print("ok")
+}

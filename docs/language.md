@@ -116,6 +116,20 @@ try { run("false") }
 catch { print_err("failed") }
 ```
 
+#### `return`
+Returns a value from a function.
+- `return <expr>` prints the value to stdout (if non-empty) and returns exit status 0.
+- `return <bool>` prints "true" (or "1") if true, or nothing if false, and returns exit status 0.
+- `return` (no arg) returns exit status 0.
+
+Values returned strings can be captured via `$(func())`.
+To return an error status, use `exit(code)` (if terminating) or explicit status handling (not yet fully unified with `return`).
+
+```sh2
+func foo() { return "bar" }
+let x = $(foo())
+```
+
 #### `case`
 ```sh2
 case env("MODE") {

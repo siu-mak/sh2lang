@@ -1,0 +1,7 @@
+func BASE() {
+    return "/srv/docker-rootless"
+}
+
+func main() {
+    run("echo", BASE())
+}

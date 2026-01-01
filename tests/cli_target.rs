@@ -58,6 +58,7 @@ main() {
   local __sh2_loc=""
   __sh2_loc="cli_target_basic.sh2:2:3"
   x='world'
+  __sh2_status=$?; (exit $__sh2_status)
   __sh2_loc="cli_target_basic.sh2:3:3"
   'echo' 'hello' "$x"; __sh2_status=$?; (exit $__sh2_status)
 }
@@ -81,6 +82,7 @@ main() {
   local __sh2_loc=""
   __sh2_loc="cli_target_basic.sh2:2:3"
   x='world'
+  __sh2_status=$?; (exit $__sh2_status)
   __sh2_loc="cli_target_basic.sh2:3:3"
   'echo' 'hello' "$x"; __sh2_status=$?; (exit $__sh2_status)
 }
@@ -104,6 +106,7 @@ main() {
   local __sh2_loc=""
   __sh2_loc="cli_target_basic.sh2:2:3"
   x='world'
+  __sh2_status=$?; (exit $__sh2_status)
   __sh2_loc="cli_target_basic.sh2:3:3"
   'echo' 'hello' "$x"; __sh2_status=$?; (exit $__sh2_status)
 }
@@ -123,6 +126,7 @@ fn cli_target_posix() {
 main() {
   __sh2_loc="cli_target_basic.sh2:2:3"
   x='world'
+  __sh2_status=$?; (exit $__sh2_status)
   __sh2_loc="cli_target_basic.sh2:3:3"
   'echo' 'hello' "$x"; __sh2_status=$?; (exit $__sh2_status)
 }

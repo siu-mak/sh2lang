@@ -954,6 +954,7 @@ fn emit_cmd(
                 }
                 out.push_str(&pad);
                 out.push_str(&format!("__sh2_lines {} {}\n", emit_val(inner, target)?, name));
+                out.push_str(&format!("{}__sh2_status=$?; (exit $__sh2_status)\n", pad));
                 return Ok(());
             }
             if target == TargetShell::Posix {
@@ -997,6 +998,7 @@ fn emit_cmd(
                     out.push_str(&sh_single_quote(key));
                 }
                 out.push_str(" )\n");
+                out.push_str(&format!("{}__sh2_status=$?; (exit $__sh2_status)\n", pad));
                 return Ok(());
             }
 
@@ -1065,11 +1067,13 @@ fn emit_cmd(
             } else if let Val::Args = val {
                 out.push_str(name);
                 out.push_str("=(\"$@\")\n");
+                out.push_str(&format!("{}__sh2_status=$?; (exit $__sh2_status)\n", pad));
             } else {
                 out.push_str(name);
                 out.push('=');
                 out.push_str(&emit_val(val, target)?);
                 out.push('\n');
+                out.push_str(&format!("{}__sh2_status=$?; (exit $__sh2_status)\n", pad));
             }
         }
         Cmd::Exec {
@@ -1471,14 +1475,16 @@ fn emit_cmd(
                 if is_boolean_expr(v) {
                     let cond_str = emit_cond(v, target)?;
                     out.push_str(&format!(
-                        "{pad}if {}; then return 0; else return 1; fi\n",
+                        "{pad}if {}; then printf '%s' 1; fi\n",
                         cond_str
                     ));
+                    out.push_str(&format!("{pad}return 0\n"));
                 } else {
-                    out.push_str(&format!("{pad}return {}\n", emit_val(v, target)?));
+                    out.push_str(&format!("{pad}printf '%s' {}\n", emit_val(v, target)?));
+                    out.push_str(&format!("{pad}return 0\n"));
                 }
             } else {
-                out.push_str(&format!("{pad}return\n"));
+                out.push_str(&format!("{pad}return 0\n"));
             }
         }
         Cmd::Exit(val) => {
@@ -1573,6 +1579,7 @@ fn emit_cmd(
             out.push_str(&pad);
             out.push_str(s);
             out.push('\n');
+            out.push_str(&format!("{}__sh2_status=$?; (exit $__sh2_status)\n", pad));
         }
         Cmd::Call { name, args } => {
             out.push_str(&pad);

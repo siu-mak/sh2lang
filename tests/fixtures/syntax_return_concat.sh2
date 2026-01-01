@@ -1,0 +1,11 @@
+func BASE() {
+    return "/base"
+}
+
+func ENVS_DIR() {
+    return BASE() & "/envs"
+}
+
+func main() {
+    run("echo", ENVS_DIR())
+}

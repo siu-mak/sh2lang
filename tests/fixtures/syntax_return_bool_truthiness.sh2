@@ -1,0 +1,16 @@
+func is_yes() {
+    return 1 == 1
+}
+
+func is_no() {
+    return 1 == 0
+}
+
+func main() {
+    if is_yes() {
+        print("Y")
+    }
+    if is_no() {
+        print("N")
+    }
+}
