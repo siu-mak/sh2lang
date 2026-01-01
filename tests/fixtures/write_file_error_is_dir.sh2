@@ -1,0 +1,5 @@
+
+func main() {
+    run("mkdir", "-p", "d")
+    write_file("d", "X")
+}

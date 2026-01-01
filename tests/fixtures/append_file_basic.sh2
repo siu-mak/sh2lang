@@ -1,0 +1,8 @@
+
+func main() {
+    write_file("append.txt", "A")
+    append_file("append.txt", "B")
+    if read_file("append.txt") != "AB" {
+        exit(1)
+    }
+}

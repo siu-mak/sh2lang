@@ -1371,24 +1371,7 @@ fn emit_cmd(
                 out.push_str("'false'\n");
             }
         }
-        Cmd::WriteFile {
-            path,
-            content,
-            append,
-        } => {
-            out.push_str(&pad);
-            out.push_str("__sh2_write_file ");
-            out.push_str(&emit_word(path, target)?);
-            out.push(' ');
-            out.push_str(&emit_word(content, target)?);
-            out.push(' ');
-            if *append {
-                out.push_str("'true'");
-            } else {
-                out.push_str("'false'");
-            }
-            out.push('\n');
-        }
+
         Cmd::For { var, items, body } => {
             // Pre-process any Lines() items
             for (idx, item) in items.iter().enumerate() {
@@ -1501,6 +1484,18 @@ fn emit_cmd(
             } else {
                 out.push_str(&format!("{pad}exit\n"));
             }
+        }
+        Cmd::WriteFile { path, content, append } => {
+            let op = if *append { ">>" } else { ">" };
+            out.push_str(&pad);
+            out.push_str(&format!(
+                "printf '%s' {} {} {}",
+                emit_val(content, target)?,
+                op,
+                emit_val(path, target)?
+            ));
+            out.push('\n');
+            out.push_str(&format!("{}__sh2_status=$?; (exit $__sh2_status)\n", pad));
         }
         Cmd::WithEnv { bindings, body } => {
             // Check for single Exec optimization

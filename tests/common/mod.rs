@@ -288,6 +288,31 @@ pub fn assert_exec_matches_fixture(fixture_name: &str) {
     assert_exec_matches_fixture_target(fixture_name, TargetShell::Bash);
 }
 
+pub fn compile_and_run_err(fixture_name: &str, target: TargetShell) -> (String, String) {
+    let sh2_path = format!("tests/fixtures/{}.sh2", fixture_name);
+    if !Path::new(&sh2_path).exists() {
+        panic!("Fixture {} does not exist", sh2_path);
+    }
+
+    let src = fs::read_to_string(&sh2_path).expect("Failed to read fixture");
+    let shell_script = compile_to_shell(&src, target);
+    
+    let shell_bin = match target {
+        TargetShell::Bash => "bash",
+        TargetShell::Posix => "sh", // Basic assumption
+    };
+    
+    // We expect failure, so we run and return output
+    let (stdout, stderr, status) = run_shell_script(&shell_script, shell_bin, &[], &[], None, None);
+    
+    if status == 0 {
+        panic!("Expected script to fail (non-zero exit), but it succeeded with status component 0. Stdout: {}\nStderr: {}", stdout, stderr);
+    }
+    
+    (stdout, stderr)
+}
+
+
 pub fn assert_exec_matches_fixture_target(fixture_name: &str, target: TargetShell) {
     let sh2_path = format!("tests/fixtures/{}.sh2", fixture_name);
     let target_str = match target {

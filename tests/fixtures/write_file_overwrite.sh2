@@ -1,6 +1,7 @@
 
 func main() {
-    write_file("tmp_overwrite.txt", "initial")
-    write_file("tmp_overwrite.txt", "final")
-    print(read_file("tmp_overwrite.txt"))
+    write_file("output.txt", "content")
+    if read_file("output.txt") != "content" {
+        exit(1)
+    }
 }

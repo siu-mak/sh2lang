@@ -545,6 +545,26 @@ fn lower_stmt<'a>(
                         sm.format_diagnostic(file, opts.diag_base_dir.as_deref(), "require() expects a list literal", arg.span)
                     );
                 }
+            } else if name == "append_file" {
+                if args.len() != 2 {
+                    panic!(
+                        "{}",
+                        sm.format_diagnostic(
+                            file,
+                            opts.diag_base_dir.as_deref(),
+                            "append_file() requires exactly 2 arguments (path, content)",
+                            stmt.span
+                        )
+                    );
+                }
+                let mut iter = args.into_iter();
+                let path = lower_expr(iter.next().unwrap(), &mut ctx, sm, file);
+                let content = lower_expr(iter.next().unwrap(), &mut ctx, sm, file);
+                out.push(ir::Cmd::WriteFile {
+                    path,
+                    content,
+                    append: true,
+                });
             } else if name == "write_file" {
                 if args.len() < 2 || args.len() > 3 {
                     panic!(
@@ -1075,6 +1095,16 @@ fn lower_expr<'a>(e: ast::Expr, ctx: &mut LoweringContext<'a>, sm: &SourceMap, f
                         file,
                         opts.diag_base_dir.as_deref(),
                         "write_file() is a statement, not an expression",
+                        e.span
+                    )
+                );
+            } else if name == "append_file" {
+                panic!(
+                    "{}",
+                    sm.format_diagnostic(
+                        file,
+                        opts.diag_base_dir.as_deref(),
+                        "append_file() is a statement, not an expression",
                         e.span
                     )
                 );
