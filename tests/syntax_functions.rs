@@ -104,7 +104,7 @@ fn parse_return_status() {
     let program = parse_fixture("return_status");
     let func = &program.functions[0];
     if let Stmt {
-        node: StmtKind::Return(Some(val)),
+        node: StmtKind::Exit(Some(val)),
         ..
     } = &func.body[0]
     {

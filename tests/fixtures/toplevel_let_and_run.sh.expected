@@ -6,6 +6,7 @@ main() {
   local __sh2_loc=""
   __sh2_loc="tests/fixtures/toplevel_let_and_run.sh2:2:1"
   x='world'
+  __sh2_status=$?; (exit $__sh2_status)
   __sh2_loc="tests/fixtures/toplevel_let_and_run.sh2:3:1"
   'echo' "$x"; __sh2_status=$?; (exit $__sh2_status)
 }

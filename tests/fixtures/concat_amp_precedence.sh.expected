@@ -6,6 +6,7 @@ main() {
   local __sh2_loc=""
   __sh2_loc="tests/fixtures/concat_amp_precedence.sh2:2:3"
   s='n='"$(( ( 1 + 2 ) ))"
+  __sh2_status=$?; (exit $__sh2_status)
   printf '%s\n' "$s"
 }
 __sh2_status=0

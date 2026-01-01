@@ -6,6 +6,7 @@ main() {
   local __sh2_loc=""
   __sh2_loc="tests/fixtures/quote_concat_no_split.sh2:2:3"
   x='b c'
+  __sh2_status=$?; (exit $__sh2_status)
   printf '%s\n' 'a:'"$x"
 }
 __sh2_status=0

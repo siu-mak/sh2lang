@@ -6,12 +6,15 @@ main() {
   local __sh2_loc=""
   __sh2_loc="tests/fixtures/fs_predicates_cwd.sh2:3:3"
   d="$( 'mktemp' '-d' )"
+  __sh2_status=$?; (exit $__sh2_status)
   (
     cd "$d"
     touch f.txt
+    __sh2_status=$?; (exit $__sh2_status)
   )
   __sh2_loc="tests/fixtures/fs_predicates_cwd.sh2:9:3"
   f="$d"'/f.txt'
+  __sh2_status=$?; (exit $__sh2_status)
   if [ -e "$f" ] && [ -f "$f" ] && ! [ -d "$f" ]; then
     printf '%s\n' 'fs_ok'
   else

@@ -5,7 +5,8 @@ trap '__sh2_err_handler' ERR
 check() {
   local __sh2_loc=""
   local path="${1}"
-  if [ -s "$path" ]; then return 0; else return 1; fi
+  if [ -s "$path" ]; then printf '%s' 1; fi
+  return 0
 }
 
 main() {

@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 show() {
   echo arg=$1
+  __sh2_status=$?; (exit $__sh2_status)
 }
 
 main() {

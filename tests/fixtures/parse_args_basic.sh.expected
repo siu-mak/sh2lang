@@ -27,6 +27,7 @@ main() {
   local __sh2_loc=""
   __sh2_loc="tests/fixtures/parse_args_basic.sh2:2:3"
   parsed="${__sh2_parsed_args}"
+  __sh2_status=$?; (exit $__sh2_status)
   printf '%s\n' 'reg='"$( __sh2_args_flag_get "$( __sh2_args_flags "$parsed" )" '--registry' )"
   printf '%s\n' 'tag='"$( __sh2_args_flag_get "$( __sh2_args_flags "$parsed" )" '--tag' )"
   printf '%s\n' 'dry='"$( __sh2_args_flag_get "$( __sh2_args_flags "$parsed" )" '--dry-run' )"

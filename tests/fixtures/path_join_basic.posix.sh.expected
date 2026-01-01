@@ -3,6 +3,7 @@ __sh2_path_join() { out=''; for p in "$@"; do [ -z "$p" ] && continue; case "$p"
 main() {
   __sh2_loc="tests/fixtures/path_join_basic.sh2:3:5"
   p="$( __sh2_path_join 'a' 'b' 'c' )"
+  __sh2_status=$?; (exit $__sh2_status)
   printf '%s\n' "$p"
 }
 __sh2_status=0

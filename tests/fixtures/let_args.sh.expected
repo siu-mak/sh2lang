@@ -6,6 +6,7 @@ main() {
   local __sh2_loc=""
   __sh2_loc="tests/fixtures/let_args.sh2:2:3"
   xs=("$@")
+  __sh2_status=$?; (exit $__sh2_status)
   printf '%s\n' "${#xs[@]}"
   printf '%s\n' "${xs[0]}"
   printf '%s\n' "$( IFS=','; printf "%s" "${xs[*]}" )"

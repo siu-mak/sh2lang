@@ -6,6 +6,7 @@ main() {
   local __sh2_loc=""
   __sh2_loc="tests/fixtures/concat_amp_basic.sh2:2:3"
   x='a''b'
+  __sh2_status=$?; (exit $__sh2_status)
   printf '%s\n' "$x"
   __sh2_loc="tests/fixtures/concat_amp_basic.sh2:4:3"
   'echo' 'c''d'; __sh2_status=$?; (exit $__sh2_status)

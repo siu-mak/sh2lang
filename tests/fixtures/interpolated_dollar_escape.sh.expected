@@ -6,6 +6,7 @@ main() {
   local __sh2_loc=""
   __sh2_loc="tests/fixtures/interpolated_dollar_escape.sh2:2:3"
   name='world'
+  __sh2_status=$?; (exit $__sh2_status)
   printf '%s\n' 'literal: \{name\}'
   printf '%s\n' 'dollar: \$'
   printf '%s\n' 'interp: '"$name"

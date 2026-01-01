@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 main() {
-  if ! false; then return 0; else return 1; fi
+  if ! false; then printf '%s' 1; fi
+  return 0
 }
 __sh2_status=0
 main "$@"

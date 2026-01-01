@@ -8,6 +8,7 @@ main() {
   xs=('a' 'b' 'c')
   __sh2_loc="tests/fixtures/index_arith_index.sh2:3:5"
   i="0"
+  __sh2_status=$?; (exit $__sh2_status)
   printf '%s\n' "${xs[( i + 2 )]}"
 }
 __sh2_status=0

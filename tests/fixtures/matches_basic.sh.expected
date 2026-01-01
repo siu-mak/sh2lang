@@ -7,6 +7,7 @@ main() {
   local __sh2_loc=""
   __sh2_loc="tests/fixtures/matches_basic.sh2:2:5"
   s='hello'
+  __sh2_status=$?; (exit $__sh2_status)
   if __sh2_matches "$s" 'h.*o'; then
     printf '%s\n' 'yes'
   else

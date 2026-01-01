@@ -6,6 +6,7 @@ main() {
   local __sh2_loc=""
   __sh2_loc="tests/fixtures/self_pid_arith.sh2:3:3"
   x="$(( ( $$ + 1 ) ))"
+  __sh2_status=$?; (exit $__sh2_status)
   if [ "$x" -gt "$$" ]; then
     printf '%s\n' 'arith_ok'
   else

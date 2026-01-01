@@ -6,6 +6,7 @@ main() {
   local __sh2_loc=""
   __sh2_loc="tests/fixtures/set_env_scalar_ok.sh2:2:5"
   x='ok'
+  __sh2_status=$?; (exit $__sh2_status)
   export FOO="$x"
   printf '%s\n' "${FOO}"
 }

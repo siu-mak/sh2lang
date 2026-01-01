@@ -8,6 +8,7 @@ main() {
   local __sh2_loc=""
   __sh2_loc="tests/fixtures/json_kv_empty.sh2:2:3"
   m="$( __sh2_load_envfile 'missing.env' )"
+  __sh2_status=$?; (exit $__sh2_status)
   printf '%s\n' "$( __sh2_json_kv "$m" )"
 }
 __sh2_status=0

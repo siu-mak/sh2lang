@@ -6,6 +6,7 @@ main() {
   local __sh2_loc=""
   __sh2_loc="tests/fixtures/index_list_literal.sh2:2:3"
   x="$( arr=('a' 'b' 'c'); idx=$(( 1 )); printf "%s" "${arr[idx]}" )"
+  __sh2_status=$?; (exit $__sh2_status)
   printf '%s\n' "$x"
 }
 __sh2_status=0

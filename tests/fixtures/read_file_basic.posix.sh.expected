@@ -5,6 +5,7 @@ main() {
   __sh2_write_file 'tmp_read_basic.txt' 'hello world' 'false'
   __sh2_loc="tests/fixtures/read_file_basic.sh2:4:5"
   s="$( __sh2_read_file 'tmp_read_basic.txt' )"
+  __sh2_status=$?; (exit $__sh2_status)
   printf '%s\n' "$s"
 }
 __sh2_status=0

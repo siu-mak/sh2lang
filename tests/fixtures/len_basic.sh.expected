@@ -6,6 +6,7 @@ main() {
   local __sh2_loc=""
   __sh2_loc="tests/fixtures/len_basic.sh2:2:3"
   s='hello'
+  __sh2_status=$?; (exit $__sh2_status)
   printf '%s\n' "$( printf "%s" "$s" | awk 'BEGIN{l=0} {l=length($0)} END{print l}' )"
 }
 __sh2_status=0

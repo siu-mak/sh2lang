@@ -7,6 +7,7 @@ main() {
   ( __sh2_loc="tests/fixtures/pid_basic.sh2:2:11"; 'bash' '-c' 'exit 7' ) &
   __sh2_loc="tests/fixtures/pid_basic.sh2:3:5"
   p="$!"
+  __sh2_status=$?; (exit $__sh2_status)
   wait "$p"; __sh2_status=$?; (exit $__sh2_status)
   printf '%s\n' "$__sh2_status"
 }

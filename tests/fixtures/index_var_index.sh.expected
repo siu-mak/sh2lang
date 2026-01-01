@@ -8,6 +8,7 @@ main() {
   xs=('a' 'b' 'c')
   __sh2_loc="tests/fixtures/index_var_index.sh2:3:5"
   i="1"
+  __sh2_status=$?; (exit $__sh2_status)
   printf '%s\n' "${xs[i]}"
 }
 __sh2_status=0

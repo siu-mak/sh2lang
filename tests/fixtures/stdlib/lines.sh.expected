@@ -8,6 +8,7 @@ main() {
   __sh2_loc="tests/fixtures/stdlib/lines.sh2:3:5"
   normal='a
 b'
+  __sh2_status=$?; (exit $__sh2_status)
   printf '%s\n' '--- Normal ---'
   __sh2_lines "$normal" __sh2_for_lines_0
   for l in "${__sh2_for_lines_0[@]}"; do
@@ -17,6 +18,7 @@ b'
   trailing='a
 b
 '
+  __sh2_status=$?; (exit $__sh2_status)
   printf '%s\n' '--- Trailing ---'
   __sh2_lines "$trailing" __sh2_for_lines_0
   for l in "${__sh2_for_lines_0[@]}"; do
@@ -26,6 +28,7 @@ b
   interior='a
 
 b'
+  __sh2_status=$?; (exit $__sh2_status)
   printf '%s\n' '--- Interior ---'
   __sh2_lines "$interior" __sh2_for_lines_0
   for l in "${__sh2_for_lines_0[@]}"; do
@@ -41,6 +44,7 @@ b'
   cap="$( 'printf' 'x
 y
 ' )"
+  __sh2_status=$?; (exit $__sh2_status)
   __sh2_lines "$cap" __sh2_for_lines_0
   for l in "${__sh2_for_lines_0[@]}"; do
     printf '%s\n' 'C:'"$l"

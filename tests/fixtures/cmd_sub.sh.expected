@@ -6,6 +6,7 @@ main() {
   local __sh2_loc=""
   __sh2_loc="tests/fixtures/cmd_sub.sh2:2:5"
   files="$( 'ls' )"
+  __sh2_status=$?; (exit $__sh2_status)
   printf '%s\n' 'Files: '"$files"
 }
 __sh2_status=0

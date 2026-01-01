@@ -86,25 +86,7 @@ pub fn lex(sm: &SourceMap, file: &str) -> Result<Vec<Token>, Diagnostic> {
             '+' => { lexer.next(); tokens.push(Token { kind: TokenKind::Plus, span: Span::new(start, lexer.pos) }); }
             '-' => {
                 lexer.next();
-                if lexer.peek() == Some(&'>') {
-                   // Arrow handled above? No, wait. '-' -> is ->? No '=' -> is '=>'. 
-                   // Wait, checking original code...
-                   // Original code line 250: '-' => ...
-                   // Let's assume standard handling but I need to replace calls to error() inside strings.
-                   // Since I can't replace the ENTIRE lex function easily due to length limits, I will rely on the replace tool
-                   // matching specific blocks. But here I'm replacing the start of the function and the error def.
-                   // I should focus on `fn error` and `strings`.
-
-                   // Actually, I can use multi_replace for specific parts.
-                   // 1. imports + Lexer::error
-                   // 2. Lex function signature
-                   // 3. String handling block (where error is called)
-                   
-                   // Ah, I need to see what '-' does to not break it.
-                   // Just use multi_replace.
-                   panic!("Need multiple hunks"); // self-correction
-                }
-                 tokens.push(Token { kind: TokenKind::Minus, span: Span::new(start, lexer.pos) });
+                tokens.push(Token { kind: TokenKind::Minus, span: Span::new(start, lexer.pos) });
             }
             '*' => { lexer.next(); tokens.push(Token { kind: TokenKind::Star, span: Span::new(start, lexer.pos) }); }
             '/' => {

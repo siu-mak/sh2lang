@@ -12,6 +12,7 @@ main() {
   ) &
   __sh2_loc="tests/fixtures/wait_list_basic.sh2:3:3"
   p1="$!"
+  __sh2_status=$?; (exit $__sh2_status)
   ( 
     {
       __sh2_loc="tests/fixtures/wait_list_basic.sh2:4:11"
@@ -20,6 +21,7 @@ main() {
   ) &
   __sh2_loc="tests/fixtures/wait_list_basic.sh2:5:3"
   p2="$!"
+  __sh2_status=$?; (exit $__sh2_status)
   wait "$p1" "$p2"; __sh2_status=$?; (exit $__sh2_status)
   printf '%s\n' 'done'
 }

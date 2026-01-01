@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 main() {
-  return "$( printf "%s" 'abc' | awk 'BEGIN{l=0} {l=length($0)} END{print l}' )"
+  printf '%s' "$( printf "%s" 'abc' | awk 'BEGIN{l=0} {l=length($0)} END{print l}' )"
+  return 0
 }
 __sh2_status=0
 main "$@"

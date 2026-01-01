@@ -7,6 +7,7 @@ main() {
   local __sh2_loc=""
   __sh2_loc="tests/fixtures/string_split_basic.sh2:2:5"
   s='a,,b'
+  __sh2_status=$?; (exit $__sh2_status)
   printf '%s\n' "$( __sh2_split "$s" ',' )"
 }
 __sh2_status=0

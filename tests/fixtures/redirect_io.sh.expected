@@ -6,6 +6,7 @@ main() {
   local __sh2_loc=""
   __sh2_loc="tests/fixtures/redirect_io.sh2:3:3"
   f="$( 'mktemp' )"
+  __sh2_status=$?; (exit $__sh2_status)
   {
     printf '%s\n' 'out'
   } > "$f"
@@ -19,13 +20,16 @@ main() {
   } 2>&1
   __sh2_loc="tests/fixtures/redirect_io.sh2:22:3"
   infile="$( 'mktemp' )"
+  __sh2_status=$?; (exit $__sh2_status)
   echo hello > $infile
+  __sh2_status=$?; (exit $__sh2_status)
   {
     __sh2_loc="tests/fixtures/redirect_io.sh2:25:5"
     'cat'; __sh2_status=$?; (exit $__sh2_status)
   } < "$infile"
   __sh2_loc="tests/fixtures/redirect_io.sh2:29:3"
   f2="$( 'mktemp' )"
+  __sh2_status=$?; (exit $__sh2_status)
   {
     printf '%s\n' 'swap_ok'
   } 2> "$f2" 1>&2

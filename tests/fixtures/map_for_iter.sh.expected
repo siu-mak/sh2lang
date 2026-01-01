@@ -7,6 +7,7 @@ main() {
   __sh2_loc="tests/fixtures/map_for_iter.sh2:2:1"
   local -A m=( ['x']='10' ['y']='20' )
   local -a __sh2_keys_m=( 'x' 'y' )
+  __sh2_status=$?; (exit $__sh2_status)
   for __sh2_k in "${__sh2_keys_m[@]}"; do
     local k="$__sh2_k"
     local v="${m[$__sh2_k]}"
