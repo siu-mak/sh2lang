@@ -82,6 +82,7 @@ pub enum Val {
     TryRun(Vec<Val>),
     Home,
     PathJoin(Vec<Val>),
+    Lines(Box<Val>),
 }
 
 #[derive(Debug, Clone, PartialEq)]

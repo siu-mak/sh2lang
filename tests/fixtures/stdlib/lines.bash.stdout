@@ -1,0 +1,14 @@
+--- Normal ---
+N:a
+N:b
+--- Trailing ---
+T:a
+T:b
+--- Interior ---
+I:a
+I:
+I:b
+--- Empty ---
+--- Capture ---
+C:x
+C:y

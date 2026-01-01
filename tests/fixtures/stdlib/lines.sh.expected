@@ -1,0 +1,50 @@
+#!/usr/bin/env bash
+__sh2_err_handler() { local s=$?; if [[ "${BASH_COMMAND}" == *"(exit "* ]]; then return $s; fi; printf "Error in %s\n" "${__sh2_loc:-unknown}" >&2; return $s; }
+set -o errtrace
+trap '__sh2_err_handler' ERR
+__sh2_lines() { mapfile -t "$2" <<< "$1"; if [[ -z "$1" ]]; then eval "$2=()"; elif [[ "$1" == *$'\n' ]]; then eval "unset '$2[\${#$2[@]}-1]'"; fi; }
+main() {
+  local __sh2_loc=""
+  __sh2_loc="tests/fixtures/stdlib/lines.sh2:3:5"
+  normal='a
+b'
+  printf '%s\n' '--- Normal ---'
+  __sh2_lines "$normal" __sh2_for_lines_0
+  for l in "${__sh2_for_lines_0[@]}"; do
+    printf '%s\n' 'N:'"$l"
+  done
+  __sh2_loc="tests/fixtures/stdlib/lines.sh2:8:5"
+  trailing='a
+b
+'
+  printf '%s\n' '--- Trailing ---'
+  __sh2_lines "$trailing" __sh2_for_lines_0
+  for l in "${__sh2_for_lines_0[@]}"; do
+    printf '%s\n' 'T:'"$l"
+  done
+  __sh2_loc="tests/fixtures/stdlib/lines.sh2:13:5"
+  interior='a
+
+b'
+  printf '%s\n' '--- Interior ---'
+  __sh2_lines "$interior" __sh2_for_lines_0
+  for l in "${__sh2_for_lines_0[@]}"; do
+    printf '%s\n' 'I:'"$l"
+  done
+  printf '%s\n' '--- Empty ---'
+  __sh2_lines '' __sh2_for_lines_0
+  for l in "${__sh2_for_lines_0[@]}"; do
+    printf '%s\n' 'E:'"$l"
+  done
+  printf '%s\n' '--- Capture ---'
+  __sh2_loc="tests/fixtures/stdlib/lines.sh2:23:5"
+  cap="$( 'printf' 'x
+y
+' )"
+  __sh2_lines "$cap" __sh2_for_lines_0
+  for l in "${__sh2_for_lines_0[@]}"; do
+    printf '%s\n' 'C:'"$l"
+  done
+}
+__sh2_status=0
+main "$@"

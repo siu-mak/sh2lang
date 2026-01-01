@@ -1,102 +1,181 @@
-program         ::= (toplevel_stmt | function | comment)*
+(* sh2 Grammar - EBNF *)
+(* This is a descriptive grammar for the sh2 language *)
 
-function        ::= "func" identifier "(" params? ")" block
+program = { import_stmt } , { function_def } , { statement } ;
 
-params          ::= param ("," param)*
-param           ::= identifier (":" type)?
-type            ::= "Str" | "Int" | "Bool"
+(* Imports *)
+import_stmt = "import" , string_literal ;
 
-block           ::= "{" statement* "}"
+(* Function definitions *)
+function_def = "func" , identifier , "(" , [ param_list ] , ")" , block ;
+param_list = identifier , { "," , identifier } ;
 
-statement       ::= assign_stmt
-                  | run_stmt
-                  | print_stmt
-                  | print_err_stmt
-                  | if_stmt
-                  | case_stmt
-                  | while_stmt
-                  | for_stmt
-                  | break_stmt
-                  | continue_stmt
-                  | return_stmt
-                  | exit_stmt
-                  | with_stmt
-                  | pipe_stmt
-                  | spawn_stmt
-                  | subshell_stmt
-                  | group_stmt
-                  | raw_stmt
-                  | sh_stmt
-                  | comment
+(* Blocks *)
+block = "{" , { statement } , "}" ;
 
-assign_stmt     ::= "let" identifier "=" expr
-                  | "set" lvalue "=" expr
+(* Statements *)
+statement = let_stmt
+          | run_stmt
+          | exec_stmt
+          | print_stmt
+          | print_err_stmt
+          | if_stmt
+          | while_stmt
+          | for_stmt
+          | for_map_stmt
+          | try_catch_stmt
+          | case_stmt
+          | with_stmt
+          | subshell_stmt
+          | group_stmt
+          | spawn_stmt
+          | pipe_stmt
+          | return_stmt
+          | exit_stmt
+          | break_stmt
+          | continue_stmt
+          | set_stmt
+          | call_stmt
+          | export_stmt
+          | unset_stmt
+          | source_stmt
+          | sh_stmt
+          | cd_stmt
+          | wait_stmt
+          | and_then_stmt
+          | or_else_stmt
+          ;
 
-lvalue          ::= identifier
-                  | "env" "." identifier
+let_stmt = "let" , identifier , "=" , expression ;
+run_stmt = "run" , "(" , [ arg_list ] , ")" ;
+exec_stmt = "exec" , "(" , [ arg_list ] , ")" ;
+print_stmt = "print" , "(" , expression , ")" ;
+print_err_stmt = "print_err" , "(" , expression , ")" ;
+call_stmt = identifier , "(" , [ arg_list ] , ")" ;
+set_stmt = "set" , lvalue , "=" , expression ;
+export_stmt = "export" , "(" , string_literal , [ "," , expression ] , ")" ;
+unset_stmt = "unset" , "(" , string_literal , ")" ;
+source_stmt = "source" , "(" , expression , ")" ;
+sh_stmt = "sh" , "(" , string_literal , ")" | "sh" , block ;
+cd_stmt = "cd" , "(" , expression , ")" ;
+wait_stmt = "wait" , [ "(" , expression , ")" ] ;
+return_stmt = "return" , [ expression ] ;
+exit_stmt = "exit" , [ expression ] ;
+break_stmt = "break" ;
+continue_stmt = "continue" ;
 
-run_stmt        ::= "run" "(" string ("," string)* ")"
+if_stmt = "if" , expression , block , { elif_clause } , [ else_clause ] ;
+elif_clause = "elif" , expression , block ;
+else_clause = "else" , block ;
 
-print_stmt      ::= "print" "(" expr ")"
-print_err_stmt  ::= "print_err" "(" expr ")"
+while_stmt = "while" , expression , block ;
+for_stmt = "for" , identifier , "in" , expression , block ;
+for_map_stmt = "for" , "(" , identifier , "," , identifier , ")" , "in" , identifier , block ;
 
-if_stmt         ::= "if" expr block elif_clause* else_clause?
+try_catch_stmt = "try" , block , "catch" , block ;
 
-elif_clause     ::= "elif" expr block
-else_clause     ::= "else" block
+case_stmt = "case" , expression , "{" , { case_arm } , "}" ;
+case_arm = pattern , { "|" , pattern } , "=>" , block ;
+pattern = string_literal | "glob" , "(" , string_literal , ")" | "_" ;
 
-case_stmt       ::= "case" expr "{" case_arm+ "}"
-case_arm        ::= pattern_list "=>" block
-pattern_list    ::= pattern ("|" pattern)*
-pattern         ::= string | "_"
+with_stmt = "with" , with_modifier , block ;
+with_modifier = "env" , "{" , env_bindings , "}"
+              | "cwd" , "(" , expression , ")"
+              | "log" , "(" , expression , [ "," , "append" , "=" , bool_literal ] , ")"
+              | "redirect" , "{" , redirect_spec , "}"
+              ;
+env_bindings = identifier , "=" , expression , { "," , identifier , "=" , expression } ;
+redirect_spec = redirect_item , { "," , redirect_item } ;
+redirect_item = ( "stdout" | "stderr" | "stdin" ) , ":" , redirect_target ;
+redirect_target = "stdout" | "stderr" | "file" , "(" , expression , [ "," , "append" , "=" , bool_literal ] , ")"
+                | "heredoc" , "(" , string_literal , ")" ;
 
-while_stmt      ::= "while" expr block
+subshell_stmt = "subshell" , block ;
+group_stmt = "group" , block ;
+spawn_stmt = "spawn" , ( block | statement ) ;
 
-for_stmt        ::= "for" identifier "in" iterable block
-iterable        ::= "args"
-                  | list_lit
-                  | "glob" "(" string ")"
+pipe_stmt = run_call , { "|" , run_call } ;
+run_call = "run" , "(" , [ arg_list ] , ")" ;
 
-with_stmt       ::= "with" with_head block
-with_head       ::= "env" "{" env_bind ("," env_bind)* "}"
-                  | "cwd" string
-                  | "redirect" "{" redirect_bind ("," redirect_bind)* "}"
-                  | "options" "{" option_bind ("," option_bind)* "}"
+and_then_stmt = statement , "&&" , statement ;
+or_else_stmt = statement , "||" , statement ;
 
-pipe_stmt       ::= pipe_stage ("|" pipe_stage)+
-pipe_stage      ::= run_stmt | block
+(* Expressions *)
+expression = or_expr ;
+or_expr = and_expr , { "||" , and_expr } ;
+and_expr = compare_expr , { "&&" , compare_expr } ;
+compare_expr = concat_expr , [ compare_op , concat_expr ] ;
+compare_op = "==" | "!=" | "<" | "<=" | ">" | ">=" ;
+concat_expr = arith_expr , { "&" , arith_expr } ;
+arith_expr = term , { ( "+" | "-" ) , term } ;
+term = unary_expr , { ( "*" | "/" | "%" ) , unary_expr } ;
+unary_expr = [ "!" | "-" ] , primary_expr ;
 
-spawn_stmt      ::= "spawn" block
-subshell_stmt   ::= "subshell" block
-group_stmt      ::= "group" block
+primary_expr = literal
+             | identifier
+             | "(" , expression , ")"
+             | call_expr
+             | capture_expr
+             | list_expr
+             | map_expr
+             | index_expr
+             | field_expr
+             | builtin_expr
+             ;
 
-raw_stmt        ::= "raw" "{" raw_text "}"
-sh_stmt         ::= "sh" "(" string ")"
+call_expr = identifier , "(" , [ arg_list ] , ")" ;
+capture_expr = "capture" , "(" , ( run_call | pipe_expr ) , ")" ;
+pipe_expr = run_call , { "|" , run_call } ;
+list_expr = "[" , [ expression , { "," , expression } ] , "]" ;
+map_expr = "{" , [ map_entry , { "," , map_entry } ] , "}" ;
+map_entry = string_literal , ":" , expression ;
+index_expr = primary_expr , "[" , expression , "]" ;
+field_expr = primary_expr , "." , identifier ;
 
-expr            ::= or_expr
-or_expr         ::= and_expr ("||" and_expr)*
-and_expr        ::= unary_expr ("&&" unary_expr)*
-unary_expr      ::= "!" unary_expr | primary
+builtin_expr = "arg" , "(" , number , ")"
+             | "args"
+             | "status" , "(" , ")"
+             | "pid" , "(" , ")"
+             | "ppid" , "(" , ")"
+             | "uid" , "(" , ")"
+             | "pwd" , "(" , ")"
+             | "self_pid" , "(" , ")"
+             | "argv0" , "(" , ")"
+             | "argc" , "(" , ")"
+             | "env" , "(" , expression , ")"
+             | "env" , "." , identifier
+             | "exists" , "(" , expression , ")"
+             | "is_dir" , "(" , expression , ")"
+             | "is_file" , "(" , expression , ")"
+             | "is_symlink" , "(" , expression , ")"
+             | "is_exec" , "(" , expression , ")"
+             | "is_readable" , "(" , expression , ")"
+             | "is_writable" , "(" , expression , ")"
+             | "is_non_empty" , "(" , expression , ")"
+             | "len" , "(" , expression , ")"
+             | "count" , "(" , expression , ")"
+             | "join" , "(" , expression , "," , expression , ")"
+             | "input" , "(" , expression , ")"
+             | "confirm" , "(" , expression , ")"
+             | "bool_str" , "(" , expression , ")"
+             ;
 
-primary         ::= literal
-                  | identifier
-                  | "env" "." identifier
-                  | "(" expr ")"
+arg_list = expression , { "," , expression } ;
+lvalue = identifier | "env" , "." , identifier ;
 
-literal         ::= string
-                  | interpolated_string
-                  | int_lit
-                  | bool_lit
-                  | list_lit
+(* Literals *)
+literal = string_literal | number | bool_literal ;
+string_literal = normal_string | raw_string | interpolated_string ;
+normal_string = '"' , { string_char } , '"' ;
+raw_string = 'r"' , { raw_string_char } , '"' ;
+interpolated_string = '$"' , { interp_char | "{" , expression , "}" } , '"' ;
+bool_literal = "true" | "false" ;
+number = digit , { digit } ;
 
-list_lit        ::= "[" (expr ("," expr)*)? "]"
-
-string          ::= "\"" string_char* "\""
-interpolated_string ::= "$\"" interp_char* "\""
-
-int_lit         ::= digit+
-bool_lit        ::= "true" | "false"
-
-identifier      ::= (letter | "_") (letter | digit | "_")*
-
-comment         ::= "#" comment_char* newline
+(* Lexical *)
+identifier = letter , { letter | digit | "_" } ;
+letter = "a" | "b" | (* ... *) | "z" | "A" | (* ... *) | "Z" ;
+digit = "0" | "1" | (* ... *) | "9" ;
+string_char = ? any character except '"' and unescaped newline ? ;
+raw_string_char = ? any character except '"' ? ;
+interp_char = ? any character except '"', '{', and unescaped newline ? ;

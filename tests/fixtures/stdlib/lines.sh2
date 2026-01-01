@@ -1,0 +1,25 @@
+func main() {
+    # 1. Normal case
+    let normal = "a\nb"
+    print("--- Normal ---")
+    for l in lines(normal) { print("N:" & l) }
+
+    # 2. Trailing newline
+    let trailing = "a\nb\n"
+    print("--- Trailing ---")
+    for l in lines(trailing) { print("T:" & l) }
+
+    # 3. Interior empty
+    let interior = "a\n\nb"
+    print("--- Interior ---")
+    for l in lines(interior) { print("I:" & l) }
+
+    # 4. Empty
+    print("--- Empty ---")
+    for l in lines("") { print("E:" & l) }
+
+    # 5. Capture integration (simulated with printf)
+    print("--- Capture ---")
+    let cap = capture(run("printf", "x\ny\n"))
+    for l in lines(cap) { print("C:" & l) }
+}

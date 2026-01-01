@@ -1,219 +1,110 @@
-## sh2 — A Semantic Shell Language
+# sh2c (sh2)
 
-**Project Status:** Prototype / WIP (spec-first, implementation evolving)  
-**Language Version:** 0.1 (Draft)
+`sh2c` is a prototype compiler for **sh2**, a small, structured shell language that compiles down to `bash` or POSIX `sh`.
 
-**Audience:** Compiler implementers, contributors, reviewers
+This repository contains:
+- the **compiler** (`sh2c`)
+- the **language spec** (see `language.md`)
+- the **descriptive grammar** (see `grammar.enbf.md`)
 
-`sh2` is the *language/spec*. `sh2c` is this repository’s *reference compiler* that compiles `.sh2` programs to shell scripts.
-
----
-
-## 1. Project Overview
-
-**sh2** is a spec-first language with an evolving formal definition.
-
-sh2 exists to solve long-standing problems with traditional shell scripting:
-
-* Meaning is encoded in punctuation (`>&2`, `$@`, `[[ ]]`)
-* Scripts are difficult to read, review, and refactor
-* Errors are subtle and often silent
-* Tooling support is weak due to implicit semantics
-
-sh2 replaces symbolic shell syntax with **structured language constructs** while preserving full compatibility with existing shell environments.
+> Note: The grammar/spec describe the *target language shape*. Individual features may land incrementally.
 
 ---
 
-## 2. Project Goals
+## CLI
 
-### Primary Goals
-
-* Define a **human-readable shell language**
-* Provide a **formal language specification**
-* Compile to **POSIX shell by default**
-* Support **full Bash expressiveness** via structured features and escape hatches
-* Enable **multiple independent implementations**
-
-### Explicit Non-Goals
-
-* Replacing interactive shells
-* Re-implementing all Bash internals
-* Becoming a general-purpose programming language
-* Runtime interpretation (sh2 is compiled)
-
----
-
-## 3. Language Definition Status
-
-The authoritative definitions are:
-
-| Document              | Purpose                           |
-| --------------------- | --------------------------------- |
-| `docs/language.md`    | Normative language specification  |
-| `docs/grammar.ebnf`   | Formal grammar                    |
-| `docs/sh2_vs_shell.md`| rationale / comparison with traditional shell |
-
-**Note:** The compiler implementation (`sh2c`) is not the language definition; it is one implementation that should track the spec and tests.
-
----
-
-## 4. Language Scope (v0.1 Draft) 
-
-Bash completeness policy: any Bash can be expressed via `sh(...)` / `raw { ... }` even if not all constructs are first-class yet:
-* **Structurally**, using first-class constructs (`if`, `case`, `with`, pipes, redirects, loops), or
-* **Explicitly**, using escape hatches (`sh("...")`, `raw { ... }`)
-
-### Core Constructs
-
-* Functions and entry point (`func main`)
-* Sequential execution
-* Command execution (`run`, `cmd`)
-* Output (`print`, `print_err`)
-* Conditionals (`if`, `elif`, `else`)
-* Pattern matching (`case`)
-* Loops (`while`, `for`)
-* Scoped behavior (`with env`, `with cwd`, `with redirect`)
-* Pipelines and background jobs
-* Subshells and groups
-* Escape hatches for raw shell
-
----
-
-## 5. Architecture Overview
-
-sh2 follows a **compiler pipeline architecture**:
-
-```
-.sh2 source
-   ↓
-Lexer
-   ↓
-Parser (AST)
-   ↓
-Lowering (IR)
-   ↓
-Codegen
-   ↓
-POSIX shell / Bash
+```text
+Usage: sh2c [flags] <script.sh2> [flags]
+Flags:
+  --target <bash|posix>  Select output shell dialect (default: bash)
+  --no-diagnostics       Disable error location reporting and traps
 ```
 
-### Design Principles
-
-* Each phase has a single responsibility
-* Semantics are encoded in IR, not syntax
-* Code generation is mechanical and testable
-* Shell quirks are isolated to codegen
-
 ---
 
-## 6. Repository Structure
+## Quick example
 
-The repository is organized to reflect compiler phases and language boundaries:
+```sh2
+import "stdlib.sh2"
 
-```
-.github/workflows/   CI
-.vscode/             editor tasks (optional)
-docs/                spec + grammar
-src/                 compiler implementation
-  parser/            parser modules
-  bin/               (misc bin helpers, if any)
-tests/
-  common/            shared test helpers
-  fixtures/          golden fixtures / test inputs
-  *.rs               integration test suites
+func main() {
+  let who = input("Name: ")
+  print($"Hello {who}")
+
+  if exists("README.md") && is_file("README.md") {
+    run("ls", "-al", "README.md")
+  } else {
+    print_err("README.md not found")
+  }
+}
 ```
 
-Rust implementation files live in `src/`:
-- `lexer.rs`, `parser/`, `ast.rs`, `lower.rs`, `ir.rs`, `codegen.rs`
-- `span.rs` for diagnostics/spans
-- `loader.rs` for file/module loading
-- `main.rs` / `lib.rs` for CLI + library entrypoints
+---
+
+## Language at a glance
+
+### Program structure
+- `import "path"`
+- `func name(a, b, c) { ... }`
+- Optional free-standing statements (top-level execution), per grammar.
+
+### Statements
+- `let name = expr`
+- `set <lvalue> = expr` where `lvalue` is `name` or `env.NAME`
+- Command execution:
+  - `run(expr, ...)`
+  - `exec(expr, ...)`
+- Output:
+  - `print(expr)`
+  - `print_err(expr)`
+- Control flow:
+  - `if expr { ... } elif expr { ... } else { ... }`
+  - `while expr { ... }`
+  - `for x in expr { ... }`
+  - `for (k, v) in m { ... }`
+  - `try { ... } catch { ... }`
+  - `case expr { pattern => { ... } }`
+- Scopes / modifiers:
+  - `with env { KEY = expr, ... } { ... }`
+  - `with cwd(expr) { ... }`
+  - `with log(path, append=true|false) { ... }`
+  - `with redirect { stdout: ..., stderr: ..., stdin: ... } { ... }`
+- Process helpers:
+  - `spawn { ... }` / `spawn statement`
+  - `subshell { ... }`
+  - `group { ... }`
+  - pipelines: `run(...) | run(...) | run(...)`
+  - statement chaining: `stmt && stmt` / `stmt || stmt`
+
+### Expressions
+- Literals: strings, numbers, booleans
+- Operators (precedence high → low):
+  - unary `!` `-`
+  - `* / %`
+  - `+ -`
+  - concat `&`
+  - compare `== != < <= > >=`
+  - `&&`
+  - `||`
+- Calls: `name(expr, ...)`
+- Capture: `capture(run(...) | run(...))`
+- Lists: `[a, b, c]`
+- Maps: `{ "k": v, "x": y }`
+- Indexing: `a[i]`
+- Field access: `obj.field`
+
+### Builtins (selected)
+- Args/process: `args`, `arg(n)`, `argc()`, `argv0()`, `status()`, `pid()`, `ppid()`, `uid()`, `pwd()`, `self_pid()`
+- Env: `env(expr)` and `env.NAME`
+- Filesystem tests: `exists(x)`, `is_dir(x)`, `is_file(x)`, `is_symlink(x)`, `is_exec(x)`, `is_readable(x)`, `is_writable(x)`, `is_non_empty(x)`
+- Collections: `len(x)`, `count(x)`, `join(xs, sep)`
+- Interactive: `input(prompt)`, `confirm(prompt)`
+- Helpers: `bool_str(x)`
 
 ---
 
-## 7. Testing Philosophy
+## Docs
 
-sh2 uses **language-level testing**, not just unit tests.
-
-Test categories:
-
-| Category   | Purpose                   |
-| ---------- | ------------------------- |
-| `parse`    | Grammar correctness       |
-| `semantic` | Static rule enforcement   |
-| `codegen`  | Shell output structure    |
-| `exec`     | Runtime behavior          |
-| `reject`   | Invalid program rejection |
-
-Golden-file testing is mandatory for code generation.
-
----
-
-## 8. Bash Completeness Policy
-
-Bash completeness policy: any Bash can be expressed via `sh(...)` / `raw { ... }` even if not all constructs are first-class yet:
-
-* Structured language constructs for common shell behavior
-* Mandatory escape hatch support (`sh(...)` or `raw {}`)
-
-This ensures:
-
-* Any Bash script can be represented in sh2
-* sh2 does not need to model every Bash quirk natively
-
----
-
-## 9. Contribution Model
-
-### Who Should Contribute
-
-* Compiler engineers
-* Language designers
-* Shell users with production experience
-* Tooling and CI engineers
-
-### Contribution Expectations
-
-* All language changes require:
-
-  * specification updates
-  * fixtures + integration tests
-* Implementation changes without spec updates are discouraged
-* Design discussion precedes implementation
-
----
-
-## 10. Language Evolution Policy
-
-* sh2 follows **spec-first development**
-* New syntax requires:
-
-  * a spec proposal
-  * grammar update
-  * fixtures + integration tests
-* Breaking changes require a version bump
-
----
-
-## 11. Success Criteria
-
-The project is considered successful if:
-
-* The language can be reimplemented from the spec alone
-* Multiple independent compilers can exist
-* Generated shell scripts are readable and reviewable
-* Contributors reason about semantics, not shell punctuation
-
----
-
-## 12. Project Status Summary
-
-| Area               | Status      |
-| ------------------ | ----------- |
-| Language Spec      | Defined     |
-| Grammar            | Defined     |
-| Reference Compiler | Prototype   |
-| CI Integration     | In progress |
-
----
+- `language.md` — descriptive language reference
+- `grammar.enbf.md` — EBNF grammar (descriptive)
 

@@ -55,6 +55,7 @@ pub struct PreludeUsage {
     pub path_join: bool,
     pub loc: bool,
     pub uid: bool,
+    pub lines: bool,
 }
 
 fn scan_usage(funcs: &[Function], include_diagnostics: bool) -> PreludeUsage {
@@ -318,6 +319,10 @@ fn visit_val(val: &Val, usage: &mut PreludeUsage) {
             for a in args {
                 visit_val(a, usage);
             }
+        }
+        Val::Lines(inner) => {
+            usage.lines = true;
+            visit_val(inner, usage);
         }
         Val::Concat(l, r) | Val::And(l, r) | Val::Or(l, r) => {
             visit_val(l, usage);
@@ -693,6 +698,10 @@ fn emit_val(v: &Val, target: TargetShell) -> Result<String, CompileError> {
         Val::LoadEnvfile(path) => {
             Ok(format!("\"$( __sh2_load_envfile {} )\"", emit_word(path, target)?))
         }
+        Val::Lines(_) => Err(CompileError::unsupported(
+            "lines() is only valid in 'for' loops or 'let' assignment",
+            target,
+        )),
         Val::JsonKv(blob) => {
             Ok(format!("\"$( __sh2_json_kv {} )\"", emit_word(blob, target)?))
         }
@@ -938,6 +947,14 @@ fn emit_cmd(
         Cmd::Assign(name, val, loc) => {
             if let Some(l) = loc {
                 out.push_str(&format!("{}__sh2_loc=\"{}\"\n", pad, l));
+            }
+            if let Val::Lines(inner) = val {
+                if target == TargetShell::Posix {
+                    return Err(CompileError::unsupported("lines() not supported in POSIX", target));
+                }
+                out.push_str(&pad);
+                out.push_str(&format!("__sh2_lines {} {}\n", emit_val(inner, target)?, name));
+                return Ok(());
             }
             if target == TargetShell::Posix {
                 if matches!(val, Val::MapLiteral(_)) {
@@ -1369,9 +1386,23 @@ fn emit_cmd(
             out.push('\n');
         }
         Cmd::For { var, items, body } => {
+            // Pre-process any Lines() items
+            for (idx, item) in items.iter().enumerate() {
+                if let Val::Lines(inner) = item {
+                    if target == TargetShell::Posix {
+                        return Err(CompileError::unsupported("lines() iteration not supported in POSIX", target));
+                    }
+                    out.push_str(&pad);
+                    out.push_str(&format!("__sh2_lines {} __sh2_for_lines_{}\n", emit_val(inner, target)?, idx));
+                }
+            }
+
             out.push_str(&format!("{}for {} in", pad, var));
-            for item in items {
+            for (idx, item) in items.iter().enumerate() {
                 match item {
+                    Val::Lines(_) => {
+                         out.push_str(&format!(" \"${{__sh2_for_lines_{}[@]}}\"", idx));
+                    }
                     Val::List(elems) => {
                         for elem in elems {
                             out.push(' ');
@@ -2192,6 +2223,17 @@ fn emit_prelude(target: TargetShell, usage: &PreludeUsage) -> String {
     if usage.write_file {
         s.push_str(r#"__sh2_write_file() { if [ "$3" = "true" ]; then printf '%s' "$2" >> "$1"; else printf '%s' "$2" > "$1"; fi; }
 "#);
+    }
+    if usage.lines {
+        match target {
+            TargetShell::Bash => {
+                s.push_str(r#"__sh2_lines() { mapfile -t "$2" <<< "$1"; if [[ -z "$1" ]]; then eval "$2=()"; elif [[ "$1" == *$'\n' ]]; then eval "unset '$2[\${#$2[@]}-1]'"; fi; }
+"#);
+            }
+            TargetShell::Posix => {
+                // Not supported in POSIX sh
+            }
+        }
     }
     if usage.log {
         s.push_str(r#"__sh2_log_now() { if [ -n "${SH2_LOG_TS:-}" ]; then printf '%s' "$SH2_LOG_TS"; return 0; fi; date '+%Y-%m-%dT%H:%M:%S%z' 2>/dev/null || date 2>/dev/null || printf '%s' 'unknown-time'; }

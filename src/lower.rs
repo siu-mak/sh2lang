@@ -1112,6 +1112,20 @@ fn lower_expr<'a>(e: ast::Expr, ctx: &mut LoweringContext<'a>, sm: &SourceMap, f
                     .map(|a| lower_expr(a, ctx, sm, file))
                     .collect();
                 ir::Val::PathJoin(lowered_args)
+            } else if name == "lines" {
+                if args.len() != 1 {
+                    panic!(
+                        "{}",
+                        sm.format_diagnostic(
+                            file,
+                            opts.diag_base_dir.as_deref(),
+                            "lines() requires exactly 1 argument (text)",
+                            e.span
+                        )
+                    );
+                }
+                let arg = lower_expr(args.into_iter().next().unwrap(), ctx, sm, file);
+                ir::Val::Lines(Box::new(arg))
             } else if name == "save_envfile" {
                 panic!(
                     "{}",
