@@ -1,0 +1,4 @@
+write_file("t_trailing.txt", "content\n")
+let val = read_file("t_trailing.txt")
+# Verify trailing newline is preserved by printing markers
+print("START" + val + "END")

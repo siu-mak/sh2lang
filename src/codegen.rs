@@ -496,6 +496,8 @@ fn emit_val(v: &Val, target: TargetShell) -> Result<String, CompileError> {
         Val::TryRun(_) => Err(CompileError::unsupported("try_run() must be bound via let (e.g., let r = try_run(...))", target)),
         Val::Which(arg) => Ok(format!("\"$( __sh2_which {} )\"", emit_word(arg, target)?)),
         Val::ReadFile(arg) => Ok(format!("\"$( __sh2_read_file {} )\"", emit_word(arg, target)?)),
+
+
         Val::Home => Ok("\"$( __sh2_home )\"".to_string()),
         Val::PathJoin(args) => {
             let parts: Vec<String> = args.iter().map(|a| emit_word(a, target)).collect::<Result<_, _>>()?;
@@ -2218,7 +2220,7 @@ fn emit_prelude(target: TargetShell, usage: &PreludeUsage) -> String {
     }
     if usage.read_file {
         s.push_str(
-            r#"__sh2_read_file() { cat "$1" 2>/dev/null || true; }
+            r#"__sh2_read_file() { cat "$1"; }
 "#,
         );
     }

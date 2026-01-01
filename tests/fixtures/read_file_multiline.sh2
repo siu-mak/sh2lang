@@ -1,0 +1,3 @@
+write_file("t_multi.txt", "line1\nline2\nline3")
+let content = read_file("t_multi.txt")
+print(content)

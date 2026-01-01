@@ -1,0 +1,4 @@
+# This should fail with exit status != 0
+let ignored = read_file("non_existent_file.txt")
+
+

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-__sh2_read_file() { cat "$1" 2>/dev/null || true; }
+__sh2_read_file() { cat "$1"; }
 __sh2_write_file() { if [ "$3" = "true" ]; then printf '%s' "$2" >> "$1"; else printf '%s' "$2" > "$1"; fi; }
 main() {
   printf '%s' 'content' > 'output.txt'

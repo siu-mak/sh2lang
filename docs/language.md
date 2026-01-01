@@ -174,7 +174,15 @@ let path = base & "/env.meta"
 - Comparisons: `== != < <= > >=`
 - Boolean: `&& ||` (used in `if` conditions)
 
+
+### 6.4 Builtin functions
+
+- `read_file(path)`: Returns the content of the file at `path` as a string.
+  - **Note**: Trailing newlines are **stripped** (standard shell command substitution behavior).
+  - Returns exit status 0 on success, non-zero if reading fails (e.g. file missing).
+
 ---
+
 
 ## 7. Environment access
 
