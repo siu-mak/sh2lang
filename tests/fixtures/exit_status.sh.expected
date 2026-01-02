@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-__sh2_check() { local s="$1"; local loc="$2"; if (( s != 0 )); then if [[ -n "$loc" ]]; then printf 'Error in %s\n' "$loc" >&2; fi; exit "$s"; fi; }
+__sh2_check() { local s="$1"; local loc="$2"; local mode="$3"; if (( s != 0 )); then if [[ -n "$loc" ]]; then printf 'Error in %s\n' "$loc" >&2; fi; if [[ "$mode" == "return" ]]; then return "$s"; else exit "$s"; fi; fi; }
 main() {
   exit "7"
 }

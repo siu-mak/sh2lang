@@ -1,10 +1,10 @@
 #!/bin/sh
-__sh2_check() { s="$1"; loc="$2"; if [ "$s" -ne 0 ]; then if [ -n "$loc" ]; then printf 'Error in %s\n' "$loc" >&2; fi; exit "$s"; fi; }
+__sh2_check() { s="$1"; loc="$2"; mode="$3"; if [ "$s" -ne 0 ]; then if [ -n "$loc" ]; then printf 'Error in %s\n' "$loc" >&2; fi; if [ "$mode" = "return" ]; then return "$s"; else exit "$s"; fi; fi; }
 main() {
   export X='hello'
   __sh2_loc="tests/fixtures/env_export_unset_source.sh2:4:3"
   'sh' '-c' 'echo $X'; __sh2_status=$?
-  __sh2_check "$__sh2_status" "${__sh2_loc:-}"
+  __sh2_check "$__sh2_status" "${__sh2_loc:-}" "exit"
   __sh2_loc="tests/fixtures/env_export_unset_source.sh2:7:3"
   y='yo'
   __sh2_status=$?
@@ -12,11 +12,11 @@ main() {
   export y
   __sh2_loc="tests/fixtures/env_export_unset_source.sh2:9:3"
   'sh' '-c' 'echo $y'; __sh2_status=$?
-  __sh2_check "$__sh2_status" "${__sh2_loc:-}"
+  __sh2_check "$__sh2_status" "${__sh2_loc:-}" "exit"
   unset X
   __sh2_loc="tests/fixtures/env_export_unset_source.sh2:13:3"
   'sh' '-c' 'test -z "$X" && echo unset_ok || echo unset_bad'; __sh2_status=$?
-  __sh2_check "$__sh2_status" "${__sh2_loc:-}"
+  __sh2_check "$__sh2_status" "${__sh2_loc:-}" "exit"
   __sh2_loc="tests/fixtures/env_export_unset_source.sh2:16:3"
   f="$( 'mktemp' )"
   __sh2_status=$?
@@ -27,7 +27,7 @@ main() {
   . "$f"
   __sh2_loc="tests/fixtures/env_export_unset_source.sh2:21:3"
   'rm' '-f' "$f"; __sh2_status=$?
-  __sh2_check "$__sh2_status" "${__sh2_loc:-}"
+  __sh2_check "$__sh2_status" "${__sh2_loc:-}" "exit"
 }
 __sh2_status=0
 main "$@"

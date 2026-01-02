@@ -1,5 +1,5 @@
 #!/bin/sh
-__sh2_check() { s="$1"; loc="$2"; if [ "$s" -ne 0 ]; then if [ -n "$loc" ]; then printf 'Error in %s\n' "$loc" >&2; fi; exit "$s"; fi; }
+__sh2_check() { s="$1"; loc="$2"; mode="$3"; if [ "$s" -ne 0 ]; then if [ -n "$loc" ]; then printf 'Error in %s\n' "$loc" >&2; fi; if [ "$mode" = "return" ]; then return "$s"; else exit "$s"; fi; fi; }
 check() {
   path="${1}"
   if [ -s "$path" ]; then printf '%s' 1; fi
@@ -9,16 +9,16 @@ check() {
 main() {
   __sh2_loc="tests/fixtures/return_fs_predicate.sh2:6:3"
   'sh' '-c' 'rm -f empty nonempty; printf '\'''\'' > empty; echo hi > nonempty'; __sh2_status=$?
-  __sh2_check "$__sh2_status" "${__sh2_loc:-}"
+  __sh2_check "$__sh2_status" "${__sh2_loc:-}" "exit"
   __sh2_loc="tests/fixtures/return_fs_predicate.sh2:7:3"
   'check' 'nonempty'; __sh2_status=$?
-  __sh2_check "$__sh2_status" "${__sh2_loc:-}"
+  __sh2_check "$__sh2_status" "${__sh2_loc:-}" "exit"
   if [ "$__sh2_status" = "0" ]; then
     printf '%s\n' 'nonempty: ok'
   fi
   __sh2_loc="tests/fixtures/return_fs_predicate.sh2:12:3"
   'check' 'empty'; __sh2_status=$?
-  __sh2_check "$__sh2_status" "${__sh2_loc:-}"
+  __sh2_check "$__sh2_status" "${__sh2_loc:-}" "exit"
   if [ "$__sh2_status" = "1" ]; then
     printf '%s\n' 'empty: ok'
   fi

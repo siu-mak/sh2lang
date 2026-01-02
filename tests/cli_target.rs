@@ -4,8 +4,6 @@ fn sh2c_path() -> String {
     env!("CARGO_BIN_EXE_sh2c").to_string()
 }
 
-
-
 fn assert_cmd_stdout_str(args: &[&str], expected: &str) {
     let output = Command::new(sh2c_path())
         .args(args)
@@ -46,126 +44,38 @@ fn assert_cmd_fail(args: &[&str], expected_status: Option<i32>, expected_stderr_
 
 #[test]
 fn cli_target_default_is_bash() {
-    // Default should match cli_target_basic.sh.expected (bash)
-    // Note: CLI uses script parent as base, so paths are basename-only here.
-   
-     let expected = r#"
-#!/usr/bin/env bash
-__sh2_err_handler() {
-  local s=$?
-  local loc="${__sh2_loc:-}"
-  if [[ "${BASH_COMMAND}" == *"(exit "* ]]; then return $s; fi
-  if [[ -z "$loc" ]]; then return $s; fi
-  if [[ "$loc" == "${__sh2_last_err_loc:-}" && "$s" == "${__sh2_last_err_status:-}" ]]; then return $s; fi
-  __sh2_last_err_loc="$loc"
-  __sh2_last_err_status="$s"
-  printf "Error in %s\n" "$loc" >&2
-  return $s
-}
-set -o errtrace
-trap '__sh2_err_handler' ERR
-main() {
-  local __sh2_loc=""
-  __sh2_loc="cli_target_basic.sh2:2:3"
-  x='world'
-  __sh2_status=$?; (exit $__sh2_status)
-  __sh2_loc="cli_target_basic.sh2:3:3"
-  'echo' 'hello' "$x"; __sh2_status=$?; (exit $__sh2_status)
-}
-__sh2_status=0
-main "$@"
-"#;
+    let expected = std::fs::read_to_string("tests/fixtures/cli_target_basic.sh.expected").unwrap();
+    // CLI relativizes paths to input file parent, so "tests/fixtures/" prefix is stripped.
     assert_cmd_stdout_str(
         &["tests/fixtures/cli_target_basic.sh2"],
-        expected,
+        &expected.replace("tests/fixtures/", ""),
     );
 }
 
 #[test]
 fn cli_target_explicit_bash() {
-    let expected = r#"
-#!/usr/bin/env bash
-__sh2_err_handler() {
-  local s=$?
-  local loc="${__sh2_loc:-}"
-  if [[ "${BASH_COMMAND}" == *"(exit "* ]]; then return $s; fi
-  if [[ -z "$loc" ]]; then return $s; fi
-  if [[ "$loc" == "${__sh2_last_err_loc:-}" && "$s" == "${__sh2_last_err_status:-}" ]]; then return $s; fi
-  __sh2_last_err_loc="$loc"
-  __sh2_last_err_status="$s"
-  printf "Error in %s\n" "$loc" >&2
-  return $s
-}
-set -o errtrace
-trap '__sh2_err_handler' ERR
-main() {
-  local __sh2_loc=""
-  __sh2_loc="cli_target_basic.sh2:2:3"
-  x='world'
-  __sh2_status=$?; (exit $__sh2_status)
-  __sh2_loc="cli_target_basic.sh2:3:3"
-  'echo' 'hello' "$x"; __sh2_status=$?; (exit $__sh2_status)
-}
-__sh2_status=0
-main "$@"
-"#;
+    let expected = std::fs::read_to_string("tests/fixtures/cli_target_basic.sh.expected").unwrap();
     assert_cmd_stdout_str(
         &["--target", "bash", "tests/fixtures/cli_target_basic.sh2"],
-        expected,
+        &expected.replace("tests/fixtures/", ""),
     );
 }
 
 #[test]
 fn cli_target_explicit_bash_equal() {
-    let expected = r#"
-#!/usr/bin/env bash
-__sh2_err_handler() {
-  local s=$?
-  local loc="${__sh2_loc:-}"
-  if [[ "${BASH_COMMAND}" == *"(exit "* ]]; then return $s; fi
-  if [[ -z "$loc" ]]; then return $s; fi
-  if [[ "$loc" == "${__sh2_last_err_loc:-}" && "$s" == "${__sh2_last_err_status:-}" ]]; then return $s; fi
-  __sh2_last_err_loc="$loc"
-  __sh2_last_err_status="$s"
-  printf "Error in %s\n" "$loc" >&2
-  return $s
-}
-set -o errtrace
-trap '__sh2_err_handler' ERR
-main() {
-  local __sh2_loc=""
-  __sh2_loc="cli_target_basic.sh2:2:3"
-  x='world'
-  __sh2_status=$?; (exit $__sh2_status)
-  __sh2_loc="cli_target_basic.sh2:3:3"
-  'echo' 'hello' "$x"; __sh2_status=$?; (exit $__sh2_status)
-}
-__sh2_status=0
-main "$@"
-"#;
+    let expected = std::fs::read_to_string("tests/fixtures/cli_target_basic.sh.expected").unwrap();
     assert_cmd_stdout_str(
         &["--target=bash", "tests/fixtures/cli_target_basic.sh2"],
-        expected,
+        &expected.replace("tests/fixtures/", ""),
     );
 }
 
 #[test]
 fn cli_target_posix() {
-    let expected = r#"
-#!/bin/sh
-main() {
-  __sh2_loc="cli_target_basic.sh2:2:3"
-  x='world'
-  __sh2_status=$?; (exit $__sh2_status)
-  __sh2_loc="cli_target_basic.sh2:3:3"
-  'echo' 'hello' "$x"; __sh2_status=$?; (exit $__sh2_status)
-}
-__sh2_status=0
-main "$@"
-"#;
+    let expected = std::fs::read_to_string("tests/fixtures/cli_target_basic.posix.sh.expected").unwrap();
     assert_cmd_stdout_str(
         &["--target", "posix", "tests/fixtures/cli_target_basic.sh2"],
-        expected,
+        &expected.replace("tests/fixtures/", ""),
     );
 }
 

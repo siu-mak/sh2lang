@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-__sh2_check() { local s="$1"; local loc="$2"; if (( s != 0 )); then if [[ -n "$loc" ]]; then printf 'Error in %s\n' "$loc" >&2; fi; exit "$s"; fi; }
+__sh2_check() { local s="$1"; local loc="$2"; local mode="$3"; if (( s != 0 )); then if [[ -n "$loc" ]]; then printf 'Error in %s\n' "$loc" >&2; fi; if [[ "$mode" == "return" ]]; then return "$s"; else exit "$s"; fi; fi; }
 __sh2_err_handler() {
   local s=$?
   local loc="${__sh2_loc:-}"
@@ -19,7 +19,7 @@ main() {
   arr=('a' 'b')
   __sh2_loc="tests/fixtures/cli_target_posix_rejects_array.sh2:3:3"
   'echo' "$arr"; __sh2_status=$?
-  __sh2_check "$__sh2_status" "${__sh2_loc:-}"
+  __sh2_check "$__sh2_status" "${__sh2_loc:-}" "exit"
 }
 __sh2_status=0
 main "$@"

@@ -1,9 +1,9 @@
 #!/bin/sh
-__sh2_check() { s="$1"; loc="$2"; if [ "$s" -ne 0 ]; then if [ -n "$loc" ]; then printf 'Error in %s\n' "$loc" >&2; fi; exit "$s"; fi; }
+__sh2_check() { s="$1"; loc="$2"; mode="$3"; if [ "$s" -ne 0 ]; then if [ -n "$loc" ]; then printf 'Error in %s\n' "$loc" >&2; fi; if [ "$mode" = "return" ]; then return "$s"; else exit "$s"; fi; fi; }
 main() {
   __sh2_loc="tests/fixtures/fs_readable_writable_basic.sh2:2:3"
   'sh' '-c' 'rm -f ro rw; : > ro; : > rw; chmod 444 ro; chmod 644 rw'; __sh2_status=$?
-  __sh2_check "$__sh2_status" "${__sh2_loc:-}"
+  __sh2_check "$__sh2_status" "${__sh2_loc:-}" "exit"
   if [ -r 'ro' ] && ! [ -w 'ro' ] && [ -r 'rw' ] && [ -w 'rw' ]; then
     printf '%s\n' 'ok'
   else

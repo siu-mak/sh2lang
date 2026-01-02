@@ -1153,11 +1153,11 @@ fn emit_cmd(
                 if in_cond_ctx {
                     // In condition context (e.g. try block), we must NOT exit the script.
                     // We use (exit $s) to set $? and trigger errexit if active (which catch handles).
-                    out.push_str(&format!("{}(exit $__sh2_status)
+                    out.push_str(&format!("{}__sh2_check \"$__sh2_status\" \"${{__sh2_loc:-}}\" \"return\"
 ", pad));
                 } else {
                     // Normal context: use __sh2_check to fail-fast with diagnostics
-                    out.push_str(&format!("{}__sh2_check \"$__sh2_status\" \"${{__sh2_loc:-}}\"
+                    out.push_str(&format!("{}__sh2_check \"$__sh2_status\" \"${{__sh2_loc:-}}\" \"exit\"
 ", pad));
                 }
             }
@@ -1939,22 +1939,22 @@ fn emit_cmd(
         Cmd::AndThen { left, right } => {
             out.push_str(&format!("{pad}{{\n"));
             for cmd in left {
-                emit_cmd(cmd, out, indent + 2, opts, in_cond_ctx, ctx)?;
+                emit_cmd(cmd, out, indent + 2, opts, true, ctx)?;
             }
             out.push_str(&format!("{pad}}} && {{\n"));
             for cmd in right {
-                emit_cmd(cmd, out, indent + 2, opts, in_cond_ctx, ctx)?;
+                emit_cmd(cmd, out, indent + 2, opts, true, ctx)?;
             }
             out.push_str(&format!("{pad}}}\n"));
         }
         Cmd::OrElse { left, right } => {
             out.push_str(&format!("{pad}{{\n"));
             for cmd in left {
-                emit_cmd(cmd, out, indent + 2, opts, in_cond_ctx, ctx)?;
+                emit_cmd(cmd, out, indent + 2, opts, true, ctx)?;
             }
             out.push_str(&format!("{pad}}} || {{\n"));
             for cmd in right {
-                emit_cmd(cmd, out, indent + 2, opts, in_cond_ctx, ctx)?;
+                emit_cmd(cmd, out, indent + 2, opts, true, ctx)?;
             }
             out.push_str(&format!("{pad}}}\n"));
         }
@@ -2188,10 +2188,10 @@ fn emit_prelude(target: TargetShell, usage: &PreludeUsage) -> String {
     // Always emit __sh2_check for fail-fast behavior
     match target {
         TargetShell::Bash => {
-            s.push_str("__sh2_check() { local s=\"$1\"; local loc=\"$2\"; if (( s != 0 )); then if [[ -n \"$loc\" ]]; then printf 'Error in %s\\n' \"$loc\" >&2; fi; exit \"$s\"; fi; }\n");
+            s.push_str("__sh2_check() { local s=\"$1\"; local loc=\"$2\"; local mode=\"$3\"; if (( s != 0 )); then if [[ -n \"$loc\" ]]; then printf 'Error in %s\\n' \"$loc\" >&2; fi; if [[ \"$mode\" == \"return\" ]]; then return \"$s\"; else exit \"$s\"; fi; fi; }\n");
         }
         TargetShell::Posix => {
-            s.push_str("__sh2_check() { s=\"$1\"; loc=\"$2\"; if [ \"$s\" -ne 0 ]; then if [ -n \"$loc\" ]; then printf 'Error in %s\\n' \"$loc\" >&2; fi; exit \"$s\"; fi; }\n");
+            s.push_str("__sh2_check() { s=\"$1\"; loc=\"$2\"; mode=\"$3\"; if [ \"$s\" -ne 0 ]; then if [ -n \"$loc\" ]; then printf 'Error in %s\\n' \"$loc\" >&2; fi; if [ \"$mode\" = \"return\" ]; then return \"$s\"; else exit \"$s\"; fi; fi; }\n");
         }
     }
 

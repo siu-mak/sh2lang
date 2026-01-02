@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-__sh2_check() { local s="$1"; local loc="$2"; if (( s != 0 )); then if [[ -n "$loc" ]]; then printf 'Error in %s\n' "$loc" >&2; fi; exit "$s"; fi; }
+__sh2_check() { local s="$1"; local loc="$2"; local mode="$3"; if (( s != 0 )); then if [[ -n "$loc" ]]; then printf 'Error in %s\n' "$loc" >&2; fi; if [[ "$mode" == "return" ]]; then return "$s"; else exit "$s"; fi; fi; }
 __sh2_err_handler() {
   local s=$?
   local loc="${__sh2_loc:-}"
@@ -20,7 +20,7 @@ main() {
   if {
     {
       'sh' '-c' 'printf hi'; __sh2_status=$?
-      (exit $__sh2_status)
+      __sh2_check "$__sh2_status" "${__sh2_loc:-}" "return"
     } && {
       __sh2_loc="tests/fixtures/pipe_fail_middle.sh2:4:9"
       if ( set -o pipefail; set +e; 'sh' '-c' 'exit 7' | 'sh' '-c' 'cat' ); then __sh2_status=0; else __sh2_status=$?; fi; (exit $__sh2_status)

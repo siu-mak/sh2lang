@@ -1,5 +1,5 @@
 #!/bin/sh
-__sh2_check() { s="$1"; loc="$2"; if [ "$s" -ne 0 ]; then if [ -n "$loc" ]; then printf 'Error in %s\n' "$loc" >&2; fi; exit "$s"; fi; }
+__sh2_check() { s="$1"; loc="$2"; mode="$3"; if [ "$s" -ne 0 ]; then if [ -n "$loc" ]; then printf 'Error in %s\n' "$loc" >&2; fi; if [ "$mode" = "return" ]; then return "$s"; else exit "$s"; fi; fi; }
 __sh2_matches() { printf '%s\n' "$1" | grep -Eq -- "$2"; }
 main() {
   printf '%s\n' "$( if __sh2_matches 'abc' ''; then printf "%s" "true"; else printf "%s" "false"; fi )"
