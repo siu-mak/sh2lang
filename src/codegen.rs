@@ -634,10 +634,9 @@ fn emit_val(v: &Val, target: TargetShell) -> Result<String, CompileError> {
             Val::Args => Ok("\"$#\"".to_string()),
             _ => Err(CompileError::internal("count(...) supports only list literals, list variables, and args", target)),
         },
-        Val::Bool(_) => Err(CompileError::internal(
+        Val::Bool(_) => Err(CompileError::new(
             "Cannot emit boolean value as string/word; booleans are only valid in conditions",
-            target
-        )),
+        ).with_target(target)),
         Val::Number(n) => Ok(format!("\"{}\"", n)),
         Val::Status => Ok("\"$__sh2_status\"".to_string()),
         Val::Pid => Ok("\"$!\"".to_string()),
@@ -742,7 +741,7 @@ fn emit_val(v: &Val, target: TargetShell) -> Result<String, CompileError> {
         | Val::IsWritable(..)
         | Val::IsNonEmpty(..)
         | Val::List(..)
-        | Val::Confirm(..) => Err(CompileError::internal("Cannot emit boolean/list value as string", target)),
+        | Val::Confirm(..) => Err(CompileError::new("Cannot emit boolean/list value as string").with_target(target)),
     }
 }
 

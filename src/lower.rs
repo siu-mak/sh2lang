@@ -874,18 +874,50 @@ fn lower_expr<'a>(e: ast::Expr, ctx: &mut LoweringContext<'a>, sm: &SourceMap, f
             }
         }
         ast::ExprKind::Compare { left, op, right } => {
-            let op = match op {
-                ast::CompareOp::Eq => ir::CompareOp::Eq,
-                ast::CompareOp::NotEq => ir::CompareOp::NotEq,
-                ast::CompareOp::Lt => ir::CompareOp::Lt,
-                ast::CompareOp::Le => ir::CompareOp::Le,
-                ast::CompareOp::Gt => ir::CompareOp::Gt,
-                ast::CompareOp::Ge => ir::CompareOp::Ge,
-            };
-            ir::Val::Compare {
-                left: Box::new(lower_expr(*left, ctx, sm, file)),
-                op,
-                right: Box::new(lower_expr(*right, ctx, sm, file)),
+            // Check for boolean literal comparisons (eq/neq with true/false_
+            let l_bool = if let ast::ExprKind::Bool(b) = left.node { Some(b) } else { None };
+            let r_bool = if let ast::ExprKind::Bool(b) = right.node { Some(b) } else { None };
+
+            if (l_bool.is_some() || r_bool.is_some()) && matches!(op, ast::CompareOp::Eq | ast::CompareOp::NotEq) {
+                // If one side is a bool literal and op is Eq/NotEq, canonicalize to unary conditional
+                // Supported cases: true == pred, false == pred, pred == true, pred == false (and !=)
+                
+                // Identify which side is literal and which is predicate
+                let (lit_val, pred_expr) = if let Some(b) = l_bool {
+                     (b, *right)
+                } else {
+                     (r_bool.unwrap(), *left)
+                };
+
+                let pred_val = lower_expr(pred_expr, ctx, sm, file);
+                
+                // Logic table:
+                // Eq:   true == pred -> pred
+                // Eq:   false == pred -> !pred
+                // NotEq: true != pred -> !pred
+                // NotEq: false != pred -> pred
+                
+                let is_eq = matches!(op, ast::CompareOp::Eq);
+                match (is_eq, lit_val) {
+                    (true, true) => pred_val,      // pred == true
+                    (true, false) => ir::Val::Not(Box::new(pred_val)), // pred == false
+                    (false, true) => ir::Val::Not(Box::new(pred_val)), // pred != true
+                    (false, false) => pred_val,    // pred != false
+                }
+            } else {
+                let op = match op {
+                    ast::CompareOp::Eq => ir::CompareOp::Eq,
+                    ast::CompareOp::NotEq => ir::CompareOp::NotEq,
+                    ast::CompareOp::Lt => ir::CompareOp::Lt,
+                    ast::CompareOp::Le => ir::CompareOp::Le,
+                    ast::CompareOp::Gt => ir::CompareOp::Gt,
+                    ast::CompareOp::Ge => ir::CompareOp::Ge,
+                };
+                ir::Val::Compare {
+                    left: Box::new(lower_expr(*left, ctx, sm, file)),
+                    op,
+                    right: Box::new(lower_expr(*right, ctx, sm, file)),
+                }
             }
         }
         ast::ExprKind::And(left, right) => ir::Val::And(

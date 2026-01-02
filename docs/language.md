@@ -139,6 +139,19 @@ if status() == 0 {
 }
 ```
 
+#### Boolean Expressions
+
+Boolean conditions can be formed using comparison operators or predicate functions.
+
+- Predicates like `is_dir(path)` return a boolean.
+- Use `!pred` for negation (e.g., `if !is_dir(d)`).
+- Explicit comparisons to `true`/`false` are supported but `!pred` is canonical.
+
+```sh2
+if is_dir(".") == true { ... }  # Same as if is_dir(".")
+if is_dir(".") == false { ... } # Same as if !is_dir(".")
+```
+
 ### 5.2 `case` (arrow is `=>`)
 
 `case` arms use `=>` (not `hyphen+greater-than`):

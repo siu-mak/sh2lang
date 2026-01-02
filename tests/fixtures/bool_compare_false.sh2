@@ -1,0 +1,6 @@
+func main() {
+    mkdir("tests")
+    let d = "tests"
+    if is_dir(d) == false { print("no") }
+    print("ok")
+}

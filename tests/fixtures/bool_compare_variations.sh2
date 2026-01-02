@@ -1,0 +1,23 @@
+func main() {
+    mkdir("tests")
+    let d = "tests"
+    let f = "missing"
+
+    # Eq True
+    if is_dir(d) == true { print("EqTrue:ok") } else { print("EqTrue:fail") }
+    
+    # Eq False (missing file)
+    if is_dir(f) == false { print("EqFalse:ok") } else { print("EqFalse:fail") }
+
+    # NotEq True (missing file)
+    if is_dir(f) != true { print("NotEqTrue:ok") } else { print("NotEqTrue:fail") }
+
+    # NotEq False
+    if is_dir(d) != false { print("NotEqFalse:ok") } else { print("NotEqFalse:fail") }
+
+    # Swapped Eq (True == pred)
+    if true == is_dir(d) { print("SwapEqTrue:ok") } else { print("SwapEqTrue:fail") }
+
+    # Swapped NotEq (False != pred)
+    if false != is_dir(d) { print("SwapNotEqFalse:ok") } else { print("SwapNotEqFalse:fail") }
+}
