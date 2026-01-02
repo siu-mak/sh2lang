@@ -1,105 +1,234 @@
-(* sh2 Grammar - EBNF *)
-(* Descriptive grammar for the devctl Steps 1–8 subset *)
+(*
+  sh2 Language Grammar (EBNF) — descriptive
 
-(* NOTE: Top-level statements are NOT allowed. A file contains function definitions only. *)
+  This is a descriptive grammar for the sh2 language as implemented by sh2c.
+  It aims to match behavior validated by the test suite.
 
-program       = { function_def } ;
+  Notation:
+    =      definition
+    |      alternation
+    (...)  grouping
+    [...]  optional
+    {...}  repetition (zero or more)
 
-function_def  = "func" , identifier , "(" , [ param_list ] , ")" , block ;
-param_list    = identifier , { "," , identifier } ;
+  NOTE: Statements in blocks are newline-separated; semicolons are not statement
+  separators. Newline handling is lexical and not expressed directly in EBNF.
+*)
 
-block         = "{" , { statement } , "}" ;
+(* =========================
+   Top-level program
+   ========================= *)
 
-(* Statements (subset) *)
-statement     = let_stmt
-              | set_stmt
-              | run_pipeline_stmt
-              | print_stmt
-              | print_err_stmt
-              | if_stmt
-              | case_stmt
-              | with_stmt
-              | sh_stmt
-              | return_stmt
-              | exit_stmt
-              ;
+Program            = { ImportStatement } , { FunctionDefinition } ;
 
-(* No ';' statement separators in blocks; statements are separated by newlines in the source. *)
+ImportStatement    = "import" , StringLiteral ;
 
-let_stmt      = "let" , identifier , "=" , expr ;
-set_stmt      = "set" , lvalue , "=" , expr ;
+FunctionDefinition = "func" , Identifier , "(" , [ ParameterList ] , ")" , Block ;
+ParameterList      = Identifier , { "," , Identifier } ;
 
-print_stmt     = "print" , "(" , expr , ")" ;
-print_err_stmt = "print_err" , "(" , expr , ")" ;
+Block              = "{" , { Statement } , "}" ;
 
-(* sh(...) currently accepts ONLY a string literal, not an arbitrary expression. *)
-sh_stmt       = "sh" , "(" , string_lit , ")" ;
 
-return_stmt   = "return" , [ expr ] ;
-exit_stmt     = "exit" , [ expr ] ;
+(* =========================
+   Statements
+   ========================= *)
 
-if_stmt       = "if" , expr , block , [ "else" , block ] ;
+Statement
+  = LetStatement
+  | SetStatement
+  | PrintStatement
+  | PrintErrStatement
+  | IfStatement
+  | WhileStatement
+  | ForStatement
+  | TryCatchStatement
+  | CaseStatement
+  | WithStatement
+  | SpawnStatement
+  | WaitStatement
+  | ReturnStatement
+  | ExitStatement
+  | BreakStatement
+  | ContinueStatement
+  | ExportStatement
+  | UnsetStatement
+  | SourceStatement
+  | ExecStatement
+  | ExpressionStatement
+  ;
 
-case_stmt     = "case" , expr , "{" , { case_arm } , "}" ;
-case_arm      = pattern , "=>" , block ;
-pattern       = string_lit | "_" ;
+LetStatement      = "let" , Identifier , "=" , Expression ;
+SetStatement      = "set" , LValue , "=" , Expression ;
+LValue            = Identifier | EnvDot | IndexExpression | FieldExpression ;
 
-with_stmt     = "with" , with_mod , block ;
-with_mod      = "env" , "{" , env_bindings , "}"
-              | "cwd" , "(" , expr , ")"
-              | "redirect" , "{" , redirect_spec , "}" ;
+PrintStatement    = "print" , "(" , [ ArgList ] , ")" ;
+PrintErrStatement = "print_err" , "(" , [ ArgList ] , ")" ;
 
-env_bindings  = identifier , "=" , expr , { "," , identifier , "=" , expr } ;
+ExportStatement   = "export" , "(" , StringLiteral , [ "," , Expression ] , ")" ;
+UnsetStatement    = "unset" , "(" , StringLiteral , ")" ;
+SourceStatement   = "source" , "(" , Expression , ")" ;
 
-redirect_spec = redirect_item , { "," , redirect_item } ;
-redirect_item = ("stdout" | "stderr" | "stdin") , ":" , redirect_target ;
+ExecStatement     = "exec" , "(" , [ ArgList ] , ")" ;
 
-redirect_target =
-                "stdout"
-              | "stderr"
-              | "file" , "(" , expr , [ "," , "append" , "=" , bool_lit ] , ")"
-              | "heredoc" , "(" , string_lit , ")"
-              ;
+WaitStatement     = "wait" , [ "(" , Expression , ")" ] ;
 
-(* Pipelines are supported between run(...) calls. *)
-run_pipeline_stmt = run_call , { "|" , run_call } ;
-run_call      = "run" , "(" , [ arg_list ] , ")" ;
-arg_list      = expr , { "," , expr } ;
+ReturnStatement   = "return" , [ Expression ] ;
+ExitStatement     = "exit" , [ Expression ] ;
+BreakStatement    = "break" ;
+ContinueStatement = "continue" ;
 
-(* Expressions *)
-expr          = or_expr ;
-or_expr       = and_expr , { "||" , and_expr } ;
-and_expr      = cmp_expr , { "&&" , cmp_expr } ;
-cmp_expr      = concat_expr , [ cmp_op , concat_expr ] ;
-cmp_op        = "==" | "!=" | "<" | "<=" | ">" | ">=" ;
+ExpressionStatement = Expression ;
 
-concat_expr   = primary , { "&" , primary } ;
 
-primary       = literal
-              | identifier
-              | "(" , expr , ")"
-              | builtin
-              ;
+(* =========================
+   Control flow
+   ========================= *)
 
-(* lvalues *)
-lvalue        = identifier | "env" , "." , identifier ;
+IfStatement    = "if" , Expression , Block , { "elif" , Expression , Block } , [ "else" , Block ] ;
+WhileStatement = "while" , Expression , Block ;
 
-(* Builtins (documented subset) *)
-builtin       = "status" , "(" , ")"
-              | "env" , "." , identifier
-              | "exists" , "(" , expr , ")"
-              | "is_dir" , "(" , expr , ")"
-              | "is_file" , "(" , expr , ")"
-              | "arg" , "(" , number , ")"
-              ;
+ForStatement
+  = "for" , Identifier , "in" , Expression , Block
+  | "for" , "(" , Identifier , "," , Identifier , ")" , "in" , Identifier , Block ;
 
-(* Literals *)
-literal       = string_lit | number | bool_lit ;
-string_lit    = '"' , { string_char } , '"' ;
-bool_lit      = "true" | "false" ;
-number        = digit , { digit } ;
+TryCatchStatement = "try" , Block , "catch" , Block ;
 
-identifier    = letter , { letter | digit | "_" } ;
-letter        = ? ASCII letter ? ;
-digit         = "0" | "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9" ;
-string_char   = ? any char except '"' and unescaped newline ? ;
+CaseStatement = "case" , Expression , "{" , { CaseArm } , "}" ;
+CaseArm       = CasePatternList , "=>" , Block ;
+CasePatternList = CasePattern , { "|" , CasePattern } ;
+
+CasePattern
+  = "_"                              (* default wildcard *)
+  | "glob" , "(" , StringLiteral , ")" (* glob(...) pattern *)
+  | Expression                       (* e.g. a string literal / other expr *)
+  ;
+
+(* =========================
+   with-scoped modifiers
+   ========================= *)
+
+WithStatement = "with" , WithModifier , Block ;
+
+WithModifier
+  = WithEnv
+  | WithCwd
+  | WithRedirect
+  | WithLog
+  ;
+
+WithEnv = "env" , "{" , [ EnvBindingList ] , "}" ;
+EnvBindingList = EnvBinding , { "," , EnvBinding } ;
+EnvBinding = Identifier , ":" , Expression ;
+
+WithCwd = "cwd" , "(" , Expression , ")" ;
+
+WithLog = "log" , "(" , Expression , [ "," , "append" , "=" , BoolLiteral ] , ")" ;
+
+WithRedirect = "redirect" , "{" , RedirectSpec , "}" ;
+RedirectSpec = RedirectItem , { "," , RedirectItem } ;
+
+RedirectItem = ( "stdin" | "stdout" | "stderr" ) , ":" , RedirectTarget ;
+
+RedirectTarget
+  = "stdout"
+  | "stderr"
+  | "file" , "(" , Expression , [ "," , "append" , "=" , BoolLiteral ] , ")"
+  | "heredoc" , "(" , StringLiteral , ")"
+  | Expression
+  ;
+
+
+(* =========================
+   Concurrency
+   ========================= *)
+
+SpawnStatement = "spawn" , ( Block | Statement ) ;
+
+
+(* =========================
+   Expressions
+   ========================= *)
+
+Expression = PipelineExpression ;
+
+(* Pipeline has the lowest precedence; stages are expressions. *)
+PipelineExpression = OrExpression , { "|" , OrExpression } ;
+
+(* Textual boolean operators (verified by tests): and/or. *)
+OrExpression  = AndExpression , { "or" , AndExpression } ;
+AndExpression = CompareExpression , { "and" , CompareExpression } ;
+
+CompareExpression = ConcatExpression , [ CompareOp , ConcatExpression ] ;
+CompareOp = "==" | "!=" | "<" | "<=" | ">" | ">=" ;
+
+ConcatExpression = AddExpression , { "&" , AddExpression } ;
+AddExpression    = MulExpression , { ( "+" | "-" ) , MulExpression } ;
+MulExpression    = UnaryExpression , { ( "*" | "/" | "%" ) , UnaryExpression } ;
+
+UnaryExpression  = [ "!" | "-" ] , PostfixExpression ;
+
+PostfixExpression
+  = PrimaryExpression ,
+    { CallSuffix | IndexSuffix | FieldSuffix }
+  ;
+
+CallSuffix  = "(" , [ ArgList ] , ")" ;
+IndexSuffix = "[" , Expression , "]" ;
+FieldSuffix = "." , Identifier ;
+
+PrimaryExpression
+  = Literal
+  | Identifier
+  | EnvDot
+  | "(" , Expression , ")"
+  | RunCall
+  | ShCall
+  | CaptureCall
+  | TryRunCall
+  ;
+
+RunCall = "run" , "(" , [ ArgList ] , [ "," , RunOptionList ] , ")" ;
+RunOptionList = RunOption , { "," , RunOption } ;
+RunOption = "allow_fail" , "=" , BoolLiteral ;
+
+ShCall = "sh" , "(" , StringLiteral , ")" ;   (* string literal only *)
+
+CaptureCall = "capture" , "(" , Expression , ")" ;
+
+TryRunCall = "try_run" , "(" , [ ArgList ] , ")" ;
+
+ArgList = Expression , { "," , Expression } ;
+
+IndexExpression = PostfixExpression , "[" , Expression , "]" ;
+FieldExpression = PostfixExpression , "." , Identifier ;
+
+
+(* =========================
+   Literals and lexical items
+   ========================= *)
+
+Literal = StringLiteral | Number | BoolLiteral | ListLiteral | MapLiteral ;
+
+ListLiteral = "[" , [ ArgList ] , "]" ;
+MapLiteral  = "{" , [ MapEntry , { "," , MapEntry } ] , "}" ;
+MapEntry    = StringLiteral , ":" , Expression ;
+
+BoolLiteral = "true" | "false" ;
+Number      = Digit , { Digit } ;
+
+(* String forms are intentionally abstracted as a terminal category here.
+   Implementations may support normal / interpolated / raw / multiline forms. *)
+StringLiteral = STRING_LITERAL ;
+
+(* Identifier excludes reserved keywords. This is a lexical constraint:
+   IDENTIFIER MUST NOT be any reserved keyword such as:
+     env, true, false, if, elif, else, while, for, case, try, catch, with,
+     import, func, let, set, return, exit, break, continue, spawn, wait,
+     print, print_err, run, exec, sh, capture, try_run, export, unset, source,
+     and, or, glob, stdout, stderr, stdin, file, heredoc, log, cwd, redirect, append.
+*)
+Identifier = IDENTIFIER ;
+
+EnvDot = "env" , "." , Identifier ;
+
+Digit = "0" | "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9" ;
