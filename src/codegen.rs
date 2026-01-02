@@ -324,6 +324,11 @@ fn visit_val(val: &Val, usage: &mut PreludeUsage) {
             usage.lines = true;
             visit_val(inner, usage);
         }
+        Val::Split { s, delim } => {
+            usage.split = true;
+            visit_val(s, usage);
+            visit_val(delim, usage);
+        }
         Val::Concat(l, r) | Val::And(l, r) | Val::Or(l, r) => {
             visit_val(l, usage);
             visit_val(r, usage);
@@ -741,6 +746,7 @@ fn emit_val(v: &Val, target: TargetShell) -> Result<String, CompileError> {
         | Val::IsWritable(..)
         | Val::IsNonEmpty(..)
         | Val::List(..)
+        | Val::Split { .. }
         | Val::Confirm(..) => Err(CompileError::new("Cannot emit boolean/list value as string").with_target(target)),
     }
 }
@@ -965,6 +971,22 @@ fn emit_cmd(
                 out.push_str(&format!("__sh2_lines {} {}\n", emit_val(inner, target)?, name));
                 out.push_str(&format!("{}__sh2_status=$?; (exit $__sh2_status)\n", pad));
                 return Ok(());
+            }
+            if let Val::Split { s, delim } = val {
+                match target {
+                    TargetShell::Bash => {
+                         out.push_str(&pad);
+                         out.push_str(&format!("__sh2_split {} {} {}\n", name, emit_val(s, target)?, emit_val(delim, target)?));
+                         out.push_str(&format!("{}__sh2_status=$?; (exit $__sh2_status)\n", pad));
+                         return Ok(());
+                    }
+                    TargetShell::Posix => {
+                         out.push_str(&pad);
+                         out.push_str(&format!("{}=\"$( __sh2_split {} {} )\"\n", name, emit_val(s, target)?, emit_val(delim, target)?));
+                         out.push_str(&format!("{}__sh2_status=$?; (exit $__sh2_status)\n", pad));
+                         return Ok(());
+                    }
+                }
             }
             if target == TargetShell::Posix {
                 if matches!(val, Val::MapLiteral(_)) {
@@ -1391,6 +1413,12 @@ fn emit_cmd(
                     out.push_str(&pad);
                     out.push_str(&format!("__sh2_lines {} __sh2_for_lines_{}\n", emit_val(inner, target)?, idx));
                 }
+                if let Val::Split { s, delim } = item {
+                    if target == TargetShell::Bash {
+                        out.push_str(&pad);
+                        out.push_str(&format!("__sh2_split __sh2_for_split_{} {} {}\n", idx, emit_val(s, target)?, emit_val(delim, target)?));
+                    }
+                }
             }
 
             out.push_str(&format!("{}for {} in", pad, var));
@@ -1398,6 +1426,16 @@ fn emit_cmd(
                 match item {
                     Val::Lines(_) => {
                          out.push_str(&format!(" \"${{__sh2_for_lines_{}[@]}}\"", idx));
+                    }
+                    Val::Split { s, delim } => {
+                        match target {
+                            TargetShell::Bash => {
+                                 out.push_str(&format!(" \"${{__sh2_for_split_{}[@]}}\"", idx));
+                            }
+                            TargetShell::Posix => {
+                                 out.push_str(&format!(" $(__sh2_split {} {})", emit_val(s, target)?, emit_val(delim, target)?));
+                            }
+                        }
                     }
                     Val::List(elems) => {
                         for elem in elems {
@@ -1410,9 +1448,11 @@ fn emit_cmd(
                     }
                     Val::Var(name) => {
                         if target == TargetShell::Posix {
-                            return Err(CompileError::unsupported("Iterating over array variable not supported in POSIX", target));
+                             // Iterate over string value (IFS splitting)
+                             out.push_str(&format!(" ${}", name));
+                        } else {
+                            out.push_str(&format!(" \"${{{}[@]}}\"", name));
                         }
-                        out.push_str(&format!(" \"${{{}[@]}}\"", name));
                     }
                     _ => {
                         out.push(' ');
@@ -2114,8 +2154,31 @@ fn emit_prelude(target: TargetShell, usage: &PreludeUsage) -> String {
 "#);
     }
     if usage.split {
-        s.push_str(r#"__sh2_split() { awk -v s="$1" -v sep="$2" 'BEGIN { if(sep=="") { printf "%s", s; exit } len=length(sep); while(i=index(s, sep)) { printf "%s\n", substr(s, 1, i-1); s=substr(s, i+len) } printf "%s", s }'; }
+        match target {
+            TargetShell::Bash => {
+                s.push_str(r#"__sh2_split() {
+  local -n __o=$1
+  if [[ -z "$3" ]]; then eval "$1=(\"$2\")"; return; fi
+  mapfile -t __o < <(awk -v s="$2" -v sep="$3" 'BEGIN {
+     len=length(sep);
+     while(i=index(s, sep)) { print substr(s, 1, i-1); s=substr(s, i+len) }
+     print s
+  }')
+}
 "#);
+            }
+            TargetShell::Posix => {
+                s.push_str(r#"__sh2_split() {
+  awk -v s="$1" -v sep="$2" 'BEGIN {
+     if(sep=="") { print s; exit }
+     len=length(sep);
+     while(i=index(s, sep)) { print substr(s, 1, i-1); s=substr(s, i+len) }
+     print s
+  }'
+}
+"#);
+            }
+        }
     }
 
     match target {

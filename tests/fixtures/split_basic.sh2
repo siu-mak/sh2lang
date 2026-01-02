@@ -1,0 +1,5 @@
+func main() {
+    let s = "a,b,c"
+    let xs = split(s, ",")
+    for x in xs { print(x) }
+}

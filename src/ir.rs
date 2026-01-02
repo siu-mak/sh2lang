@@ -83,6 +83,7 @@ pub enum Val {
     Home,
     PathJoin(Vec<Val>),
     Lines(Box<Val>),
+    Split { s: Box<Val>, delim: Box<Val> },
 }
 
 #[derive(Debug, Clone, PartialEq)]

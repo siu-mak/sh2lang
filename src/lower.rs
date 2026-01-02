@@ -1189,6 +1189,25 @@ fn lower_expr<'a>(e: ast::Expr, ctx: &mut LoweringContext<'a>, sm: &SourceMap, f
                 }
                 let arg = lower_expr(args.into_iter().next().unwrap(), ctx, sm, file);
                 ir::Val::Lines(Box::new(arg))
+            } else if name == "split" {
+                if args.len() != 2 {
+                    panic!(
+                        "{}",
+                        sm.format_diagnostic(
+                            file,
+                            opts.diag_base_dir.as_deref(),
+                            "split() requires exactly 2 arguments (text, delimiter)",
+                            e.span
+                        )
+                    );
+                }
+                let mut iter = args.into_iter();
+                let s = lower_expr(iter.next().unwrap(), ctx, sm, file);
+                let delim = lower_expr(iter.next().unwrap(), ctx, sm, file);
+                ir::Val::Split {
+                    s: Box::new(s),
+                    delim: Box::new(delim),
+                }
             } else if name == "save_envfile" {
                 panic!(
                     "{}",

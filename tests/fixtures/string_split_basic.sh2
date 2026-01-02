@@ -1,4 +1,0 @@
-func main() {
-    let s = "a,,b"
-    print(split(s, ","))
-}
