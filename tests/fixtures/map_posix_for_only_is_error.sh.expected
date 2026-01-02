@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 main() {
   for __sh2_k in "${__sh2_keys_m[@]}"; do
     local k="$__sh2_k"

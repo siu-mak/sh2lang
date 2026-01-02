@@ -1,37 +1,42 @@
+#!/bin/sh
 main() {
-  __sh2_loc="tests/fixtures/redirect_io.sh2:3"
+  __sh2_loc="tests/fixtures/redirect_io.sh2:3:3"
   f="$( 'mktemp' )"
+  __sh2_status=$?; (exit $__sh2_status)
   {
     printf '%s\n' 'out'
   } > "$f"
   {
     printf '%s\n' 'err' >&2
   } 2>> "$f"
-  __sh2_loc="tests/fixtures/redirect_io.sh2:14"
-  'cat' "$f"; __sh2_status=$?; if [ $__sh2_status -ne 0 ]; then printf 'Error in %s\n' "$__sh2_loc" >&2; exit $__sh2_status; fi
+  __sh2_loc="tests/fixtures/redirect_io.sh2:14:3"
+  'cat' "$f"; __sh2_status=$?; (exit $__sh2_status)
   {
     printf '%s\n' 'e2s' >&2
   } 2>&1
-  __sh2_loc="tests/fixtures/redirect_io.sh2:22"
+  __sh2_loc="tests/fixtures/redirect_io.sh2:22:3"
   infile="$( 'mktemp' )"
+  __sh2_status=$?; (exit $__sh2_status)
   echo hello > $infile
+  __sh2_status=$?; (exit $__sh2_status)
   {
-    __sh2_loc="tests/fixtures/redirect_io.sh2:25"
-    'cat'; __sh2_status=$?; if [ $__sh2_status -ne 0 ]; then printf 'Error in %s\n' "$__sh2_loc" >&2; exit $__sh2_status; fi
+    __sh2_loc="tests/fixtures/redirect_io.sh2:25:5"
+    'cat'; __sh2_status=$?; (exit $__sh2_status)
   } < "$infile"
-  __sh2_loc="tests/fixtures/redirect_io.sh2:29"
+  __sh2_loc="tests/fixtures/redirect_io.sh2:29:3"
   f2="$( 'mktemp' )"
+  __sh2_status=$?; (exit $__sh2_status)
   {
     printf '%s\n' 'swap_ok'
   } 2> "$f2" 1>&2
-  __sh2_loc="tests/fixtures/redirect_io.sh2:33"
-  'cat' "$f2"; __sh2_status=$?; if [ $__sh2_status -ne 0 ]; then printf 'Error in %s\n' "$__sh2_loc" >&2; exit $__sh2_status; fi
-  __sh2_loc="tests/fixtures/redirect_io.sh2:36"
-  'rm' '-f' "$f"; __sh2_status=$?; if [ $__sh2_status -ne 0 ]; then printf 'Error in %s\n' "$__sh2_loc" >&2; exit $__sh2_status; fi
-  __sh2_loc="tests/fixtures/redirect_io.sh2:37"
-  'rm' '-f' "$infile"; __sh2_status=$?; if [ $__sh2_status -ne 0 ]; then printf 'Error in %s\n' "$__sh2_loc" >&2; exit $__sh2_status; fi
-  __sh2_loc="tests/fixtures/redirect_io.sh2:38"
-  'rm' '-f' "$f2"; __sh2_status=$?; if [ $__sh2_status -ne 0 ]; then printf 'Error in %s\n' "$__sh2_loc" >&2; exit $__sh2_status; fi
+  __sh2_loc="tests/fixtures/redirect_io.sh2:33:3"
+  'cat' "$f2"; __sh2_status=$?; (exit $__sh2_status)
+  __sh2_loc="tests/fixtures/redirect_io.sh2:36:3"
+  'rm' '-f' "$f"; __sh2_status=$?; (exit $__sh2_status)
+  __sh2_loc="tests/fixtures/redirect_io.sh2:37:3"
+  'rm' '-f' "$infile"; __sh2_status=$?; (exit $__sh2_status)
+  __sh2_loc="tests/fixtures/redirect_io.sh2:38:3"
+  'rm' '-f' "$f2"; __sh2_status=$?; (exit $__sh2_status)
 }
 __sh2_status=0
 main "$@"

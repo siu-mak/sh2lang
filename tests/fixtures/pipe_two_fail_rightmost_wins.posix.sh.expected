@@ -1,43 +1,48 @@
+#!/bin/sh
 main() {
+  case $- in *e*) __sh2_e=1;; *) __sh2_e=0;; esac; set +e
   if {
-    __sh2_loc="tests/fixtures/pipe_two_fail_rightmost_wins.sh2:3"
     {
-      case $- in *e*) __sh2_e=1;; *) __sh2_e=0;; esac; set +e;
-      __sh2_saved_traps=$(trap);
-      __sh2_base="${TMPDIR:-/tmp}/sh2_fifo_$$";
-      rm -f "${__sh2_base}_"*;
-      mkfifo "${__sh2_base}_0";
-      mkfifo "${__sh2_base}_1";
-      trap 'rm -f "${__sh2_base}_"*' EXIT;
-      trap 'rm -f "${__sh2_base}_"*; exit 1' INT TERM QUIT;
-      __sh2_fd=3;
-      __sh2_fds="";
-      eval "exec ${__sh2_fd}<>\"${__sh2_base}_0\"";
-      __sh2_fds="$__sh2_fds $__sh2_fd";
-      __sh2_fd=$((__sh2_fd + 1));
-      eval "exec ${__sh2_fd}<>\"${__sh2_base}_1\"";
-      __sh2_fds="$__sh2_fds $__sh2_fd";
-      __sh2_fd=$((__sh2_fd + 1));
-      ( for fd in $__sh2_fds; do eval "exec $fd>&-"; done; 'sh' '-c' 'exit 3' )  > "${__sh2_base}_0" & __sh2_p0=$!;
-      ( for fd in $__sh2_fds; do eval "exec $fd>&-"; done; 'sh' '-c' 'exit 9' )  < "${__sh2_base}_0" > "${__sh2_base}_1" & __sh2_p1=$!;
-      ( for fd in $__sh2_fds; do eval "exec $fd>&-"; done; 'sh' '-c' 'true' )  < "${__sh2_base}_1" & __sh2_p2=$!;
-      for fd in $__sh2_fds; do eval "exec $fd>&-"; done;
-      wait "$__sh2_p0"; __sh2_s0=$?;
-      wait "$__sh2_p1"; __sh2_s1=$?;
-      wait "$__sh2_p2"; __sh2_s2=$?;
-      __sh2_status=0;
-      if [ "$__sh2_s0" -ne 0 ]; then __sh2_status="$__sh2_s0"; fi;
-      if [ "$__sh2_s1" -ne 0 ]; then __sh2_status="$__sh2_s1"; fi;
-      if [ "$__sh2_s2" -ne 0 ]; then __sh2_status="$__sh2_s2"; fi;
-      trap - EXIT INT TERM QUIT;
-      rm -f "${__sh2_base}_"*;
-      if [ -n "$__sh2_saved_traps" ]; then eval "$__sh2_saved_traps"; fi;
-      if [ "$__sh2_e" = 1 ]; then set -e; fi;
-      if [ "$__sh2_status" -ne 0 ]; then printf 'Error in %s\n' "$__sh2_loc" >&2; exit $__sh2_status; fi
+      __sh2_loc="tests/fixtures/pipe_two_fail_rightmost_wins.sh2:3:10"
+      {
+        case $- in *e*) __sh2_e=1;; *) __sh2_e=0;; esac; set +e;
+        __sh2_saved_traps=$(trap);
+        __sh2_base="${TMPDIR:-/tmp}/sh2_fifo_$$";
+        rm -f "${__sh2_base}_"*;
+        mkfifo "${__sh2_base}_0";
+        mkfifo "${__sh2_base}_1";
+        trap 'rm -f "${__sh2_base}_"*' EXIT;
+        trap 'rm -f "${__sh2_base}_"*; exit 1' INT TERM QUIT;
+        __sh2_fd=3;
+        __sh2_fds="";
+        eval "exec ${__sh2_fd}<>\"${__sh2_base}_0\"";
+        __sh2_fds="$__sh2_fds $__sh2_fd";
+        __sh2_fd=$((__sh2_fd + 1));
+        eval "exec ${__sh2_fd}<>\"${__sh2_base}_1\"";
+        __sh2_fds="$__sh2_fds $__sh2_fd";
+        __sh2_fd=$((__sh2_fd + 1));
+        ( for fd in $__sh2_fds; do eval "exec $fd>&-"; done; 'sh' '-c' 'exit 3' )  > "${__sh2_base}_0" & __sh2_p0=$!;
+        ( for fd in $__sh2_fds; do eval "exec $fd>&-"; done; 'sh' '-c' 'exit 9' )  < "${__sh2_base}_0" > "${__sh2_base}_1" & __sh2_p1=$!;
+        ( for fd in $__sh2_fds; do eval "exec $fd>&-"; done; 'sh' '-c' 'true' )  < "${__sh2_base}_1" & __sh2_p2=$!;
+        for fd in $__sh2_fds; do eval "exec $fd>&-"; done;
+        wait "$__sh2_p0"; __sh2_s0=$?;
+        wait "$__sh2_p1"; __sh2_s1=$?;
+        wait "$__sh2_p2"; __sh2_s2=$?;
+        __sh2_status=0;
+        if [ "$__sh2_s0" -ne 0 ]; then __sh2_status="$__sh2_s0"; fi;
+        if [ "$__sh2_s1" -ne 0 ]; then __sh2_status="$__sh2_s1"; fi;
+        if [ "$__sh2_s2" -ne 0 ]; then __sh2_status="$__sh2_s2"; fi;
+        trap - EXIT INT TERM QUIT;
+        rm -f "${__sh2_base}_"*;
+        if [ -n "$__sh2_saved_traps" ]; then eval "$__sh2_saved_traps"; fi;
+        if [ "$__sh2_e" = 1 ]; then set -e; fi;
+        (exit $__sh2_status)
+      }
     }
   }; then
-    :
+    if [ "${__sh2_e:-0}" = 1 ]; then set -e; fi
   else
+    if [ "${__sh2_e:-0}" = 1 ]; then set -e; fi
     printf '%s\n' "$__sh2_status"
   fi
 }

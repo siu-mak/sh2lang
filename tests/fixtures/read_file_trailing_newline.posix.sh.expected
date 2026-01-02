@@ -1,0 +1,14 @@
+#!/bin/sh
+__sh2_read_file() { cat "$1"; }
+__sh2_write_file() { if [ "$3" = "true" ]; then printf '%s' "$2" >> "$1"; else printf '%s' "$2" > "$1"; fi; }
+main() {
+  printf '%s' 'content
+' > 't_trailing.txt'
+  __sh2_status=$?; (exit $__sh2_status)
+  __sh2_loc="tests/fixtures/read_file_trailing_newline.sh2:2:1"
+  val="$( __sh2_read_file 't_trailing.txt' )"
+  __sh2_status=$?; (exit $__sh2_status)
+  printf '%s\n' 'START'"$val"'END'
+}
+__sh2_status=0
+main "$@"

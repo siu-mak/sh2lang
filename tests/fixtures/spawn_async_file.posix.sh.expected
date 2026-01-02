@@ -1,9 +1,11 @@
+#!/bin/sh
 main() {
-  __sh2_loc="tests/fixtures/spawn_async_file.sh2:2"
+  __sh2_loc="tests/fixtures/spawn_async_file.sh2:2:5"
   f='flag.txt'
-  __sh2_loc="tests/fixtures/spawn_async_file.sh2:3"
-  'rm' '-f' "$f"; __sh2_status=$?; if [ $__sh2_status -ne 0 ]; then printf 'Error in %s\n' "$__sh2_loc" >&2; exit $__sh2_status; fi
-  ( __sh2_loc="tests/fixtures/spawn_async_file.sh2:4"; 'sh' '-c' 'sleep 0.05; echo x > flag.txt' ) &
+  __sh2_status=$?; (exit $__sh2_status)
+  __sh2_loc="tests/fixtures/spawn_async_file.sh2:3:5"
+  'rm' '-f' "$f"; __sh2_status=$?; (exit $__sh2_status)
+  ( __sh2_loc="tests/fixtures/spawn_async_file.sh2:4:11"; 'sh' '-c' 'sleep 0.05; echo x > flag.txt' ) &
   if [ -e "$f" ]; then
     printf '%s\n' 'WRONG_EARLY'
   else

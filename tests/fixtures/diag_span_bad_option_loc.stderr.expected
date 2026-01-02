@@ -1,3 +1,3 @@
-diag_span_bad_option_loc.sh2:2:30: write_file() third argument must be a boolean literal
+compile error: diag_span_bad_option_loc.sh2:2:30: write_file: append must be boolean literal
     write_file("foo", "bar", invalid)
                              ^~~~~~~

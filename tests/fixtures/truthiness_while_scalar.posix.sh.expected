@@ -1,10 +1,13 @@
+#!/bin/sh
 main() {
-  __sh2_loc="tests/fixtures/truthiness_while_scalar.sh2:2"
+  __sh2_loc="tests/fixtures/truthiness_while_scalar.sh2:2:3"
   x='go'
+  __sh2_status=$?; (exit $__sh2_status)
   while [ -n "$x" ]; do
     printf '%s\n' 'loop'
-    __sh2_loc="tests/fixtures/truthiness_while_scalar.sh2:5"
+    __sh2_loc="tests/fixtures/truthiness_while_scalar.sh2:5:5"
     x=''
+    __sh2_status=$?; (exit $__sh2_status)
   done
   printf '%s\n' 'done'
 }

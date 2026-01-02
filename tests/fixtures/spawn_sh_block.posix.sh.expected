@@ -1,8 +1,11 @@
+#!/bin/sh
 main() {
   ( 
     {
       echo one
+      __sh2_status=$?; (exit $__sh2_status)
       echo two
+      __sh2_status=$?; (exit $__sh2_status)
     }
   ) &
   wait; __sh2_status=$?

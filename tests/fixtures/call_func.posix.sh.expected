@@ -1,9 +1,12 @@
+#!/bin/sh
 show() {
   echo arg=$1
+  __sh2_status=$?; (exit $__sh2_status)
 }
 
 main() {
-  show 'hi'; __sh2_status=$?; (exit $__sh2_status)
+  __sh2_loc="tests/fixtures/call_func.sh2:6:3"
+  'show' 'hi'; __sh2_status=$?; (exit $__sh2_status)
 }
 __sh2_status=0
 main "$@"

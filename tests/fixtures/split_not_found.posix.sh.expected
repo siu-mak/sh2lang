@@ -1,0 +1,35 @@
+#!/bin/sh
+__sh2_tmpfiles=""
+__sh2_tmpfile() {
+    t=$(mktemp) || exit 1
+    __sh2_tmpfiles="$__sh2_tmpfiles $t"
+    echo "$t"
+}
+__sh2_cleanup_tmpfiles() {
+    for t in $__sh2_tmpfiles; do rm -f "$t"; done
+}
+trap __sh2_cleanup_tmpfiles EXIT
+__sh2_split() {
+  awk -v s="$1" -v sep="$2" 'BEGIN {
+     if(sep=="") { print s; exit }
+     len=length(sep);
+     while(i=index(s, sep)) { print substr(s, 1, i-1); s=substr(s, i+len) }
+     print s
+  }'
+}
+main() {
+  __sh2_loc="tests/fixtures/split_not_found.sh2:2:5"
+  xs="$(__sh2_tmpfile)"
+  __sh2_split 'abc' ',' > "$xs"
+  __sh2_status=$?; (exit $__sh2_status)
+  __sh2_for_tmp_x=$(__sh2_tmpfile)
+  {
+    cat "$xs"
+  } > "$__sh2_for_tmp_x"
+  while IFS= read -r x || [ -n "$x" ]; do
+    printf '%s\n' "$x"
+  done < "$__sh2_for_tmp_x"
+  rm -f "$__sh2_for_tmp_x"
+}
+__sh2_status=0
+main "$@"

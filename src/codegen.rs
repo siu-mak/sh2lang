@@ -404,19 +404,6 @@ fn visit_val(val: &Val, usage: &mut PreludeUsage) {
     }
 }
 
-pub fn emit(funcs: &[Function]) -> String {
-    emit_with_target(funcs, TargetShell::Bash).expect("Failed to emit code")
-}
-
-pub fn emit_with_target(funcs: &[Function], target: TargetShell) -> Result<String, CompileError> {
-    emit_with_options(
-        funcs,
-        CodegenOptions {
-            target,
-            include_diagnostics: true,
-        },
-    )
-}
 
 pub fn emit_with_options(funcs: &[Function], opts: CodegenOptions) -> Result<String, CompileError> {
     let usage = scan_usage(funcs, opts.include_diagnostics);
@@ -428,6 +415,7 @@ pub fn emit_with_options(funcs: &[Function], opts: CodegenOptions) -> Result<Str
 
     // Usage-aware prelude emission
     out.push_str(&emit_prelude(opts.target, &usage));
+    let mut ctx = CodegenContext::default();
 
     for (i, f) in funcs.iter().enumerate() {
         if i > 0 {
@@ -446,7 +434,7 @@ pub fn emit_with_options(funcs: &[Function], opts: CodegenOptions) -> Result<Str
             }
         }
         for cmd in &f.commands {
-            emit_cmd(cmd, &mut out, 2, opts.target, false)?;
+            emit_cmd(cmd, &mut out, 2, opts.target, false, &mut ctx)?;
         }
         out.push_str("}\n");
     }
@@ -491,6 +479,14 @@ fn sh_single_quote(s: &str) -> String {
     }
     out.push('\'');
     out
+}
+
+
+use std::collections::HashSet;
+
+#[derive(Default)]
+struct CodegenContext {
+    known_lists: HashSet<String>,
 }
 
 fn emit_val(v: &Val, target: TargetShell) -> Result<String, CompileError> {
@@ -658,7 +654,7 @@ fn emit_val(v: &Val, target: TargetShell) -> Result<String, CompileError> {
         },
         Val::EnvDot(name) => match target {
             TargetShell::Bash => Ok(format!(
-                "\"$( ( typeset +x {0}; printenv {0} ) 2>/dev/null || printenv {0} 2>/dev/null || true )\"",
+                "\"$( ( unset {0}; printenv {0} ) 2>/dev/null || printenv {0} 2>/dev/null || true )\"",
                 name
             )),
             TargetShell::Posix => Ok(format!("\"${{{}-}}\"", name)),
@@ -955,6 +951,7 @@ fn emit_cmd(
     indent: usize,
     target: TargetShell,
     in_cond_ctx: bool,
+    ctx: &mut CodegenContext,
 ) -> Result<(), CompileError> {
     let pad = " ".repeat(indent);
 
@@ -982,8 +979,11 @@ fn emit_cmd(
                     }
                     TargetShell::Posix => {
                          out.push_str(&pad);
-                         out.push_str(&format!("{}=\"$( __sh2_split {} {} )\"\n", name, emit_val(s, target)?, emit_val(delim, target)?));
+                         out.push_str(&format!("{}=\"$(__sh2_tmpfile)\"\n", name));
+                         out.push_str(&pad);
+                         out.push_str(&format!("__sh2_split {} {} > \"${}\"\n", emit_val(s, target)?, emit_val(delim, target)?, name));
                          out.push_str(&format!("{}__sh2_status=$?; (exit $__sh2_status)\n", pad));
+                         ctx.known_lists.insert(name.to_string());
                          return Ok(());
                     }
                 }
@@ -1191,21 +1191,21 @@ fn emit_cmd(
             let cond_str = emit_cond(cond, target)?;
             out.push_str(&format!("{pad}if {cond_str}; then\n"));
             for c in then_body {
-                emit_cmd(c, out, indent + 2, target, in_cond_ctx)?;
+                emit_cmd(c, out, indent + 2, target, in_cond_ctx, ctx)?;
             }
 
             for (cond, body) in elifs {
                 let cond_str = emit_cond(cond, target)?;
                 out.push_str(&format!("{pad}elif {cond_str}; then\n"));
                 for c in body {
-                    emit_cmd(c, out, indent + 2, target, in_cond_ctx)?;
+                    emit_cmd(c, out, indent + 2, target, in_cond_ctx, ctx)?;
                 }
             }
 
             if !else_body.is_empty() {
                 out.push_str(&format!("{pad}else\n"));
                 for c in else_body {
-                    emit_cmd(c, out, indent + 2, target, in_cond_ctx)?;
+                    emit_cmd(c, out, indent + 2, target, in_cond_ctx, ctx)?;
                 }
             }
 
@@ -1302,7 +1302,7 @@ fn emit_cmd(
                         }
                         pipe_str.push_str("{\n");
                         for cmd in seg {
-                            emit_cmd(cmd, &mut pipe_str, indent + 2, target, false)?;
+                            emit_cmd(cmd, &mut pipe_str, indent + 2, target, false, ctx)?;
                         }
                         pipe_str.push_str(&format!("{pad}}}"));
                     }
@@ -1321,7 +1321,7 @@ fn emit_cmd(
                             let mut s = String::new();
                             s.push_str("{\n");
                             for cmd in seg {
-                                emit_cmd(cmd, &mut s, indent + 2, target, false)?;
+                                emit_cmd(cmd, &mut s, indent + 2, target, false, ctx)?;
                             }
                             s.push_str(&format!("{pad}}}"));
                             Ok(s)
@@ -1357,7 +1357,7 @@ fn emit_cmd(
                 out.push_str(")\n");
 
                 for cmd in body {
-                    emit_cmd(cmd, out, indent + 4, target, in_cond_ctx)?;
+                    emit_cmd(cmd, out, indent + 4, target, in_cond_ctx, ctx)?;
                 }
                 out.push_str(&format!("{}  ;;\n", pad));
             }
@@ -1368,7 +1368,7 @@ fn emit_cmd(
             let cond_str = emit_cond(cond, target)?;
             out.push_str(&format!("{pad}while {cond_str}; do\n"));
             for c in body {
-                emit_cmd(c, out, indent + 2, target, in_cond_ctx)?;
+                emit_cmd(c, out, indent + 2, target, in_cond_ctx, ctx)?;
             }
             out.push_str(&format!("{pad}done\n"));
         }
@@ -1404,7 +1404,47 @@ fn emit_cmd(
         }
 
         Cmd::For { var, items, body } => {
-            // Pre-process any Lines() items
+            // Check if we need POSIX list iteration (file-based)
+            let is_posix_list_mode = target == TargetShell::Posix && items.iter().any(|i|
+                matches!(i, Val::Split { .. } | Val::Lines(_)) ||
+                (if let Val::Var(n) = i { ctx.known_lists.contains(n) } else { false })
+            );
+
+            if is_posix_list_mode {
+                 // POSIX List Iteration: Generate stream to temp file, then while-read it to preserve body semantics
+                 out.push_str(&pad);
+                 out.push_str(&format!("__sh2_for_tmp_{}=$(__sh2_tmpfile)\n", var));
+                 out.push_str(&pad);
+                 out.push_str("{\n");
+                 for item in items {
+                     match item {
+                         Val::Split { s, delim } => {
+                             out.push_str(&format!("{}  __sh2_split {} {}\n", pad, emit_val(s, target)?, emit_val(delim, target)?));
+                         }
+                         Val::Lines(inner) => {
+                             return Err(CompileError::unsupported("lines() iteration not supported in POSIX", target));
+                         }
+                         Val::Var(n) if ctx.known_lists.contains(n) => {
+                             out.push_str(&format!("{}  cat \"${}\"\n", pad, n));
+                         }
+                         _ => {
+                             // Treat other items (literals, unknown string vars) as single lines
+                             out.push_str(&format!("{}  echo {}\n", pad, emit_word(item, target)?));
+                         }
+                     }
+                 }
+                 out.push_str(&format!("{}}} > \"$__sh2_for_tmp_{}\"\n", pad, var));
+
+                 out.push_str(&format!("{}while IFS= read -r {} || [ -n \"${}\" ]; do\n", pad, var, var));
+                 for c in body {
+                     emit_cmd(c, out, indent + 2, target, in_cond_ctx, ctx)?;
+                 }
+                 out.push_str(&format!("{}done < \"$__sh2_for_tmp_{}\"\n", pad, var));
+                 out.push_str(&format!("{}rm -f \"$__sh2_for_tmp_{}\"\n", pad, var)); // Early cleanup
+                 return Ok(());
+            }
+
+            // Pre-process any Lines() / Split items for Bash (Arrays)
             for (idx, item) in items.iter().enumerate() {
                 if let Val::Lines(inner) = item {
                     if target == TargetShell::Posix {
@@ -1427,42 +1467,31 @@ fn emit_cmd(
                     Val::Lines(_) => {
                          out.push_str(&format!(" \"${{__sh2_for_lines_{}[@]}}\"", idx));
                     }
-                    Val::Split { s, delim } => {
-                        match target {
-                            TargetShell::Bash => {
-                                 out.push_str(&format!(" \"${{__sh2_for_split_{}[@]}}\"", idx));
-                            }
-                            TargetShell::Posix => {
-                                 out.push_str(&format!(" $(__sh2_split {} {})", emit_val(s, target)?, emit_val(delim, target)?));
-                            }
-                        }
+                    Val::Split { .. } => {
+                        // Bash array pre-calc handled above
+                        out.push_str(&format!(" \"${{__sh2_for_split_{}[@]}}\"", idx));
                     }
                     Val::List(elems) => {
                         for elem in elems {
                             out.push(' ');
-                            out.push_str(&emit_val(elem, target)?);
+                            out.push_str(&emit_word(elem, target)?);
                         }
-                    }
-                    Val::Args => {
-                        out.push_str(" \"$@\"");
                     }
                     Val::Var(name) => {
                         if target == TargetShell::Posix {
-                             // Iterate over string value (IFS splitting)
-                             out.push_str(&format!(" ${}", name));
-                        } else {
-                            out.push_str(&format!(" \"${{{}[@]}}\"", name));
+                             return Err(CompileError::unsupported("Iterating over array variable not supported in POSIX", target));
                         }
+                        out.push_str(&format!(" \"${{{}[@]}}\"", name));
                     }
                     _ => {
                         out.push(' ');
-                        out.push_str(&emit_val(item, target)?);
+                        out.push_str(&emit_word(item, target)?);
                     }
                 }
             }
             out.push_str("; do\n");
             for c in body {
-                emit_cmd(c, out, indent + 2, target, in_cond_ctx)?;
+                emit_cmd(c, out, indent + 2, target, in_cond_ctx, ctx)?;
             }
             out.push_str(&format!("{}done\n", pad));
         }
@@ -1491,7 +1520,7 @@ fn emit_cmd(
             ));
 
             for c in body {
-                emit_cmd(c, out, indent + 2, target, in_cond_ctx)?;
+                emit_cmd(c, out, indent + 2, target, in_cond_ctx, ctx)?;
             }
 
             out.push_str(&format!("{pad}done\n"));
@@ -1568,7 +1597,7 @@ fn emit_cmd(
                 out.push_str(&format!("{}  export {}={}\n", pad, k, emit_val(v, target)?));
             }
             for cmd in body {
-                emit_cmd(cmd, out, indent + 2, target, in_cond_ctx)?;
+                emit_cmd(cmd, out, indent + 2, target, in_cond_ctx, ctx)?;
             }
             out.push_str(&format!("{pad})\n"));
         }
@@ -1601,7 +1630,7 @@ fn emit_cmd(
             ));
 
             for cmd in body {
-                emit_cmd(cmd, out, indent + 2, target, in_cond_ctx)?;
+                emit_cmd(cmd, out, indent + 2, target, in_cond_ctx, ctx)?;
             }
             out.push_str(&format!("{pad})\n"));
         }
@@ -1609,7 +1638,7 @@ fn emit_cmd(
             out.push_str(&format!("{pad}(\n"));
             out.push_str(&format!("{pad}  cd {}\n", emit_val(path, target)?));
             for cmd in body {
-                emit_cmd(cmd, out, indent + 2, target, in_cond_ctx)?;
+                emit_cmd(cmd, out, indent + 2, target, in_cond_ctx, ctx)?;
             }
             out.push_str(&format!("{pad})\n"));
         }
@@ -1637,14 +1666,14 @@ fn emit_cmd(
         Cmd::Subshell { body } => {
             out.push_str(&format!("{pad}(\n"));
             for cmd in body {
-                emit_cmd(cmd, out, indent + 2, target, in_cond_ctx)?;
+                emit_cmd(cmd, out, indent + 2, target, in_cond_ctx, ctx)?;
             }
             out.push_str(&format!("{pad})\n"));
         }
         Cmd::Group { body } => {
             out.push_str(&format!("{pad}{{\n"));
             for cmd in body {
-                emit_cmd(cmd, out, indent + 2, target, in_cond_ctx)?;
+                emit_cmd(cmd, out, indent + 2, target, in_cond_ctx, ctx)?;
             }
             out.push_str(&format!("{pad}}}\n"));
         }
@@ -1656,7 +1685,7 @@ fn emit_cmd(
         } => {
             out.push_str(&format!("{pad}{{\n"));
             for cmd in body {
-                emit_cmd(cmd, out, indent + 2, target, in_cond_ctx)?;
+                emit_cmd(cmd, out, indent + 2, target, in_cond_ctx, ctx)?;
             }
             out.push_str(&format!("{pad}}}")); // No newline yet, redirections follow
 
@@ -1791,7 +1820,7 @@ fn emit_cmd(
                 _ => {
                     // Complex command (block, group, etc): emit with increased indent
                     out.push('\n');
-                    emit_cmd(cmd, out, indent + 2, target, false)?;
+                    emit_cmd(cmd, out, indent + 2, target, false, ctx)?;
                     out.push_str(&pad);
                     out.push_str(") &\n");
                 }
@@ -1853,7 +1882,7 @@ fn emit_cmd(
                         out.push_str(&format!("{pad}  {{\n"));
                     }
                     // Emit command directly with increased indent and in condition context
-                    emit_cmd(cmd, out, indent + 4, target, true)?;
+                    emit_cmd(cmd, out, indent + 4, target, true, ctx)?;
                 }
                 out.push_str(&format!("{pad}  }}\n"));
             }
@@ -1883,29 +1912,29 @@ fn emit_cmd(
                 out.push_str(&format!("{pad}  :\n"));
             }
             for cmd in catch_body {
-                emit_cmd(cmd, out, indent + 2, target, in_cond_ctx)?;
+                emit_cmd(cmd, out, indent + 2, target, in_cond_ctx, ctx)?;
             }
             out.push_str(&format!("{pad}fi\n"));
         }
         Cmd::AndThen { left, right } => {
             out.push_str(&format!("{pad}{{\n"));
             for cmd in left {
-                emit_cmd(cmd, out, indent + 2, target, in_cond_ctx)?;
+                emit_cmd(cmd, out, indent + 2, target, in_cond_ctx, ctx)?;
             }
             out.push_str(&format!("{pad}}} && {{\n"));
             for cmd in right {
-                emit_cmd(cmd, out, indent + 2, target, in_cond_ctx)?;
+                emit_cmd(cmd, out, indent + 2, target, in_cond_ctx, ctx)?;
             }
             out.push_str(&format!("{pad}}}\n"));
         }
         Cmd::OrElse { left, right } => {
             out.push_str(&format!("{pad}{{\n"));
             for cmd in left {
-                emit_cmd(cmd, out, indent + 2, target, in_cond_ctx)?;
+                emit_cmd(cmd, out, indent + 2, target, in_cond_ctx, ctx)?;
             }
             out.push_str(&format!("{pad}}} || {{\n"));
             for cmd in right {
-                emit_cmd(cmd, out, indent + 2, target, in_cond_ctx)?;
+                emit_cmd(cmd, out, indent + 2, target, in_cond_ctx, ctx)?;
             }
             out.push_str(&format!("{pad}}}\n"));
         }
@@ -2168,7 +2197,17 @@ fn emit_prelude(target: TargetShell, usage: &PreludeUsage) -> String {
 "#);
             }
             TargetShell::Posix => {
-                s.push_str(r#"__sh2_split() {
+                s.push_str(r#"__sh2_tmpfiles=""
+__sh2_tmpfile() {
+    t=$(mktemp) || exit 1
+    __sh2_tmpfiles="$__sh2_tmpfiles $t"
+    echo "$t"
+}
+__sh2_cleanup_tmpfiles() {
+    for t in $__sh2_tmpfiles; do rm -f "$t"; done
+}
+trap __sh2_cleanup_tmpfiles EXIT
+__sh2_split() {
   awk -v s="$1" -v sep="$2" 'BEGIN {
      if(sep=="") { print s; exit }
      len=length(sep);

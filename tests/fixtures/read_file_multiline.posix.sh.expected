@@ -1,0 +1,15 @@
+#!/bin/sh
+__sh2_read_file() { cat "$1"; }
+__sh2_write_file() { if [ "$3" = "true" ]; then printf '%s' "$2" >> "$1"; else printf '%s' "$2" > "$1"; fi; }
+main() {
+  printf '%s' 'line1
+line2
+line3' > 't_multi.txt'
+  __sh2_status=$?; (exit $__sh2_status)
+  __sh2_loc="tests/fixtures/read_file_multiline.sh2:2:1"
+  content="$( __sh2_read_file 't_multi.txt' )"
+  __sh2_status=$?; (exit $__sh2_status)
+  printf '%s\n' "$content"
+}
+__sh2_status=0
+main "$@"

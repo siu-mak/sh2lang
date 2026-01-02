@@ -1,0 +1,10 @@
+#!/bin/sh
+main() {
+  __sh2_loc="tests/fixtures/cli_emit_ast.sh2:2:5"
+  x="1"
+  __sh2_status=$?; (exit $__sh2_status)
+  __sh2_loc="tests/fixtures/cli_emit_ast.sh2:3:5"
+  "$echo" "$x"; __sh2_status=$?; (exit $__sh2_status)
+}
+__sh2_status=0
+main "$@"

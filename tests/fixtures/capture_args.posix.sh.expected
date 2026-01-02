@@ -1,6 +1,8 @@
+#!/bin/sh
 main() {
   __sh2_loc="tests/fixtures/capture_args.sh2:2:3"
   out="$( 'printf' '%s' "$@" )"
+  __sh2_status=$?; (exit $__sh2_status)
   printf '%s\n' "$out"
 }
 __sh2_status=0

@@ -1,5 +1,19 @@
 #!/usr/bin/env bash
+__sh2_err_handler() {
+  local s=$?
+  local loc="${__sh2_loc:-}"
+  if [[ "${BASH_COMMAND}" == *"(exit "* ]]; then return $s; fi
+  if [[ -z "$loc" ]]; then return $s; fi
+  if [[ "$loc" == "${__sh2_last_err_loc:-}" && "$s" == "${__sh2_last_err_status:-}" ]]; then return $s; fi
+  __sh2_last_err_loc="$loc"
+  __sh2_last_err_status="$s"
+  printf "Error in %s\n" "$loc" >&2
+  return $s
+}
+set -o errtrace
+trap '__sh2_err_handler' ERR
 tenth() {
+  local __sh2_loc=""
   local a1="${1}"
   local a2="${2}"
   local a3="${3}"
@@ -14,7 +28,9 @@ tenth() {
 }
 
 main() {
-  tenth '1' '2' '3' '4' '5' '6' '7' '8' '9' '10'; __sh2_status=$?; (exit $__sh2_status)
+  local __sh2_loc=""
+  __sh2_loc="tests/fixtures/func_params_10.sh2:6:3"
+  'tenth' '1' '2' '3' '4' '5' '6' '7' '8' '9' '10'; __sh2_status=$?; (exit $__sh2_status)
 }
 __sh2_status=0
 main "$@"

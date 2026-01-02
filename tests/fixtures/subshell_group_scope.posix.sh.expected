@@ -1,14 +1,18 @@
+#!/bin/sh
 main() {
-  __sh2_loc="tests/fixtures/subshell_group_scope.sh2:2"
+  __sh2_loc="tests/fixtures/subshell_group_scope.sh2:2:3"
   x='0'
+  __sh2_status=$?; (exit $__sh2_status)
   (
-    __sh2_loc="tests/fixtures/subshell_group_scope.sh2:5"
+    __sh2_loc="tests/fixtures/subshell_group_scope.sh2:5:5"
     x='1'
+    __sh2_status=$?; (exit $__sh2_status)
   )
   printf '%s\n' "$x"
   {
-    __sh2_loc="tests/fixtures/subshell_group_scope.sh2:10"
+    __sh2_loc="tests/fixtures/subshell_group_scope.sh2:10:5"
     x='2'
+    __sh2_status=$?; (exit $__sh2_status)
   }
   printf '%s\n' "$x"
 }

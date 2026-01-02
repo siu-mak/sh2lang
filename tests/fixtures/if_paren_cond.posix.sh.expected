@@ -1,3 +1,4 @@
+#!/bin/sh
 main() {
   if [ 'a' = 'a' ]; then
     printf '%s\n' 'ok'

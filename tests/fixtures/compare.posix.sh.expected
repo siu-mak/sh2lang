@@ -1,6 +1,8 @@
+#!/bin/sh
 main() {
   __sh2_loc="tests/fixtures/compare.sh2:2:5"
   user='admin'
+  __sh2_status=$?; (exit $__sh2_status)
   if [ "$user" = 'admin' ]; then
     printf '%s\n' 'welcome root'
   fi

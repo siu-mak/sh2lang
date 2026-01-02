@@ -1,9 +1,12 @@
+#!/bin/sh
 main() {
-  __sh2_loc="tests/fixtures/subshell_basic.sh2:2"
+  __sh2_loc="tests/fixtures/subshell_basic.sh2:2:5"
   x='outer'
+  __sh2_status=$?; (exit $__sh2_status)
   (
-    __sh2_loc="tests/fixtures/subshell_basic.sh2:4"
+    __sh2_loc="tests/fixtures/subshell_basic.sh2:4:9"
     x='inner'
+    __sh2_status=$?; (exit $__sh2_status)
     printf '%s\n' "$x"
   )
   printf '%s\n' "$x"

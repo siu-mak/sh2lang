@@ -1,0 +1,7 @@
+#!/bin/sh
+main() {
+  __sh2_loc="tests/fixtures/path_join_stmt_error.sh2:3:5"
+  'path_join' 'a' 'b'; __sh2_status=$?; (exit $__sh2_status)
+}
+__sh2_status=0
+main "$@"

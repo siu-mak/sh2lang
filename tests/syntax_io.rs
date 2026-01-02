@@ -131,6 +131,6 @@ fn codegen_with_redirect_cyclic() {
     let tokens = sh2c::lexer::lex(&sm, "test").unwrap();
     let mut ast = parser::parse(&tokens, &sm, "test").unwrap();
     ast.source_maps.insert("test".to_string(), sm);
-    let ir = lower::lower(ast);
-    codegen::emit(&ir);
+    let ir = lower::lower(ast).unwrap();
+    codegen::emit_with_options(&ir, codegen::CodegenOptions { target: codegen::TargetShell::Bash, include_diagnostics: true }).unwrap();
 }

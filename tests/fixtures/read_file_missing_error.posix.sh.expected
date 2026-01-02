@@ -1,0 +1,9 @@
+#!/bin/sh
+__sh2_read_file() { cat "$1"; }
+main() {
+  __sh2_loc="tests/fixtures/read_file_missing_error.sh2:2:1"
+  ignored="$( __sh2_read_file 'non_existent_file.txt' )"
+  __sh2_status=$?; (exit $__sh2_status)
+}
+__sh2_status=0
+main "$@"

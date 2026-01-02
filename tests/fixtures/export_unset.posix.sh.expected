@@ -1,3 +1,4 @@
+#!/bin/sh
 main() {
   export FOO='bar'
   export BAZ
@@ -29,7 +30,7 @@ main() {
       rm -f "${__sh2_base}_"*;
       if [ -n "$__sh2_saved_traps" ]; then eval "$__sh2_saved_traps"; fi;
       if [ "$__sh2_e" = 1 ]; then set -e; fi;
-      if [ "$__sh2_status" -ne 0 ]; then printf 'Error in %s\n' "$__sh2_loc" >&2; exit $__sh2_status; fi
+      (exit $__sh2_status)
     }
   } || {
     printf '%s\n' 'no baz'

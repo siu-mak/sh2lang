@@ -1,0 +1,17 @@
+#!/bin/sh
+BASE() {
+  printf '%s' '/base'
+  return 0
+}
+
+ENVS_DIR() {
+  printf '%s' "$( BASE  )"'/envs'
+  return 0
+}
+
+main() {
+  __sh2_loc="tests/fixtures/syntax_return_concat.sh2:10:5"
+  'echo' "$( ENVS_DIR  )"; __sh2_status=$?; (exit $__sh2_status)
+}
+__sh2_status=0
+main "$@"

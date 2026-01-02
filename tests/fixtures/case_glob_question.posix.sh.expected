@@ -1,6 +1,8 @@
+#!/bin/sh
 main() {
   __sh2_loc="tests/fixtures/case_glob_question.sh2:2:5"
   x='ab'
+  __sh2_status=$?; (exit $__sh2_status)
   case "$x" in
     'a'?)
       printf '%s\n' 'hit_q'

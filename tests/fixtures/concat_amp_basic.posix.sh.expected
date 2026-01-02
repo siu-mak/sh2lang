@@ -1,9 +1,11 @@
+#!/bin/sh
 main() {
   __sh2_loc="tests/fixtures/concat_amp_basic.sh2:2:3"
   x='a''b'
+  __sh2_status=$?; (exit $__sh2_status)
   printf '%s\n' "$x"
   __sh2_loc="tests/fixtures/concat_amp_basic.sh2:4:3"
-  'echo' 'c''d'; __sh2_status=$?; if [ $__sh2_status -ne 0 ]; then printf 'Error in %s\n' "$__sh2_loc" >&2; exit $__sh2_status; fi
+  'echo' 'c''d'; __sh2_status=$?; (exit $__sh2_status)
 }
 __sh2_status=0
 main "$@"

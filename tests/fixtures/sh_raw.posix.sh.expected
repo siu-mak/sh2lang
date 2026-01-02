@@ -1,7 +1,9 @@
+#!/bin/sh
 main() {
   set -euo pipefail
-  __sh2_loc="tests/fixtures/sh_raw.sh2:3"
-  'echo' 'hi'; __sh2_status=$?; if [ $__sh2_status -ne 0 ]; then printf 'Error in %s\n' "$__sh2_loc" >&2; exit $__sh2_status; fi
+  __sh2_status=$?; (exit $__sh2_status)
+  __sh2_loc="tests/fixtures/sh_raw.sh2:3:5"
+  'echo' 'hi'; __sh2_status=$?; (exit $__sh2_status)
 }
 __sh2_status=0
 main "$@"

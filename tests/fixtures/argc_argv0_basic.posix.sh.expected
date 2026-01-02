@@ -1,3 +1,4 @@
+#!/bin/sh
 f() {
   a="${1}"
   b="${2}"
@@ -6,7 +7,7 @@ f() {
   else
     printf '%s\n' 'argc_bad'
   fi
-  if [ "$( printf "%s" "$0" | awk '{ print length($0) }' )" -gt "0" ]; then
+  if [ "$( printf "%s" "$0" | awk 'BEGIN{l=0} {l=length($0)} END{print l}' )" -gt "0" ]; then
     printf '%s\n' 'argv0_ok'
   else
     printf '%s\n' 'argv0_bad'
@@ -14,7 +15,8 @@ f() {
 }
 
 main() {
-  f 'x' 'y'; __sh2_status=$?; (exit $__sh2_status)
+  __sh2_loc="tests/fixtures/argc_argv0_basic.sh2:7:3"
+  'f' 'x' 'y'; __sh2_status=$?; (exit $__sh2_status)
 }
 __sh2_status=0
 main "$@"

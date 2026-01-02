@@ -1,0 +1,34 @@
+#!/usr/bin/env bash
+__sh2_split() {
+  local -n __o=$1
+  if [[ -z "$3" ]]; then eval "$1=(\"$2\")"; return; fi
+  mapfile -t __o < <(awk -v s="$2" -v sep="$3" 'BEGIN {
+     len=length(sep);
+     while(i=index(s, sep)) { print substr(s, 1, i-1); s=substr(s, i+len) }
+     print s
+  }')
+}
+__sh2_err_handler() {
+  local s=$?
+  local loc="${__sh2_loc:-}"
+  if [[ "${BASH_COMMAND}" == *"(exit "* ]]; then return $s; fi
+  if [[ -z "$loc" ]]; then return $s; fi
+  if [[ "$loc" == "${__sh2_last_err_loc:-}" && "$s" == "${__sh2_last_err_status:-}" ]]; then return $s; fi
+  __sh2_last_err_loc="$loc"
+  __sh2_last_err_status="$s"
+  printf "Error in %s\n" "$loc" >&2
+  return $s
+}
+set -o errtrace
+trap '__sh2_err_handler' ERR
+main() {
+  local __sh2_loc=""
+  __sh2_loc="tests/fixtures/split_multichar.sh2:2:5"
+  __sh2_split xs 'a::b::c' '::'
+  __sh2_status=$?; (exit $__sh2_status)
+  for x in "${xs[@]}"; do
+    printf '%s\n' "$x"
+  done
+}
+__sh2_status=0
+main "$@"

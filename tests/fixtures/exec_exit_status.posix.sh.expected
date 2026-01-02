@@ -1,3 +1,4 @@
+#!/bin/sh
 main() {
   __sh2_loc="tests/fixtures/exec_exit_status.sh2:2:5"
   exec 'bash' '-c' 'echo ok; exit 7'

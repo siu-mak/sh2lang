@@ -1,8 +1,10 @@
+#!/bin/sh
 main() {
-  __sh2_loc="toplevel_let_and_run.sh2:2:1"
+  __sh2_loc="tests/fixtures/toplevel_let_and_run.sh2:2:1"
   x='world'
-  __sh2_loc="toplevel_let_and_run.sh2:3:1"
-  'echo' "$x"; __sh2_status=$?; if [ $__sh2_status -ne 0 ]; then printf 'Error in %s\n' "$__sh2_loc" >&2; exit $__sh2_status; fi
+  __sh2_status=$?; (exit $__sh2_status)
+  __sh2_loc="tests/fixtures/toplevel_let_and_run.sh2:3:1"
+  'echo' "$x"; __sh2_status=$?; (exit $__sh2_status)
 }
 __sh2_status=0
 main "$@"

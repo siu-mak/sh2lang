@@ -1,6 +1,7 @@
+#!/bin/sh
 main() {
   __sh2_loc="tests/fixtures/fs_exists_dir_file_symlink_basic.sh2:2:3"
-  'sh' '-c' 'rm -rf tmp; mkdir -p tmp/dir; : > tmp/file; ln -s file tmp/link'; __sh2_status=$?; if [ $__sh2_status -ne 0 ]; then printf 'Error in %s\n' "$__sh2_loc" >&2; exit $__sh2_status; fi
+  'sh' '-c' 'rm -rf tmp; mkdir -p tmp/dir; : > tmp/file; ln -s file tmp/link'; __sh2_status=$?; (exit $__sh2_status)
   if [ -e 'tmp/file' ] && [ -f 'tmp/file' ] && [ -d 'tmp/dir' ] && [ -L 'tmp/link' ]; then
     printf '%s\n' 'ok'
   else

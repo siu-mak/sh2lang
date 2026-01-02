@@ -1,13 +1,16 @@
+#!/bin/sh
 main() {
-  __sh2_loc="tests/fixtures/truthy_capture.sh2:2"
+  __sh2_loc="tests/fixtures/truthy_capture.sh2:2:5"
   empty="$( 'printf' '%s' '' )"
+  __sh2_status=$?; (exit $__sh2_status)
   if [ -n "$empty" ]; then
     printf '%s\n' 'T_EMPTY'
   else
     printf '%s\n' 'F_EMPTY'
   fi
-  __sh2_loc="tests/fixtures/truthy_capture.sh2:9"
+  __sh2_loc="tests/fixtures/truthy_capture.sh2:9:5"
   full="$( 'printf' '%s' 'hi' )"
+  __sh2_status=$?; (exit $__sh2_status)
   if [ -n "$full" ]; then
     printf '%s\n' 'T_FULL'
   else

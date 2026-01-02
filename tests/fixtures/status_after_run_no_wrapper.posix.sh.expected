@@ -1,9 +1,10 @@
+#!/bin/sh
 main() {
-  __sh2_loc="tests/fixtures/status_after_run_no_wrapper.sh2:2"
-  'sh' '-c' 'exit 9'; __sh2_status=$?; if [ $__sh2_status -ne 0 ]; then printf 'Error in %s\n' "$__sh2_loc" >&2; exit $__sh2_status; fi
+  __sh2_loc="tests/fixtures/status_after_run_no_wrapper.sh2:2:5"
+  'sh' '-c' 'exit 9'; __sh2_status=$?; (exit $__sh2_status)
   printf '%s\n' "$__sh2_status"
-  __sh2_loc="tests/fixtures/status_after_run_no_wrapper.sh2:4"
-  'echo' 'hi'; __sh2_status=$?; if [ $__sh2_status -ne 0 ]; then printf 'Error in %s\n' "$__sh2_loc" >&2; exit $__sh2_status; fi
+  __sh2_loc="tests/fixtures/status_after_run_no_wrapper.sh2:4:5"
+  'echo' 'hi'; __sh2_status=$?; (exit $__sh2_status)
   printf '%s\n' "$__sh2_status"
 }
 __sh2_status=0

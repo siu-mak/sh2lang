@@ -236,8 +236,8 @@ fn codegen_comparison() {
     let tokens = sh2c::lexer::lex(&sm, "test").unwrap();
     let mut ast = parser::parse(&tokens, &sm, "test").unwrap();
     ast.source_maps.insert("test".to_string(), sm.clone());
-    let ir = lower::lower(ast);
-    let out = codegen::emit(&ir);
+    let ir = lower::lower(ast).unwrap();
+    let out = codegen::emit_with_options(&ir, codegen::CodegenOptions { target: codegen::TargetShell::Bash, include_diagnostics: true }).unwrap();
     assert!(out.contains("[ \"$x\" != 'bar' ]"));
 }
 
@@ -256,8 +256,8 @@ fn exec_comparison() {
     let tokens = sh2c::lexer::lex(&sm, "test").unwrap();
     let mut ast = parser::parse(&tokens, &sm, "test").unwrap();
     ast.source_maps.insert("test".to_string(), sm.clone());
-    let ir = lower::lower(ast);
-    let bash = codegen::emit(&ir);
+    let ir = lower::lower(ast).unwrap();
+    let bash = codegen::emit_with_options(&ir, codegen::CodegenOptions { target: codegen::TargetShell::Bash, include_diagnostics: true }).unwrap();
     let (stdout, _, _) = common::run_bash_script(&bash, &[], &[]);
     assert_eq!(stdout.trim(), "access granted");
 }
@@ -392,8 +392,8 @@ fn codegen_concatenation() {
     let tokens = sh2c::lexer::lex(&sm, "test").unwrap();
     let mut ast = parser::parse(&tokens, &sm, "test").unwrap();
     ast.source_maps.insert("test".to_string(), sm.clone());
-    let ir = lower::lower(ast);
-    let out = codegen::emit(&ir);
+    let ir = lower::lower(ast).unwrap();
+    let out = codegen::emit_with_options(&ir, codegen::CodegenOptions { target: codegen::TargetShell::Bash, include_diagnostics: true }).unwrap();
     assert!(out.contains("'hello '\"$name\""));
 }
 
@@ -411,8 +411,8 @@ fn exec_concatenation() {
     let tokens = sh2c::lexer::lex(&sm, "test").unwrap();
     let mut ast = parser::parse(&tokens, &sm, "test").unwrap();
     ast.source_maps.insert("test".to_string(), sm.clone());
-    let ir = lower::lower(ast);
-    let bash = codegen::emit(&ir);
+    let ir = lower::lower(ast).unwrap();
+    let bash = codegen::emit_with_options(&ir, codegen::CodegenOptions { target: codegen::TargetShell::Bash, include_diagnostics: true }).unwrap();
     let (stdout, _, _) = common::run_bash_script(&bash, &[], &[]);
     assert_eq!(stdout.trim(), "running");
 }
@@ -464,8 +464,8 @@ fn codegen_let_and_usage() {
     let tokens = sh2c::lexer::lex(&sm, "test").unwrap();
     let mut ast = parser::parse(&tokens, &sm, "test").unwrap();
     ast.source_maps.insert("test".to_string(), sm.clone());
-    let ir = lower::lower(ast);
-    let out = codegen::emit(&ir);
+    let ir = lower::lower(ast).unwrap();
+    let out = codegen::emit_with_options(&ir, codegen::CodegenOptions { target: codegen::TargetShell::Bash, include_diagnostics: true }).unwrap();
     assert!(out.contains("msg='hello'"));
     assert!(out.contains("printf '%s\\n' \"$msg\""));
 }
@@ -483,8 +483,8 @@ fn exec_let_variable() {
     let tokens = sh2c::lexer::lex(&sm, "test").unwrap();
     let mut ast = parser::parse(&tokens, &sm, "test").unwrap();
     ast.source_maps.insert("test".to_string(), sm.clone());
-    let ir = lower::lower(ast);
-    let bash = codegen::emit(&ir);
+    let ir = lower::lower(ast).unwrap();
+    let bash = codegen::emit_with_options(&ir, codegen::CodegenOptions { target: codegen::TargetShell::Bash, include_diagnostics: true }).unwrap();
     let (stdout, _, _) = common::run_bash_script(&bash, &[], &[]);
     assert_eq!(stdout.trim(), "works");
 }
@@ -503,8 +503,8 @@ fn let_alias_variable() {
     let tokens = sh2c::lexer::lex(&sm, "test").unwrap();
     let mut ast = parser::parse(&tokens, &sm, "test").unwrap();
     ast.source_maps.insert("test".to_string(), sm.clone());
-    let ir = lower::lower(ast);
-    let out = codegen::emit(&ir);
+    let ir = lower::lower(ast).unwrap();
+    let out = codegen::emit_with_options(&ir, codegen::CodegenOptions { target: codegen::TargetShell::Bash, include_diagnostics: true }).unwrap();
     assert!(out.contains("b=\"$a\""));
 }
 

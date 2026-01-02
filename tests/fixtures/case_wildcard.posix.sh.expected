@@ -1,6 +1,8 @@
+#!/bin/sh
 main() {
   __sh2_loc="tests/fixtures/case_wildcard.sh2:2:3"
   x='foo'
+  __sh2_status=$?; (exit $__sh2_status)
   case "$x" in
     'bar')
       printf '%s\n' 'no'

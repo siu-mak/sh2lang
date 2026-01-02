@@ -1,3 +1,4 @@
+#!/bin/sh
 __sh2_matches() { printf '%s\n' "$1" | grep -Eq -- "$2"; }
 main() {
   printf '%s\n' "$( if __sh2_matches 'abc' ''; then printf "%s" "true"; else printf "%s" "false"; fi )"

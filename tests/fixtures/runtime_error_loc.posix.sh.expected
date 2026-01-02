@@ -1,10 +1,12 @@
+#!/bin/sh
 foo() {
-  __sh2_loc="runtime_error_loc.sh2:2:5"
+  __sh2_loc="tests/fixtures/runtime_error_loc.sh2:2:5"
   'false'; __sh2_status=$?; (exit $__sh2_status)
 }
 
 main() {
-  foo; __sh2_status=$?; (exit $__sh2_status)
+  __sh2_loc="tests/fixtures/runtime_error_loc.sh2:5:1"
+  'foo'; __sh2_status=$?; (exit $__sh2_status)
 }
 __sh2_status=0
 main "$@"

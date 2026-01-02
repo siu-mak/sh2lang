@@ -1,11 +1,16 @@
+#!/bin/sh
 main() {
+  case $- in *e*) __sh2_e=1;; *) __sh2_e=0;; esac; set +e
   if {
-    printf '%s\n' 'BEFORE' &&
-    __sh2_loc="tests/fixtures/run_disallow_fail_try.sh2:4"
-    'sh' '-c' 'exit 7'; __sh2_status=$?; if [ $__sh2_status -ne 0 ]; then printf 'Error in %s\n' "$__sh2_loc" >&2; exit $__sh2_status; fi
+    {
+      printf '%s\n' 'BEFORE'
+    } && {
+      'sh' '-c' 'exit 7'; __sh2_status=$?; (exit $__sh2_status)
+    }
   }; then
-    :
+    if [ "${__sh2_e:-0}" = 1 ]; then set -e; fi
   else
+    if [ "${__sh2_e:-0}" = 1 ]; then set -e; fi
     printf '%s\n' 'CAUGHT'
   fi
 }

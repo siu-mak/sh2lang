@@ -1,5 +1,6 @@
+#!/bin/sh
 main() {
-  return "9"
+  exit "9"
 }
 __sh2_status=0
 main "$@"

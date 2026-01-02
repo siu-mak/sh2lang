@@ -1,3 +1,4 @@
+#!/bin/sh
 main() {
   if [ -n '0' ]; then
     printf '%s\n' 'T_STR_0'

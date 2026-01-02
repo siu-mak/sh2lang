@@ -106,6 +106,6 @@ fn compile_require_arity_error() {
 fn compile_require_expr_error() {
     assert_codegen_panics(
         "require_expr_error",
-        "require() is a statement, not an expression",
+        "require() is a statement; use it as a standalone call",
     );
 }

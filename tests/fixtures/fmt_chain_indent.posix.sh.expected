@@ -1,0 +1,31 @@
+#!/bin/sh
+main() {
+  {
+    __sh2_loc="tests/fixtures/fmt_chain_indent.sh2:2:5"
+    "$echo" 'a'; __sh2_status=$?; (exit $__sh2_status)
+  } && {
+    __sh2_loc="tests/fixtures/fmt_chain_indent.sh2:2:23"
+    "$echo" 'b'; __sh2_status=$?; (exit $__sh2_status)
+  }
+  {
+    if true; then
+      printf '%s\n' 'x'
+    fi
+  } || {
+    printf '%s\n' 'err'
+  }
+  {
+    {
+      __sh2_loc="tests/fixtures/fmt_chain_indent.sh2:6:5"
+      "$a"; __sh2_status=$?; (exit $__sh2_status)
+    } && {
+      __sh2_loc="tests/fixtures/fmt_chain_indent.sh2:6:15"
+      "$b"; __sh2_status=$?; (exit $__sh2_status)
+    }
+  } && {
+    __sh2_loc="tests/fixtures/fmt_chain_indent.sh2:6:25"
+    "$c"; __sh2_status=$?; (exit $__sh2_status)
+  }
+}
+__sh2_status=0
+main "$@"

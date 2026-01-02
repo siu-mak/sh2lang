@@ -1,0 +1,4 @@
+func main() {
+    let xs = split("a,,b,", ",")
+    for x in xs { print("[" + x + "]") }
+}

@@ -1,3 +1,4 @@
+#!/bin/sh
 main() {
   wait "$( 'sh' '-c' 'echo 1234' )"; __sh2_status=$?; (exit $__sh2_status)
 }

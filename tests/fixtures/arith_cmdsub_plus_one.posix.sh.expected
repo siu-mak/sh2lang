@@ -1,6 +1,8 @@
+#!/bin/sh
 main() {
   __sh2_loc="tests/fixtures/arith_cmdsub_plus_one.sh2:2:3"
   n="$(( ( $( 'sh' '-c' 'printf '\''%s'\'' 41' ) + 1 ) ))"
+  __sh2_status=$?; (exit $__sh2_status)
   printf '%s\n' "$n"
 }
 __sh2_status=0

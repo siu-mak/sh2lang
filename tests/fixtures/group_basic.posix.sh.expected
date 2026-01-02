@@ -1,9 +1,12 @@
+#!/bin/sh
 main() {
   __sh2_loc="tests/fixtures/group_basic.sh2:2:5"
   x='outside'
+  __sh2_status=$?; (exit $__sh2_status)
   {
     __sh2_loc="tests/fixtures/group_basic.sh2:4:9"
     x='inside'
+    __sh2_status=$?; (exit $__sh2_status)
     printf '%s\n' "$x"
   }
   printf '%s\n' "$x"

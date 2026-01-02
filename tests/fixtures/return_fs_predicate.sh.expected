@@ -23,11 +23,13 @@ main() {
   local __sh2_loc=""
   __sh2_loc="tests/fixtures/return_fs_predicate.sh2:6:3"
   'sh' '-c' 'rm -f empty nonempty; printf '\'''\'' > empty; echo hi > nonempty'; __sh2_status=$?; (exit $__sh2_status)
-  check 'nonempty'; __sh2_status=$?; (exit $__sh2_status)
+  __sh2_loc="tests/fixtures/return_fs_predicate.sh2:7:3"
+  'check' 'nonempty'; __sh2_status=$?; (exit $__sh2_status)
   if [ "$__sh2_status" = "0" ]; then
     printf '%s\n' 'nonempty: ok'
   fi
-  check 'empty'; __sh2_status=$?; (exit $__sh2_status)
+  __sh2_loc="tests/fixtures/return_fs_predicate.sh2:12:3"
+  'check' 'empty'; __sh2_status=$?; (exit $__sh2_status)
   if [ "$__sh2_status" = "1" ]; then
     printf '%s\n' 'empty: ok'
   fi

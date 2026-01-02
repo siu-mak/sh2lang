@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 main() {
   wait '1234'; __sh2_status=$?; (exit $__sh2_status)
 }

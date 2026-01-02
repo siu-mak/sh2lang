@@ -1,6 +1,8 @@
+#!/bin/sh
 main() {
   __sh2_loc="tests/fixtures/case_glob_star.sh2:2:5"
   x='foo123'
+  __sh2_status=$?; (exit $__sh2_status)
   case "$x" in
     'foo'*)
       printf '%s\n' 'hit'

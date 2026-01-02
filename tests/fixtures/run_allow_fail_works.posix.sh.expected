@@ -1,0 +1,12 @@
+#!/bin/sh
+main() {
+  printf '%s\n' 'start'
+  __sh2_loc="tests/fixtures/run_allow_fail_works.sh2:3:5"
+  __sh2_status=0; 'sh' '-c' 'exit 7' || __sh2_status=$?; :
+  printf '%s\n' 'ok'
+  if [ "$__sh2_status" = "7" ]; then
+    printf '%s\n' 'status preserved'
+  fi
+}
+__sh2_status=0
+main "$@"

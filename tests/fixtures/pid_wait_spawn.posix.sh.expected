@@ -1,7 +1,9 @@
+#!/bin/sh
 main() {
-  ( __sh2_loc="tests/fixtures/pid_wait_spawn.sh2:2"; 'sh' '-c' 'exit 0' ) &
-  __sh2_loc="tests/fixtures/pid_wait_spawn.sh2:3"
+  ( __sh2_loc="tests/fixtures/pid_wait_spawn.sh2:2:9"; 'sh' '-c' 'exit 0' ) &
+  __sh2_loc="tests/fixtures/pid_wait_spawn.sh2:3:3"
   p="$!"
+  __sh2_status=$?; (exit $__sh2_status)
   wait "$p"; __sh2_status=$?; (exit $__sh2_status)
   if [ "$__sh2_status" = "0" ]; then
     printf '%s\n' 'wait_ok'

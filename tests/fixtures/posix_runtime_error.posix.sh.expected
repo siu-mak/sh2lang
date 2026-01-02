@@ -1,5 +1,6 @@
+#!/bin/sh
 main() {
-  __sh2_loc="posix_runtime_error.sh2:2:5"
+  __sh2_loc="tests/fixtures/posix_runtime_error.sh2:2:5"
   'false'; __sh2_status=$?; (exit $__sh2_status)
 }
 __sh2_status=0

@@ -1,5 +1,5 @@
 fn main() {
-    use sh2c::codegen::{TargetShell, emit_with_target};
+    use sh2c::codegen::{TargetShell, emit_with_options, CodegenOptions};
     use sh2c::loader;
     use sh2c::lower;
     use std::fs;
@@ -42,8 +42,8 @@ fn main() {
 
         println!("Regenerating: {}", final_path.display());
         let program = loader::load_program_with_imports(&final_path).unwrap();
-        let ir = lower::lower(program);
-        let posix_code = emit_with_target(&ir, TargetShell::Posix).expect("Failed to emit posix code");
+        let ir = lower::lower(program).unwrap();
+        let posix_code = emit_with_options(&ir, CodegenOptions { target: TargetShell::Posix, include_diagnostics: true }).expect("Failed to emit posix code");
 
         let expected_path = format!("{}.posix.sh.expected", fixture_base);
         fs::write(&expected_path, posix_code).expect("Failed to write expected file");

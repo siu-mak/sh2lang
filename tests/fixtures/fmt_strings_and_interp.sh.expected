@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+main() {
+  printf '%s\n' 's1'
+  printf '%s\n' 'r1'
+  printf '%s\n' 'i '"$v"
+}
+__sh2_status=0
+main "$@"

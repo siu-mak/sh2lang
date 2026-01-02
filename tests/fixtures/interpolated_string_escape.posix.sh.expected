@@ -1,6 +1,8 @@
+#!/bin/sh
 main() {
-  __sh2_loc="tests/fixtures/interpolated_string_escape.sh2:2"
+  __sh2_loc="tests/fixtures/interpolated_string_escape.sh2:2:3"
   name='world'
+  __sh2_status=$?; (exit $__sh2_status)
   printf '%s\n' 'literal: ${name}'
   printf '%s\n' 'dollar: $'
 }

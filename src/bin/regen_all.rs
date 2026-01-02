@@ -1,5 +1,5 @@
 fn main() {
-    use sh2c::codegen::{TargetShell, emit_with_target};
+    use sh2c::codegen::{TargetShell, emit_with_options, CodegenOptions};
     use sh2c::loader;
     use sh2c::lower;
     use std::fs;
@@ -32,14 +32,13 @@ fn main() {
         // No, let's keep a catch_unwind wrapper for safety if needed, or just let it crash (regen usually shouldn't crash on frontend).
         // To respect existing logic, let's wrap lowering too but separately.
         
-        let ir_res = panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-             lower::lower_with_options(program, &opts)
-        }));
+        // Lowering
+        let ir_res = lower::lower_with_options(program, &opts);
 
         match ir_res {
             Ok(ir) => {
                 // Try Bash
-                if let Ok(bash) = emit_with_target(&ir, TargetShell::Bash) {
+                if let Ok(bash) = emit_with_options(&ir, CodegenOptions { target: TargetShell::Bash, include_diagnostics: true }) {
                      let bash_path = path.with_extension("sh.expected");
                      if let Err(e) = fs::write(&bash_path, bash) {
                          eprintln!("Failed to write {}: {}", bash_path.display(), e);
@@ -47,7 +46,7 @@ fn main() {
                 }
                 
                 // Try Posix
-                if let Ok(posix) = emit_with_target(&ir, TargetShell::Posix) {
+                if let Ok(posix) = emit_with_options(&ir, CodegenOptions { target: TargetShell::Posix, include_diagnostics: true }) {
                      let posix_path = path.with_extension("posix.sh.expected");
                      if let Err(e) = fs::write(&posix_path, posix) {
                          eprintln!("Failed to write {}: {}", posix_path.display(), e);
@@ -55,7 +54,7 @@ fn main() {
                 }
             }
             Err(_) => {
-                println!("Skipping {} (loading/lowering failed)", path.display());
+                println!("Skipping {} (lowering failed)", path.display());
             }
         }
 

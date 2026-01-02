@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+main() {
+  false
+  __sh2_status=$?; (exit $__sh2_status)
+  if [ "$__sh2_status" = "0" ]; then
+    exit "1"
+  fi
+  printf '%s\n' 'ok'
+}
+__sh2_status=0
+main "$@"

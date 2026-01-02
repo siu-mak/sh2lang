@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 main() {
   (
     __sh2_log_path='out.log'

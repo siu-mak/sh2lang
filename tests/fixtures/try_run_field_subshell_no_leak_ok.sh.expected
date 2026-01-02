@@ -1,19 +1,33 @@
-__sh2_err_handler() { printf "Error in %s\n" "${__sh2_loc:-unknown}" >&2; }
+#!/usr/bin/env bash
+__sh2_err_handler() {
+  local s=$?
+  local loc="${__sh2_loc:-}"
+  if [[ "${BASH_COMMAND}" == *"(exit "* ]]; then return $s; fi
+  if [[ -z "$loc" ]]; then return $s; fi
+  if [[ "$loc" == "${__sh2_last_err_loc:-}" && "$s" == "${__sh2_last_err_status:-}" ]]; then return $s; fi
+  __sh2_last_err_loc="$loc"
+  __sh2_last_err_status="$s"
+  printf "Error in %s\n" "$loc" >&2
+  return $s
+}
+set -o errtrace
 trap '__sh2_err_handler' ERR
 __sh2_tmpfile() { if command -v mktemp >/dev/null 2>&1; then mktemp; else printf "%s/sh2_tmp_%s_%s" "${TMPDIR:-/tmp}" "$$" "$(awk 'BEGIN{srand();print int(rand()*1000000)}')"; fi; }
-__sh2_read_file() { cat "$1" 2>/dev/null || true; }
+__sh2_read_file() { cat "$1"; }
 main() {
-  __sh2_loc="tests/fixtures/try_run_field_subshell_no_leak_ok.sh2:2"
+  local __sh2_loc=""
+  __sh2_loc="tests/fixtures/try_run_field_subshell_no_leak_ok.sh2:2:3"
     r__tmp_out="$(__sh2_tmpfile)"
   r__tmp_err="$(__sh2_tmpfile)"
-  case $- in *e*) __sh2__errexit_was_set=1;; *) __sh2__errexit_was_set=0;; esac; set +e; 'sh' '-c' 'printf '\''out'\''; exit 0' >"$r__tmp_out" 2>"$r__tmp_err"; r__status=$?; if [ "$__sh2__errexit_was_set" = 1 ]; then set -e; fi;
+  if 'sh' '-c' 'printf '\''out'\''; exit 0' >"${r__tmp_out}" 2>"${r__tmp_err}"; then r__status=0; else r__status=$?; fi;
   r__stdout="$(__sh2_read_file "$r__tmp_out")"
   r__stderr="$(__sh2_read_file "$r__tmp_err")"
   rm -f "$r__tmp_out" "$r__tmp_err"
   __sh2_status="$r__status"
   (
-    __sh2_loc="tests/fixtures/try_run_field_subshell_no_leak_ok.sh2:4"
+    __sh2_loc="tests/fixtures/try_run_field_subshell_no_leak_ok.sh2:4:5"
     r='shadowed'
+    __sh2_status=$?; (exit $__sh2_status)
   )
   printf '%s\n' "$r__stdout"
 }

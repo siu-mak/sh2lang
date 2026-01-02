@@ -1,6 +1,8 @@
+#!/bin/sh
 main() {
-  __sh2_loc="tests/fixtures/wait_pid_var.sh2:2"
+  __sh2_loc="tests/fixtures/wait_pid_var.sh2:2:3"
   p='1234'
+  __sh2_status=$?; (exit $__sh2_status)
   wait "$p"; __sh2_status=$?; (exit $__sh2_status)
 }
 __sh2_status=0

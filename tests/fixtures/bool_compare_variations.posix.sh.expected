@@ -1,0 +1,41 @@
+#!/bin/sh
+main() {
+  __sh2_loc="tests/fixtures/bool_compare_variations.sh2:2:5"
+  d='.'
+  __sh2_status=$?; (exit $__sh2_status)
+  __sh2_loc="tests/fixtures/bool_compare_variations.sh2:3:5"
+  f='missing_dir_12345'
+  __sh2_status=$?; (exit $__sh2_status)
+  if [ -d "$d" ]; then
+    printf '%s\n' 'EqTrue:ok'
+  else
+    printf '%s\n' 'EqTrue:fail'
+  fi
+  if ! [ -d "$f" ]; then
+    printf '%s\n' 'EqFalse:ok'
+  else
+    printf '%s\n' 'EqFalse:fail'
+  fi
+  if ! [ -d "$f" ]; then
+    printf '%s\n' 'NotEqTrue:ok'
+  else
+    printf '%s\n' 'NotEqTrue:fail'
+  fi
+  if [ -d "$d" ]; then
+    printf '%s\n' 'NotEqFalse:ok'
+  else
+    printf '%s\n' 'NotEqFalse:fail'
+  fi
+  if [ -d "$d" ]; then
+    printf '%s\n' 'SwapEqTrue:ok'
+  else
+    printf '%s\n' 'SwapEqTrue:fail'
+  fi
+  if [ -d "$d" ]; then
+    printf '%s\n' 'SwapNotEqFalse:ok'
+  else
+    printf '%s\n' 'SwapNotEqFalse:fail'
+  fi
+}
+__sh2_status=0
+main "$@"

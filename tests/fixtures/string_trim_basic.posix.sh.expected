@@ -1,3 +1,4 @@
+#!/bin/sh
 __sh2_trim() { awk -v s="$1" 'BEGIN { sub(/^[[:space:]]+/, "", s); sub(/[[:space:]]+$/, "", s); printf "%s", s }'; }
 main() {
   printf '%s\n' '>'"$( __sh2_trim '  hi	' )"'<'

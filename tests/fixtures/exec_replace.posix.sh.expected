@@ -1,3 +1,4 @@
+#!/bin/sh
 main() {
   printf '%s\n' 'before'
   __sh2_loc="tests/fixtures/exec_replace.sh2:3:3"

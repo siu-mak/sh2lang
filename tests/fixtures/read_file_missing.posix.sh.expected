@@ -1,7 +1,9 @@
-__sh2_read_file() { cat "$1" 2>/dev/null || true; }
+#!/bin/sh
+__sh2_read_file() { cat "$1"; }
 main() {
-  __sh2_loc="tests/fixtures/read_file_missing.sh2:3"
+  __sh2_loc="tests/fixtures/read_file_missing.sh2:3:5"
   s="$( __sh2_read_file 'does_not_exist_xyz.txt' )"
+  __sh2_status=$?; (exit $__sh2_status)
   if [ "$s" = '' ]; then
     printf '%s\n' 'empty'
   else

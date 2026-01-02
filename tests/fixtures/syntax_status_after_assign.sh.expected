@@ -1,0 +1,34 @@
+#!/usr/bin/env bash
+__sh2_err_handler() {
+  local s=$?
+  local loc="${__sh2_loc:-}"
+  if [[ "${BASH_COMMAND}" == *"(exit "* ]]; then return $s; fi
+  if [[ -z "$loc" ]]; then return $s; fi
+  if [[ "$loc" == "${__sh2_last_err_loc:-}" && "$s" == "${__sh2_last_err_status:-}" ]]; then return $s; fi
+  __sh2_last_err_loc="$loc"
+  __sh2_last_err_status="$s"
+  printf "Error in %s\n" "$loc" >&2
+  return $s
+}
+set -o errtrace
+trap '__sh2_err_handler' ERR
+main() {
+  local __sh2_loc=""
+  __sh2_loc="tests/fixtures/syntax_status_after_assign.sh2:3:5"
+  x="$( 'false' )"
+  __sh2_status=$?; (exit $__sh2_status)
+  if [ "$__sh2_status" = "0" ]; then
+    printf '%s\n' 'Expected status != 0 after let x = run(false)' >&2
+    exit "1"
+  fi
+  __sh2_loc="tests/fixtures/syntax_status_after_assign.sh2:11:5"
+  y="$( 'true' )"
+  __sh2_status=$?; (exit $__sh2_status)
+  if [ "$__sh2_status" != "0" ]; then
+    printf '%s\n' 'Expected status 0 after let y = run(true)' >&2
+    exit "1"
+  fi
+  printf '%s\n' 'ok'
+}
+__sh2_status=0
+main "$@"

@@ -1,3 +1,4 @@
+#!/bin/sh
 main() {
   if [ 'a' = 'a' ] && [ 'b' != 'c' ]; then
     printf '%s\n' 'ok'

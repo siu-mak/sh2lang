@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+is_yes() {
+  if [ "1" = "1" ]; then printf '%s' 1; fi
+  return 0
+}
+
+is_no() {
+  if [ "1" = "0" ]; then printf '%s' 1; fi
+  return 0
+}
+
+main() {
+  if [ -n "$( is_yes  )" ]; then
+    printf '%s\n' 'Y'
+  fi
+  if [ -n "$( is_no  )" ]; then
+    printf '%s\n' 'N'
+  fi
+}
+__sh2_status=0
+main "$@"

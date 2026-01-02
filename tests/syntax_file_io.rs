@@ -83,7 +83,7 @@ fn exec_write_file_spaces_posix() {
 
 #[test]
 fn compile_read_file_stmt_error() {
-    assert_codegen_panics("read_file_stmt_error", "read_file() returns a value");
+    assert_codegen_panics("read_file_stmt_error", "read_file() returns a value; use it in an expression");
 }
 
 #[test]
@@ -95,6 +95,6 @@ fn compile_write_file_expr_error() {
 fn compile_write_file_bad_arg() {
     assert_codegen_panics(
         "write_file_bad_arg",
-        "third argument must be a boolean literal",
+        "write_file: append must be boolean literal",
     );
 }

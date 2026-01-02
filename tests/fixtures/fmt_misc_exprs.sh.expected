@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+__sh2_uid="$(id -u 2>/dev/null || printf '%s' 0)"
+main() {
+  printf '%s\n' "$__sh2_uid"
+  printf '%s\n' "$PPID"
+  printf '%s\n' "$PWD"
+  printf '%s\n' "$0"
+  printf '%s\n' "$#"
+  printf '%s\n' "$$"
+}
+__sh2_status=0
+main "$@"

@@ -1,6 +1,8 @@
+#!/bin/sh
 main() {
   __sh2_loc="tests/fixtures/case_glob_literal_safety.sh2:2:5"
   x='a bZ'
+  __sh2_status=$?; (exit $__sh2_status)
   case "$x" in
     'a b'*)
       printf '%s\n' 'hit_space'

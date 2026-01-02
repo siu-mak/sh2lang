@@ -1,0 +1,12 @@
+#!/bin/sh
+BASE() {
+  printf '%s' '/srv/docker-rootless'
+  return 0
+}
+
+main() {
+  __sh2_loc="tests/fixtures/syntax_return_string_literal.sh2:6:5"
+  'echo' "$( BASE  )"; __sh2_status=$?; (exit $__sh2_status)
+}
+__sh2_status=0
+main "$@"

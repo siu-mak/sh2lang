@@ -1,0 +1,10 @@
+#!/bin/sh
+__sh2_write_file() { if [ "$3" = "true" ]; then printf '%s' "$2" >> "$1"; else printf '%s' "$2" > "$1"; fi; }
+main() {
+  __sh2_loc="tests/fixtures/write_file_error_is_dir.sh2:3:5"
+  'mkdir' '-p' 'd'; __sh2_status=$?; (exit $__sh2_status)
+  printf '%s' 'X' > 'd'
+  __sh2_status=$?; (exit $__sh2_status)
+}
+__sh2_status=0
+main "$@"

@@ -1,3 +1,4 @@
+#!/bin/sh
 shadow() {
   FOO="${1}"
   printf '%s\n' "${FOO-}"
@@ -5,10 +6,12 @@ shadow() {
 }
 
 main() {
-  (
-    export FOO='outer'
-    shadow 'local'; __sh2_status=$?; (exit $__sh2_status)
-  )
+  __sh2_loc="tests/fixtures/envdot_shadow.sh2:6:1"
+  FOO='outer'
+  __sh2_status=$?; (exit $__sh2_status)
+  export FOO
+  __sh2_loc="tests/fixtures/envdot_shadow.sh2:8:1"
+  'shadow' 'local'; __sh2_status=$?; (exit $__sh2_status)
 }
 __sh2_status=0
 main "$@"

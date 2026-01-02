@@ -1,12 +1,16 @@
+#!/bin/sh
 __sh2_coalesce() { if [ -n "$1" ]; then printf '%s' "$1"; else printf '%s' "$2"; fi; }
 main() {
-  __sh2_loc="tests/fixtures/string_coalesce_basic.sh2:2"
+  __sh2_loc="tests/fixtures/string_coalesce_basic.sh2:2:5"
   a=''
-  __sh2_loc="tests/fixtures/string_coalesce_basic.sh2:3"
+  __sh2_status=$?; (exit $__sh2_status)
+  __sh2_loc="tests/fixtures/string_coalesce_basic.sh2:3:5"
   b='fallback'
+  __sh2_status=$?; (exit $__sh2_status)
   printf '%s\n' "$( __sh2_coalesce "$a" "$b" )"
-  __sh2_loc="tests/fixtures/string_coalesce_basic.sh2:6"
+  __sh2_loc="tests/fixtures/string_coalesce_basic.sh2:6:5"
   c='x'
+  __sh2_status=$?; (exit $__sh2_status)
   printf '%s\n' "$( __sh2_coalesce "$c" "$b" )"
 }
 __sh2_status=0

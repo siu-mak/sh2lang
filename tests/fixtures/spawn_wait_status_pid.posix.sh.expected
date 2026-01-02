@@ -1,5 +1,6 @@
+#!/bin/sh
 main() {
-  ( __sh2_loc="tests/fixtures/spawn_wait_status_pid.sh2:3"; 'sh' '-c' 'exit 7' ) &
+  ( __sh2_loc="tests/fixtures/spawn_wait_status_pid.sh2:3:9"; 'sh' '-c' 'exit 7' ) &
   if [ "$!" -gt "0" ]; then
     printf '%s\n' 'pid_ok'
   else

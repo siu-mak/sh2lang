@@ -1,6 +1,8 @@
+#!/bin/sh
 main() {
   __sh2_loc="tests/fixtures/cmd_sub_pipe.sh2:2:5"
   x="$( 'echo' 'hello' | 'cat' )"
+  __sh2_status=$?; (exit $__sh2_status)
   printf '%s\n' "$x"
 }
 __sh2_status=0

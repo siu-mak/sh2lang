@@ -1,6 +1,8 @@
+#!/bin/sh
 main() {
-  __sh2_loc="tests/fixtures/interpolated_dollar_basic.sh2:2"
+  __sh2_loc="tests/fixtures/interpolated_dollar_basic.sh2:2:3"
   name='world'
+  __sh2_status=$?; (exit $__sh2_status)
   printf '%s\n' 'hello '"$name"'!'
 }
 __sh2_status=0

@@ -1,9 +1,23 @@
-__sh2_err_handler() { printf "Error in %s\n" "${__sh2_loc:-unknown}" >&2; }
+#!/usr/bin/env bash
+__sh2_err_handler() {
+  local s=$?
+  local loc="${__sh2_loc:-}"
+  if [[ "${BASH_COMMAND}" == *"(exit "* ]]; then return $s; fi
+  if [[ -z "$loc" ]]; then return $s; fi
+  if [[ "$loc" == "${__sh2_last_err_loc:-}" && "$s" == "${__sh2_last_err_status:-}" ]]; then return $s; fi
+  __sh2_last_err_loc="$loc"
+  __sh2_last_err_status="$s"
+  printf "Error in %s\n" "$loc" >&2
+  return $s
+}
+set -o errtrace
 trap '__sh2_err_handler' ERR
-__sh2_read_file() { cat "$1" 2>/dev/null || true; }
+__sh2_read_file() { cat "$1"; }
 main() {
-  __sh2_loc="tests/fixtures/read_file_missing.sh2:3"
-  s="$( __sh2_read_file 'does_not_exist_xyz.txt' )"
+  local __sh2_loc=""
+  __sh2_loc="tests/fixtures/read_file_missing.sh2:3:5"
+  s="$( trap '' ERR; __sh2_read_file 'does_not_exist_xyz.txt' )"
+  __sh2_status=$?; (exit $__sh2_status)
   if [ "$s" = '' ]; then
     printf '%s\n' 'empty'
   else

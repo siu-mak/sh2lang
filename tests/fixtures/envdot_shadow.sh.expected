@@ -1,15 +1,32 @@
 #!/usr/bin/env bash
+__sh2_err_handler() {
+  local s=$?
+  local loc="${__sh2_loc:-}"
+  if [[ "${BASH_COMMAND}" == *"(exit "* ]]; then return $s; fi
+  if [[ -z "$loc" ]]; then return $s; fi
+  if [[ "$loc" == "${__sh2_last_err_loc:-}" && "$s" == "${__sh2_last_err_status:-}" ]]; then return $s; fi
+  __sh2_last_err_loc="$loc"
+  __sh2_last_err_status="$s"
+  printf "Error in %s\n" "$loc" >&2
+  return $s
+}
+set -o errtrace
+trap '__sh2_err_handler' ERR
 shadow() {
+  local __sh2_loc=""
   local FOO="${1}"
-  printf '%s\n' "$( ( typeset +x FOO; printenv FOO ) 2>/dev/null || printenv FOO 2>/dev/null || true )"
+  printf '%s\n' "$( ( unset FOO; printenv FOO ) 2>/dev/null || printenv FOO 2>/dev/null || true )"
   printf '%s\n' "$FOO"
 }
 
 main() {
-  (
-    export FOO='outer'
-    shadow 'local'; __sh2_status=$?; (exit $__sh2_status)
-  )
+  local __sh2_loc=""
+  __sh2_loc="tests/fixtures/envdot_shadow.sh2:6:1"
+  FOO='outer'
+  __sh2_status=$?; (exit $__sh2_status)
+  export FOO
+  __sh2_loc="tests/fixtures/envdot_shadow.sh2:8:1"
+  'shadow' 'local'; __sh2_status=$?; (exit $__sh2_status)
 }
 __sh2_status=0
 main "$@"

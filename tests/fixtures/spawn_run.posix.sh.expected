@@ -1,5 +1,6 @@
+#!/bin/sh
 main() {
-  ( __sh2_loc="tests/fixtures/spawn_run.sh2:2"; 'sleep' '1' ) &
+  ( __sh2_loc="tests/fixtures/spawn_run.sh2:2:9"; 'sleep' '1' ) &
   printf '%s\n' 'after'
   wait; __sh2_status=$?
 }

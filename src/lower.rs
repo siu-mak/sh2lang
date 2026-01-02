@@ -2,6 +2,7 @@ use crate::ast;
 use crate::ir;
 use crate::span::SourceMap;
 use crate::span::Span;
+use crate::error::CompileError;
 use std::collections::HashSet;
 
 #[derive(Clone, Debug)]
@@ -57,11 +58,11 @@ impl Default for LowerOptions {
 }
 
 /// Lower a whole program (AST) into IR
-pub fn lower(p: ast::Program) -> Vec<ir::Function> {
+pub fn lower(p: ast::Program) -> Result<Vec<ir::Function>, CompileError> {
     lower_with_options(p, &LowerOptions::default())
 }
 
-pub fn lower_with_options(p: ast::Program, opts: &LowerOptions) -> Vec<ir::Function> {
+pub fn lower_with_options(p: ast::Program, opts: &LowerOptions) -> Result<Vec<ir::Function>, CompileError> {
     let has_main = p.functions.iter().any(|f| f.name == "main");
     let has_top_level = !p.top_level.is_empty();
 
@@ -76,8 +77,7 @@ pub fn lower_with_options(p: ast::Program, opts: &LowerOptions) -> Vec<ir::Funct
 
     if has_top_level {
         if has_main {
-            let snippet = entry_sm.format_diagnostic(entry_file, opts.diag_base_dir.as_deref(), "Top-level statements are not allowed when `func main` is defined; move statements into main or remove main to use implicit main.", p.span);
-            panic!("{}", snippet);
+            return Err(CompileError::new(entry_sm.format_diagnostic(entry_file, opts.diag_base_dir.as_deref(), "Top-level statements are not allowed when `func main` is defined; move statements into main or remove main to use implicit main.", p.span)));
         }
         // Synthesize main
         let main_func = ast::Function {
@@ -90,39 +90,39 @@ pub fn lower_with_options(p: ast::Program, opts: &LowerOptions) -> Vec<ir::Funct
 
         for f in p.functions {
             let sm = maps.get(&f.file).expect("Missing source map");
-            ir_funcs.push(lower_function(f, sm, opts));
+            ir_funcs.push(lower_function(f, sm, opts)?);
         }
 
         let sm = maps.get(&main_func.file).expect("Missing source map");
-        ir_funcs.push(lower_function(main_func, sm, opts));
+        ir_funcs.push(lower_function(main_func, sm, opts)?);
     } else {
         if !has_main {
-            panic!("No entrypoint: define `func main()` or add top-level statements.");
+            return Err(CompileError::new(entry_sm.format_diagnostic(entry_file, opts.diag_base_dir.as_deref(), "No entrypoint: define `func main()` or add top-level statements.", p.span)));
         }
         for f in p.functions {
             let sm = maps.get(&f.file).expect("Missing source map");
-            ir_funcs.push(lower_function(f, sm, opts));
+            ir_funcs.push(lower_function(f, sm, opts)?);
         }
     }
 
-    ir_funcs
+    Ok(ir_funcs)
 }
 
 /// Lower a single function
-fn lower_function(f: ast::Function, sm: &SourceMap, opts: &LowerOptions) -> ir::Function {
+fn lower_function(f: ast::Function, sm: &SourceMap, opts: &LowerOptions) -> Result<ir::Function, CompileError> {
     let mut body = Vec::new();
     let mut ctx = LoweringContext::new(opts);
 
     for stmt in f.body {
-        ctx = lower_stmt(stmt, &mut body, ctx, sm, &f.file, opts);
+        ctx = lower_stmt(stmt, &mut body, ctx, sm, &f.file, opts)?;
     }
 
-    ir::Function {
+    Ok(ir::Function {
         name: f.name,
         params: f.params,
         commands: body,
         file: f.file,
-    }
+    })
 }
 
 /// Helper to lower a block of statements sequentially
@@ -133,11 +133,11 @@ fn lower_block<'a>(
     sm: &SourceMap,
     file: &str,
     opts: &'a LowerOptions,
-) -> LoweringContext<'a> {
+) -> Result<LoweringContext<'a>, CompileError> {
     for stmt in stmts {
-        ctx = lower_stmt(stmt, out, ctx, sm, file, opts);
+        ctx = lower_stmt(stmt, out, ctx, sm, file, opts)?;
     }
-    ctx
+    Ok(ctx)
 }
 
 fn resolve_span(
@@ -159,7 +159,7 @@ fn lower_stmt<'a>(
     sm: &SourceMap,
     file: &str,
     opts: &'a LowerOptions,
-) -> LoweringContext<'a> {
+) -> Result<LoweringContext<'a>, CompileError> {
     let loc = if opts.include_diagnostics {
         Some(resolve_span(
             stmt.span,
@@ -180,37 +180,34 @@ fn lower_stmt<'a>(
             {
                 if func_name == "try_run" {
                     if args.is_empty() {
-                        panic!(
-                            "{}",
-                            sm.format_diagnostic(
-                                file,
-                                opts.diag_base_dir.as_deref(),
-                                "try_run() requires at least 1 argument (cmd)",
-                                value.span
-                            )
-                        );
+                        return Err(CompileError::new(sm.format_diagnostic(
+                            file,
+                            opts.diag_base_dir.as_deref(),
+                            "try_run() requires at least 1 argument (cmd)",
+                            value.span,
+                        )));
                     }
                     let lowered_args = args
                         .clone()
                         .into_iter()
                         .map(|a| lower_expr(a, &mut ctx, sm, file))
-                        .collect();
+                        .collect::<Result<Vec<_>, _>>()?;
                     out.push(ir::Cmd::Assign(
                         name.clone(),
                         ir::Val::TryRun(lowered_args),
                         loc,
                     ));
                     ctx.insert(&name);
-                    return ctx;
+                    return Ok(ctx);
                 }
             }
             out.push(ir::Cmd::Assign(
                 name.clone(),
-                lower_expr(value, &mut ctx, sm, file),
+                lower_expr(value, &mut ctx, sm, file)?,
                 loc,
             ));
             ctx.remove(&name);
-            ctx
+            Ok(ctx)
         }
 
         ast::StmtKind::Run(run_call) => {
@@ -218,23 +215,23 @@ fn lower_stmt<'a>(
                 .args
                 .into_iter()
                 .map(|a| lower_expr(a, &mut ctx, sm, file))
-                .collect();
+                .collect::<Result<Vec<_>, _>>()?;
 
             let mut allow_fail = false;
             let mut seen_allow_fail = false;
             for opt in run_call.options {
                 if opt.name == "allow_fail" {
                     if seen_allow_fail {
-                        panic!("{}", sm.format_diagnostic(file, opts.diag_base_dir.as_deref(), "allow_fail specified more than once", opt.span));
+                        return Err(CompileError::new(sm.format_diagnostic(file, opts.diag_base_dir.as_deref(), "allow_fail specified more than once", opt.span)));
                     }
                     seen_allow_fail = true;
                     if let ast::ExprKind::Bool(b) = opt.value.node {
                         allow_fail = b;
                     } else {
-                        panic!("{}", sm.format_diagnostic(file, opts.diag_base_dir.as_deref(), "allow_fail must be true/false literal", opt.value.span));
+                        return Err(CompileError::new(sm.format_diagnostic(file, opts.diag_base_dir.as_deref(), "allow_fail must be true/false literal", opt.value.span)));
                     }
                 } else {
-                    panic!("{}", sm.format_diagnostic(file, opts.diag_base_dir.as_deref(), format!("unknown run option: {}", opt.name).as_str(), opt.span));
+                    return Err(CompileError::new(sm.format_diagnostic(file, opts.diag_base_dir.as_deref(), format!("unknown run option: {}", opt.name).as_str(), opt.span)));
                 }
             }
 
@@ -243,17 +240,27 @@ fn lower_stmt<'a>(
                 allow_fail,
                 loc,
             });
-            ctx
+            Ok(ctx)
         }
 
         ast::StmtKind::Print(e) => {
-            out.push(ir::Cmd::Print(lower_expr(e, &mut ctx, sm, file)));
-            ctx
+            if let ast::ExprKind::Call { name, args } = &e.node {
+                if name == "split" {
+                     return Err(CompileError::new(sm.format_diagnostic(
+                        file,
+                        opts.diag_base_dir.as_deref(),
+                        "Cannot emit boolean/list value as string",
+                        e.span,
+                    )));
+                }
+            }
+            out.push(ir::Cmd::Print(lower_expr(e, &mut ctx, sm, file)?));
+            Ok(ctx)
         }
 
         ast::StmtKind::PrintErr(e) => {
-            out.push(ir::Cmd::PrintErr(lower_expr(e, &mut ctx, sm, file)));
-            ctx
+            out.push(ir::Cmd::PrintErr(lower_expr(e, &mut ctx, sm, file)?));
+            Ok(ctx)
         }
         ast::StmtKind::If {
             cond,
@@ -261,25 +268,25 @@ fn lower_stmt<'a>(
             elifs,
             else_body,
         } => {
-            let cond_val = lower_expr(cond, &mut ctx, sm, file);
+            let cond_val = lower_expr(cond, &mut ctx, sm, file)?;
 
             let mut t_cmds = Vec::new();
-            let ctx_then = lower_block(then_body, &mut t_cmds, ctx.clone(), sm, file, opts);
+            let ctx_then = lower_block(then_body, &mut t_cmds, ctx.clone(), sm, file, opts)?;
 
             let mut lowered_elifs = Vec::new();
             let mut ctx_elifs = Vec::new();
 
             for elif in elifs {
                 let mut body_cmds = Vec::new();
-                let elif_cond = lower_expr(elif.cond, &mut ctx, sm, file); // Evaluate cond in original context
-                let ctx_elif = lower_block(elif.body, &mut body_cmds, ctx.clone(), sm, file, opts);
+                let elif_cond = lower_expr(elif.cond, &mut ctx, sm, file)?; // Evaluate cond in original context
+                let ctx_elif = lower_block(elif.body, &mut body_cmds, ctx.clone(), sm, file, opts)?;
                 lowered_elifs.push((elif_cond, body_cmds));
                 ctx_elifs.push(ctx_elif);
             }
 
             let mut e_cmds = Vec::new();
             let ctx_else = if let Some(body) = else_body {
-                lower_block(body, &mut e_cmds, ctx.clone(), sm, file, opts)
+                lower_block(body, &mut e_cmds, ctx.clone(), sm, file, opts)?
             } else {
                 ctx.clone()
             };
@@ -296,10 +303,10 @@ fn lower_stmt<'a>(
             for c in ctx_elifs {
                 final_ctx = final_ctx.intersection(&c);
             }
-            final_ctx
+            Ok(final_ctx)
         }
         ast::StmtKind::Case { expr, arms } => {
-            let expr_val = lower_expr(expr, &mut ctx, sm, file);
+            let expr_val = lower_expr(expr, &mut ctx, sm, file)?;
             let mut lower_arms = Vec::new();
             let mut arm_ctxs = Vec::new();
             let mut has_wildcard = false;
@@ -313,7 +320,7 @@ fn lower_stmt<'a>(
                     }
                 }
 
-                let ctx_arm = lower_block(arm.body, &mut body_cmds, ctx.clone(), sm, file, opts);
+                let ctx_arm = lower_block(arm.body, &mut body_cmds, ctx.clone(), sm, file, opts)?;
 
                 let patterns = arm
                     .patterns
@@ -335,7 +342,7 @@ fn lower_stmt<'a>(
             });
 
             if arm_ctxs.is_empty() {
-                return ctx;
+                return Ok(ctx);
             }
 
             let mut final_ctx = arm_ctxs[0].clone();
@@ -347,33 +354,32 @@ fn lower_stmt<'a>(
                 final_ctx = final_ctx.intersection(&ctx);
             }
 
-            final_ctx
+            Ok(final_ctx)
         }
         ast::StmtKind::While { cond, body } => {
-            let cond_val = lower_expr(cond, &mut ctx, sm, file);
+            let cond_val = lower_expr(cond, &mut ctx, sm, file)?;
             let mut lower_body = Vec::new();
-            let ctx_body = lower_block(body, &mut lower_body, ctx.clone(), sm, file, opts);
-
+            let ctx_body = lower_block(body, &mut lower_body, ctx.clone(), sm, file, opts)?;
             out.push(ir::Cmd::While {
                 cond: cond_val,
                 body: lower_body,
             });
-            ctx.intersection(&ctx_body)
+            Ok(ctx.intersection(&ctx_body))
         }
         ast::StmtKind::For { var, items, body } => {
             let lowered_items = items
                 .into_iter()
                 .map(|i| lower_expr(i, &mut ctx, sm, file))
-                .collect();
+                .collect::<Result<Vec<_>, _>>()?;
             let mut lower_body = Vec::new();
-            let ctx_body = lower_block(body, &mut lower_body, ctx.clone(), sm, file, opts);
+            let ctx_body = lower_block(body, &mut lower_body, ctx.clone(), sm, file, opts)?;
 
             out.push(ir::Cmd::For {
                 var,
                 items: lowered_items,
                 body: lower_body,
             });
-            ctx.intersection(&ctx_body)
+            Ok(ctx.intersection(&ctx_body))
         }
         ast::StmtKind::Pipe(segments) => {
             let mut lowered_segments = Vec::new();
@@ -382,184 +388,177 @@ fn lower_stmt<'a>(
                     .args
                     .into_iter()
                     .map(|a| lower_expr(a, &mut ctx, sm, file))
-                    .collect();
+                    .collect::<Result<Vec<_>, _>>()?;
 
                 let mut allow_fail = false;
                 let mut seen_allow_fail = false;
                 for opt in run_call.options {
                     if opt.name == "allow_fail" {
                         if seen_allow_fail {
-                            panic!("{}", sm.format_diagnostic(file, opts.diag_base_dir.as_deref(), "allow_fail specified more than once", opt.span));
+                            return Err(CompileError::new(sm.format_diagnostic(file, opts.diag_base_dir.as_deref(), "allow_fail specified more than once", opt.span)));
                         }
                         seen_allow_fail = true;
                         if let ast::ExprKind::Bool(b) = opt.value.node {
                             allow_fail = b;
                         } else {
-                            panic!("{}", sm.format_diagnostic(file, opts.diag_base_dir.as_deref(), "allow_fail must be true/false literal", opt.value.span));
+                            return Err(CompileError::new(sm.format_diagnostic(file, opts.diag_base_dir.as_deref(), "allow_fail must be true/false literal", opt.value.span)));
                         }
                     } else {
-                        panic!("{}", sm.format_diagnostic(file, opts.diag_base_dir.as_deref(), format!("unknown run option: {}", opt.name).as_str(), opt.span));
+                        return Err(CompileError::new(sm.format_diagnostic(file, opts.diag_base_dir.as_deref(), format!("unknown run option: {}", opt.name).as_str(), opt.span)));
                     }
                 }
 
                 lowered_segments.push((lowered_args, allow_fail));
             }
             out.push(ir::Cmd::Pipe(lowered_segments, loc));
-            ctx
+            Ok(ctx)
         }
         ast::StmtKind::Break => {
             out.push(ir::Cmd::Break);
-            ctx
+            Ok(ctx)
         }
         ast::StmtKind::Continue => {
             out.push(ir::Cmd::Continue);
-            ctx
+            Ok(ctx)
         }
         ast::StmtKind::Return(e) => {
             out.push(ir::Cmd::Return(
-                e.map(|x| lower_expr(x, &mut ctx, sm, file)),
+                e.map(|x| lower_expr(x, &mut ctx, sm, file)).transpose()?,
             ));
-            ctx
+            Ok(ctx)
         }
         ast::StmtKind::Exit(e) => {
-            out.push(ir::Cmd::Exit(e.map(|x| lower_expr(x, &mut ctx, sm, file))));
-            ctx
+            out.push(ir::Cmd::Exit(
+                e.map(|x| lower_expr(x, &mut ctx, sm, file)).transpose()?,
+            ));
+            Ok(ctx)
         }
         ast::StmtKind::WithEnv { bindings, body } => {
             let lowered_bindings = bindings
                 .into_iter()
-                .map(|(k, v)| (k, lower_expr(v, &mut ctx, sm, file)))
-                .collect();
+                .map(|(k, v)| {
+                     let v = lower_expr(v, &mut ctx, sm, file)?;
+                     Ok((k, v))
+                })
+                .collect::<Result<Vec<_>, _>>()?;
             let mut lower_body = Vec::new();
-            let ctx_body = lower_block(body, &mut lower_body, ctx.clone(), sm, file, opts);
+            let ctx_body = lower_block(body, &mut lower_body, ctx.clone(), sm, file, opts)?;
             out.push(ir::Cmd::WithEnv {
                 bindings: lowered_bindings,
                 body: lower_body,
             });
-            ctx_body
+            Ok(ctx_body)
         }
         ast::StmtKind::AndThen { left, right } => {
             let mut lower_left = Vec::new();
-            let ctx_left = lower_block(left, &mut lower_left, ctx.clone(), sm, file, opts);
+            let ctx_left = lower_block(left, &mut lower_left, ctx.clone(), sm, file, opts)?;
 
             let mut lower_right = Vec::new();
-            let ctx_right = lower_block(right, &mut lower_right, ctx_left.clone(), sm, file, opts);
+            let ctx_right = lower_block(right, &mut lower_right, ctx_left.clone(), sm, file, opts)?;
 
             out.push(ir::Cmd::AndThen {
                 left: lower_left,
                 right: lower_right,
             });
-            ctx_left.intersection(&ctx_right)
+            Ok(ctx_left.intersection(&ctx_right))
         }
         ast::StmtKind::OrElse { left, right } => {
             let mut lower_left = Vec::new();
-            let ctx_left = lower_block(left, &mut lower_left, ctx.clone(), sm, file, opts);
+            let ctx_left = lower_block(left, &mut lower_left, ctx.clone(), sm, file, opts)?;
 
             let mut lower_right = Vec::new();
-            let ctx_right = lower_block(right, &mut lower_right, ctx_left.clone(), sm, file, opts);
+            let ctx_right = lower_block(right, &mut lower_right, ctx_left.clone(), sm, file, opts)?;
 
             out.push(ir::Cmd::OrElse {
                 left: lower_left,
                 right: lower_right,
             });
-            ctx_left.intersection(&ctx_right)
+            Ok(ctx_left.intersection(&ctx_right))
         }
         ast::StmtKind::WithCwd { path, body } => {
-            let lowered_path = lower_expr(path, &mut ctx, sm, file);
+            let lowered_path = lower_expr(path, &mut ctx, sm, file)?;
             let mut lower_body = Vec::new();
-            let ctx_body = lower_block(body, &mut lower_body, ctx.clone(), sm, file, opts);
+            let ctx_body = lower_block(body, &mut lower_body, ctx.clone(), sm, file, opts)?;
             out.push(ir::Cmd::WithCwd {
                 path: lowered_path,
                 body: lower_body,
             });
-            ctx_body
+            Ok(ctx_body)
         }
         ast::StmtKind::WithLog { path, append, body } => {
-            let lowered_path = lower_expr(path, &mut ctx, sm, file);
+            let lowered_path = lower_expr(path, &mut ctx, sm, file)?;
             let mut lower_body = Vec::new();
-            let ctx_body = lower_block(body, &mut lower_body, ctx.clone(), sm, file, opts);
+            let ctx_body = lower_block(body, &mut lower_body, ctx.clone(), sm, file, opts)?;
             out.push(ir::Cmd::WithLog {
                 path: lowered_path,
                 append,
                 body: lower_body,
             });
-            ctx_body
+            Ok(ctx_body)
         }
         ast::StmtKind::Cd { path } => {
-            out.push(ir::Cmd::Cd(lower_expr(path, &mut ctx, sm, file)));
-            ctx
+            out.push(ir::Cmd::Cd(lower_expr(path, &mut ctx, sm, file)?));
+            Ok(ctx)
         }
         ast::StmtKind::Sh(s) => {
             out.push(ir::Cmd::Raw(s));
-            ctx
+            Ok(ctx)
         }
         ast::StmtKind::ShBlock(lines) => {
             for s in lines {
                 out.push(ir::Cmd::Raw(s));
             }
-            ctx
+            Ok(ctx)
         }
         ast::StmtKind::Call { name, args } => {
             if name == "save_envfile" {
                 if args.len() != 2 {
-                    panic!(
-                        "{}",
-                        sm.format_diagnostic(
-                            file,
-                            opts.diag_base_dir.as_deref(),
-                            "save_envfile() requires exactly 2 arguments (path, env_blob)",
-                            stmt.span
-                        )
-                    );
+                    return Err(CompileError::new(sm.format_diagnostic(
+                        file,
+                        opts.diag_base_dir.as_deref(),
+                        "save_envfile() requires exactly 2 arguments (path, env_blob)",
+                        stmt.span,
+                    )));
                 }
                 let mut iter = args.into_iter();
-                let path = lower_expr(iter.next().unwrap(), &mut ctx, sm, file);
-                let env = lower_expr(iter.next().unwrap(), &mut ctx, sm, file);
+                let path = lower_expr(iter.next().unwrap(), &mut ctx, sm, file)?;
+                let env = lower_expr(iter.next().unwrap(), &mut ctx, sm, file)?;
                 out.push(ir::Cmd::SaveEnvfile { path, env });
             } else if name == "load_envfile" {
-                panic!("{}", sm.format_diagnostic(file, opts.diag_base_dir.as_deref(), "load_envfile() returns a value; use it in an expression (e.g., let m = load_envfile(\"env.meta\"))", stmt.span));
+                return Err(CompileError::new(sm.format_diagnostic(file, opts.diag_base_dir.as_deref(), "load_envfile() returns a value; use it in an expression (e.g., let m = load_envfile(\"env.meta\"))", stmt.span)));
             } else if name == "which" {
-                panic!("{}", sm.format_diagnostic(file, opts.diag_base_dir.as_deref(), "which() returns a value; use it in an expression (e.g., let p = which(\"cmd\"))", stmt.span));
+                return Err(CompileError::new(sm.format_diagnostic(file, opts.diag_base_dir.as_deref(), "which() returns a value; use it in an expression (e.g., let p = which(\"cmd\"))", stmt.span)));
             } else if name == "require" {
                 if args.len() != 1 {
-                    panic!(
-                        "{}",
-                        sm.format_diagnostic(
-                            file,
-                            opts.diag_base_dir.as_deref(),
-                            "require() requires exactly one argument (cmd_list)",
-                            stmt.span
-                        )
-                    );
+                    return Err(CompileError::new(sm.format_diagnostic(
+                        file,
+                        opts.diag_base_dir.as_deref(),
+                        "require() requires exactly one argument (cmd_list)",
+                        stmt.span,
+                    )));
                 }
                 let arg = &args[0];
                 if let ast::ExprKind::List(elems) = &arg.node {
                     let mut valid_cmds = Vec::new();
                     for e in elems {
-                        valid_cmds.push(lower_expr(e.clone(), &mut ctx, sm, file));
+                        valid_cmds.push(lower_expr(e.clone(), &mut ctx, sm, file)?);
                     }
                     out.push(ir::Cmd::Require(valid_cmds));
                 } else {
-                    panic!(
-                        "{}",
-                        sm.format_diagnostic(file, opts.diag_base_dir.as_deref(), "require() expects a list literal", arg.span)
-                    );
+                    return Err(CompileError::new(sm.format_diagnostic(file, opts.diag_base_dir.as_deref(), "require() expects a list literal", arg.span)));
                 }
             } else if name == "append_file" {
                 if args.len() != 2 {
-                    panic!(
-                        "{}",
-                        sm.format_diagnostic(
-                            file,
-                            opts.diag_base_dir.as_deref(),
-                            "append_file() requires exactly 2 arguments (path, content)",
-                            stmt.span
-                        )
-                    );
+                    return Err(CompileError::new(sm.format_diagnostic(
+                        file,
+                        opts.diag_base_dir.as_deref(),
+                        "append_file() requires exactly 2 arguments (path, content)",
+                        stmt.span,
+                    )));
                 }
                 let mut iter = args.into_iter();
-                let path = lower_expr(iter.next().unwrap(), &mut ctx, sm, file);
-                let content = lower_expr(iter.next().unwrap(), &mut ctx, sm, file);
+                let path = lower_expr(iter.next().unwrap(), &mut ctx, sm, file)?;
+                let content = lower_expr(iter.next().unwrap(), &mut ctx, sm, file)?;
                 out.push(ir::Cmd::WriteFile {
                     path,
                     content,
@@ -567,33 +566,22 @@ fn lower_stmt<'a>(
                 });
             } else if name == "write_file" {
                 if args.len() < 2 || args.len() > 3 {
-                    panic!(
-                        "{}",
-                        sm.format_diagnostic(
-                            file,
-                            opts.diag_base_dir.as_deref(),
-                            "write_file() requires 2 or 3 arguments (path, content, [append])",
-                            stmt.span
-                        )
-                    );
+                    return Err(CompileError::new(sm.format_diagnostic(
+                        file,
+                        opts.diag_base_dir.as_deref(),
+                        "write_file() requires 2 or 3 arguments (path, content, [append])",
+                        stmt.span,
+                    )));
                 }
                 let mut iter = args.into_iter();
-                let path = lower_expr(iter.next().unwrap(), &mut ctx, sm, file);
-                let content = lower_expr(iter.next().unwrap(), &mut ctx, sm, file);
+                let path = lower_expr(iter.next().unwrap(), &mut ctx, sm, file)?;
+                let content = lower_expr(iter.next().unwrap(), &mut ctx, sm, file)?;
                 let append = if iter.len() > 0 {
                     let arg = iter.next().unwrap();
                     if let ast::ExprKind::Bool(b) = arg.node {
                         b
                     } else {
-                        panic!(
-                            "{}",
-                            sm.format_diagnostic(
-                                file,
-                                opts.diag_base_dir.as_deref(),
-                                "write_file() third argument must be a boolean literal",
-                                arg.span
-                            )
-                        );
+                        return Err(CompileError::new(sm.format_diagnostic(file, opts.diag_base_dir.as_deref(), "write_file: append must be boolean literal", arg.span)));
                     }
                 } else {
                     false
@@ -604,97 +592,77 @@ fn lower_stmt<'a>(
                     append,
                 });
             } else if name == "read_file" {
-                panic!("{}", sm.format_diagnostic(file, opts.diag_base_dir.as_deref(), "read_file() returns a value; use it in an expression (e.g., let s = read_file(\"foo.txt\"))", stmt.span));
+                return Err(CompileError::new(sm.format_diagnostic(
+                    file,
+                    opts.diag_base_dir.as_deref(),
+                    "read_file() returns a value; use it in an expression (e.g., let c = read_file(\"file.txt\"))",
+                    stmt.span,
+                )));
             } else if matches!(name.as_str(), "log_info" | "log_warn" | "log_error") {
-                let level = match name.as_str() {
+                let lvl = match name.as_str() {
                     "log_info" => ir::LogLevel::Info,
                     "log_warn" => ir::LogLevel::Warn,
                     "log_error" => ir::LogLevel::Error,
                     _ => unreachable!(),
                 };
+                
                 if args.is_empty() || args.len() > 2 {
-                    panic!(
-                        "{}",
-                        sm.format_diagnostic(
-                            file,
-                            opts.diag_base_dir.as_deref(),
-                            format!("{}() requires 1 or 2 arguments (msg, [timestamp])", name)
-                                .as_str(),
-                            stmt.span
-                        )
-                    );
+                     return Err(CompileError::new(sm.format_diagnostic(
+                        file,
+                        opts.diag_base_dir.as_deref(),
+                        format!("{}() requires 1 or 2 arguments (msg, [timestamp])", name).as_str(),
+                        stmt.span
+                    )));
                 }
+
                 let mut iter = args.into_iter();
-                let msg = lower_expr(iter.next().unwrap(), &mut ctx, sm, file);
+                let msg = lower_expr(iter.next().unwrap(), &mut ctx, sm, file)?;
                 let timestamp = if iter.len() > 0 {
                     let arg = iter.next().unwrap();
                     if let ast::ExprKind::Bool(b) = arg.node {
                         b
                     } else {
-                        panic!(
-                            "{}",
-                            sm.format_diagnostic(
-                                file,
-                                opts.diag_base_dir.as_deref(),
-                                format!("{}() second argument must be a boolean literal", name)
-                                    .as_str(),
-                                arg.span
-                            )
-                        );
+                         return Err(CompileError::new(sm.format_diagnostic(
+                            file,
+                            opts.diag_base_dir.as_deref(),
+                            format!("{}() second argument must be a boolean literal", name).as_str(),
+                            arg.span
+                        )));
                     }
                 } else {
                     false
                 };
+
                 out.push(ir::Cmd::Log {
-                    level,
+                    level: lvl,
                     msg,
                     timestamp,
                 });
-            } else if name == "home" {
-                panic!(
-                    "{}",
-                    sm.format_diagnostic(
-                        file,
-                        opts.diag_base_dir.as_deref(),
-                        "home() returns a value; use it in an expression (e.g., let h = home())",
-                        stmt.span
-                    )
-                );
-            } else if name == "path_join" {
-                panic!("{}", sm.format_diagnostic(file, opts.diag_base_dir.as_deref(), "path_join() returns a value; use it in an expression (e.g., let p = path_join(\"a\", \"b\"))", stmt.span));
-            } else if name == "try_run" {
-                panic!(
-                    "{}",
-                    sm.format_diagnostic(
-                        file,
-                        opts.diag_base_dir.as_deref(),
-                        "try_run() must be bound via let (e.g., let r = try_run(...))",
-                        stmt.span
-                    )
-                );
             } else {
-                let args = args
-                    .iter()
-                    .map(|e| lower_expr(e.clone(), &mut ctx, sm, file))
-                    .collect();
-                out.push(ir::Cmd::Call {
-                    name: name.clone(),
-                    args,
+                // Generic call (Command)
+                let mut cmd_args = vec![ir::Val::Literal(name)];
+                for a in args {
+                    cmd_args.push(lower_expr(a, &mut ctx, sm, file)?);
+                }
+                out.push(ir::Cmd::Exec {
+                    args: cmd_args,
+                    allow_fail: false,
+                    loc,
                 });
             }
-            ctx
+            Ok(ctx)
         }
         ast::StmtKind::Subshell { body } => {
             let mut lower_body = Vec::new();
-            lower_block(body, &mut lower_body, ctx.clone(), sm, file, opts);
+            lower_block(body, &mut lower_body, ctx.clone(), sm, file, opts)?;
             out.push(ir::Cmd::Subshell { body: lower_body });
-            ctx
+            Ok(ctx)
         }
         ast::StmtKind::Group { body } => {
             let mut lower_body = Vec::new();
-            let ctx_body = lower_block(body, &mut lower_body, ctx.clone(), sm, file, opts);
+            let ctx_body = lower_block(body, &mut lower_body, ctx.clone(), sm, file, opts)?;
             out.push(ir::Cmd::Group { body: lower_body });
-            ctx_body
+            Ok(ctx_body)
         }
         ast::StmtKind::WithRedirect {
             stdout,
@@ -703,29 +671,32 @@ fn lower_stmt<'a>(
             body,
         } => {
             let mut lowered_body = Vec::new();
-            let ctx_body = lower_block(body, &mut lowered_body, ctx.clone(), sm, file, opts);
+            let ctx_body = lower_block(body, &mut lowered_body, ctx.clone(), sm, file, opts)?;
 
-            let lower_target = |t: ast::RedirectTarget, c: &mut LoweringContext| match t {
-                ast::RedirectTarget::File { path, append } => ir::RedirectTarget::File {
-                    path: lower_expr(path, c, sm, file),
-                    append,
-                },
-                ast::RedirectTarget::HereDoc { content } => ir::RedirectTarget::HereDoc { content },
-                ast::RedirectTarget::Stdout => ir::RedirectTarget::Stdout,
-                ast::RedirectTarget::Stderr => ir::RedirectTarget::Stderr,
+            // Cannot use closure easily with Result propagation from captures
+            let mut lower_target = |t: ast::RedirectTarget, c: &mut LoweringContext| -> Result<ir::RedirectTarget, CompileError> {
+                 Ok(match t {
+                    ast::RedirectTarget::File { path, append } => ir::RedirectTarget::File {
+                        path: lower_expr(path, c, sm, file)?,
+                        append,
+                    },
+                    ast::RedirectTarget::HereDoc { content } => ir::RedirectTarget::HereDoc { content },
+                    ast::RedirectTarget::Stdout => ir::RedirectTarget::Stdout,
+                    ast::RedirectTarget::Stderr => ir::RedirectTarget::Stderr,
+                })
             };
 
             out.push(ir::Cmd::WithRedirect {
-                stdout: stdout.map(|t| lower_target(t, &mut ctx)),
-                stderr: stderr.map(|t| lower_target(t, &mut ctx)),
-                stdin: stdin.map(|t| lower_target(t, &mut ctx)),
+                stdout: stdout.map(|t| lower_target(t, &mut ctx)).transpose()?,
+                stderr: stderr.map(|t| lower_target(t, &mut ctx)).transpose()?,
+                stdin: stdin.map(|t| lower_target(t, &mut ctx)).transpose()?,
                 body: lowered_body,
             });
-            ctx_body
+            Ok(ctx_body)
         }
         ast::StmtKind::Spawn { stmt } => {
             let mut lower_cmds = Vec::new();
-            lower_stmt(*stmt, &mut lower_cmds, ctx.clone(), sm, file, opts);
+            lower_stmt(*stmt, &mut lower_cmds, ctx.clone(), sm, file, opts)?;
 
             if lower_cmds.len() == 1 {
                 out.push(ir::Cmd::Spawn(Box::new(lower_cmds.remove(0))));
@@ -734,72 +705,72 @@ fn lower_stmt<'a>(
                     body: lower_cmds,
                 })));
             }
-            ctx
+            Ok(ctx)
         }
         ast::StmtKind::Wait(expr) => {
             out.push(ir::Cmd::Wait(
-                expr.map(|e| lower_expr(e, &mut ctx, sm, file)),
+                expr.map(|e| lower_expr(e, &mut ctx, sm, file)).transpose()?,
             ));
-            ctx
+            Ok(ctx)
         }
         ast::StmtKind::TryCatch {
             try_body,
             catch_body,
         } => {
             let mut lower_try = Vec::new();
-            let ctx_try = lower_block(try_body, &mut lower_try, ctx.clone(), sm, file, opts);
+            let ctx_try = lower_block(try_body, &mut lower_try, ctx.clone(), sm, file, opts)?;
 
             let mut lower_catch = Vec::new();
-            let ctx_catch = lower_block(catch_body, &mut lower_catch, ctx.clone(), sm, file, opts);
+            let ctx_catch = lower_block(catch_body, &mut lower_catch, ctx.clone(), sm, file, opts)?;
 
             out.push(ir::Cmd::TryCatch {
                 try_body: lower_try,
                 catch_body: lower_catch,
             });
-            ctx_try.intersection(&ctx_catch)
+            Ok(ctx_try.intersection(&ctx_catch))
         }
         ast::StmtKind::Export { name, value } => {
             out.push(ir::Cmd::Export {
                 name,
-                value: value.map(|v| lower_expr(v, &mut ctx, sm, file)),
+                value: value.map(|v| lower_expr(v, &mut ctx, sm, file)).transpose()?,
             });
-            ctx
+            Ok(ctx)
         }
         ast::StmtKind::Unset { name } => {
             out.push(ir::Cmd::Unset(name));
-            ctx
+            Ok(ctx)
         }
         ast::StmtKind::Source { path } => {
-            out.push(ir::Cmd::Source(lower_expr(path, &mut ctx, sm, file)));
-            ctx
+            out.push(ir::Cmd::Source(lower_expr(path, &mut ctx, sm, file)?));
+            Ok(ctx)
         }
         ast::StmtKind::Exec(args) => {
             out.push(ir::Cmd::ExecReplace(
                 args.into_iter()
                     .map(|a| lower_expr(a, &mut ctx, sm, file))
-                    .collect(),
+                    .collect::<Result<Vec<_>, _>>()?,
                 loc,
             ));
-            ctx
+            Ok(ctx)
         }
         ast::StmtKind::Set { target, value } => {
             match target {
                 ast::LValue::Var(name) => {
                     out.push(ir::Cmd::Assign(
                         name,
-                        lower_expr(value, &mut ctx, sm, file),
+                        lower_expr(value, &mut ctx, sm, file)?,
                         loc,
                     ));
                 }
                 ast::LValue::Env(name) => {
                     if matches!(&value.node, ast::ExprKind::List(_) | ast::ExprKind::Args) {
-                        panic!("{}", sm.format_diagnostic(file, opts.diag_base_dir.as_deref(), "set env.<NAME> requires a scalar string/number; lists/args are not supported", stmt.span));
+                        return Err(CompileError::new(sm.format_diagnostic(file, opts.diag_base_dir.as_deref(), "set env.<NAME> requires a scalar string/number; lists/args are not supported", stmt.span)));
                     }
 
-                    let val = lower_expr(value, &mut ctx, sm, file);
+                    let val = lower_expr(value, &mut ctx, sm, file)?;
 
                     if matches!(&val, ir::Val::List(_) | ir::Val::Args) {
-                        panic!("{}", sm.format_diagnostic(file, opts.diag_base_dir.as_deref(), "set env.<NAME> requires a scalar string/number; lists/args are not supported", stmt.span));
+                        return Err(CompileError::new(sm.format_diagnostic(file, opts.diag_base_dir.as_deref(), "set env.<NAME> requires a scalar string/number; lists/args are not supported", stmt.span)));
                     }
 
                     out.push(ir::Cmd::Export {
@@ -808,17 +779,17 @@ fn lower_stmt<'a>(
                     });
                 }
             }
-            ctx
+            Ok(ctx)
         }
         ast::StmtKind::PipeBlocks { segments } => {
             let mut lower_segments = Vec::new();
             for seg in segments {
                 let mut lowered = Vec::new();
-                lower_block(seg, &mut lowered, ctx.clone(), sm, file, opts);
+                lower_block(seg, &mut lowered, ctx.clone(), sm, file, opts)?;
                 lower_segments.push(lowered);
             }
             out.push(ir::Cmd::PipeBlocks(lower_segments, loc));
-            ctx
+            Ok(ctx)
         }
         ast::StmtKind::ForMap {
             key_var,
@@ -827,36 +798,36 @@ fn lower_stmt<'a>(
             body,
         } => {
             let mut lower_body = Vec::new();
-            let ctx_body = lower_block(body, &mut lower_body, ctx.clone(), sm, file, opts);
+            let ctx_body = lower_block(body, &mut lower_body, ctx.clone(), sm, file, opts)?;
             out.push(ir::Cmd::ForMap {
                 key_var,
                 val_var,
                 map,
                 body: lower_body,
             });
-            ctx.intersection(&ctx_body)
+            Ok(ctx.intersection(&ctx_body))
         }
     }
 }
 
-fn lower_expr<'a>(e: ast::Expr, ctx: &mut LoweringContext<'a>, sm: &SourceMap, file: &str) -> ir::Val {
+fn lower_expr<'a>(e: ast::Expr, ctx: &mut LoweringContext<'a>, sm: &SourceMap, file: &str) -> Result<ir::Val, CompileError> {
     let opts = ctx.opts; // Get opts from context for diagnostic formatting
     match e.node {
-        ast::ExprKind::Literal(s) => ir::Val::Literal(s),
-        ast::ExprKind::Var(s) => ir::Val::Var(s),
-        ast::ExprKind::Concat(l, r) => ir::Val::Concat(
-            Box::new(lower_expr(*l, ctx, sm, file)),
-            Box::new(lower_expr(*r, ctx, sm, file)),
-        ),
+        ast::ExprKind::Literal(s) => Ok(ir::Val::Literal(s)),
+        ast::ExprKind::Var(s) => Ok(ir::Val::Var(s)),
+        ast::ExprKind::Concat(l, r) => Ok(ir::Val::Concat(
+            Box::new(lower_expr(*l, ctx, sm, file)?),
+            Box::new(lower_expr(*r, ctx, sm, file)?),
+        )),
         ast::ExprKind::Arith { left, op, right } => {
             if matches!(op, ast::ArithOp::Add) {
                 let l_is_lit = matches!(left.node, ast::ExprKind::Literal(_));
                 let r_is_lit = matches!(right.node, ast::ExprKind::Literal(_));
                 if l_is_lit || r_is_lit {
-                    return ir::Val::Concat(
-                        Box::new(lower_expr(*left, ctx, sm, file)),
-                        Box::new(lower_expr(*right, ctx, sm, file)),
-                    );
+                    return Ok(ir::Val::Concat(
+                        Box::new(lower_expr(*left, ctx, sm, file)?),
+                        Box::new(lower_expr(*right, ctx, sm, file)?),
+                    ));
                 }
             }
 
@@ -867,11 +838,11 @@ fn lower_expr<'a>(e: ast::Expr, ctx: &mut LoweringContext<'a>, sm: &SourceMap, f
                 ast::ArithOp::Div => ir::ArithOp::Div,
                 ast::ArithOp::Mod => ir::ArithOp::Mod,
             };
-            ir::Val::Arith {
-                left: Box::new(lower_expr(*left, ctx, sm, file)),
+            Ok(ir::Val::Arith {
+                left: Box::new(lower_expr(*left, ctx, sm, file)?),
                 op,
-                right: Box::new(lower_expr(*right, ctx, sm, file)),
-            }
+                right: Box::new(lower_expr(*right, ctx, sm, file)?),
+            })
         }
         ast::ExprKind::Compare { left, op, right } => {
             // Check for boolean literal comparisons (eq/neq with true/false_
@@ -890,7 +861,7 @@ fn lower_expr<'a>(e: ast::Expr, ctx: &mut LoweringContext<'a>, sm: &SourceMap, f
                      (r_bool.unwrap(), *left)
                 };
 
-                let pred_val = lower_expr(pred_expr, ctx, sm, file);
+                let pred_val = lower_expr(pred_expr, ctx, sm, file)?;
                 
                 // Logic table:
                 // Eq:   true == pred -> pred
@@ -900,10 +871,10 @@ fn lower_expr<'a>(e: ast::Expr, ctx: &mut LoweringContext<'a>, sm: &SourceMap, f
                 
                 let is_eq = matches!(op, ast::CompareOp::Eq);
                 match (is_eq, lit_val) {
-                    (true, true) => pred_val,      // pred == true
-                    (true, false) => ir::Val::Not(Box::new(pred_val)), // pred == false
-                    (false, true) => ir::Val::Not(Box::new(pred_val)), // pred != true
-                    (false, false) => pred_val,    // pred != false
+                    (true, true) => Ok(pred_val),      // pred == true
+                    (true, false) => Ok(ir::Val::Not(Box::new(pred_val))), // pred == false
+                    (false, true) => Ok(ir::Val::Not(Box::new(pred_val))), // pred != true
+                    (false, false) => Ok(pred_val),    // pred != false
                 }
             } else {
                 let op = match op {
@@ -914,80 +885,80 @@ fn lower_expr<'a>(e: ast::Expr, ctx: &mut LoweringContext<'a>, sm: &SourceMap, f
                     ast::CompareOp::Gt => ir::CompareOp::Gt,
                     ast::CompareOp::Ge => ir::CompareOp::Ge,
                 };
-                ir::Val::Compare {
-                    left: Box::new(lower_expr(*left, ctx, sm, file)),
+                Ok(ir::Val::Compare {
+                    left: Box::new(lower_expr(*left, ctx, sm, file)?),
                     op,
-                    right: Box::new(lower_expr(*right, ctx, sm, file)),
-                }
+                    right: Box::new(lower_expr(*right, ctx, sm, file)?),
+                })
             }
         }
-        ast::ExprKind::And(left, right) => ir::Val::And(
-            Box::new(lower_expr(*left, ctx, sm, file)),
-            Box::new(lower_expr(*right, ctx, sm, file)),
-        ),
-        ast::ExprKind::Or(left, right) => ir::Val::Or(
-            Box::new(lower_expr(*left, ctx, sm, file)),
-            Box::new(lower_expr(*right, ctx, sm, file)),
-        ),
-        ast::ExprKind::Not(expr) => ir::Val::Not(Box::new(lower_expr(*expr, ctx, sm, file))),
-        ast::ExprKind::Exists(path) => ir::Val::Exists(Box::new(lower_expr(*path, ctx, sm, file))),
-        ast::ExprKind::IsDir(path) => ir::Val::IsDir(Box::new(lower_expr(*path, ctx, sm, file))),
-        ast::ExprKind::IsFile(path) => ir::Val::IsFile(Box::new(lower_expr(*path, ctx, sm, file))),
+        ast::ExprKind::And(left, right) => Ok(ir::Val::And(
+            Box::new(lower_expr(*left, ctx, sm, file)?),
+            Box::new(lower_expr(*right, ctx, sm, file)?),
+        )),
+        ast::ExprKind::Or(left, right) => Ok(ir::Val::Or(
+            Box::new(lower_expr(*left, ctx, sm, file)?),
+            Box::new(lower_expr(*right, ctx, sm, file)?),
+        )),
+        ast::ExprKind::Not(expr) => Ok(ir::Val::Not(Box::new(lower_expr(*expr, ctx, sm, file)?))),
+        ast::ExprKind::Exists(path) => Ok(ir::Val::Exists(Box::new(lower_expr(*path, ctx, sm, file)?))),
+        ast::ExprKind::IsDir(path) => Ok(ir::Val::IsDir(Box::new(lower_expr(*path, ctx, sm, file)?))),
+        ast::ExprKind::IsFile(path) => Ok(ir::Val::IsFile(Box::new(lower_expr(*path, ctx, sm, file)?))),
         ast::ExprKind::IsSymlink(path) => {
-            ir::Val::IsSymlink(Box::new(lower_expr(*path, ctx, sm, file)))
+            Ok(ir::Val::IsSymlink(Box::new(lower_expr(*path, ctx, sm, file)?)))
         }
-        ast::ExprKind::IsExec(path) => ir::Val::IsExec(Box::new(lower_expr(*path, ctx, sm, file))),
+        ast::ExprKind::IsExec(path) => Ok(ir::Val::IsExec(Box::new(lower_expr(*path, ctx, sm, file)?))),
         ast::ExprKind::IsReadable(path) => {
-            ir::Val::IsReadable(Box::new(lower_expr(*path, ctx, sm, file)))
+            Ok(ir::Val::IsReadable(Box::new(lower_expr(*path, ctx, sm, file)?)))
         }
         ast::ExprKind::IsWritable(path) => {
-            ir::Val::IsWritable(Box::new(lower_expr(*path, ctx, sm, file)))
+            Ok(ir::Val::IsWritable(Box::new(lower_expr(*path, ctx, sm, file)?)))
         }
         ast::ExprKind::IsNonEmpty(path) => {
-            ir::Val::IsNonEmpty(Box::new(lower_expr(*path, ctx, sm, file)))
+            Ok(ir::Val::IsNonEmpty(Box::new(lower_expr(*path, ctx, sm, file)?)))
         }
         ast::ExprKind::BoolStr(inner) => {
-            ir::Val::BoolStr(Box::new(lower_expr(*inner, ctx, sm, file)))
+            Ok(ir::Val::BoolStr(Box::new(lower_expr(*inner, ctx, sm, file)?)))
         }
-        ast::ExprKind::Len(expr) => ir::Val::Len(Box::new(lower_expr(*expr, ctx, sm, file))),
-        ast::ExprKind::Arg(n) => ir::Val::Arg(n),
-        ast::ExprKind::Index { list, index } => ir::Val::Index {
-            list: Box::new(lower_expr(*list, ctx, sm, file)),
-            index: Box::new(lower_expr(*index, ctx, sm, file)),
-        },
+        ast::ExprKind::Len(expr) => Ok(ir::Val::Len(Box::new(lower_expr(*expr, ctx, sm, file)?))),
+        ast::ExprKind::Arg(n) => Ok(ir::Val::Arg(n)),
+        ast::ExprKind::Index { list, index } => Ok(ir::Val::Index {
+            list: Box::new(lower_expr(*list, ctx, sm, file)?),
+            index: Box::new(lower_expr(*index, ctx, sm, file)?),
+        }),
         ast::ExprKind::Field { base, name } => {
-            let b = lower_expr(*base, ctx, sm, file);
+            let b = lower_expr(*base, ctx, sm, file)?;
 
             match name.as_str() {
-                "flags" => ir::Val::ArgsFlags(Box::new(b)),
-                "positionals" => ir::Val::ArgsPositionals(Box::new(b)),
+                "flags" => Ok(ir::Val::ArgsFlags(Box::new(b))),
+                "positionals" => Ok(ir::Val::ArgsPositionals(Box::new(b))),
                 "status" | "stdout" | "stderr" => {
                     if let ir::Val::Var(vname) = &b {
                         if ctx.run_results.contains(vname) {
-                            ir::Val::Var(format!("{}__{}", vname, name))
+                            Ok(ir::Val::Var(format!("{}__{}", vname, name)))
                         } else {
-                            panic!("{}", sm.format_diagnostic(file, opts.diag_base_dir.as_deref(), format!(".{} is only valid on try_run() results (bind via let)", name).as_str(), e.span));
+                            Err(CompileError::new(sm.format_diagnostic(file, opts.diag_base_dir.as_deref(), format!(".{} is only valid on try_run() results (bind via let)", name).as_str(), e.span)))
                         }
                     } else {
-                        panic!("{}", sm.format_diagnostic(file, opts.diag_base_dir.as_deref(), format!("Field access '{}' only supported on variables (e.g. r.status)", name).as_str(), e.span));
+                        Err(CompileError::new(sm.format_diagnostic(file, opts.diag_base_dir.as_deref(), format!("Field access '{}' only supported on variables (e.g. r.status)", name).as_str(), e.span)))
                     }
                 }
-                _ => panic!("{}", sm.format_diagnostic(file, opts.diag_base_dir.as_deref(), format!("Unknown field '{}'. Supported: status, stdout, stderr, flags, positionals.", name).as_str(), e.span)),
+                _ => Err(CompileError::new(sm.format_diagnostic(file, opts.diag_base_dir.as_deref(), format!("Unknown field '{}'. Supported: status, stdout, stderr, flags, positionals.", name).as_str(), e.span))),
             }
         }
-        ast::ExprKind::Join { list, sep } => ir::Val::Join {
-            list: Box::new(lower_expr(*list, ctx, sm, file)),
-            sep: Box::new(lower_expr(*sep, ctx, sm, file)),
-        },
-        ast::ExprKind::Count(inner) => ir::Val::Count(Box::new(lower_expr(*inner, ctx, sm, file))),
-        ast::ExprKind::Bool(b) => ir::Val::Bool(b),
-        ast::ExprKind::Number(n) => ir::Val::Number(n),
+        ast::ExprKind::Join { list, sep } => Ok(ir::Val::Join {
+            list: Box::new(lower_expr(*list, ctx, sm, file)?),
+            sep: Box::new(lower_expr(*sep, ctx, sm, file)?),
+        }),
+        ast::ExprKind::Count(inner) => Ok(ir::Val::Count(Box::new(lower_expr(*inner, ctx, sm, file)?))),
+        ast::ExprKind::Bool(b) => Ok(ir::Val::Bool(b)),
+        ast::ExprKind::Number(n) => Ok(ir::Val::Number(n)),
         ast::ExprKind::Command(args) => {
             let lowered_args = args
                 .into_iter()
                 .map(|a| lower_expr(a, ctx, sm, file))
-                .collect();
-            ir::Val::Command(lowered_args)
+                .collect::<Result<Vec<_>, _>>()?;
+            Ok(ir::Val::Command(lowered_args))
         }
         ast::ExprKind::CommandPipe(segments) => {
             let lowered_segments = segments
@@ -995,247 +966,203 @@ fn lower_expr<'a>(e: ast::Expr, ctx: &mut LoweringContext<'a>, sm: &SourceMap, f
                 .map(|seg| {
                     seg.into_iter()
                         .map(|a| lower_expr(a, ctx, sm, file))
-                        .collect()
+                        .collect::<Result<Vec<_>, _>>()
                 })
-                .collect();
-            ir::Val::CommandPipe(lowered_segments)
+                .collect::<Result<Vec<_>, _>>()?;
+            Ok(ir::Val::CommandPipe(lowered_segments))
         }
         ast::ExprKind::List(exprs) => {
             let lowered_exprs = exprs
                 .into_iter()
                 .map(|e| lower_expr(e, ctx, sm, file))
-                .collect();
-            ir::Val::List(lowered_exprs)
+                .collect::<Result<Vec<_>, _>>()?;
+            Ok(ir::Val::List(lowered_exprs))
         }
-        ast::ExprKind::Args => ir::Val::Args,
-        ast::ExprKind::Status => ir::Val::Status,
-        ast::ExprKind::Pid => ir::Val::Pid,
-        ast::ExprKind::Env(inner) => ir::Val::Env(Box::new(lower_expr(*inner, ctx, sm, file))),
-        ast::ExprKind::Uid => ir::Val::Uid,
-        ast::ExprKind::Ppid => ir::Val::Ppid,
-        ast::ExprKind::Pwd => ir::Val::Pwd,
-        ast::ExprKind::SelfPid => ir::Val::SelfPid,
-        ast::ExprKind::Argv0 => ir::Val::Argv0,
-        ast::ExprKind::Argc => ir::Val::Argc,
-        ast::ExprKind::EnvDot(name) => ir::Val::EnvDot(name),
-        ast::ExprKind::Input(e) => ir::Val::Input(Box::new(lower_expr(*e, ctx, sm, file))),
-        ast::ExprKind::Confirm(e) => ir::Val::Confirm(Box::new(lower_expr(*e, ctx, sm, file))),
+        ast::ExprKind::Args => Ok(ir::Val::Args),
+        ast::ExprKind::Status => Ok(ir::Val::Status),
+        ast::ExprKind::Pid => Ok(ir::Val::Pid),
+        ast::ExprKind::Env(inner) => Ok(ir::Val::Env(Box::new(lower_expr(*inner, ctx, sm, file)?))),
+        ast::ExprKind::Uid => Ok(ir::Val::Uid),
+        ast::ExprKind::Ppid => Ok(ir::Val::Ppid),
+        ast::ExprKind::Pwd => Ok(ir::Val::Pwd),
+        ast::ExprKind::SelfPid => Ok(ir::Val::SelfPid),
+        ast::ExprKind::Argv0 => Ok(ir::Val::Argv0),
+        ast::ExprKind::Argc => Ok(ir::Val::Argc),
+        ast::ExprKind::EnvDot(name) => Ok(ir::Val::EnvDot(name)),
+        ast::ExprKind::Input(e) => Ok(ir::Val::Input(Box::new(lower_expr(*e, ctx, sm, file)?))),
+        ast::ExprKind::Confirm(e) => Ok(ir::Val::Confirm(Box::new(lower_expr(*e, ctx, sm, file)?))),
         ast::ExprKind::Call { name, args } => {
             if name == "matches" {
                 if args.len() != 2 {
-                    panic!(
-                        "{}",
-                        sm.format_diagnostic(
-                            file,
-                            opts.diag_base_dir.as_deref(),
-                            "matches() requires exactly 2 arguments (text, regex)",
-                            e.span
-                        )
-                    );
+                    return Err(CompileError::new(sm.format_diagnostic(
+                        file,
+                        opts.diag_base_dir.as_deref(),
+                        "matches() requires exactly 2 arguments (text, regex)",
+                        e.span,
+                    )));
                 }
                 let mut iter = args.into_iter();
-                let text = Box::new(lower_expr(iter.next().unwrap(), ctx, sm, file));
-                let regex = Box::new(lower_expr(iter.next().unwrap(), ctx, sm, file));
-                ir::Val::Matches(text, regex)
+                let text = Box::new(lower_expr(iter.next().unwrap(), ctx, sm, file)?);
+                let regex = Box::new(lower_expr(iter.next().unwrap(), ctx, sm, file)?);
+                Ok(ir::Val::Matches(text, regex))
             } else if name == "parse_args" {
                 if !args.is_empty() {
-                    panic!(
-                        "{}",
-                        sm.format_diagnostic(file, opts.diag_base_dir.as_deref(), "parse_args() takes no arguments", e.span)
-                    );
+                    return Err(CompileError::new(sm.format_diagnostic(file, opts.diag_base_dir.as_deref(), "parse_args() takes no arguments", e.span)));
                 }
-                ir::Val::ParseArgs
+                Ok(ir::Val::ParseArgs)
             } else if name == "load_envfile" {
                 if args.len() != 1 {
-                    panic!(
-                        "{}",
-                        sm.format_diagnostic(
-                            file,
-                            opts.diag_base_dir.as_deref(),
-                            "load_envfile() requires exactly 1 argument (path)",
-                            e.span
-                        )
-                    );
+                    return Err(CompileError::new(sm.format_diagnostic(
+                        file,
+                        opts.diag_base_dir.as_deref(),
+                        "load_envfile() requires exactly 1 argument (path)",
+                        e.span,
+                    )));
                 }
-                let path = lower_expr(args.into_iter().next().unwrap(), ctx, sm, file);
-                ir::Val::LoadEnvfile(Box::new(path))
+                let path = lower_expr(args.into_iter().next().unwrap(), ctx, sm, file)?;
+                Ok(ir::Val::LoadEnvfile(Box::new(path)))
             } else if name == "json_kv" {
                 if args.len() != 1 {
-                    panic!(
-                        "{}",
-                        sm.format_diagnostic(
-                            file,
-                            opts.diag_base_dir.as_deref(),
-                            "json_kv() requires exactly 1 argument (pairs_blob)",
-                            e.span
-                        )
-                    );
+                    return Err(CompileError::new(sm.format_diagnostic(
+                        file,
+                        opts.diag_base_dir.as_deref(),
+                        "json_kv() requires exactly 1 argument (pairs_blob)",
+                        e.span,
+                    )));
                 }
-                let blob = lower_expr(args.into_iter().next().unwrap(), ctx, sm, file);
-                ir::Val::JsonKv(Box::new(blob))
+                let blob = lower_expr(args.into_iter().next().unwrap(), ctx, sm, file)?;
+                Ok(ir::Val::JsonKv(Box::new(blob)))
             } else if name == "which" {
                 if args.len() != 1 {
-                    panic!(
-                        "{}",
-                        sm.format_diagnostic(
-                            file,
-                            opts.diag_base_dir.as_deref(),
-                            "which() requires exactly 1 argument (cmd)",
-                            e.span
-                        )
-                    );
+                    return Err(CompileError::new(sm.format_diagnostic(
+                        file,
+                        opts.diag_base_dir.as_deref(),
+                        "which() requires exactly 1 argument (cmd)",
+                        e.span,
+                    )));
                 }
-                let arg = lower_expr(args.into_iter().next().unwrap(), ctx, sm, file);
-                ir::Val::Which(Box::new(arg))
+                let arg = lower_expr(args.into_iter().next().unwrap(), ctx, sm, file)?;
+                Ok(ir::Val::Which(Box::new(arg)))
             } else if name == "try_run" {
-                panic!(
-                    "{}",
-                    sm.format_diagnostic(
-                        file,
-                        opts.diag_base_dir.as_deref(),
-                        "try_run() must be bound via let (e.g., let r = try_run(...))",
-                        e.span
-                    )
-                );
+                return Err(CompileError::new(sm.format_diagnostic(
+                    file,
+                    opts.diag_base_dir.as_deref(),
+                    "try_run() must be bound via let (e.g., let r = try_run(...))",
+                    e.span,
+                )));
             } else if name == "require" {
-                panic!(
-                    "{}",
-                    sm.format_diagnostic(
-                        file,
-                        opts.diag_base_dir.as_deref(),
-                        "require() is a statement, not an expression",
-                        e.span
-                    )
-                );
+                return Err(CompileError::new(sm.format_diagnostic(
+                    file,
+                    opts.diag_base_dir.as_deref(),
+                    "require() is a statement; use it as a standalone call",
+                    e.span,
+                )));
             } else if name == "read_file" {
                 if args.len() != 1 {
-                    panic!(
-                        "{}",
-                        sm.format_diagnostic(
-                            file,
-                            opts.diag_base_dir.as_deref(),
-                            "read_file() requires exactly 1 argument (path)",
-                            e.span
-                        )
-                    );
+                    return Err(CompileError::new(sm.format_diagnostic(
+                        file,
+                        opts.diag_base_dir.as_deref(),
+                        "read_file() requires exactly 1 argument (path)",
+                        e.span,
+                    )));
                 }
-                let arg = lower_expr(args.into_iter().next().unwrap(), ctx, sm, file);
-                ir::Val::ReadFile(Box::new(arg))
+                let arg = lower_expr(args.into_iter().next().unwrap(), ctx, sm, file)?;
+                Ok(ir::Val::ReadFile(Box::new(arg)))
             } else if name == "write_file" {
-                panic!(
-                    "{}",
-                    sm.format_diagnostic(
-                        file,
-                        opts.diag_base_dir.as_deref(),
-                        "write_file() is a statement, not an expression",
-                        e.span
-                    )
-                );
+                return Err(CompileError::new(sm.format_diagnostic(
+                    file,
+                    opts.diag_base_dir.as_deref(),
+                    "write_file() is a statement, not an expression",
+                    e.span,
+                )));
             } else if name == "append_file" {
-                panic!(
-                    "{}",
-                    sm.format_diagnostic(
-                        file,
-                        opts.diag_base_dir.as_deref(),
-                        "append_file() is a statement, not an expression",
-                        e.span
-                    )
-                );
+                return Err(CompileError::new(sm.format_diagnostic(
+                    file,
+                    opts.diag_base_dir.as_deref(),
+                    "append_file() is a statement, not an expression",
+                    e.span,
+                )));
             } else if matches!(name.as_str(), "log_info" | "log_warn" | "log_error") {
-                panic!(
-                    "{}",
-                    sm.format_diagnostic(
-                        file,
-                        opts.diag_base_dir.as_deref(),
-                        format!("{}() is a statement, not an expression", name).as_str(),
-                        e.span
-                    )
-                );
+                return Err(CompileError::new(sm.format_diagnostic(
+                    file,
+                    opts.diag_base_dir.as_deref(),
+                    format!("{}() is a statement, not an expression", name).as_str(),
+                    e.span,
+                )));
             } else if name == "home" {
                 if !args.is_empty() {
-                    panic!(
-                        "{}",
-                        sm.format_diagnostic(file, opts.diag_base_dir.as_deref(), "home() takes no arguments", e.span)
-                    );
+                    return Err(CompileError::new(sm.format_diagnostic(file, opts.diag_base_dir.as_deref(), "home() takes no arguments", e.span)));
                 }
-                ir::Val::Home
+                Ok(ir::Val::Home)
             } else if name == "path_join" {
                 if args.is_empty() {
-                    panic!(
-                        "{}",
-                            sm.format_diagnostic(
-                                file,
-                                opts.diag_base_dir.as_deref(),
-                                "path_join() requires at least 1 argument",
-                                e.span
-                            )                  );
+                    return Err(CompileError::new(sm.format_diagnostic(
+                        file,
+                        opts.diag_base_dir.as_deref(),
+                        "path_join() requires at least 1 argument",
+                        e.span,
+                    )));
                 }
                 let lowered_args = args
                     .into_iter()
                     .map(|a| lower_expr(a, ctx, sm, file))
-                    .collect();
-                ir::Val::PathJoin(lowered_args)
+                    .collect::<Result<Vec<_>, _>>()?;
+                Ok(ir::Val::PathJoin(lowered_args))
             } else if name == "lines" {
                 if args.len() != 1 {
-                    panic!(
-                        "{}",
-                        sm.format_diagnostic(
-                            file,
-                            opts.diag_base_dir.as_deref(),
-                            "lines() requires exactly 1 argument (text)",
-                            e.span
-                        )
-                    );
-                }
-                let arg = lower_expr(args.into_iter().next().unwrap(), ctx, sm, file);
-                ir::Val::Lines(Box::new(arg))
-            } else if name == "split" {
-                if args.len() != 2 {
-                    panic!(
-                        "{}",
-                        sm.format_diagnostic(
-                            file,
-                            opts.diag_base_dir.as_deref(),
-                            "split() requires exactly 2 arguments (text, delimiter)",
-                            e.span
-                        )
-                    );
-                }
-                let mut iter = args.into_iter();
-                let s = lower_expr(iter.next().unwrap(), ctx, sm, file);
-                let delim = lower_expr(iter.next().unwrap(), ctx, sm, file);
-                ir::Val::Split {
-                    s: Box::new(s),
-                    delim: Box::new(delim),
-                }
-            } else if name == "save_envfile" {
-                panic!(
-                    "{}",
-                    sm.format_diagnostic(
+                    return Err(CompileError::new(sm.format_diagnostic(
                         file,
                         opts.diag_base_dir.as_deref(),
-                        "save_envfile() is a statement; use it as a standalone call",
-                        e.span
-                    )
-                );
+                        "lines() requires exactly 1 argument (text)",
+                        e.span,
+                    )));
+                }
+                let arg = lower_expr(args.into_iter().next().unwrap(), ctx, sm, file)?;
+                Ok(ir::Val::Lines(Box::new(arg)))
+            } else if name == "split" {
+                if args.len() != 2 {
+                    return Err(CompileError::new(sm.format_diagnostic(
+                        file,
+                        opts.diag_base_dir.as_deref(),
+                        "split() requires exactly 2 arguments (text, delimiter)",
+                        e.span,
+                    )));
+                }
+                let mut iter = args.into_iter();
+                let s = lower_expr(iter.next().unwrap(), ctx, sm, file)?;
+                let delim = lower_expr(iter.next().unwrap(), ctx, sm, file)?;
+                Ok(ir::Val::Split {
+                    s: Box::new(s),
+                    delim: Box::new(delim),
+                })
+            } else if name == "save_envfile" {
+                return Err(CompileError::new(sm.format_diagnostic(
+                    file,
+                    opts.diag_base_dir.as_deref(),
+                    "save_envfile() is a statement; use it as a standalone call",
+                    e.span,
+                )));
             } else {
                 let lowered_args = args
                     .into_iter()
                     .map(|a| lower_expr(a, ctx, sm, file))
-                    .collect();
-                ir::Val::Call {
+                    .collect::<Result<Vec<_>, _>>()?;
+                Ok(ir::Val::Call {
                     name,
                     args: lowered_args,
-                }
+                })
             }
         }
         ast::ExprKind::MapLiteral(entries) => {
             let lowered_entries = entries
                 .into_iter()
-                .map(|(k, v)| (k, lower_expr(v, ctx, sm, file)))
-                .collect();
-            ir::Val::MapLiteral(lowered_entries)
+                .map(|(k, v)| {
+                     let v = lower_expr(v, ctx, sm, file)?;
+                     Ok((k, v))
+                })
+                .collect::<Result<Vec<_>, _>>()?;
+            Ok(ir::Val::MapLiteral(lowered_entries))
         }
-        ast::ExprKind::MapIndex { map, key } => ir::Val::MapIndex { map, key },
+        ast::ExprKind::MapIndex { map, key } => Ok(ir::Val::MapIndex { map, key }),
     }
 }

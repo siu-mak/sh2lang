@@ -1,6 +1,7 @@
+#!/bin/sh
 main() {
   printf '%s\n' 'before'
-  return
+  return 0
   printf '%s\n' 'after'
 }
 __sh2_status=0

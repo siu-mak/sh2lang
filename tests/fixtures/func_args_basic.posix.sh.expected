@@ -1,10 +1,12 @@
+#!/bin/sh
 greet() {
   name="${1}"
   printf '%s\n' 'hi '"$1"
 }
 
 main() {
-  greet 'Herbert'; __sh2_status=$?; (exit $__sh2_status)
+  __sh2_loc="tests/fixtures/func_args_basic.sh2:6:3"
+  'greet' 'Herbert'; __sh2_status=$?; (exit $__sh2_status)
 }
 __sh2_status=0
 main "$@"

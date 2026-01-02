@@ -237,7 +237,7 @@ fn compile(config: Config) -> Result<(), CliError> {
             include_diagnostics: config.include_diagnostics,
             diag_base_dir: diag_base_dir.clone(),
         },
-    );
+    ).map_err(|e| CliError::compile(e.to_string()))?;
 
     if let Mode::EmitIr = config.mode {
         let mut ir_stripped = ir;

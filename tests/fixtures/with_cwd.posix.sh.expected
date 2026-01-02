@@ -1,8 +1,9 @@
+#!/bin/sh
 main() {
   (
     cd '/tmp'
-    __sh2_loc="tests/fixtures/with_cwd.sh2:3"
-    'pwd'; __sh2_status=$?; if [ $__sh2_status -ne 0 ]; then printf 'Error in %s\n' "$__sh2_loc" >&2; exit $__sh2_status; fi
+    __sh2_loc="tests/fixtures/with_cwd.sh2:3:9"
+    'pwd'; __sh2_status=$?; (exit $__sh2_status)
   )
 }
 __sh2_status=0

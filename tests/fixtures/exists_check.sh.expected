@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 main() {
   if [ -e '/tmp' ]; then
     printf '%s\n' 'yes'

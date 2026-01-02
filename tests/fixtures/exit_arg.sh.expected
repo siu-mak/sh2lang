@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 main() {
   local x="${1}"
   exit "$1"

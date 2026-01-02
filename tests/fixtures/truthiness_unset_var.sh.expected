@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 main() {
   if [ -n "$missing" ]; then
     printf '%s\n' 'bad'

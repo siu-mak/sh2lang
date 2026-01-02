@@ -1,0 +1,11 @@
+#!/bin/sh
+main() {
+  __sh2_loc="tests/fixtures/fmt_capture_pipe.sh2:2:5"
+  x="$( "$echo" 'hi' )"
+  __sh2_status=$?; (exit $__sh2_status)
+  __sh2_loc="tests/fixtures/fmt_capture_pipe.sh2:3:5"
+  y="$( "$echo" 'hi' | "$grep" 'h' )"
+  __sh2_status=$?; (exit $__sh2_status)
+}
+__sh2_status=0
+main "$@"

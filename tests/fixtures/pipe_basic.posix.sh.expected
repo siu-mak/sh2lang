@@ -1,5 +1,6 @@
+#!/bin/sh
 main() {
-  __sh2_loc="tests/fixtures/pipe_basic.sh2:2"
+  __sh2_loc="tests/fixtures/pipe_basic.sh2:2:3"
   {
     case $- in *e*) __sh2_e=1;; *) __sh2_e=0;; esac; set +e;
     __sh2_saved_traps=$(trap);
@@ -25,7 +26,7 @@ main() {
     rm -f "${__sh2_base}_"*;
     if [ -n "$__sh2_saved_traps" ]; then eval "$__sh2_saved_traps"; fi;
     if [ "$__sh2_e" = 1 ]; then set -e; fi;
-    if [ "$__sh2_status" -ne 0 ]; then printf 'Error in %s\n' "$__sh2_loc" >&2; exit $__sh2_status; fi
+    (exit $__sh2_status)
   }
 }
 __sh2_status=0

@@ -1,7 +1,8 @@
+#!/bin/sh
 main() {
   {
-    __sh2_loc="tests/fixtures/with_redirect_stdout.sh2:3"
-    'echo' 'hi'; __sh2_status=$?; if [ $__sh2_status -ne 0 ]; then printf 'Error in %s\n' "$__sh2_loc" >&2; exit $__sh2_status; fi
+    __sh2_loc="tests/fixtures/with_redirect_stdout.sh2:3:5"
+    'echo' 'hi'; __sh2_status=$?; (exit $__sh2_status)
   } > 'out.log'
 }
 __sh2_status=0

@@ -1,6 +1,8 @@
+#!/bin/sh
 main() {
-  __sh2_loc="tests/fixtures/truthiness_empty_var.sh2:2"
+  __sh2_loc="tests/fixtures/truthiness_empty_var.sh2:2:3"
   x=''
+  __sh2_status=$?; (exit $__sh2_status)
   if [ -n "$x" ]; then
     printf '%s\n' 'bad'
   else

@@ -1,8 +1,11 @@
-__sh2_read_file() { cat "$1" 2>/dev/null || true; }
+#!/bin/sh
+__sh2_read_file() { cat "$1"; }
 __sh2_write_file() { if [ "$3" = "true" ]; then printf '%s' "$2" >> "$1"; else printf '%s' "$2" > "$1"; fi; }
 main() {
-  __sh2_write_file 'tmp_append.txt' 'first' 'false'
-  __sh2_write_file 'tmp_append.txt' 'second' 'true'
+  printf '%s' 'first' > 'tmp_append.txt'
+  __sh2_status=$?; (exit $__sh2_status)
+  printf '%s' 'second' >> 'tmp_append.txt'
+  __sh2_status=$?; (exit $__sh2_status)
   printf '%s\n' "$( __sh2_read_file 'tmp_append.txt' )"
 }
 __sh2_status=0

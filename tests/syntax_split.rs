@@ -46,6 +46,16 @@ fn compile_split_basic_posix() {
        .success()
        .stdout(predicate::str::contains("__sh2_split() {"))
        .stdout(predicate::str::contains("awk -v s=\"$1\"")) // POSIX simple awk
-       .stdout(predicate::str::contains("xs=\"$( __sh2_split"))
-       .stdout(predicate::str::contains("for x in $xs; do")); // Unquoted iteration
+       .stdout(predicate::str::contains("xs=\"$(__sh2_tmpfile)\""))
+       .stdout(predicate::str::contains("__sh2_split \"$s\" ',' > \"$xs\""))
+       .stdout(predicate::str::contains("while IFS= read -r x || [ -n \"$x\" ]; do")); // File-backed iteration
+}
+
+#[test]
+fn exec_split_empty_fields_posix() {
+    let src = std::fs::read_to_string("tests/fixtures/split_empty_fields_posix.sh2").unwrap();
+    let sh_code = common::compile_to_shell(&src, common::TargetShell::Posix);
+    let (stdout, _, _) = common::run_shell_script(&sh_code, "sh", &[], &[], None, None);
+    let expected = std::fs::read_to_string("tests/fixtures/split_empty_fields_posix.stdout").unwrap();
+    assert_eq!(stdout, expected);
 }

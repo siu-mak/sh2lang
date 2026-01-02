@@ -36,7 +36,8 @@ main() {
   for item in "${xs[@]}"; do
     printf '%s\n' "$item"
   done
-  test 'x' 'y' 'z'; __sh2_status=$?; (exit $__sh2_status)
+  __sh2_loc="tests/fixtures/list_args_utils.sh2:35:3"
+  'test' 'x' 'y' 'z'; __sh2_status=$?; (exit $__sh2_status)
 }
 __sh2_status=0
 main "$@"

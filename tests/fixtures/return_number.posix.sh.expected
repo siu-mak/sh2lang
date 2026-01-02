@@ -1,5 +1,7 @@
+#!/bin/sh
 main() {
-  return "7"
+  printf '%s' "7"
+  return 0
 }
 __sh2_status=0
 main "$@"

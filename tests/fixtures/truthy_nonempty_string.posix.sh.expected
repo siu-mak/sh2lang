@@ -1,3 +1,4 @@
+#!/bin/sh
 main() {
   if [ -n 'x' ]; then
     printf '%s\n' 'T'

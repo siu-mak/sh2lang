@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 main() {
   if ( while true; do printf '%s' 'Continue? ' >&2; if ! IFS= read -r __sh2_ans; then exit 1; fi; case "${__sh2_ans,,}" in y|yes|true|1) exit 0 ;; n|no|false|0|"") exit 1 ;; esac; done ); then
     printf '%s\n' 'YES'

@@ -1,0 +1,29 @@
+#!/bin/sh
+main() {
+  __sh2_loc="tests/fixtures/fmt_basic.sh2:2:1"
+  x="1"
+  __sh2_status=$?; (exit $__sh2_status)
+  if [ "$x" = "1" ]; then
+    printf '%s\n' 'one'
+  else
+    printf '%s\n' 'not one'
+  fi
+  while [ "$x" -lt "10" ]; do
+    __sh2_loc="tests/fixtures/fmt_basic.sh2:5:12"
+    x="$(( ( x + 1 ) ))"
+    __sh2_status=$?; (exit $__sh2_status)
+  done
+  case $- in *e*) __sh2_e=1;; *) __sh2_e=0;; esac; set +e
+  if {
+    {
+      "$ls"; __sh2_status=$?; (exit $__sh2_status)
+    }
+  }; then
+    if [ "${__sh2_e:-0}" = 1 ]; then set -e; fi
+  else
+    if [ "${__sh2_e:-0}" = 1 ]; then set -e; fi
+    printf '%s\n' 'failed'
+  fi
+}
+__sh2_status=0
+main "$@"

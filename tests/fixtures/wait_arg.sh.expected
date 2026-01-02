@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 main() {
   local x="${1}"
   wait "$1"; __sh2_status=$?; (exit $__sh2_status)

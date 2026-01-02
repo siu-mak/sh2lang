@@ -1,7 +1,9 @@
+#!/bin/sh
 main() {
-  __sh2_loc="tests/fixtures/multiline_mixed_quotes.sh2:2"
+  __sh2_loc="tests/fixtures/multiline_mixed_quotes.sh2:2:5"
   s='a'\''b"c\
 next'
+  __sh2_status=$?; (exit $__sh2_status)
   printf '%s\n' "$s"
 }
 __sh2_status=0

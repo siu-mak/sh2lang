@@ -1,0 +1,7 @@
+#!/bin/sh
+main() {
+  __sh2_loc="tests/fixtures/try_run_stmt_invalid.sh2:2:5"
+  'try_run' 'echo' 'fail'; __sh2_status=$?; (exit $__sh2_status)
+}
+__sh2_status=0
+main "$@"

@@ -1,3 +1,4 @@
+#!/bin/sh
 main() {
   if [ "1" = "2" ]; then
     printf '%s\n' 'no'

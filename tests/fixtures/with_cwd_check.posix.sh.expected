@@ -1,8 +1,10 @@
+#!/bin/sh
 main() {
   (
     cd '/tmp'
-    __sh2_loc="tests/fixtures/with_cwd_check.sh2:3"
+    __sh2_loc="tests/fixtures/with_cwd_check.sh2:3:5"
     p="$( 'pwd' )"
+    __sh2_status=$?; (exit $__sh2_status)
     if [ "$p" = '/tmp' ]; then
       printf '%s\n' 'yes'
     fi

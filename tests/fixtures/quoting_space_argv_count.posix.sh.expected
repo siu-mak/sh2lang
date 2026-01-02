@@ -1,6 +1,7 @@
+#!/bin/sh
 main() {
-  __sh2_loc="tests/fixtures/quoting_space_argv_count.sh2:2"
-  'sh' '-c' 'printf '\''%s\n'\'' "$#"' '_' 'a b'; __sh2_status=$?; if [ $__sh2_status -ne 0 ]; then printf 'Error in %s\n' "$__sh2_loc" >&2; exit $__sh2_status; fi
+  __sh2_loc="tests/fixtures/quoting_space_argv_count.sh2:2:3"
+  'sh' '-c' 'printf '\''%s\n'\'' "''$#"' '_' 'a b'; __sh2_status=$?; (exit $__sh2_status)
 }
 __sh2_status=0
 main "$@"

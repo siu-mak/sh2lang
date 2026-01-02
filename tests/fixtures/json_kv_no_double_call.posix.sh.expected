@@ -1,5 +1,7 @@
+#!/bin/sh
 main() {
-  echo 'DOUBLE'; __sh2_status=$?; (exit $__sh2_status)
+  __sh2_loc="tests/fixtures/json_kv_no_double_call.sh2:2:3"
+  'echo' 'DOUBLE'; __sh2_status=$?; (exit $__sh2_status)
 }
 __sh2_status=0
 main "$@"

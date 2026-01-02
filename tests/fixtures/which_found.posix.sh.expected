@@ -1,7 +1,9 @@
+#!/bin/sh
 __sh2_which() { command -v -- "$1" 2>/dev/null || true; }
 main() {
-  __sh2_loc="tests/fixtures/which_found.sh2:3"
+  __sh2_loc="tests/fixtures/which_found.sh2:3:5"
   p="$( __sh2_which 'sh' )"
+  __sh2_status=$?; (exit $__sh2_status)
   if [ "$p" != '' ]; then
     printf '%s\n' 'OK'
   else

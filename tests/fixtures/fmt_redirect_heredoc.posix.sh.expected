@@ -1,0 +1,12 @@
+#!/bin/sh
+main() {
+  {
+    __sh2_loc="tests/fixtures/fmt_redirect_heredoc.sh2:6:9"
+    "$cat"; __sh2_status=$?; (exit $__sh2_status)
+  } <<'__SH2_EOF__'
+line1
+line2
+__SH2_EOF__
+}
+__sh2_status=0
+main "$@"
