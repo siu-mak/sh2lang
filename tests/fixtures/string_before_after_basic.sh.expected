@@ -1,7 +1,17 @@
 #!/usr/bin/env bash
 __sh2_before() { awk -v s="$1" -v sep="$2" 'BEGIN { n=index(s, sep); if(n==0) printf "%s", s; else printf "%s", substr(s, 1, n-1) }'; }
 __sh2_after() { awk -v s="$1" -v sep="$2" 'BEGIN { n=index(s, sep); if(n==0) printf ""; else printf "%s", substr(s, n+length(sep)) }'; }
-__sh2_err_handler() { local s=$?; if [[ "${BASH_COMMAND}" == *"(exit "* ]]; then return $s; fi; printf "Error in %s\n" "${__sh2_loc:-unknown}" >&2; return $s; }
+__sh2_err_handler() {
+  local s=$?
+  local loc="${__sh2_loc:-}"
+  if [[ "${BASH_COMMAND}" == *"(exit "* ]]; then return $s; fi
+  if [[ -z "$loc" ]]; then return $s; fi
+  if [[ "$loc" == "${__sh2_last_err_loc:-}" && "$s" == "${__sh2_last_err_status:-}" ]]; then return $s; fi
+  __sh2_last_err_loc="$loc"
+  __sh2_last_err_status="$s"
+  printf "Error in %s\n" "$loc" >&2
+  return $s
+}
 set -o errtrace
 trap '__sh2_err_handler' ERR
 main() {

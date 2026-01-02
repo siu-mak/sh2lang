@@ -51,7 +51,17 @@ fn cli_target_default_is_bash() {
    
      let expected = r#"
 #!/usr/bin/env bash
-__sh2_err_handler() { local s=$?; if [[ "${BASH_COMMAND}" == *"(exit "* ]]; then return $s; fi; printf "Error in %s\n" "${__sh2_loc:-unknown}" >&2; return $s; }
+__sh2_err_handler() {
+  local s=$?
+  local loc="${__sh2_loc:-}"
+  if [[ "${BASH_COMMAND}" == *"(exit "* ]]; then return $s; fi
+  if [[ -z "$loc" ]]; then return $s; fi
+  if [[ "$loc" == "${__sh2_last_err_loc:-}" && "$s" == "${__sh2_last_err_status:-}" ]]; then return $s; fi
+  __sh2_last_err_loc="$loc"
+  __sh2_last_err_status="$s"
+  printf "Error in %s\n" "$loc" >&2
+  return $s
+}
 set -o errtrace
 trap '__sh2_err_handler' ERR
 main() {
@@ -75,7 +85,17 @@ main "$@"
 fn cli_target_explicit_bash() {
     let expected = r#"
 #!/usr/bin/env bash
-__sh2_err_handler() { local s=$?; if [[ "${BASH_COMMAND}" == *"(exit "* ]]; then return $s; fi; printf "Error in %s\n" "${__sh2_loc:-unknown}" >&2; return $s; }
+__sh2_err_handler() {
+  local s=$?
+  local loc="${__sh2_loc:-}"
+  if [[ "${BASH_COMMAND}" == *"(exit "* ]]; then return $s; fi
+  if [[ -z "$loc" ]]; then return $s; fi
+  if [[ "$loc" == "${__sh2_last_err_loc:-}" && "$s" == "${__sh2_last_err_status:-}" ]]; then return $s; fi
+  __sh2_last_err_loc="$loc"
+  __sh2_last_err_status="$s"
+  printf "Error in %s\n" "$loc" >&2
+  return $s
+}
 set -o errtrace
 trap '__sh2_err_handler' ERR
 main() {
@@ -99,7 +119,17 @@ main "$@"
 fn cli_target_explicit_bash_equal() {
     let expected = r#"
 #!/usr/bin/env bash
-__sh2_err_handler() { local s=$?; if [[ "${BASH_COMMAND}" == *"(exit "* ]]; then return $s; fi; printf "Error in %s\n" "${__sh2_loc:-unknown}" >&2; return $s; }
+__sh2_err_handler() {
+  local s=$?
+  local loc="${__sh2_loc:-}"
+  if [[ "${BASH_COMMAND}" == *"(exit "* ]]; then return $s; fi
+  if [[ -z "$loc" ]]; then return $s; fi
+  if [[ "$loc" == "${__sh2_last_err_loc:-}" && "$s" == "${__sh2_last_err_status:-}" ]]; then return $s; fi
+  __sh2_last_err_loc="$loc"
+  __sh2_last_err_status="$s"
+  printf "Error in %s\n" "$loc" >&2
+  return $s
+}
 set -o errtrace
 trap '__sh2_err_handler' ERR
 main() {

@@ -4,7 +4,7 @@ __sh2_write_file() { if [ "$3" = "true" ]; then printf '%s' "$2" >> "$1"; else p
 main() {
   printf '%s' 'hello' > 't_basic.txt'
   __sh2_status=$?; (exit $__sh2_status)
-  printf '%s\n' "$( __sh2_read_file 't_basic.txt' )"
+  printf '%s\n' "$( trap '' ERR; __sh2_read_file 't_basic.txt' )"
 }
 __sh2_status=0
 main "$@"

@@ -495,7 +495,15 @@ fn emit_val(v: &Val, target: TargetShell) -> Result<String, CompileError> {
         Val::Concat(l, r) => Ok(format!("{}{}", emit_val(l, target)?, emit_val(r, target)?)),
         Val::TryRun(_) => Err(CompileError::unsupported("try_run() must be bound via let (e.g., let r = try_run(...))", target)),
         Val::Which(arg) => Ok(format!("\"$( __sh2_which {} )\"", emit_word(arg, target)?)),
-        Val::ReadFile(arg) => Ok(format!("\"$( __sh2_read_file {} )\"", emit_word(arg, target)?)),
+        Val::ReadFile(arg) => {
+            let path = emit_word(arg, target)?;
+            match target {
+                TargetShell::Bash => Ok(format!("\"$( trap '' ERR; __sh2_read_file {} )\"", path)),
+                _ => Ok(format!("\"$( __sh2_read_file {} )\"", path)),
+            }
+        }
+
+
 
 
         Val::Home => Ok("\"$( __sh2_home )\"".to_string()),
@@ -2114,7 +2122,19 @@ fn emit_prelude(target: TargetShell, usage: &PreludeUsage) -> String {
     match target {
         TargetShell::Bash => {
             if usage.loc {
-                s.push_str("__sh2_err_handler() { local s=$?; if [[ \"${BASH_COMMAND}\" == *\"(exit \"* ]]; then return $s; fi; printf \"Error in %s\\n\" \"${__sh2_loc:-unknown}\" >&2; return $s; }\n");
+                s.push_str(r#"__sh2_err_handler() {
+  local s=$?
+  local loc="${__sh2_loc:-}"
+  if [[ "${BASH_COMMAND}" == *"(exit "* ]]; then return $s; fi
+  if [[ -z "$loc" ]]; then return $s; fi
+  if [[ "$loc" == "${__sh2_last_err_loc:-}" && "$s" == "${__sh2_last_err_status:-}" ]]; then return $s; fi
+  __sh2_last_err_loc="$loc"
+  __sh2_last_err_status="$s"
+  printf "Error in %s\n" "$loc" >&2
+  return $s
+}
+"#);
+
                 s.push_str("set -o errtrace\n");
                 s.push_str("trap '__sh2_err_handler' ERR\n");
             }
