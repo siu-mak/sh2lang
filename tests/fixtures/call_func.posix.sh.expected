@@ -1,12 +1,15 @@
 #!/bin/sh
+__sh2_check() { s="$1"; loc="$2"; if [ "$s" -ne 0 ]; then if [ -n "$loc" ]; then printf 'Error in %s\n' "$loc" >&2; fi; exit "$s"; fi; }
 show() {
   echo arg=$1
-  __sh2_status=$?; (exit $__sh2_status)
+  __sh2_status=$?
+  __sh2_check "$__sh2_status" "${__sh2_loc:-}"
 }
 
 main() {
   __sh2_loc="tests/fixtures/call_func.sh2:6:3"
-  'show' 'hi'; __sh2_status=$?; (exit $__sh2_status)
+  'show' 'hi'; __sh2_status=$?
+  __sh2_check "$__sh2_status" "${__sh2_loc:-}"
 }
 __sh2_status=0
 main "$@"

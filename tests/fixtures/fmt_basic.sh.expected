@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+__sh2_check() { local s="$1"; local loc="$2"; if (( s != 0 )); then if [[ -n "$loc" ]]; then printf 'Error in %s\n' "$loc" >&2; fi; exit "$s"; fi; }
 __sh2_err_handler() {
   local s=$?
   local loc="${__sh2_loc:-}"
@@ -16,7 +17,8 @@ main() {
   local __sh2_loc=""
   __sh2_loc="tests/fixtures/fmt_basic.sh2:2:1"
   x="1"
-  __sh2_status=$?; (exit $__sh2_status)
+  __sh2_status=$?
+  __sh2_check "$__sh2_status" "${__sh2_loc:-}"
   if [ "$x" = "1" ]; then
     printf '%s\n' 'one'
   else
@@ -25,13 +27,15 @@ main() {
   while [ "$x" -lt "10" ]; do
     __sh2_loc="tests/fixtures/fmt_basic.sh2:5:12"
     x="$(( ( x + 1 ) ))"
-    __sh2_status=$?; (exit $__sh2_status)
+    __sh2_status=$?
+    __sh2_check "$__sh2_status" "${__sh2_loc:-}"
   done
   local __sh2_e=0; case $- in *e*) __sh2_e=1;; *) __sh2_e=0;; esac; set +e
   local __sh2_err=$(trap -p ERR || true); trap - ERR
   if {
     {
-      "$ls"; __sh2_status=$?; (exit $__sh2_status)
+      "$ls"; __sh2_status=$?
+      (exit $__sh2_status)
     }
   }; then
     if [ -n "$__sh2_err" ]; then eval "$__sh2_err"; fi; if [ "$__sh2_e" = 1 ]; then set -e; fi

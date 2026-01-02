@@ -1,8 +1,10 @@
 #!/bin/sh
+__sh2_check() { s="$1"; loc="$2"; if [ "$s" -ne 0 ]; then if [ -n "$loc" ]; then printf 'Error in %s\n' "$loc" >&2; fi; exit "$s"; fi; }
 main() {
   {
     __sh2_loc="tests/fixtures/heredoc_literal_no_expansion.sh2:5:9"
-    'cat'; __sh2_status=$?; (exit $__sh2_status)
+    'cat'; __sh2_status=$?
+    __sh2_check "$__sh2_status" "${__sh2_loc:-}"
   } <<'__SH2_EOF__'
 a $HOME \ * `cmd`
 __SH2_EOF__

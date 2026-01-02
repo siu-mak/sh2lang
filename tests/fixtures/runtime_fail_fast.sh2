@@ -1,0 +1,5 @@
+func main() {
+  print("before")
+  run("sh", "-c", "exit 7")
+  print("after")
+}

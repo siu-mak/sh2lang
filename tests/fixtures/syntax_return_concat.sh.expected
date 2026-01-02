@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+__sh2_check() { local s="$1"; local loc="$2"; if (( s != 0 )); then if [[ -n "$loc" ]]; then printf 'Error in %s\n' "$loc" >&2; fi; exit "$s"; fi; }
 __sh2_err_handler() {
   local s=$?
   local loc="${__sh2_loc:-}"
@@ -27,7 +28,8 @@ ENVS_DIR() {
 main() {
   local __sh2_loc=""
   __sh2_loc="tests/fixtures/syntax_return_concat.sh2:10:5"
-  'echo' "$( ENVS_DIR  )"; __sh2_status=$?; (exit $__sh2_status)
+  'echo' "$( ENVS_DIR  )"; __sh2_status=$?
+  __sh2_check "$__sh2_status" "${__sh2_loc:-}"
 }
 __sh2_status=0
 main "$@"

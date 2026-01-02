@@ -1,4 +1,5 @@
 #!/bin/sh
+__sh2_check() { s="$1"; loc="$2"; if [ "$s" -ne 0 ]; then if [ -n "$loc" ]; then printf 'Error in %s\n' "$loc" >&2; fi; exit "$s"; fi; }
 __sh2_parse_args() {
   __out="" 
   while [ "$#" -gt 0 ]; do
@@ -25,7 +26,8 @@ __sh2_list_get() { printf '%s' "$1" | awk -v i="$2" 'NR==i+1 { printf "%s", $0; 
 main() {
   __sh2_loc="tests/fixtures/parse_args_double_dash.sh2:2:3"
   parsed="${__sh2_parsed_args}"
-  __sh2_status=$?; (exit $__sh2_status)
+  __sh2_status=$?
+  __sh2_check "$__sh2_status" "${__sh2_loc:-}"
   printf '%s\n' 'x='"$( __sh2_args_flag_get "$( __sh2_args_flags "$parsed" )" '--x' )"
   printf '%s\n' 'p0='"$( __sh2_list_get "$( __sh2_args_positionals "$parsed" )" $(( 0 )) )"
   printf '%s\n' 'p1='"$( __sh2_list_get "$( __sh2_args_positionals "$parsed" )" $(( 1 )) )"

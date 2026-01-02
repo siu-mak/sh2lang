@@ -1,14 +1,17 @@
 #!/bin/sh
+__sh2_check() { s="$1"; loc="$2"; if [ "$s" -ne 0 ]; then if [ -n "$loc" ]; then printf 'Error in %s\n' "$loc" >&2; fi; exit "$s"; fi; }
 main() {
   msg="${1}"
   __sh2_loc="tests/fixtures/target_posix_basic.sh2:2:3"
-  'echo' "$msg"; __sh2_status=$?; (exit $__sh2_status)
+  'echo' "$msg"; __sh2_status=$?
+  __sh2_check "$__sh2_status" "${__sh2_loc:-}"
   VAR='set_via_env' 'print_env'
 }
 
 print_env() {
   __sh2_loc="tests/fixtures/target_posix_basic.sh2:9:3"
-  'echo' "${VAR}"; __sh2_status=$?; (exit $__sh2_status)
+  'echo' "${VAR}"; __sh2_status=$?
+  __sh2_check "$__sh2_status" "${__sh2_loc:-}"
 }
 __sh2_status=0
 main "$@"

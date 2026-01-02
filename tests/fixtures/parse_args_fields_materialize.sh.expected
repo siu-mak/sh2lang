@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+__sh2_check() { local s="$1"; local loc="$2"; if (( s != 0 )); then if [[ -n "$loc" ]]; then printf 'Error in %s\n' "$loc" >&2; fi; exit "$s"; fi; }
 __sh2_err_handler() {
   local s=$?
   local loc="${__sh2_loc:-}"
@@ -37,13 +38,16 @@ main() {
   local __sh2_loc=""
   __sh2_loc="tests/fixtures/parse_args_fields_materialize.sh2:2:3"
   a="${__sh2_parsed_args}"
-  __sh2_status=$?; (exit $__sh2_status)
+  __sh2_status=$?
+  __sh2_check "$__sh2_status" "${__sh2_loc:-}"
   __sh2_loc="tests/fixtures/parse_args_fields_materialize.sh2:3:3"
   f="$( __sh2_args_flags "$a" )"
-  __sh2_status=$?; (exit $__sh2_status)
+  __sh2_status=$?
+  __sh2_check "$__sh2_status" "${__sh2_loc:-}"
   __sh2_loc="tests/fixtures/parse_args_fields_materialize.sh2:4:3"
   p="$( __sh2_args_positionals "$a" )"
-  __sh2_status=$?; (exit $__sh2_status)
+  __sh2_status=$?
+  __sh2_check "$__sh2_status" "${__sh2_loc:-}"
   printf '%s\n' 'k='"$( __sh2_args_flag_get "$( __sh2_args_flags "$a" )" '--k' )"
   printf '%s\n' 'p0='"$( __sh2_list_get "$( __sh2_args_positionals "$a" )" $(( 0 )) )"
 }

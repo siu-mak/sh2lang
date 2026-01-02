@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+__sh2_check() { local s="$1"; local loc="$2"; if (( s != 0 )); then if [[ -n "$loc" ]]; then printf 'Error in %s\n' "$loc" >&2; fi; exit "$s"; fi; }
 __sh2_err_handler() {
   local s=$?
   local loc="${__sh2_loc:-}"
@@ -16,7 +17,8 @@ main() {
   local __sh2_loc=""
   __sh2_loc="tests/fixtures/truthy_capture.sh2:2:5"
   empty="$( 'printf' '%s' '' )"
-  __sh2_status=$?; (exit $__sh2_status)
+  __sh2_status=$?
+  __sh2_check "$__sh2_status" "${__sh2_loc:-}"
   if [ -n "$empty" ]; then
     printf '%s\n' 'T_EMPTY'
   else
@@ -24,7 +26,8 @@ main() {
   fi
   __sh2_loc="tests/fixtures/truthy_capture.sh2:9:5"
   full="$( 'printf' '%s' 'hi' )"
-  __sh2_status=$?; (exit $__sh2_status)
+  __sh2_status=$?
+  __sh2_check "$__sh2_status" "${__sh2_loc:-}"
   if [ -n "$full" ]; then
     printf '%s\n' 'T_FULL'
   else

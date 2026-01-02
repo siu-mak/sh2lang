@@ -1,10 +1,12 @@
 #!/bin/sh
+__sh2_check() { s="$1"; loc="$2"; if [ "$s" -ne 0 ]; then if [ -n "$loc" ]; then printf 'Error in %s\n' "$loc" >&2; fi; exit "$s"; fi; }
 __sh2_tmpfile() { if command -v mktemp >/dev/null 2>&1; then mktemp; else printf "%s/sh2_tmp_%s_%s" "${TMPDIR:-/tmp}" "$$" "$(awk 'BEGIN{srand();print int(rand()*1000000)}')"; fi; }
 __sh2_read_file() { cat "$1"; }
 main() {
   __sh2_loc="tests/fixtures/try_run_field_with_redirect_leak_ok.sh2:2:5"
   r='base'
-  __sh2_status=$?; (exit $__sh2_status)
+  __sh2_status=$?
+  __sh2_check "$__sh2_status" "${__sh2_loc:-}"
   {
     __sh2_loc="tests/fixtures/try_run_field_with_redirect_leak_ok.sh2:4:8"
         r__tmp_out="$(__sh2_tmpfile)"

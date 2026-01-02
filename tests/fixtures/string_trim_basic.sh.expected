@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+__sh2_check() { local s="$1"; local loc="$2"; if (( s != 0 )); then if [[ -n "$loc" ]]; then printf 'Error in %s\n' "$loc" >&2; fi; exit "$s"; fi; }
 __sh2_trim() { awk -v s="$1" 'BEGIN { sub(/^[[:space:]]+/, "", s); sub(/[[:space:]]+$/, "", s); printf "%s", s }'; }
 main() {
   printf '%s\n' '>'"$( __sh2_trim '  hi	' )"'<'

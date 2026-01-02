@@ -1,9 +1,11 @@
 #!/bin/sh
+__sh2_check() { s="$1"; loc="$2"; if [ "$s" -ne 0 ]; then if [ -n "$loc" ]; then printf 'Error in %s\n' "$loc" >&2; fi; exit "$s"; fi; }
 __sh2_matches() { printf '%s\n' "$1" | grep -Eq -- "$2"; }
 main() {
   __sh2_loc="tests/fixtures/matches_basic.sh2:2:5"
   s='hello'
-  __sh2_status=$?; (exit $__sh2_status)
+  __sh2_status=$?
+  __sh2_check "$__sh2_status" "${__sh2_loc:-}"
   if __sh2_matches "$s" 'h.*o'; then
     printf '%s\n' 'yes'
   else

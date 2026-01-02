@@ -1,4 +1,5 @@
 #!/bin/sh
+__sh2_check() { s="$1"; loc="$2"; if [ "$s" -ne 0 ]; then if [ -n "$loc" ]; then printf 'Error in %s\n' "$loc" >&2; fi; exit "$s"; fi; }
 main() {
   __sh2_loc="tests/fixtures/pipe_blocks_mixed_right_stmt.sh2:2:3"
   {
@@ -20,7 +21,8 @@ main() {
   } )  > "${__sh2_base}_0" & __sh2_p0=$!;
     ( for fd in $__sh2_fds; do eval "exec $fd>&-"; done; {
     __sh2_loc="tests/fixtures/pipe_blocks_mixed_right_stmt.sh2:2:36"
-    'grep' 'b'; __sh2_status=$?; (exit $__sh2_status)
+    'grep' 'b'; __sh2_status=$?
+    __sh2_check "$__sh2_status" "${__sh2_loc:-}"
   } )  < "${__sh2_base}_0" & __sh2_p1=$!;
     for fd in $__sh2_fds; do eval "exec $fd>&-"; done;
     wait "$__sh2_p0"; __sh2_s0=$?;

@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+__sh2_check() { local s="$1"; local loc="$2"; if (( s != 0 )); then if [[ -n "$loc" ]]; then printf 'Error in %s\n' "$loc" >&2; fi; exit "$s"; fi; }
 __sh2_err_handler() {
   local s=$?
   local loc="${__sh2_loc:-}"
@@ -15,29 +16,40 @@ trap '__sh2_err_handler' ERR
 main() {
   local __sh2_loc=""
   __sh2_loc="tests/fixtures/fs_predicates_full.sh2:2:5"
-  'mkdir' '-p' 'sandbox'; __sh2_status=$?; (exit $__sh2_status)
+  'mkdir' '-p' 'sandbox'; __sh2_status=$?
+  __sh2_check "$__sh2_status" "${__sh2_loc:-}"
   (
     cd 'sandbox'
     __sh2_loc="tests/fixtures/fs_predicates_full.sh2:4:9"
-    'touch' 'f_empty'; __sh2_status=$?; (exit $__sh2_status)
+    'touch' 'f_empty'; __sh2_status=$?
+    __sh2_check "$__sh2_status" "${__sh2_loc:-}"
     __sh2_loc="tests/fixtures/fs_predicates_full.sh2:5:9"
-    'touch' 'f_full'; __sh2_status=$?; (exit $__sh2_status)
+    'touch' 'f_full'; __sh2_status=$?
+    __sh2_check "$__sh2_status" "${__sh2_loc:-}"
     __sh2_loc="tests/fixtures/fs_predicates_full.sh2:6:9"
-    'sh' '-c' 'echo x > f_full'; __sh2_status=$?; (exit $__sh2_status)
+    'sh' '-c' 'echo x > f_full'; __sh2_status=$?
+    __sh2_check "$__sh2_status" "${__sh2_loc:-}"
     __sh2_loc="tests/fixtures/fs_predicates_full.sh2:7:9"
-    'ln' '-s' 'f_empty' 'link'; __sh2_status=$?; (exit $__sh2_status)
+    'ln' '-s' 'f_empty' 'link'; __sh2_status=$?
+    __sh2_check "$__sh2_status" "${__sh2_loc:-}"
     __sh2_loc="tests/fixtures/fs_predicates_full.sh2:9:9"
-    'touch' 'f_exec'; __sh2_status=$?; (exit $__sh2_status)
+    'touch' 'f_exec'; __sh2_status=$?
+    __sh2_check "$__sh2_status" "${__sh2_loc:-}"
     __sh2_loc="tests/fixtures/fs_predicates_full.sh2:10:9"
-    'chmod' '+x' 'f_exec'; __sh2_status=$?; (exit $__sh2_status)
+    'chmod' '+x' 'f_exec'; __sh2_status=$?
+    __sh2_check "$__sh2_status" "${__sh2_loc:-}"
     __sh2_loc="tests/fixtures/fs_predicates_full.sh2:12:9"
-    'touch' 'f_ro'; __sh2_status=$?; (exit $__sh2_status)
+    'touch' 'f_ro'; __sh2_status=$?
+    __sh2_check "$__sh2_status" "${__sh2_loc:-}"
     __sh2_loc="tests/fixtures/fs_predicates_full.sh2:13:9"
-    'chmod' '444' 'f_ro'; __sh2_status=$?; (exit $__sh2_status)
+    'chmod' '444' 'f_ro'; __sh2_status=$?
+    __sh2_check "$__sh2_status" "${__sh2_loc:-}"
     __sh2_loc="tests/fixtures/fs_predicates_full.sh2:15:9"
-    'touch' 'f_noread'; __sh2_status=$?; (exit $__sh2_status)
+    'touch' 'f_noread'; __sh2_status=$?
+    __sh2_check "$__sh2_status" "${__sh2_loc:-}"
     __sh2_loc="tests/fixtures/fs_predicates_full.sh2:16:9"
-    'chmod' '000' 'f_noread'; __sh2_status=$?; (exit $__sh2_status)
+    'chmod' '000' 'f_noread'; __sh2_status=$?
+    __sh2_check "$__sh2_status" "${__sh2_loc:-}"
     if [ -L 'link' ]; then
       printf '%s\n' 'link is symlink'
     fi

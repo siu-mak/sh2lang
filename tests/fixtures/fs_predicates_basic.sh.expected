@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+__sh2_check() { local s="$1"; local loc="$2"; if (( s != 0 )); then if [[ -n "$loc" ]]; then printf 'Error in %s\n' "$loc" >&2; fi; exit "$s"; fi; }
 __sh2_err_handler() {
   local s=$?
   local loc="${__sh2_loc:-}"
@@ -15,7 +16,8 @@ trap '__sh2_err_handler' ERR
 main() {
   local __sh2_loc=""
   __sh2_loc="tests/fixtures/fs_predicates_basic.sh2:2:3"
-  'sh' '-c' 'rm -rf tfile tlink; echo hi > tfile; chmod 600 tfile; chmod +x tfile; ln -s tfile tlink'; __sh2_status=$?; (exit $__sh2_status)
+  'sh' '-c' 'rm -rf tfile tlink; echo hi > tfile; chmod 600 tfile; chmod +x tfile; ln -s tfile tlink'; __sh2_status=$?
+  __sh2_check "$__sh2_status" "${__sh2_loc:-}"
   if [ -L 'tlink' ] && [ -x 'tfile' ] && [ -r 'tfile' ] && [ -w 'tfile' ]; then
     printf '%s\n' 'ok'
   else

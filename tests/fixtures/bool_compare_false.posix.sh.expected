@@ -1,8 +1,10 @@
 #!/bin/sh
+__sh2_check() { s="$1"; loc="$2"; if [ "$s" -ne 0 ]; then if [ -n "$loc" ]; then printf 'Error in %s\n' "$loc" >&2; fi; exit "$s"; fi; }
 main() {
   __sh2_loc="tests/fixtures/bool_compare_false.sh2:2:5"
   d='.'
-  __sh2_status=$?; (exit $__sh2_status)
+  __sh2_status=$?
+  __sh2_check "$__sh2_status" "${__sh2_loc:-}"
   if ! [ -d "$d" ]; then
     printf '%s\n' 'no'
   fi

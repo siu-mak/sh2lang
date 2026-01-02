@@ -1,11 +1,14 @@
 #!/bin/sh
+__sh2_check() { s="$1"; loc="$2"; if [ "$s" -ne 0 ]; then if [ -n "$loc" ]; then printf 'Error in %s\n' "$loc" >&2; fi; exit "$s"; fi; }
 main() {
   {
     __sh2_loc="tests/fixtures/fmt_chain_indent.sh2:2:5"
-    "$echo" 'a'; __sh2_status=$?; (exit $__sh2_status)
+    "$echo" 'a'; __sh2_status=$?
+    __sh2_check "$__sh2_status" "${__sh2_loc:-}"
   } && {
     __sh2_loc="tests/fixtures/fmt_chain_indent.sh2:2:23"
-    "$echo" 'b'; __sh2_status=$?; (exit $__sh2_status)
+    "$echo" 'b'; __sh2_status=$?
+    __sh2_check "$__sh2_status" "${__sh2_loc:-}"
   }
   {
     if true; then
@@ -17,14 +20,17 @@ main() {
   {
     {
       __sh2_loc="tests/fixtures/fmt_chain_indent.sh2:6:5"
-      "$a"; __sh2_status=$?; (exit $__sh2_status)
+      "$a"; __sh2_status=$?
+      __sh2_check "$__sh2_status" "${__sh2_loc:-}"
     } && {
       __sh2_loc="tests/fixtures/fmt_chain_indent.sh2:6:15"
-      "$b"; __sh2_status=$?; (exit $__sh2_status)
+      "$b"; __sh2_status=$?
+      __sh2_check "$__sh2_status" "${__sh2_loc:-}"
     }
   } && {
     __sh2_loc="tests/fixtures/fmt_chain_indent.sh2:6:25"
-    "$c"; __sh2_status=$?; (exit $__sh2_status)
+    "$c"; __sh2_status=$?
+    __sh2_check "$__sh2_status" "${__sh2_loc:-}"
   }
 }
 __sh2_status=0

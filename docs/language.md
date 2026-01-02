@@ -1,14 +1,42 @@
-# sh2 language reference (devctl Steps 1–8)
+# The sh2 Language Reference
 
-This reference documents the language behavior currently relied upon by the incremental **devctl** development steps (Steps 1–8). It intentionally calls out **gotchas** where the syntax differs from “typical shell”.
+sh2 is a small, structured shell language compiled by **sh2c** into either **bash** or **POSIX sh**.
+It aims to make shell intent explicit (control flow, pipelines, env/cwd scoping, status handling) and reduce common shell footguns.
+
+This document reflects the **implemented** language behavior as of the incremental `devctl` development steps (Steps 1–8) plus the implemented
+features you listed (run behavior controls, modules, try_run, logging, interactive, lists/maps, and stdlib helpers).
 
 ---
 
 ## 1. Program structure
 
-- A `.sh2` file contains **function definitions only**.
-- **Top-level statements are not allowed.**
-- The compiler-generated shell invokes `main()`.
+### 1.1 Imports
+
+You can import modules at the top of a file:
+
+```sh2
+import "path/to/module.sh2"
+import "lib/envfile.sh2"
+```
+
+Notes:
+- Imports must appear **before** function definitions.
+- The loader resolves imports recursively, detects cycles, and supports common dependency shapes (including diamond dependencies).
+- Imported functions share a single namespace (name collisions are errors).
+
+### 1.2 Functions
+
+Functions are defined with `func`:
+
+```sh2
+func greet(name) {
+  print("hello " & name)
+}
+```
+
+### 1.3 Entry point
+
+Programs are **function definitions only** (no top-level statements). The generated shell invokes `main()` as the entry point:
 
 ```sh2
 func main() {
@@ -18,11 +46,11 @@ func main() {
 
 ---
 
-## 2. Statement separation
+## 2. Statement separation (important)
 
-Inside blocks, statements are separated by **newlines**.
+Inside `{ ... }` blocks, statements are separated by **newlines**.
 
-- `;` is **not** a valid statement separator inside `Ellipsis`.
+- Semicolons `;` are **not** valid statement separators inside blocks.
 
 ✅
 
@@ -43,69 +71,158 @@ func main() {
 
 ---
 
-## 3. Identifiers and reserved words
+## 3. Identifiers and reserved keywords
 
-`env` is reserved for environment access.
+### 3.1 `env` is reserved
 
-❌
+`env` is reserved for environment access (e.g., `env.HOME`) and cannot be used as a variable name.
 
-```sh2
-func main() {
-  let <reserved env> = "nope"
-}
-```
-
-✅
+Use a different identifier:
 
 ```sh2
 func main() {
   let env_name = "ok"
+  print(env_name)
 }
 ```
 
 ---
 
-## 4. Core statements
+## 4. Data types and literals
 
-### 4.1 `let`
+### 4.1 Strings
 
-Bind a new local variable:
+```sh2
+let s = "hello"
+let p = env.HOME & "/sh2c/docker-rootless"
+```
+
+Concatenation uses `&`.
+
+### 4.2 Numbers
+
+```sh2
+let n = 42
+```
+
+### 4.3 Booleans
+
+```sh2
+let ok = true
+```
+
+### 4.4 Lists (Bash only)
+
+Lists are written with `[...]`.
+
+```sh2
+let xs = ["a", "b", "c"]
+print(xs[0])
+```
+
+- **Bash target:** supported
+- **POSIX target:** not supported (errors/panics due to lack of arrays)
+
+### 4.5 Maps (Bash only)
+
+Maps are written with `{ "k": v, ... }`.
+
+```sh2
+let m = { "user": "herbert", "role": "admin" }
+print(m["user"])
+```
+
+- **Bash target:** supported (associative arrays / structured lowering)
+- **POSIX target:** not supported (errors/panics)
+
+---
+
+## 5. Variables and assignment
+
+### 5.1 `let`
+
+Declare a new local variable:
 
 ```sh2
 let name = "world"
 ```
 
-### 4.2 `set`
+### 5.2 `set`
 
-Assign to an existing lvalue (including `env.NAME` if supported by the build):
-
-```sh2
-set x = "new"
-```
-
-### 4.3 `run(...)`
-
-Run an external command. Arguments are expressions:
+Assign to an existing lvalue:
 
 ```sh2
-run("printf", "hello %s\n", name)
+func main() {
+  let x = 1
+  set x = x + 1
+  print("x=" & x)
+}
 ```
 
-Pipelines are supported between **run calls**:
+### 5.3 Environment access
+
+Read env vars with dot access:
+
+```sh2
+let base = env.HOME & "/sh2c/docker-rootless"
+```
+
+Dynamic env lookup is also available via `env("NAME")` when you need the variable name to be computed:
+
+```sh2
+let key = "HOME"
+let home = env(key)
+```
+
+---
+
+## 6. Running commands
+
+### 6.1 `run(...)`
+
+Run an external command:
+
+```sh2
+run("printf", "hello %s\n", "world")
+```
+
+### 6.2 `run(..., allow_fail=true)`
+
+`allow_fail=true` prevents the compiler from emitting failure-propagation checks for **that specific run**.
+The command may fail without aborting the script, and `status()` is still updated.
+
+```sh2
+func main() {
+  run("false", allow_fail=true)
+  print("still running, status=" & status())
+}
+```
+
+### 6.3 Pipelines
+
+Pipelines connect `run(...)` stages:
 
 ```sh2
 run("printf", "hello\n") | run("tee", "/tmp/out.txt")
 ```
 
-### 4.4 `print(...)` and `print_err(...)`
+Notes:
+- `tee` echoes to stdout while writing to the file.
+- Pipeline error propagation is target-dependent (bash can be pipefail-like; POSIX may be limited depending on implementation).
 
-- `print(expr)` prints to stdout.
-- `print_err(expr)` prints to stderr.
-- These are **statements**, not expressions, so they **cannot** be used as pipeline stages.
+### 6.4 `exec(...)`
 
-### 4.5 `sh("...")` (literal only)
+Replace the current process with the given command (no continuation):
 
-`sh(...)` runs a shell snippet, but currently only accepts a **string literal**:
+```sh2
+func main() {
+  exec("bash", "-lc", "echo replaced")
+}
+```
+
+### 6.5 `sh("...")` (literal-only)
+
+`sh(...)` runs a shell snippet, but currently it accepts **only a string literal**:
 
 ✅
 
@@ -116,131 +233,305 @@ sh("echo hello")
 ❌
 
 ```sh2
-let cmd = "echo hello"
-sh(cmd)
-sh("echo " & "hello")
+func main() {
+  let cmd = "echo hello"
+  # sh(cmd)              # not allowed
+  # sh("echo " & "hi")   # not allowed
+}
 ```
 
 Recommended alternatives:
-- Prefer explicit `run(...)` calls.
-- Keep `sh("...")` as a literal and pass dynamic values via environment or shell variables (depending on your target policy).
+- Prefer structured `run(...)` calls.
+- If you truly need `sh`, keep it literal and pass dynamic values via files/env or by composing `run(...)` plumbing.
 
 ---
 
-## 5. Control flow
+## 7. Printing and piping
 
-### 5.1 `if` / `else`
+### 7.1 `print(...)` and `print_err(...)`
 
-```sh2
-if status() == 0 {
-  print("ok")
-} else {
-  print_err("failed")
-}
-```
+`print(expr)` writes to stdout; `print_err(expr)` writes to stderr.
 
-#### Boolean Expressions
+These are **statements**, not pipeline stages, so they cannot be piped.
 
-Boolean conditions can be formed using comparison operators or predicate functions.
-
-- Predicates like `is_dir(path)` return a boolean.
-- Use `!pred` for negation (e.g., `if !is_dir(d)`).
-- Explicit comparisons to `true`/`false` are supported but `!pred` is canonical.
+Instead of piping `print`, use `printf | tee`:
 
 ```sh2
-if is_dir(".") == true { ... }  # Same as if is_dir(".")
-if is_dir(".") == false { ... } # Same as if !is_dir(".")
-```
-
-### 5.2 `case` (arrow is `=>`)
-
-`case` arms use `=>` (not `hyphen+greater-than`):
-
-```sh2
-case cmd {
-  "env" => { print("env") }
-  _ => { print_err("unknown"); exit(2) }
-}
-```
-
----
-
-## 6. Expressions
-
-### 6.1 Literals
-
-- strings: `"text"`
-- numbers: `0`, `1`, ...
-- booleans: `true`, `false`
-
-### 6.2 Variables
-
-Use an identifier as an expression:
-
-```sh2
-let path = base & "/env.meta"
-```
-
-### 6.3 Operators
-
-- Concatenation: `a & b`
-- Comparisons: `== != < <= > >=`
-- Boolean: `&& ||` (used in `if` conditions)
-
-
-### 6.4 Builtin functions
-
-- `read_file(path)`: Returns the content of the file at `path` as a string.
-  - **Note**: Trailing newlines are **stripped** (standard shell command substitution behavior).
-  - Returns exit status 0 on success, non-zero if reading fails (e.g. file missing).
-
----
-
-
-## 7. Environment access
-
-Read environment variables with `env.NAME`:
-
-```sh2
-let base = env.HOME & "/sh2c/docker-rootless"
-```
-
-Example safe base dir pattern:
-
-```sh2
-let root = env.HOME & "/sh2c/docker-rootless"
-```
-
----
-
-## 8. Status tracking
-
-### 8.1 `status()`
-
-`status()` returns the last tracked exit status (0 = success). It updates after command-like actions such as:
-
-- `run(...)`
-- `sh("...")`
-- builtins that lower to `test` (e.g. `exists/is_dir/is_file`)
-
----
-
-## 9. Function return model (bash target)
-
-At the language level, `return <expr>` is a **string-valued return**.
-
-In the Bash target, a function “returns a string” by printing it to **stdout** and returning success, because Bash `return` only supports numeric statuses.
-
-Practical pattern:
-
-```sh2
-func get_tag() {
-  return "demo:latest"
-}
-
 func main() {
-  let tag = capture(run("bash", "-lc", "true"))  # example capture pattern
+  let path = "/tmp/out.txt"
+  run("printf", "hello %s\n", "world") | run("tee", path)
 }
 ```
 
-(Use `capture(...)` for string returns; the exact capture syntax may depend on your current feature set.)
+---
+
+## 8. Control flow
+
+### 8.1 `if` / `elif` / `else`
+
+```sh2
+func main() {
+  run("true")
+  if status() == 0 {
+    print("ok")
+  } else {
+    print_err("failed")
+  }
+}
+```
+
+### 8.2 `case` (arm arrow is `=>`)
+
+Case arms use `=>` (not `->`).
+
+```sh2
+func main() {
+  let cmd = "env"
+  case cmd {
+    "env" => { print("env") }
+    _ => { print_err("unknown"); exit(2) }
+  }
+}
+```
+
+### 8.3 Loops
+
+#### `while`
+
+```sh2
+func main() {
+  let i = 0
+  while i < 3 {
+    print("i=" & i)
+    set i = i + 1
+  }
+}
+```
+
+#### `for` over lists (Bash only)
+
+```sh2
+func main() {
+  let xs = ["a", "b", "c"]
+  for x in xs {
+    print(x)
+  }
+}
+```
+
+#### `for (k, v)` over maps (Bash only)
+
+```sh2
+func main() {
+  let m = { "a": "1", "b": "2" }
+  for (k, v) in m {
+    print(k & "=" & v)
+  }
+}
+```
+
+POSIX notes:
+- list/map iteration is restricted because lists/maps are not supported on `--target posix`.
+
+### 8.4 `try { ... } catch { ... }`
+
+`try/catch` is implemented. If a command in `try` fails under the language’s error model, the `catch` block runs.
+`status()` in the catch block reflects the failure.
+
+```sh2
+func main() {
+  try {
+    run("false")
+    print("unreachable")
+  } catch {
+    print_err("failed, status=" & status())
+  }
+}
+```
+
+---
+
+## 9. Status tracking
+
+### 9.1 `status()`
+
+`status()` returns the last tracked exit status and updates after:
+- `run(...)` (including `allow_fail=true`)
+- `try_run(...)`
+- `sh("...")`
+- filesystem predicates (e.g. `exists/is_dir/is_file`)
+
+---
+
+## 10. `try_run(...) -> RunResult`
+
+`try_run(...)` is implemented and **does not abort on failure**. It captures:
+- `stdout`
+- `stderr`
+- exit `status`
+
+The result supports field access:
+- `r.status`
+- `r.stdout`
+- `r.stderr`
+
+```sh2
+func main() {
+  let r = try_run("sh", "-lc", "echo out; echo err 1>&2; exit 7")
+
+  print("status=" & r.status)
+  print("stdout=" & r.stdout)
+  print_err("stderr=" & r.stderr)
+}
+```
+
+Fixtures confirming behavior include:
+- `try_run_success.sh2`
+- `try_run_fields.sh2`
+
+---
+
+## 11. Scoped logging: `with log(...) { ... }` (Bash only)
+
+`with log(path, append=true|false) { ... }` fans out output to both console and a log file.
+Implementation uses Bash process substitution (e.g., `exec > >(tee ...)` patterns).
+
+```sh2
+func main() {
+  with log("/tmp/devctl.log", append=true) {
+    print("hello")
+    run("printf", "tag=%s\n", "demo:latest")
+  }
+}
+```
+
+Target notes:
+- **Bash target:** supported
+- **POSIX target:** errors/panics (no process substitution)
+
+---
+
+## 12. Interactive primitives (Bash only)
+
+### 12.1 `input(prompt)`
+
+```sh2
+func main() {
+  let name = input("Name: ")
+  print("hi " & name)
+}
+```
+
+### 12.2 `confirm(prompt)`
+
+```sh2
+func main() {
+  if confirm("Proceed?") {
+    print("ok")
+  } else {
+    print_err("cancelled")
+    exit(1)
+  }
+}
+```
+
+Target notes:
+- **Bash target:** supported
+- **POSIX target:** errors/panics
+
+---
+
+## 13. Builtins and helpers
+
+### 13.1 Filesystem predicates
+
+Return booleans:
+
+- `exists(x)`
+- `is_dir(x)`
+- `is_file(x)`
+- `is_symlink(x)`
+- `is_exec(x)`
+- `is_readable(x)`
+- `is_writable(x)`
+- `is_non_empty(x)`
+
+### 13.2 Regex helper: `matches(text, regex)`
+
+Implemented (see tests like `syntax_matches.rs` and fixtures like `matches_basic.sh2`).
+
+```sh2
+func main() {
+  if matches("12345", "^[0-9]+$") {
+    print("digits")
+  }
+}
+```
+
+### 13.3 Arg parsing: `parse_args(...)`
+
+`parse_args` is implemented (see `syntax_parse_args.rs`). Document your project’s exact return shape (flags/positionals) in this section if needed.
+
+### 13.4 Envfile helpers
+
+Implemented:
+- `load_envfile(path)`
+- `save_envfile(path, data)`
+
+### 13.5 JSON helper
+
+Implemented:
+- `json_kv(...)` for emitting JSON objects from key-value pairs.
+
+### 13.6 String and file helpers
+
+Implemented helpers include:
+- `split`, `join`, `lines`
+- `trim`, `replace`
+- `read_file`, `write_file`
+
+---
+
+## 14. Target differences and portability
+
+### 14.1 `--target bash` (default)
+
+Supports Bash-only features:
+- lists / maps and their iteration
+- `with log(...)`
+- `input(...)`, `confirm(...)`
+- `try_run(...) -> RunResult` with `.stdout/.stderr/.status`
+
+### 14.2 `--target posix`
+
+Strictly portable output, with some features disabled.
+
+Currently **not supported** on POSIX target (errors/panics):
+- lists and maps
+- `with log(...)`
+- `input(...)`, `confirm(...)`
+
+---
+
+## Appendix A: Known-good cookbook patterns
+
+### A.1 Root check (portable pattern)
+
+```sh2
+func main() {
+  sh("test \"$(id -u)\" -eq 0")
+  if status() != 0 {
+    print_err("must run as root")
+    exit(1)
+  }
+}
+```
+
+### A.2 Write file content (simple)
+
+```sh2
+func main() {
+  let path = env.HOME & "/env.meta"
+  run("printf", "IMAGE_TAG=%s\n", "demo:latest") | run("tee", path)
+}
+```

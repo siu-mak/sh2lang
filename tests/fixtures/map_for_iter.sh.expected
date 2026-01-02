@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+__sh2_check() { local s="$1"; local loc="$2"; if (( s != 0 )); then if [[ -n "$loc" ]]; then printf 'Error in %s\n' "$loc" >&2; fi; exit "$s"; fi; }
 __sh2_err_handler() {
   local s=$?
   local loc="${__sh2_loc:-}"
@@ -17,7 +18,8 @@ main() {
   __sh2_loc="tests/fixtures/map_for_iter.sh2:2:1"
   local -A m=( ['x']='10' ['y']='20' )
   local -a __sh2_keys_m=( 'x' 'y' )
-  __sh2_status=$?; (exit $__sh2_status)
+  __sh2_status=$?
+  __sh2_check "$__sh2_status" "${__sh2_loc:-}"
   for __sh2_k in "${__sh2_keys_m[@]}"; do
     local k="$__sh2_k"
     local v="${m[$__sh2_k]}"

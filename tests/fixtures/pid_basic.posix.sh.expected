@@ -1,10 +1,13 @@
 #!/bin/sh
+__sh2_check() { s="$1"; loc="$2"; if [ "$s" -ne 0 ]; then if [ -n "$loc" ]; then printf 'Error in %s\n' "$loc" >&2; fi; exit "$s"; fi; }
 main() {
   ( __sh2_loc="tests/fixtures/pid_basic.sh2:2:11"; 'bash' '-c' 'exit 7' ) &
   __sh2_loc="tests/fixtures/pid_basic.sh2:3:5"
   p="$!"
-  __sh2_status=$?; (exit $__sh2_status)
-  wait "$p"; __sh2_status=$?; (exit $__sh2_status)
+  __sh2_status=$?
+  __sh2_check "$__sh2_status" "${__sh2_loc:-}"
+  wait "$p"; __sh2_status=$?
+  __sh2_check "$__sh2_status" "${__sh2_loc:-}"
   printf '%s\n' "$__sh2_status"
 }
 __sh2_status=0

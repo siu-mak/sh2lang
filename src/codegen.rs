@@ -434,7 +434,7 @@ pub fn emit_with_options(funcs: &[Function], opts: CodegenOptions) -> Result<Str
             }
         }
         for cmd in &f.commands {
-            emit_cmd(cmd, &mut out, 2, opts.target, false, &mut ctx)?;
+            emit_cmd(cmd, &mut out, 2, opts, false, &mut ctx)?;
         }
         out.push_str("}\n");
     }
@@ -949,11 +949,12 @@ fn emit_cmd(
     cmd: &Cmd,
     out: &mut String,
     indent: usize,
-    target: TargetShell,
+    opts: CodegenOptions,
     in_cond_ctx: bool,
     ctx: &mut CodegenContext,
 ) -> Result<(), CompileError> {
     let pad = " ".repeat(indent);
+    let target = opts.target;
 
     match cmd {
         Cmd::Assign(name, val, loc) => {
@@ -966,7 +967,9 @@ fn emit_cmd(
                 }
                 out.push_str(&pad);
                 out.push_str(&format!("__sh2_lines {} {}\n", emit_val(inner, target)?, name));
-                out.push_str(&format!("{}__sh2_status=$?; (exit $__sh2_status)\n", pad));
+                out.push_str(&format!("{}__sh2_status=$?\n", pad));
+
+                out.push_str(&format!("{}__sh2_check \"$__sh2_status\" \"${{__sh2_loc:-}}\"\n", pad));
                 return Ok(());
             }
             if let Val::Split { s, delim } = val {
@@ -974,7 +977,9 @@ fn emit_cmd(
                     TargetShell::Bash => {
                          out.push_str(&pad);
                          out.push_str(&format!("__sh2_split {} {} {}\n", name, emit_val(s, target)?, emit_val(delim, target)?));
-                         out.push_str(&format!("{}__sh2_status=$?; (exit $__sh2_status)\n", pad));
+                         out.push_str(&format!("{}__sh2_status=$?\n", pad));
+
+                         out.push_str(&format!("{}__sh2_check \"$__sh2_status\" \"${{__sh2_loc:-}}\"\n", pad));
                          return Ok(());
                     }
                     TargetShell::Posix => {
@@ -982,7 +987,9 @@ fn emit_cmd(
                          out.push_str(&format!("{}=\"$(__sh2_tmpfile)\"\n", name));
                          out.push_str(&pad);
                          out.push_str(&format!("__sh2_split {} {} > \"${}\"\n", emit_val(s, target)?, emit_val(delim, target)?, name));
-                         out.push_str(&format!("{}__sh2_status=$?; (exit $__sh2_status)\n", pad));
+                         out.push_str(&format!("{}__sh2_status=$?\n", pad));
+
+                         out.push_str(&format!("{}__sh2_check \"$__sh2_status\" \"${{__sh2_loc:-}}\"\n", pad));
                          ctx.known_lists.insert(name.to_string());
                          return Ok(());
                     }
@@ -1029,7 +1036,9 @@ fn emit_cmd(
                     out.push_str(&sh_single_quote(key));
                 }
                 out.push_str(" )\n");
-                out.push_str(&format!("{}__sh2_status=$?; (exit $__sh2_status)\n", pad));
+                out.push_str(&format!("{}__sh2_status=$?\n", pad));
+
+                out.push_str(&format!("{}__sh2_check \"$__sh2_status\" \"${{__sh2_loc:-}}\"\n", pad));
                 return Ok(());
             }
 
@@ -1098,13 +1107,17 @@ fn emit_cmd(
             } else if let Val::Args = val {
                 out.push_str(name);
                 out.push_str("=(\"$@\")\n");
-                out.push_str(&format!("{}__sh2_status=$?; (exit $__sh2_status)\n", pad));
+                out.push_str(&format!("{}__sh2_status=$?\n", pad));
+
+                out.push_str(&format!("{}__sh2_check \"$__sh2_status\" \"${{__sh2_loc:-}}\"\n", pad));
             } else {
                 out.push_str(name);
                 out.push('=');
                 out.push_str(&emit_val(val, target)?);
                 out.push('\n');
-                out.push_str(&format!("{}__sh2_status=$?; (exit $__sh2_status)\n", pad));
+                out.push_str(&format!("{}__sh2_status=$?\n", pad));
+
+                out.push_str(&format!("{}__sh2_check \"$__sh2_status\" \"${{__sh2_loc:-}}\"\n", pad));
             }
         }
         Cmd::Exec {
@@ -1133,23 +1146,19 @@ fn emit_cmd(
                     shell_cmd
                 ));
             } else {
-                // Normal: capture status in __sh2_status, then restore $? so try/set-e works
+                // Normal: capture status in __sh2_status, then check for failure
                 out.push_str(&shell_cmd);
-                out.push_str("; __sh2_status=$?; ");
-                match target {
-                    TargetShell::Bash => {
-                        out.push_str("(exit $__sh2_status)\n");
-                    }
-                    TargetShell::Posix => {
-                        if in_cond_ctx {
-                            // In condition context (e.g. try block), we must NOT exit the script.
-                            // We use (exit $s) to set $? and trigger errexit if active (which catch handles).
-                            out.push_str("(exit $__sh2_status)\n");
-                        } else {
-                            // For POSIX, like bash: just set $? for try/catch contexts
-                            out.push_str("(exit $__sh2_status)\n");
-                        }
-                    }
+                out.push_str("; __sh2_status=$?
+");
+                if in_cond_ctx {
+                    // In condition context (e.g. try block), we must NOT exit the script.
+                    // We use (exit $s) to set $? and trigger errexit if active (which catch handles).
+                    out.push_str(&format!("{}(exit $__sh2_status)
+", pad));
+                } else {
+                    // Normal context: use __sh2_check to fail-fast with diagnostics
+                    out.push_str(&format!("{}__sh2_check \"$__sh2_status\" \"${{__sh2_loc:-}}\"
+", pad));
                 }
             }
         }
@@ -1191,21 +1200,21 @@ fn emit_cmd(
             let cond_str = emit_cond(cond, target)?;
             out.push_str(&format!("{pad}if {cond_str}; then\n"));
             for c in then_body {
-                emit_cmd(c, out, indent + 2, target, in_cond_ctx, ctx)?;
+                emit_cmd(c, out, indent + 2, opts, in_cond_ctx, ctx)?;
             }
 
             for (cond, body) in elifs {
                 let cond_str = emit_cond(cond, target)?;
                 out.push_str(&format!("{pad}elif {cond_str}; then\n"));
                 for c in body {
-                    emit_cmd(c, out, indent + 2, target, in_cond_ctx, ctx)?;
+                    emit_cmd(c, out, indent + 2, opts, in_cond_ctx, ctx)?;
                 }
             }
 
             if !else_body.is_empty() {
                 out.push_str(&format!("{pad}else\n"));
                 for c in else_body {
-                    emit_cmd(c, out, indent + 2, target, in_cond_ctx, ctx)?;
+                    emit_cmd(c, out, indent + 2, opts, in_cond_ctx, ctx)?;
                 }
             }
 
@@ -1302,7 +1311,7 @@ fn emit_cmd(
                         }
                         pipe_str.push_str("{\n");
                         for cmd in seg {
-                            emit_cmd(cmd, &mut pipe_str, indent + 2, target, false, ctx)?;
+                            emit_cmd(cmd, &mut pipe_str, indent + 2, opts, false, ctx)?;
                         }
                         pipe_str.push_str(&format!("{pad}}}"));
                     }
@@ -1321,7 +1330,7 @@ fn emit_cmd(
                             let mut s = String::new();
                             s.push_str("{\n");
                             for cmd in seg {
-                                emit_cmd(cmd, &mut s, indent + 2, target, false, ctx)?;
+                                emit_cmd(cmd, &mut s, indent + 2, opts, false, ctx)?;
                             }
                             s.push_str(&format!("{pad}}}"));
                             Ok(s)
@@ -1357,7 +1366,7 @@ fn emit_cmd(
                 out.push_str(")\n");
 
                 for cmd in body {
-                    emit_cmd(cmd, out, indent + 4, target, in_cond_ctx, ctx)?;
+                    emit_cmd(cmd, out, indent + 4, opts, in_cond_ctx, ctx)?;
                 }
                 out.push_str(&format!("{}  ;;\n", pad));
             }
@@ -1368,7 +1377,7 @@ fn emit_cmd(
             let cond_str = emit_cond(cond, target)?;
             out.push_str(&format!("{pad}while {cond_str}; do\n"));
             for c in body {
-                emit_cmd(c, out, indent + 2, target, in_cond_ctx, ctx)?;
+                emit_cmd(c, out, indent + 2, opts, in_cond_ctx, ctx)?;
             }
             out.push_str(&format!("{pad}done\n"));
         }
@@ -1380,7 +1389,9 @@ fn emit_cmd(
                 out.push_str(&emit_word(cmd, target)?);
             }
             out.push('\n');
-            out.push_str(&format!("{}__sh2_status=$?; (exit $__sh2_status)\n", pad));
+            out.push_str(&format!("{}__sh2_status=$?\n", pad));
+
+            out.push_str(&format!("{}__sh2_check \"$__sh2_status\" \"${{__sh2_loc:-}}\"\n", pad));
         }
         Cmd::Log {
             level,
@@ -1437,7 +1448,7 @@ fn emit_cmd(
 
                  out.push_str(&format!("{}while IFS= read -r {} || [ -n \"${}\" ]; do\n", pad, var, var));
                  for c in body {
-                     emit_cmd(c, out, indent + 2, target, in_cond_ctx, ctx)?;
+                     emit_cmd(c, out, indent + 2, opts, in_cond_ctx, ctx)?;
                  }
                  out.push_str(&format!("{}done < \"$__sh2_for_tmp_{}\"\n", pad, var));
                  out.push_str(&format!("{}rm -f \"$__sh2_for_tmp_{}\"\n", pad, var)); // Early cleanup
@@ -1491,7 +1502,7 @@ fn emit_cmd(
             }
             out.push_str("; do\n");
             for c in body {
-                emit_cmd(c, out, indent + 2, target, in_cond_ctx, ctx)?;
+                emit_cmd(c, out, indent + 2, opts, in_cond_ctx, ctx)?;
             }
             out.push_str(&format!("{}done\n", pad));
         }
@@ -1520,7 +1531,7 @@ fn emit_cmd(
             ));
 
             for c in body {
-                emit_cmd(c, out, indent + 2, target, in_cond_ctx, ctx)?;
+                emit_cmd(c, out, indent + 2, opts, in_cond_ctx, ctx)?;
             }
 
             out.push_str(&format!("{pad}done\n"));
@@ -1573,7 +1584,9 @@ fn emit_cmd(
                 emit_val(path, target)?
             ));
             out.push('\n');
-            out.push_str(&format!("{}__sh2_status=$?; (exit $__sh2_status)\n", pad));
+            out.push_str(&format!("{}__sh2_status=$?\n", pad));
+
+            out.push_str(&format!("{}__sh2_check \"$__sh2_status\" \"${{__sh2_loc:-}}\"\n", pad));
         }
         Cmd::WithEnv { bindings, body } => {
             // Check for single Exec optimization
@@ -1597,7 +1610,7 @@ fn emit_cmd(
                 out.push_str(&format!("{}  export {}={}\n", pad, k, emit_val(v, target)?));
             }
             for cmd in body {
-                emit_cmd(cmd, out, indent + 2, target, in_cond_ctx, ctx)?;
+                emit_cmd(cmd, out, indent + 2, opts, in_cond_ctx, ctx)?;
             }
             out.push_str(&format!("{pad})\n"));
         }
@@ -1630,7 +1643,7 @@ fn emit_cmd(
             ));
 
             for cmd in body {
-                emit_cmd(cmd, out, indent + 2, target, in_cond_ctx, ctx)?;
+                emit_cmd(cmd, out, indent + 2, opts, in_cond_ctx, ctx)?;
             }
             out.push_str(&format!("{pad})\n"));
         }
@@ -1638,7 +1651,7 @@ fn emit_cmd(
             out.push_str(&format!("{pad}(\n"));
             out.push_str(&format!("{pad}  cd {}\n", emit_val(path, target)?));
             for cmd in body {
-                emit_cmd(cmd, out, indent + 2, target, in_cond_ctx, ctx)?;
+                emit_cmd(cmd, out, indent + 2, opts, in_cond_ctx, ctx)?;
             }
             out.push_str(&format!("{pad})\n"));
         }
@@ -1652,7 +1665,9 @@ fn emit_cmd(
             out.push_str(&pad);
             out.push_str(s);
             out.push('\n');
-            out.push_str(&format!("{}__sh2_status=$?; (exit $__sh2_status)\n", pad));
+            out.push_str(&format!("{}__sh2_status=$?\n", pad));
+
+            out.push_str(&format!("{}__sh2_check \"$__sh2_status\" \"${{__sh2_loc:-}}\"\n", pad));
         }
         Cmd::Call { name, args } => {
             out.push_str(&pad);
@@ -1661,19 +1676,21 @@ fn emit_cmd(
                 out.push(' ');
                 out.push_str(&emit_word(arg, target)?);
             }
-            out.push_str("; __sh2_status=$?; (exit $__sh2_status)\n");
+            out.push_str("; __sh2_status=$?\n");
+
+            out.push_str("__sh2_check \"$__sh2_status\" \"${{__sh2_loc:-}}\"\n");
         }
         Cmd::Subshell { body } => {
             out.push_str(&format!("{pad}(\n"));
             for cmd in body {
-                emit_cmd(cmd, out, indent + 2, target, in_cond_ctx, ctx)?;
+                emit_cmd(cmd, out, indent + 2, opts, in_cond_ctx, ctx)?;
             }
             out.push_str(&format!("{pad})\n"));
         }
         Cmd::Group { body } => {
             out.push_str(&format!("{pad}{{\n"));
             for cmd in body {
-                emit_cmd(cmd, out, indent + 2, target, in_cond_ctx, ctx)?;
+                emit_cmd(cmd, out, indent + 2, opts, in_cond_ctx, ctx)?;
             }
             out.push_str(&format!("{pad}}}\n"));
         }
@@ -1685,7 +1702,7 @@ fn emit_cmd(
         } => {
             out.push_str(&format!("{pad}{{\n"));
             for cmd in body {
-                emit_cmd(cmd, out, indent + 2, target, in_cond_ctx, ctx)?;
+                emit_cmd(cmd, out, indent + 2, opts, in_cond_ctx, ctx)?;
             }
             out.push_str(&format!("{pad}}}")); // No newline yet, redirections follow
 
@@ -1820,7 +1837,7 @@ fn emit_cmd(
                 _ => {
                     // Complex command (block, group, etc): emit with increased indent
                     out.push('\n');
-                    emit_cmd(cmd, out, indent + 2, target, false, ctx)?;
+                    emit_cmd(cmd, out, indent + 2, opts, false, ctx)?;
                     out.push_str(&pad);
                     out.push_str(") &\n");
                 }
@@ -1836,11 +1853,14 @@ fn emit_cmd(
                             out.push(' ');
                             out.push_str(&emit_word(elem, target)?);
                         }
-                        out.push_str("; __sh2_status=$?; (exit $__sh2_status)\n");
+                        out.push_str("; __sh2_status=$?\n");
+
+                        out.push_str("__sh2_check \"$__sh2_status\" \"${{__sh2_loc:-}}\"\n");
                     }
                     _ => {
                         out.push_str(&format!(
-                            "{pad}wait {}; __sh2_status=$?; (exit $__sh2_status)\n",
+
+                            "{pad}wait {}; __sh2_status=$?\n{pad}__sh2_check \"$__sh2_status\" \"${{__sh2_loc:-}}\"\n",
                             emit_word(val, target)?
                         ));
                     }
@@ -1882,7 +1902,7 @@ fn emit_cmd(
                         out.push_str(&format!("{pad}  {{\n"));
                     }
                     // Emit command directly with increased indent and in condition context
-                    emit_cmd(cmd, out, indent + 4, target, true, ctx)?;
+                    emit_cmd(cmd, out, indent + 4, opts, true, ctx)?;
                 }
                 out.push_str(&format!("{pad}  }}\n"));
             }
@@ -1912,29 +1932,29 @@ fn emit_cmd(
                 out.push_str(&format!("{pad}  :\n"));
             }
             for cmd in catch_body {
-                emit_cmd(cmd, out, indent + 2, target, in_cond_ctx, ctx)?;
+                emit_cmd(cmd, out, indent + 2, opts, in_cond_ctx, ctx)?;
             }
             out.push_str(&format!("{pad}fi\n"));
         }
         Cmd::AndThen { left, right } => {
             out.push_str(&format!("{pad}{{\n"));
             for cmd in left {
-                emit_cmd(cmd, out, indent + 2, target, in_cond_ctx, ctx)?;
+                emit_cmd(cmd, out, indent + 2, opts, in_cond_ctx, ctx)?;
             }
             out.push_str(&format!("{pad}}} && {{\n"));
             for cmd in right {
-                emit_cmd(cmd, out, indent + 2, target, in_cond_ctx, ctx)?;
+                emit_cmd(cmd, out, indent + 2, opts, in_cond_ctx, ctx)?;
             }
             out.push_str(&format!("{pad}}}\n"));
         }
         Cmd::OrElse { left, right } => {
             out.push_str(&format!("{pad}{{\n"));
             for cmd in left {
-                emit_cmd(cmd, out, indent + 2, target, in_cond_ctx, ctx)?;
+                emit_cmd(cmd, out, indent + 2, opts, in_cond_ctx, ctx)?;
             }
             out.push_str(&format!("{pad}}} || {{\n"));
             for cmd in right {
-                emit_cmd(cmd, out, indent + 2, target, in_cond_ctx, ctx)?;
+                emit_cmd(cmd, out, indent + 2, opts, in_cond_ctx, ctx)?;
             }
             out.push_str(&format!("{pad}}}\n"));
         }
@@ -1966,7 +1986,9 @@ fn emit_cmd(
             out.push_str(&emit_word(path, target)?);
             out.push(' ');
             out.push_str(&emit_val(env, target)?);
-            out.push_str("; __sh2_status=$?; (exit $__sh2_status)\n");
+            out.push_str("; __sh2_status=$?\n");
+
+            out.push_str("__sh2_check \"$__sh2_status\" \"${{__sh2_loc:-}}\"\n");
         }
     }
 
@@ -2162,6 +2184,17 @@ fn emit_posix_pipeline(
 
 fn emit_prelude(target: TargetShell, usage: &PreludeUsage) -> String {
     let mut s = String::new();
+
+    // Always emit __sh2_check for fail-fast behavior
+    match target {
+        TargetShell::Bash => {
+            s.push_str("__sh2_check() { local s=\"$1\"; local loc=\"$2\"; if (( s != 0 )); then if [[ -n \"$loc\" ]]; then printf 'Error in %s\\n' \"$loc\" >&2; fi; exit \"$s\"; fi; }\n");
+        }
+        TargetShell::Posix => {
+            s.push_str("__sh2_check() { s=\"$1\"; loc=\"$2\"; if [ \"$s\" -ne 0 ]; then if [ -n \"$loc\" ]; then printf 'Error in %s\\n' \"$loc\" >&2; fi; exit \"$s\"; fi; }\n");
+        }
+    }
+
 
     if usage.coalesce {
         s.push_str("__sh2_coalesce() { if [ -n \"$1\" ]; then printf '%s' \"$1\"; else printf '%s' \"$2\"; fi; }\n");

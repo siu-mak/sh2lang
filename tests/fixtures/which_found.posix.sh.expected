@@ -1,9 +1,11 @@
 #!/bin/sh
+__sh2_check() { s="$1"; loc="$2"; if [ "$s" -ne 0 ]; then if [ -n "$loc" ]; then printf 'Error in %s\n' "$loc" >&2; fi; exit "$s"; fi; }
 __sh2_which() { command -v -- "$1" 2>/dev/null || true; }
 main() {
   __sh2_loc="tests/fixtures/which_found.sh2:3:5"
   p="$( __sh2_which 'sh' )"
-  __sh2_status=$?; (exit $__sh2_status)
+  __sh2_status=$?
+  __sh2_check "$__sh2_status" "${__sh2_loc:-}"
   if [ "$p" != '' ]; then
     printf '%s\n' 'OK'
   else

@@ -1,15 +1,18 @@
 #!/bin/sh
+__sh2_check() { s="$1"; loc="$2"; if [ "$s" -ne 0 ]; then if [ -n "$loc" ]; then printf 'Error in %s\n' "$loc" >&2; fi; exit "$s"; fi; }
 main() {
   __sh2_loc="tests/fixtures/syntax_status_after_assign.sh2:3:5"
   x="$( 'false' )"
-  __sh2_status=$?; (exit $__sh2_status)
+  __sh2_status=$?
+  __sh2_check "$__sh2_status" "${__sh2_loc:-}"
   if [ "$__sh2_status" = "0" ]; then
     printf '%s\n' 'Expected status != 0 after let x = run(false)' >&2
     exit "1"
   fi
   __sh2_loc="tests/fixtures/syntax_status_after_assign.sh2:11:5"
   y="$( 'true' )"
-  __sh2_status=$?; (exit $__sh2_status)
+  __sh2_status=$?
+  __sh2_check "$__sh2_status" "${__sh2_loc:-}"
   if [ "$__sh2_status" != "0" ]; then
     printf '%s\n' 'Expected status 0 after let y = run(true)' >&2
     exit "1"

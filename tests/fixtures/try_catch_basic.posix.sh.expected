@@ -1,9 +1,11 @@
 #!/bin/sh
+__sh2_check() { s="$1"; loc="$2"; if [ "$s" -ne 0 ]; then if [ -n "$loc" ]; then printf 'Error in %s\n' "$loc" >&2; fi; exit "$s"; fi; }
 main() {
   case $- in *e*) __sh2_e=1;; *) __sh2_e=0;; esac; set +e
   if {
     {
-      'false'; __sh2_status=$?; (exit $__sh2_status)
+      'false'; __sh2_status=$?
+      (exit $__sh2_status)
     }
   }; then
     if [ "${__sh2_e:-0}" = 1 ]; then set -e; fi

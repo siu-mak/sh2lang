@@ -1,201 +1,225 @@
-# sh2c / sh2
+# sh2c: A Structured Shell Language Compiler
 
-**sh2** is a small, compiled “semantic shell language”. **sh2c** compiles `*.sh2` source into a shell script (Bash by default).
+`sh2c` is a prototype compiler for **sh2**, a small, structured shell language designed to bring safety and modern programming constructs to shell scripting.
+`sh2c` translates `.sh2` source into either **bash** or **POSIX sh**, so you can write one script and choose the portability/performance trade-off at compile time.
 
-This documentation reflects the language + CLI behavior observed through the incremental **devctl Steps 1–8**.
+## Design goals
+
+- **Structure & safety:** explicit `run(...)` command execution, `let` declarations, structured control flow (`if`, `while`, `for`, `case`, `try/catch`).
+- **Clarity:** readable, explicit syntax with fewer shell footguns.
+- **Dual targets:** `--target bash` (feature-rich) and `--target posix` (portable). Some features are intentionally Bash-only.
 
 ---
 
-## Quick start
+## Project status
 
-Compile to Bash on stdout:
+sh2c is a **robust, functional prototype** validated by an extensive test suite covering parsing, code generation, and runtime semantics.
+
+### Implemented core capabilities
+
+- **Variables:** `let` declaration and `set` reassignment.
+- **Control flow:** `if/elif/else`, `while`, `for`, `case` (with `=>` arms), `try/catch`.
+- **Command execution:** `run(...)`, pipelines (`|`), `exec(...)`, and `capture(...)` (where enabled).
+- **Run controls:** `run(..., allow_fail=true)` to suppress failure propagation for a single command.
+- **Run results:** `try_run(...) -> RunResult` with `.status`, `.stdout`, `.stderr`.
+- **Modules:** `import "path"` with cycle detection and recursive resolution.
+- **Scopes:** `with env {...}`, `with cwd(...)`, `with redirect {...}`, and `with log(...)` (**Bash-only**).
+- **Builtins & stdlib helpers:** filesystem predicates, regex `matches`, arg parsing (`parse_args`), envfile helpers, JSON emitter (`json_kv`), string/file helpers (`split/join/lines/trim/replace/read_file/write_file`, etc.).
+
+### Known gaps / limitations
+
+- **POSIX target limitations:** features that require arrays, associative arrays, process substitution, or interactive prompts will error/panic on `--target posix`.
+- **Some advanced shell forms are not native syntax:** e.g., bash process substitution like `diff <(cmd1) <(cmd2)`; use explicit `sh("...")` if absolutely needed (see limitations below).
+
+---
+
+## CLI usage
 
 ```bash
-sh2c --target bash ./devctl.sh2
+sh2c [flags] <script.sh2> [flags]
 ```
 
-Write to a file (auto `chmod +x` by default):
+Current flags (matches `sh2c --help`):
+
+- `--target <bash|posix>`  Select output shell dialect (default: bash)
+- `-o, --out <file>`       Write output to file instead of stdout (**auto-chmod +x**)
+- `--check`                Check syntax and semantics without emitting code
+- `--no-diagnostics`       Disable error location reporting and traps
+- `--no-chmod-x`           Do not set executable bit on output file
+- `--chmod-x`              Set executable bit on output file (**default**)
+- `--emit-ast`             Emit AST (debug)
+- `--emit-ir`              Emit IR (debug)
+- `--emit-sh`              Emit Shell (**default**)
+- `-h, --help`             Print help information
+
+### Compile to stdout
 
 ```bash
-sh2c --target bash ./devctl.sh2 -o ./devctl
-./devctl env list
+sh2c --target bash ./script.sh2
 ```
 
-Check-only (no output):
+### Compile to a file (executable)
 
 ```bash
-sh2c --check ./devctl.sh2
+sh2c --target bash -o ./script.sh ./script.sh2
+./script.sh
+```
+
+`-o/--out` writes the generated script to a file and sets `chmod +x` by default.
+Use `--no-chmod-x` if you do not want the output file to be executable.
+
+### Check-only
+
+```bash
+sh2c --check ./script.sh2
 ```
 
 ---
 
-## CLI
+## Quick example (tested style)
 
-This is the current `--help` output:
-
-```text
-Usage: sh2c [flags] <script.sh2> [flags]
-Flags:
-  --target <bash|posix>  Select output shell dialect (default: bash)
-  -o, --out <file>       Write output to file instead of stdout (auto-chmod +x)
-  --check                Check syntax and semantics without emitting code
-  --no-diagnostics       Disable error location reporting and traps
-  --no-chmod-x           Do not set executable bit on output file
-  --chmod-x              Set executable bit on output file (default)
-  --emit-ast             Emit AST (debug)
-  --emit-ir              Emit IR (debug)
-  --emit-sh              Emit Shell (default)
-  -h, --help             Print help information
-```
-
-### Output, shebangs, and executable bit
-
-- `--target bash` emits Bash-oriented shell output. In devctl Steps 1–8, generated Bash output includes a shebang:
-  - `#!/usr/bin/env bash`
-- `--target posix` emits a POSIX-sh compatible script. (Shebang behavior may differ by target; if you need a specific interpreter line, prefer `--target bash` or add the shebang you want at the top of the emitted script.)
-
-When you use `-o/--out`, the compiler writes to that file. By default, the output file is made executable (`--chmod-x` default). Use `--no-chmod-x` to disable that behavior.
-
----
-
-## Language at a glance
-
-> **Important:** sh2 files contain **function definitions only**. Top-level statements are not allowed.
-> The compiler-generated shell invokes `main()`.
-
-A minimal program:
+This example demonstrates file predicates, pipelines, and status handling.
 
 ```sh2
 func main() {
-  print("hello")
-}
-```
+  let file_path = "/etc/hosts"
 
----
+  if exists(file_path) {
+    print("File found: " & file_path)
 
-## Cookbook patterns (devctl-style)
+    # wc -l outputs: "  <N> <path>"
+    # awk extracts the first field
+    let line_count = capture(run("wc", "-l", file_path) | run("awk", "{print $1}"))
 
-### 1) `case` uses `=>` (not `hyphen+greater-than`)
-
-```sh2
-func main() {
-  let cmd = arg(0)
-
-  case cmd {
-    "env" => {
-      print("env subcommand")
-    }
-    _ => {
-      print_err("unknown command")
-      exit(2)
-    }
-  }
-}
-```
-
-### 2) Newlines separate statements (no `;` in blocks)
-
-✅ valid:
-
-```sh2
-func main() {
-  print("one")
-  print("two")
-}
-```
-
-❌ invalid:
-
-```sh2
-func main() {
-  print("one"); print("two")
-}
-```
-
-### 3) `env` is reserved
-
-❌ invalid:
-
-```sh2
-func main() {
-  let <reserved env> = "oops"
-}
-```
-
-✅ fix:
-
-```sh2
-func main() {
-  let env_name = "ok"
-}
-```
-
-### 4) `env.NAME` for environment variables
-
-```sh2
-func main() {
-  let base = env.HOME & "/sh2c/docker-rootless"
-  run("mkdir", "-p", base)
-}
-```
-
-### 5) Root check pattern (portable)
-
-Avoid `uid()` on POSIX. Use `sh("...")` + `status()`:
-
-```sh2
-func main() {
-  sh("test \"$(id -u)\" -eq 0")
-  if status() != 0 {
-    print_err("must run as root")
+    print("It contains " & line_count & " lines.")
+  } else {
+    print_err("Error: File not found at " & file_path)
     exit(1)
   }
 }
 ```
 
-### 6) “Write file” without a `write_file` builtin
+### Expected bash output characteristics
 
-`print(...)` is a **statement**, not a pipeline stage, so it can’t be used with `|`.
-
-Instead, use external tools:
-
-```sh2
-func main() {
-  let path = env.HOME & "/env.meta"
-
-  run("printf", "IMAGE_TAG=%s\n", "demo:latest")
-    | run("tee", path)
-}
-```
-
-Note: `tee` writes to the file **and** echoes to stdout. That is normal `tee` behavior.
+When targeting bash, generated output:
+- includes a shebang (`#!/usr/bin/env bash`)
+- uses a strict/error-tracking runtime model
+- tracks status via `status()` / internal `__sh2_status`
 
 ---
 
-## `sh("...")` (literal-only)
+## Language at a glance
 
-Currently, `sh(...)` accepts **only a string literal** (not a concatenated expression).
+For full details, see `language.md` and `grammar.enbf.md`. Below are the key points that frequently trip people up.
 
-❌ fails today:
+### Program structure (important)
+
+- Programs are **function definitions only**.
+- **No top-level statements** (the compiler-generated shell invokes `main()`).
+- `env` is a **reserved keyword** (use `env_name`, etc.).
+
+### Statement separation
+
+- Semicolons `;` are **not** valid statement separators inside blocks.
+- Use newlines between statements.
+
+### `case` uses `=>`
+
+Case arms use `=>` (not `->`).
 
 ```sh2
-func main() {
-  let cmd = "echo hi"
-  sh(cmd)          # not allowed
-  sh("echo " & "hi")  # not allowed
+case cmd {
+  "env" => { print("env") }
+  _ => { print_err("unknown"); exit(2) }
 }
 ```
 
-✅ recommended alternatives:
+### `sh("...")` is literal-only
 
-- Put the dynamic parts into normal shell commands via `run(...)`.
-- If you truly need an inline shell snippet, keep it a literal and reference variables (via the shell), or refactor into explicit `run(...)` calls.
+`sh(...)` currently accepts only a **string literal**, not a concatenation or variable.
+
+✅ `sh("echo hello")`  
+❌ `sh("echo " & name)`  
+❌ `sh(cmd)`
+
+Prefer structured `run(...)` calls where possible.
+
+### `print(...)` can’t be piped
+
+`print(...)` is a statement, not a pipeline stage. To write to a file with piping:
+
+```sh2
+run("printf", "IMAGE_TAG=%s\n", "demo:latest") | run("tee", "/tmp/env.meta")
+```
+
+Note: `tee` echoes to stdout while writing the file.
 
 ---
 
-## Status and `return`
+## Run behavior controls
 
-- `status()` returns the last command/builtin exit status tracked by the runtime (used by `if`, `case` fallthrough patterns, and explicit checks).
-- `return <expr>` in sh2 is *string-valued* at the language level; in Bash codegen, this is implemented by printing the return value to **stdout** and returning success (because `return "string"` is not a Bash thing). Use `capture(...)` when you need the returned string.
+### `run(..., allow_fail=true)`
 
-See **language.md** for details.
+Suppress failure propagation for a single run call while still updating `status()`:
+
+```sh2
+run("false", allow_fail=true)
+print("status=" & status())
+```
+
+### `try_run(...) -> RunResult`
+
+Capture stdout/stderr/status without aborting on failure:
+
+```sh2
+let r = try_run("sh", "-lc", "echo out; echo err 1>&2; exit 7")
+print("status=" & r.status)
+print("stdout=" & r.stdout)
+print_err("stderr=" & r.stderr)
+```
+
+---
+
+## Logging & interactive (Bash-only)
+
+### `with log(path, append=...) { ... }`
+
+Bash-only fan-out logging (console + file). Errors/panics on `--target posix`.
+
+```sh2
+with log("/tmp/devctl.log", append=true) {
+  print("hello")
+  run("printf", "tag=%s\n", "demo:latest")
+}
+```
+
+### `input(...)`, `confirm(...)`
+
+Interactive primitives (Bash-only). They error/panic on `--target posix`.
+
+---
+
+## Targets & portability
+
+### `--target bash` (default)
+
+Supports the full implemented feature set, including:
+- lists/maps (and indexing/iteration)
+- `with log(...)`
+- `input(...)`, `confirm(...)`
+- `try_run(...) -> RunResult` with `.status/.stdout/.stderr`
+
+### `--target posix`
+
+Maximal portability. Some features are intentionally unsupported and will error/panic, including:
+- lists/maps (no arrays in POSIX sh)
+- `with log(...)` (no process substitution)
+- `input(...)`, `confirm(...)` (interactive helpers)
+
+---
+
+## Documentation
+
+- `language.md` — descriptive language reference with gotchas and examples
+- `grammar.enbf.md` — EBNF grammar for the sh2 syntax
+- `tests/` — fixtures and integration tests showing supported patterns (e.g., `try_run_success.sh2`, `try_run_fields.sh2`, `matches_basic.sh2`, etc.)

@@ -1,11 +1,14 @@
 #!/bin/sh
+__sh2_check() { s="$1"; loc="$2"; if [ "$s" -ne 0 ]; then if [ -n "$loc" ]; then printf 'Error in %s\n' "$loc" >&2; fi; exit "$s"; fi; }
 main() {
   cd 'tmp'
   __sh2_loc="tests/fixtures/cd_basic.sh2:3:3"
-  'pwd'; __sh2_status=$?; (exit $__sh2_status)
+  'pwd'; __sh2_status=$?
+  __sh2_check "$__sh2_status" "${__sh2_loc:-}"
   cd "$( 'pwd' )"
   __sh2_loc="tests/fixtures/cd_basic.sh2:5:3"
-  'echo' 'done'; __sh2_status=$?; (exit $__sh2_status)
+  'echo' 'done'; __sh2_status=$?
+  __sh2_check "$__sh2_status" "${__sh2_loc:-}"
 }
 __sh2_status=0
 main "$@"

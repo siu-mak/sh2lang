@@ -49,7 +49,6 @@ fn cli_no_diagnostics_posix() {
         ],
         &[
              "__sh2_loc=",
-             "Error in " 
         ],
     );
 }
@@ -102,7 +101,7 @@ fn cli_diagnostics_default_posix() {
         &["--target", "posix", "tests/fixtures/no_diagnostics_basic.sh2"],
         &[
              "__sh2_loc=",  // Location tracking is present
-             "(exit $__sh2_status)",  // Status is captured but doesn't exit
+             "__sh2_check",  // Status is captured but doesn't exit
         ],
         &[],
     );
@@ -127,7 +126,6 @@ fn cli_no_diagnostics_pipeline_posix() {
         &[],
         &[
              "__sh2_loc=",
-             "Error in "
         ],
     );
 }

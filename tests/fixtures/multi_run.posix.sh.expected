@@ -1,9 +1,12 @@
 #!/bin/sh
+__sh2_check() { s="$1"; loc="$2"; if [ "$s" -ne 0 ]; then if [ -n "$loc" ]; then printf 'Error in %s\n' "$loc" >&2; fi; exit "$s"; fi; }
 main() {
   __sh2_loc="tests/fixtures/multi_run.sh2:2:5"
-  'echo' 'one'; __sh2_status=$?; (exit $__sh2_status)
+  'echo' 'one'; __sh2_status=$?
+  __sh2_check "$__sh2_status" "${__sh2_loc:-}"
   __sh2_loc="tests/fixtures/multi_run.sh2:3:5"
-  'echo' 'two'; __sh2_status=$?; (exit $__sh2_status)
+  'echo' 'two'; __sh2_status=$?
+  __sh2_check "$__sh2_status" "${__sh2_loc:-}"
 }
 __sh2_status=0
 main "$@"

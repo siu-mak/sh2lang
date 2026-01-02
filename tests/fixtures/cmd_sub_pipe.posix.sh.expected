@@ -1,8 +1,10 @@
 #!/bin/sh
+__sh2_check() { s="$1"; loc="$2"; if [ "$s" -ne 0 ]; then if [ -n "$loc" ]; then printf 'Error in %s\n' "$loc" >&2; fi; exit "$s"; fi; }
 main() {
   __sh2_loc="tests/fixtures/cmd_sub_pipe.sh2:2:5"
   x="$( 'echo' 'hello' | 'cat' )"
-  __sh2_status=$?; (exit $__sh2_status)
+  __sh2_status=$?
+  __sh2_check "$__sh2_status" "${__sh2_loc:-}"
   printf '%s\n' "$x"
 }
 __sh2_status=0

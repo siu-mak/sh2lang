@@ -19,3 +19,15 @@ fn exec_posix_runtime_error() {
 fn exec_cmd_sub_pipe() {
     assert_exec_matches_fixture("cmd_sub_pipe");
 }
+
+#[test]
+fn exec_runtime_fail_fast_bash() {
+    // Test that failing commands stop execution and print diagnostics
+    assert_exec_matches_fixture("runtime_fail_fast");
+}
+
+#[test]
+fn exec_runtime_fail_fast_posix() {
+    // Test that failing commands stop execution in POSIX mode too
+    assert_exec_matches_fixture_target("runtime_fail_fast", TargetShell::Posix);
+}

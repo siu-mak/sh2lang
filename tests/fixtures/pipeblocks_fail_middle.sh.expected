@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+__sh2_check() { local s="$1"; local loc="$2"; if (( s != 0 )); then if [[ -n "$loc" ]]; then printf 'Error in %s\n' "$loc" >&2; fi; exit "$s"; fi; }
 __sh2_err_handler() {
   local s=$?
   local loc="${__sh2_loc:-}"
@@ -21,13 +22,16 @@ main() {
       __sh2_loc="tests/fixtures/pipeblocks_fail_middle.sh2:3:9"
       if ( set -o pipefail; set +e; {
         __sh2_loc="tests/fixtures/pipeblocks_fail_middle.sh2:3:16"
-        'sh' '-c' 'echo hi'; __sh2_status=$?; (exit $__sh2_status)
+        'sh' '-c' 'echo hi'; __sh2_status=$?
+        __sh2_check "$__sh2_status" "${__sh2_loc:-}"
       } | {
         __sh2_loc="tests/fixtures/pipeblocks_fail_middle.sh2:3:47"
-        'sh' '-c' 'exit 7'; __sh2_status=$?; (exit $__sh2_status)
+        'sh' '-c' 'exit 7'; __sh2_status=$?
+        __sh2_check "$__sh2_status" "${__sh2_loc:-}"
       } | {
         __sh2_loc="tests/fixtures/pipeblocks_fail_middle.sh2:3:77"
-        'sh' '-c' 'cat'; __sh2_status=$?; (exit $__sh2_status)
+        'sh' '-c' 'cat'; __sh2_status=$?
+        __sh2_check "$__sh2_status" "${__sh2_loc:-}"
       } ); then __sh2_status=0; else __sh2_status=$?; fi; (exit $__sh2_status)
     } && {
       printf '%s\n' 'NO'
@@ -38,7 +42,8 @@ main() {
     if [ -n "$__sh2_err" ]; then eval "$__sh2_err"; fi; if [ "$__sh2_e" = 1 ]; then set -e; fi
     __sh2_loc="tests/fixtures/pipeblocks_fail_middle.sh2:6:9"
     s="$__sh2_status"
-    __sh2_status=$?; (exit $__sh2_status)
+    __sh2_status=$?
+    __sh2_check "$__sh2_status" "${__sh2_loc:-}"
     printf '%s\n' 'CAUGHT'
     printf '%s\n' "$s"
   fi

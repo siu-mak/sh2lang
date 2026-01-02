@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+__sh2_check() { local s="$1"; local loc="$2"; if (( s != 0 )); then if [[ -n "$loc" ]]; then printf 'Error in %s\n' "$loc" >&2; fi; exit "$s"; fi; }
 __sh2_split() {
   local -n __o=$1
   if [[ -z "$3" ]]; then eval "$1=(\"$2\")"; return; fi
@@ -25,7 +26,8 @@ main() {
   local __sh2_loc=""
   __sh2_loc="tests/fixtures/split_empty_fields.sh2:2:5"
   __sh2_split xs 'a,,b,' ','
-  __sh2_status=$?; (exit $__sh2_status)
+  __sh2_status=$?
+  __sh2_check "$__sh2_status" "${__sh2_loc:-}"
   for x in "${xs[@]}"; do
     printf '%s\n' '['"$x"']'
   done

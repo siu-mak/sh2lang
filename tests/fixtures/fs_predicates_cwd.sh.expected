@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+__sh2_check() { local s="$1"; local loc="$2"; if (( s != 0 )); then if [[ -n "$loc" ]]; then printf 'Error in %s\n' "$loc" >&2; fi; exit "$s"; fi; }
 __sh2_err_handler() {
   local s=$?
   local loc="${__sh2_loc:-}"
@@ -16,15 +17,18 @@ main() {
   local __sh2_loc=""
   __sh2_loc="tests/fixtures/fs_predicates_cwd.sh2:3:3"
   d="$( 'mktemp' '-d' )"
-  __sh2_status=$?; (exit $__sh2_status)
+  __sh2_status=$?
+  __sh2_check "$__sh2_status" "${__sh2_loc:-}"
   (
     cd "$d"
     touch f.txt
-    __sh2_status=$?; (exit $__sh2_status)
+    __sh2_status=$?
+    __sh2_check "$__sh2_status" "${__sh2_loc:-}"
   )
   __sh2_loc="tests/fixtures/fs_predicates_cwd.sh2:9:3"
   f="$d"'/f.txt'
-  __sh2_status=$?; (exit $__sh2_status)
+  __sh2_status=$?
+  __sh2_check "$__sh2_status" "${__sh2_loc:-}"
   if [ -e "$f" ] && [ -f "$f" ] && ! [ -d "$f" ]; then
     printf '%s\n' 'fs_ok'
   else
@@ -37,7 +41,8 @@ main() {
     printf '%s\n' 'cd_bad'
   fi
   __sh2_loc="tests/fixtures/fs_predicates_cwd.sh2:25:3"
-  'rm' '-rf' "$d"; __sh2_status=$?; (exit $__sh2_status)
+  'rm' '-rf' "$d"; __sh2_status=$?
+  __sh2_check "$__sh2_status" "${__sh2_loc:-}"
 }
 __sh2_status=0
 main "$@"
