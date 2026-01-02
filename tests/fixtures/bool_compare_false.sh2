@@ -1,6 +1,5 @@
 func main() {
-    mkdir("tests")
-    let d = "tests"
+    let d = "."
     if is_dir(d) == false { print("no") }
     print("ok")
 }

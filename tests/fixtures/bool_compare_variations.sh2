@@ -1,7 +1,6 @@
 func main() {
-    mkdir("tests")
-    let d = "tests"
-    let f = "missing"
+    let d = "."
+    let f = "missing_dir_12345"
 
     # Eq True
     if is_dir(d) == true { print("EqTrue:ok") } else { print("EqTrue:fail") }

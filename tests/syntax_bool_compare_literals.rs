@@ -23,3 +23,13 @@ fn compile_bool_usage_error() {
        .stderr(predicate::str::contains("Cannot emit boolean/list value as string"))
        .stderr(predicate::str::contains("Internal error").not());
 }
+
+#[test]
+fn compile_bool_literal_usage_error() {
+    let mut cmd = Command::cargo_bin("sh2c").expect("Failed to find binary");
+    cmd.arg("tests/fixtures/bool_literal_usage_error.sh2")
+       .assert()
+       .failure()
+       .stderr(predicate::str::contains("Cannot emit boolean value as string/word"))
+       .stderr(predicate::str::contains("Internal error").not());
+}

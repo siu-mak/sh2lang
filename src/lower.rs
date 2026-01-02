@@ -875,8 +875,9 @@ fn lower_expr<'a>(e: ast::Expr, ctx: &mut LoweringContext<'a>, sm: &SourceMap, f
         }
         ast::ExprKind::Compare { left, op, right } => {
             // Check for boolean literal comparisons (eq/neq with true/false_
-            let l_bool = if let ast::ExprKind::Bool(b) = left.node { Some(b) } else { None };
-            let r_bool = if let ast::ExprKind::Bool(b) = right.node { Some(b) } else { None };
+            let get_bool = |e: &ast::Expr| if let ast::ExprKind::Bool(b) = e.node { Some(b) } else { None };
+            let l_bool = get_bool(&left);
+            let r_bool = get_bool(&right);
 
             if (l_bool.is_some() || r_bool.is_some()) && matches!(op, ast::CompareOp::Eq | ast::CompareOp::NotEq) {
                 // If one side is a bool literal and op is Eq/NotEq, canonicalize to unary conditional
