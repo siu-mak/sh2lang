@@ -1109,7 +1109,11 @@ fn emit_cmd(
                 out.push_str("=(\"$@\")\n");
                 out.push_str(&format!("{}__sh2_status=$?\n", pad));
 
-                out.push_str(&format!("{}__sh2_check \"$__sh2_status\" \"${{__sh2_loc:-}}\"\n", pad));
+                if in_cond_ctx {
+                    out.push_str(&format!("{}__sh2_check \"$__sh2_status\" \"${{__sh2_loc:-}}\" \"return\"\n", pad));
+                } else {
+                    out.push_str(&format!("{}__sh2_check \"$__sh2_status\" \"${{__sh2_loc:-}}\"\n", pad));
+                }
             } else {
                 out.push_str(name);
                 out.push('=');
@@ -1117,7 +1121,11 @@ fn emit_cmd(
                 out.push('\n');
                 out.push_str(&format!("{}__sh2_status=$?\n", pad));
 
-                out.push_str(&format!("{}__sh2_check \"$__sh2_status\" \"${{__sh2_loc:-}}\"\n", pad));
+                if in_cond_ctx {
+                    out.push_str(&format!("{}__sh2_check \"$__sh2_status\" \"${{__sh2_loc:-}}\" \"return\"\n", pad));
+                } else {
+                    out.push_str(&format!("{}__sh2_check \"$__sh2_status\" \"${{__sh2_loc:-}}\"\n", pad));
+                }
             }
         }
         Cmd::Exec {
@@ -1432,7 +1440,7 @@ fn emit_cmd(
                          Val::Split { s, delim } => {
                              out.push_str(&format!("{}  __sh2_split {} {}\n", pad, emit_val(s, target)?, emit_val(delim, target)?));
                          }
-                         Val::Lines(inner) => {
+                         Val::Lines(_inner) => {
                              return Err(CompileError::unsupported("lines() iteration not supported in POSIX", target));
                          }
                          Val::Var(n) if ctx.known_lists.contains(n) => {
@@ -1586,7 +1594,11 @@ fn emit_cmd(
             out.push('\n');
             out.push_str(&format!("{}__sh2_status=$?\n", pad));
 
-            out.push_str(&format!("{}__sh2_check \"$__sh2_status\" \"${{__sh2_loc:-}}\"\n", pad));
+            if in_cond_ctx {
+                out.push_str(&format!("{}__sh2_check \"$__sh2_status\" \"${{__sh2_loc:-}}\" \"return\"\n", pad));
+            } else {
+                out.push_str(&format!("{}__sh2_check \"$__sh2_status\" \"${{__sh2_loc:-}}\"\n", pad));
+            }
         }
         Cmd::WithEnv { bindings, body } => {
             // Check for single Exec optimization
@@ -1667,7 +1679,11 @@ fn emit_cmd(
             out.push('\n');
             out.push_str(&format!("{}__sh2_status=$?\n", pad));
 
-            out.push_str(&format!("{}__sh2_check \"$__sh2_status\" \"${{__sh2_loc:-}}\"\n", pad));
+            if in_cond_ctx {
+                out.push_str(&format!("{}__sh2_check \"$__sh2_status\" \"${{__sh2_loc:-}}\" \"return\"\n", pad));
+            } else {
+                out.push_str(&format!("{}__sh2_check \"$__sh2_status\" \"${{__sh2_loc:-}}\"\n", pad));
+            }
         }
         Cmd::Call { name, args } => {
             out.push_str(&pad);
@@ -1678,7 +1694,11 @@ fn emit_cmd(
             }
             out.push_str("; __sh2_status=$?\n");
 
-            out.push_str("__sh2_check \"$__sh2_status\" \"${{__sh2_loc:-}}\"\n");
+            if in_cond_ctx {
+                out.push_str(&format!("{}__sh2_check \"$__sh2_status\" \"${{__sh2_loc:-}}\" \"return\"\n", pad));
+            } else {
+                out.push_str(&format!("{}__sh2_check \"$__sh2_status\" \"${{__sh2_loc:-}}\"\n", pad));
+            }
         }
         Cmd::Subshell { body } => {
             out.push_str(&format!("{pad}(\n"));
@@ -1855,14 +1875,22 @@ fn emit_cmd(
                         }
                         out.push_str("; __sh2_status=$?\n");
 
-                        out.push_str("__sh2_check \"$__sh2_status\" \"${{__sh2_loc:-}}\"\n");
+                        if in_cond_ctx {
+                            out.push_str(&format!("{}__sh2_check \"$__sh2_status\" \"${{__sh2_loc:-}}\" \"return\"\n", pad));
+                        } else {
+                            out.push_str(&format!("{}__sh2_check \"$__sh2_status\" \"${{__sh2_loc:-}}\"\n", pad));
+                        }
                     }
                     _ => {
                         out.push_str(&format!(
-
-                            "{pad}wait {}; __sh2_status=$?\n{pad}__sh2_check \"$__sh2_status\" \"${{__sh2_loc:-}}\"\n",
+                            "{pad}wait {}; __sh2_status=$?\n",
                             emit_word(val, target)?
                         ));
+                        if in_cond_ctx {
+                            out.push_str(&format!("{}__sh2_check \"$__sh2_status\" \"${{__sh2_loc:-}}\" \"return\"\n", pad));
+                        } else {
+                            out.push_str(&format!("{}__sh2_check \"$__sh2_status\" \"${{__sh2_loc:-}}\"\n", pad));
+                        }
                     }
                 },
                 None => out.push_str(&format!("{pad}wait; __sh2_status=$?\n")),
@@ -1988,7 +2016,11 @@ fn emit_cmd(
             out.push_str(&emit_val(env, target)?);
             out.push_str("; __sh2_status=$?\n");
 
-            out.push_str("__sh2_check \"$__sh2_status\" \"${{__sh2_loc:-}}\"\n");
+            if in_cond_ctx {
+                out.push_str(&format!("{}__sh2_check \"$__sh2_status\" \"${{__sh2_loc:-}}\" \"return\"\n", pad));
+            } else {
+                out.push_str(&format!("{}__sh2_check \"$__sh2_status\" \"${{__sh2_loc:-}}\"\n", pad));
+            }
         }
     }
 
@@ -2188,10 +2220,10 @@ fn emit_prelude(target: TargetShell, usage: &PreludeUsage) -> String {
     // Always emit __sh2_check for fail-fast behavior
     match target {
         TargetShell::Bash => {
-            s.push_str("__sh2_check() { local s=\"$1\"; local loc=\"$2\"; local mode=\"$3\"; if (( s != 0 )); then if [[ -n \"$loc\" ]]; then printf 'Error in %s\\n' \"$loc\" >&2; fi; if [[ \"$mode\" == \"return\" ]]; then return \"$s\"; else exit \"$s\"; fi; fi; }\n");
+            s.push_str("__sh2_check() { local s=\"$1\"; local loc=\"$2\"; local mode=\"$3\"; if (( s != 0 )); then if [[ \"$mode\" == \"return\" ]]; then return \"$s\"; else if [[ -n \"$loc\" ]]; then printf 'Error in %s\\n' \"$loc\" >&2; fi; exit \"$s\"; fi; fi; }\n");
         }
         TargetShell::Posix => {
-            s.push_str("__sh2_check() { s=\"$1\"; loc=\"$2\"; mode=\"$3\"; if [ \"$s\" -ne 0 ]; then if [ -n \"$loc\" ]; then printf 'Error in %s\\n' \"$loc\" >&2; fi; if [ \"$mode\" = \"return\" ]; then return \"$s\"; else exit \"$s\"; fi; fi; }\n");
+            s.push_str("__sh2_check() { __sh2_s=\"$1\"; __sh2_l=\"$2\"; __sh2_m=\"$3\"; if [ \"$__sh2_s\" -ne 0 ]; then if [ \"$__sh2_m\" = \"return\" ]; then return \"$__sh2_s\"; fi; if [ -n \"$__sh2_l\" ]; then printf 'Error in %s\\n' \"$__sh2_l\" >&2; fi; exit \"$__sh2_s\"; fi; }\n");
         }
     }
 

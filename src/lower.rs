@@ -244,7 +244,7 @@ fn lower_stmt<'a>(
         }
 
         ast::StmtKind::Print(e) => {
-            if let ast::ExprKind::Call { name, args } = &e.node {
+            if let ast::ExprKind::Call { name, args: _ } = &e.node {
                 if name == "split" {
                      return Err(CompileError::new(sm.format_diagnostic(
                         file,
@@ -598,6 +598,20 @@ fn lower_stmt<'a>(
                     "read_file() returns a value; use it in an expression (e.g., let c = read_file(\"file.txt\"))",
                     stmt.span,
                 )));
+            } else if name == "home" {
+                return Err(CompileError::new(sm.format_diagnostic(
+                    file,
+                    opts.diag_base_dir.as_deref(),
+                    "home() returns a value; use it in an expression",
+                    stmt.span,
+                )));
+            } else if name == "path_join" {
+                return Err(CompileError::new(sm.format_diagnostic(
+                    file,
+                    opts.diag_base_dir.as_deref(),
+                    "path_join() returns a value; use it in an expression",
+                    stmt.span,
+                )));
             } else if matches!(name.as_str(), "log_info" | "log_warn" | "log_error") {
                 let lvl = match name.as_str() {
                     "log_info" => ir::LogLevel::Info,
@@ -674,7 +688,7 @@ fn lower_stmt<'a>(
             let ctx_body = lower_block(body, &mut lowered_body, ctx.clone(), sm, file, opts)?;
 
             // Cannot use closure easily with Result propagation from captures
-            let mut lower_target = |t: ast::RedirectTarget, c: &mut LoweringContext| -> Result<ir::RedirectTarget, CompileError> {
+            let lower_target = |t: ast::RedirectTarget, c: &mut LoweringContext| -> Result<ir::RedirectTarget, CompileError> {
                  Ok(match t {
                     ast::RedirectTarget::File { path, append } => ir::RedirectTarget::File {
                         path: lower_expr(path, c, sm, file)?,

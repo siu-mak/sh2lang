@@ -4,7 +4,7 @@ use std::fs;
 
 #[test]
 fn test_cli_emit_ast() {
-    let mut cmd = Command::cargo_bin("sh2c").unwrap();
+    let mut cmd = Command::new(env!("CARGO_BIN_EXE_sh2c"));
     let fixture = "tests/fixtures/cli_emit_ast.sh2";
     let expected = fs::read_to_string("tests/fixtures/cli_emit_ast.stdout.expected").unwrap();
 
@@ -17,7 +17,7 @@ fn test_cli_emit_ast() {
 
 #[test]
 fn test_cli_emit_ir() {
-    let mut cmd = Command::cargo_bin("sh2c").unwrap();
+    let mut cmd = Command::new(env!("CARGO_BIN_EXE_sh2c"));
     let fixture = "tests/fixtures/cli_emit_ir.sh2";
     let expected = fs::read_to_string("tests/fixtures/cli_emit_ir.stdout.expected").unwrap();
 
@@ -30,7 +30,7 @@ fn test_cli_emit_ir() {
 
 #[test]
 fn test_cli_emit_sh() {
-    let mut cmd = Command::cargo_bin("sh2c").unwrap();
+    let mut cmd = Command::new(env!("CARGO_BIN_EXE_sh2c"));
     let fixture = "tests/fixtures/cli_emit_sh.sh2";
     let expected = fs::read_to_string("tests/fixtures/cli_emit_sh.stdout.expected").unwrap();
 
@@ -45,7 +45,7 @@ fn test_cli_emit_sh() {
 
 #[test]
 fn test_cli_check_ok() {
-    let mut cmd = Command::cargo_bin("sh2c").unwrap();
+    let mut cmd = Command::new(env!("CARGO_BIN_EXE_sh2c"));
     let fixture = "tests/fixtures/cli_check_ok.sh2";
     let expected = fs::read_to_string("tests/fixtures/cli_check_ok.stdout.expected").unwrap();
 
@@ -58,7 +58,7 @@ fn test_cli_check_ok() {
 
 #[test]
 fn test_cli_check_err() {
-    let mut cmd = Command::cargo_bin("sh2c").unwrap();
+    let mut cmd = Command::new(env!("CARGO_BIN_EXE_sh2c"));
     let fixture = "tests/fixtures/cli_check_err.sh2";
     let expected_stderr = fs::read_to_string("tests/fixtures/cli_check_err.stderr.expected").unwrap();
 
@@ -71,7 +71,7 @@ fn test_cli_check_err() {
 
 #[test]
 fn test_cli_emit_multi_flags() {
-    let mut cmd = Command::cargo_bin("sh2c").unwrap();
+    let mut cmd = Command::new(env!("CARGO_BIN_EXE_sh2c"));
     let fixture = "tests/fixtures/cli_check_ok.sh2";
     let expected_stderr = fs::read_to_string("tests/fixtures/cli_emit_multi_flags.stderr.expected").unwrap();
 

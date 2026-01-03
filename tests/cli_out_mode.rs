@@ -6,7 +6,7 @@ use std::os::unix::fs::PermissionsExt;
 
 #[test]
 fn writes_file_and_is_executable() {
-    let mut cmd = Command::cargo_bin("sh2c").unwrap();
+    let mut cmd = Command::new(env!("CARGO_BIN_EXE_sh2c"));
     let temp_dir = tempfile::tempdir().unwrap();
     let out_path = temp_dir.path().join("out.sh");
     let input_path = "tests/fixtures/cli_target_basic.sh2";
@@ -35,7 +35,7 @@ fn writes_file_and_is_executable() {
 
 #[test]
 fn check_and_out_is_error() {
-    let mut cmd = Command::cargo_bin("sh2c").unwrap();
+    let mut cmd = Command::new(env!("CARGO_BIN_EXE_sh2c"));
     let temp_dir = tempfile::tempdir().unwrap();
     let out_path = temp_dir.path().join("x.sh");
     let input_path = "tests/fixtures/cli_target_basic.sh2";
@@ -54,7 +54,7 @@ fn check_and_out_is_error() {
 
 #[test]
 fn out_io_error_exit_1() {
-    let mut cmd = Command::cargo_bin("sh2c").unwrap();
+    let mut cmd = Command::new(env!("CARGO_BIN_EXE_sh2c"));
     let temp_dir = tempfile::tempdir().unwrap();
     // Create a directory, which cannot be overwritten by fs::write
     let dir_path = temp_dir.path().join("dirout");
@@ -73,7 +73,7 @@ fn out_io_error_exit_1() {
 
 #[test]
 fn out_no_chmod_x_does_not_set_exec_bit() {
-    let mut cmd = Command::cargo_bin("sh2c").unwrap();
+    let mut cmd = Command::new(env!("CARGO_BIN_EXE_sh2c"));
     let temp_dir = tempfile::tempdir().unwrap();
     let out_path = temp_dir.path().join("no_exec.sh");
     let input_path = "tests/fixtures/cli_target_basic.sh2";
@@ -103,7 +103,7 @@ fn out_no_chmod_x_does_not_set_exec_bit() {
 
 #[test]
 fn no_chmod_x_without_out_is_usage_error() {
-    let mut cmd = Command::cargo_bin("sh2c").unwrap();
+    let mut cmd = Command::new(env!("CARGO_BIN_EXE_sh2c"));
     let input_path = "tests/fixtures/cli_target_basic.sh2";
 
     cmd.arg("--no-chmod-x")
@@ -117,7 +117,7 @@ fn no_chmod_x_without_out_is_usage_error() {
 
 #[test]
 fn chmod_x_explicit_ok() {
-    let mut cmd = Command::cargo_bin("sh2c").unwrap();
+    let mut cmd = Command::new(env!("CARGO_BIN_EXE_sh2c"));
     let temp_dir = tempfile::tempdir().unwrap();
     let out_path = temp_dir.path().join("exec.sh");
     let input_path = "tests/fixtures/cli_target_basic.sh2";
@@ -139,7 +139,7 @@ fn chmod_x_explicit_ok() {
 
 #[test]
 fn conflicting_chmod_flags_error() {
-     let mut cmd = Command::cargo_bin("sh2c").unwrap();
+     let mut cmd = Command::new(env!("CARGO_BIN_EXE_sh2c"));
     let input_path = "tests/fixtures/cli_target_basic.sh2";
     
     cmd.arg("--no-chmod-x")

@@ -16,7 +16,7 @@ fn compile_bool_compare_variations() {
 
 #[test]
 fn compile_bool_usage_error() {
-    let mut cmd = Command::cargo_bin("sh2c").expect("Failed to find binary");
+    let mut cmd = Command::new(env!("CARGO_BIN_EXE_sh2c"));
     cmd.arg("tests/fixtures/bool_usage_error.sh2")
        .assert()
        .failure()
@@ -26,7 +26,7 @@ fn compile_bool_usage_error() {
 
 #[test]
 fn compile_bool_literal_usage_error() {
-    let mut cmd = Command::cargo_bin("sh2c").expect("Failed to find binary");
+    let mut cmd = Command::new(env!("CARGO_BIN_EXE_sh2c"));
     cmd.arg("tests/fixtures/bool_literal_usage_error.sh2")
        .assert()
        .failure()

@@ -35,7 +35,7 @@ impl ConformanceTest {
     
     /// Compile the fixture with the given target
     fn compile(&self, target: &str) -> Result<String, String> {
-        let mut cmd = AssertCommand::cargo_bin("sh2c").unwrap();
+        let mut cmd = AssertCommand::new(env!("CARGO_BIN_EXE_sh2c"));
         
         cmd.arg("--target")
             .arg(target)

@@ -3,7 +3,7 @@ use predicates::prelude::*;
 
 #[test]
 fn test_compile_error_log_posix() {
-    let mut cmd = Command::cargo_bin("sh2c").expect("Failed to get binary");
+    let mut cmd = Command::new(env!("CARGO_BIN_EXE_sh2c"));
     cmd.arg("--target").arg("posix")
         .arg("tests/fixtures/unsupported_log.sh2")
         .assert()
@@ -14,7 +14,7 @@ fn test_compile_error_log_posix() {
 
 #[test]
 fn test_compile_error_no_backtrace() {
-    let mut cmd = Command::cargo_bin("sh2c").expect("Failed to get binary");
+    let mut cmd = Command::new(env!("CARGO_BIN_EXE_sh2c"));
     cmd.env_remove("RUST_BACKTRACE")
         .arg("--target").arg("posix")
         .arg("tests/fixtures/unsupported_log.sh2")

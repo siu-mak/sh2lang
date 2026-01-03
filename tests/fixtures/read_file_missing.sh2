@@ -1,9 +1,8 @@
-
 func main() {
-    let s = read_file("does_not_exist_xyz.txt")
-    if s == "" {
+    try {
+        let s = read_file("does_not_exist_xyz.txt")
+        print("not likely")
+    } catch {
         print("empty")
-    } else {
-        print("not empty")
     }
 }

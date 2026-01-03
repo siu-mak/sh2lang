@@ -1,6 +1,11 @@
 func main() {
-    run("sh", "-c", "exit 9")
+    try {
+        run("sh", "-c", "exit 9")
+    } catch {
+        run("true")
+    }
     print(status())
     run("echo", "hi")
     print(status())
+    exit(0)
 }

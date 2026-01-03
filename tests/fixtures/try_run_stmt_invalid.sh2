@@ -1,3 +1,0 @@
-func main() {
-    try_run("echo", "fail")
-}

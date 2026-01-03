@@ -3,7 +3,6 @@ fn main() {
     use sh2c::loader;
     use sh2c::lower;
     use std::fs;
-    use std::panic;
     use std::path::PathBuf;
 
     let dir = fs::read_dir("tests/fixtures").expect("Failed to read fixtures dir");

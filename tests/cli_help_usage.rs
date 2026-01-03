@@ -3,7 +3,7 @@ use predicates::prelude::*;
 
 #[test]
 fn help_prints_once_exit_0() {
-    let mut cmd = Command::cargo_bin("sh2c").unwrap();
+    let mut cmd = Command::new(env!("CARGO_BIN_EXE_sh2c"));
     cmd.arg("--help")
         .assert()
         .success()
@@ -15,7 +15,7 @@ fn help_prints_once_exit_0() {
 
 #[test]
 fn short_help_prints_once_exit_0() {
-    let mut cmd = Command::cargo_bin("sh2c").unwrap();
+    let mut cmd = Command::new(env!("CARGO_BIN_EXE_sh2c"));
     cmd.arg("-h")
         .assert()
         .success()
@@ -24,7 +24,7 @@ fn short_help_prints_once_exit_0() {
 
 #[test]
 fn unknown_flag_prints_error_and_usage_once_exit_1() {
-    let mut cmd = Command::cargo_bin("sh2c").unwrap();
+    let mut cmd = Command::new(env!("CARGO_BIN_EXE_sh2c"));
     cmd.arg("--nope")
         .assert()
         .failure()
@@ -35,7 +35,7 @@ fn unknown_flag_prints_error_and_usage_once_exit_1() {
 
 #[test]
 fn missing_filename_prints_usage_once_exit_1() {
-    let mut cmd = Command::cargo_bin("sh2c").unwrap();
+    let mut cmd = Command::new(env!("CARGO_BIN_EXE_sh2c"));
     cmd.arg("--target").arg("posix") // Valid flags but no filename
         .assert()
         .failure()
@@ -46,7 +46,7 @@ fn missing_filename_prints_usage_once_exit_1() {
 
 #[test]
 fn check_out_conflict_usage_once_exit_2() {
-    let mut cmd = Command::cargo_bin("sh2c").unwrap();
+    let mut cmd = Command::new(env!("CARGO_BIN_EXE_sh2c"));
     cmd.arg("--check").arg("--out").arg("x.sh").arg("tests/fixtures/cli_target_basic.sh2")
         .assert()
         .failure()

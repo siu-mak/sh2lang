@@ -1,7 +1,7 @@
 use std::fs;
 use sh2c::codegen::posix_lint::{lint_script, PosixLintKind};
 use assert_cmd::Command;
-use predicates::prelude::*;
+
 
 #[test]
 fn test_lint_detects_bashisms() {
@@ -45,7 +45,7 @@ fn test_lint_accepts_clean_posix() {
 #[test]
 fn test_cli_posix_check_valid_passes() {
     // Test that --target posix --check succeeds for valid POSIX scripts
-    let mut cmd = Command::cargo_bin("sh2c").unwrap();
+    let mut cmd = Command::new(env!("CARGO_BIN_EXE_sh2c"));
     
     cmd.arg("--target")
         .arg("posix")

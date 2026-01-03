@@ -1,5 +1,5 @@
 #!/bin/sh
-__sh2_check() { s="$1"; loc="$2"; mode="$3"; if [ "$s" -ne 0 ]; then if [ -n "$loc" ]; then printf 'Error in %s\n' "$loc" >&2; fi; if [ "$mode" = "return" ]; then return "$s"; else exit "$s"; fi; fi; }
+__sh2_check() { __sh2_s="$1"; __sh2_l="$2"; __sh2_m="$3"; if [ "$__sh2_s" -ne 0 ]; then if [ "$__sh2_m" = "return" ]; then return "$__sh2_s"; fi; if [ -n "$__sh2_l" ]; then printf 'Error in %s\n' "$__sh2_l" >&2; fi; exit "$__sh2_s"; fi; }
 __sh2_log_now() { if [ -n "${SH2_LOG_TS:-}" ]; then printf '%s' "$SH2_LOG_TS"; return 0; fi; date '+%Y-%m-%dT%H:%M:%S%z' 2>/dev/null || date 2>/dev/null || printf '%s' 'unknown-time'; }
 __sh2_log() { if [ "$3" = "true" ]; then printf '%s\t%s\t%s\n' "$(__sh2_log_now)" "$1" "$2" >&2; else printf '%s\t%s\n' "$1" "$2" >&2; fi; }
 main() {

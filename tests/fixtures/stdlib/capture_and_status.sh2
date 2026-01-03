@@ -11,7 +11,7 @@ func main() {
     }
     
     // Test status after failure
-    run("false")
+    run("false", allow_fail=true)
     if status() != 0 {
         print("status-nonzero-ok")
     }
