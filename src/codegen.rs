@@ -402,6 +402,10 @@ fn visit_val(val: &Val, usage: &mut PreludeUsage) {
             visit_val(list, usage);
             visit_val(needle, usage);
         }
+        Val::ContainsLine { text, needle } => {
+            visit_val(text, usage);
+            visit_val(needle, usage);
+        }
         _ => {}
     }
 }
@@ -749,6 +753,7 @@ fn emit_val(v: &Val, target: TargetShell) -> Result<String, CompileError> {
         | Val::IsNonEmpty(..)
         | Val::List(..)
         | Val::Split { .. }
+        | Val::ContainsLine { .. }
         | Val::Confirm(..) => Err(CompileError::new("Cannot emit boolean/list value as string").with_target(target)),
     }
 }
@@ -897,6 +902,13 @@ fn emit_cond(v: &Val, target: TargetShell) -> Result<String, CompileError> {
         Val::Bool(false) => Ok("false".to_string()),
         Val::List(_) | Val::Args => {
             Err(CompileError::internal("args/list is not a valid condition; use count(...) > 0", target))
+        }
+        Val::ContainsLine { text, needle } => {
+            // ( printf '%s' <text> | grep -Fxq -- <needle> )
+            Ok(format!("( printf '%s' {} | grep -Fxq -- {} )",
+                emit_val(text, target)?,
+                emit_val(needle, target)?
+            ))
         }
         Val::Matches(text, regex) => {
             Ok(format!(

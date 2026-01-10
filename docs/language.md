@@ -515,9 +515,23 @@ On `--target posix`, `with log` is not available.
 - JSON: `json_kv(...)`
 - process/system: `pid()`, `ppid()`, `uid()`, `pwd()`, `argc()`, `argv0()`, etc.
 
-### 10.4 List Utilities (Bash-only)
+### 10.4 String and List Utilities
 
-#### `contains(list, value)`
+#### `contains_line(text, needle)`
+
+Boolean predicate that evaluates to `true` if `text` contains a line exactly equal to `needle`.
+
+- **Exact match**: strict string equality (no regex/glob).
+- **Portable**: Works on both Bash and POSIX targets.
+- **Trailing newline**: A trailing `\n` does not imply an extra empty line.
+  - `contains_line("a\n", "")` is `false`.
+  - `contains_line("a\n\n", "")` is `true`.
+
+```sh2
+if contains_line(run("ls").stdout, "Makefile") { ... }
+```
+
+#### `contains(list, value)` (Bash-only)
 
 Evaluates to `true` if `list` (array or expression evaluating to list) contains exactly `value`. Performs strict string equality check (no globbing).
 

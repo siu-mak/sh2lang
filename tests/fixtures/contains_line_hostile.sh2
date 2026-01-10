@@ -1,0 +1,9 @@
+func main() {
+    let t = "sp ace\nquote\"d\n$HOME\n;;&|\n-leading\n"
+    
+    if contains_line(t, "sp ace") { print("ok 1") } else { print("fail 1") }
+    if contains_line(t, "quote\"d") { print("ok 2") } else { print("fail 2") }
+    if contains_line(t, "$HOME") { print("ok 3") } else { print("fail 3") }
+    if contains_line(t, ";;&|") { print("ok 4") } else { print("fail 4") }
+    if contains_line(t, "-leading") { print("ok 5") } else { print("fail 5") }
+}

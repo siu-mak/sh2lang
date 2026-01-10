@@ -1,0 +1,8 @@
+func main() {
+    let t = "back\\slash\n"
+    if contains_line(t, "back\\slash") { 
+        print("pass") 
+    } else { 
+        print("fail") 
+    }
+}

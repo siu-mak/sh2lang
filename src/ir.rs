@@ -87,6 +87,10 @@ pub enum Val {
         list: Box<Val>,
         needle: Box<Val>,
     },
+    ContainsLine {
+        text: Box<Val>,
+        needle: Box<Val>,
+    },
     Split { s: Box<Val>, delim: Box<Val> },
 }
 

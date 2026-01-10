@@ -1,0 +1,8 @@
+func main() {
+    let t = "a\n"
+    if contains_line(t, "") { 
+        print("fail") 
+    } else { 
+        print("pass") 
+    }
+}
