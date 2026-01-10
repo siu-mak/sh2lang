@@ -178,7 +178,7 @@ pub enum Cmd {
         timestamp: bool,
     },
     Cd(Val),
-    Raw(String),
+    Raw(Val, Option<String>),
     Call {
         name: String,
         args: Vec<Val>,
@@ -301,7 +301,7 @@ impl Cmd {
             Cmd::WriteFile { .. } => {},
             Cmd::Log { .. } => {},
             Cmd::Cd(_) => {},
-            Cmd::Raw(_) => {},
+            Cmd::Raw(..) => {},
             Cmd::Call { .. } => {},
             Cmd::Wait(_) => {},
             Cmd::Export { .. } => {},

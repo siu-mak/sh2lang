@@ -500,13 +500,13 @@ fn lower_stmt<'a>(
             out.push(ir::Cmd::Cd(lower_expr(path, &mut ctx, sm, file)?));
             Ok(ctx)
         }
-        ast::StmtKind::Sh(s) => {
-            out.push(ir::Cmd::Raw(s));
+        ast::StmtKind::Sh(expr) => {
+            out.push(ir::Cmd::Raw(lower_expr(expr, &mut ctx, sm, file)?, loc));
             Ok(ctx)
         }
         ast::StmtKind::ShBlock(lines) => {
             for s in lines {
-                out.push(ir::Cmd::Raw(s));
+                out.push(ir::Cmd::Raw(ir::Val::Literal(s), loc.clone()));
             }
             Ok(ctx)
         }

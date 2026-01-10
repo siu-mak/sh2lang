@@ -253,22 +253,26 @@ Replaces the current process. Execution does not continue after `exec`.
 exec("bash")
 ```
 
-### 6.3 `sh("...")` (raw shell)
+### 6.3 `sh(expr)` (raw shell)
 
-Executes a raw shell snippet. **It only accepts a string literal** (not concatenation / variables).
+Executes a shell snippet by passing it to the target shell (e.g., `bash -c` or `sh -c`).
+
+- Accepts any string expression (literal, variable, concatenation, etc.).
+- Runs in a **child shell process**, so it cannot modify the parent shell's local environment (variables, working directory, etc.), but it inherits exported variables.
+- Acts as a **probe**: updates `status()` but does not fail-fast.
 
 ✅
 ```sh2
 sh("echo hello")
+let cmd = "echo dynamic"
+sh(cmd)
+sh("echo " & cmd)
 ```
-
-`sh(...)` acts as a **probe**: it updates `status()` but does **not** automatically abort the script on failure (unlike `run(...)`).
 
 ❌
 ```sh2
-let cmd = "echo hello"
-sh(cmd)
-sh("echo " & cmd)
+# sh() must take a string expression, not other types directly unless converted
+sh(123) # Error if not string
 ```
 
 ### 6.4 `capture(...)` (capture stdout)

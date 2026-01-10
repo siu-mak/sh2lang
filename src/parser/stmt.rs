@@ -557,14 +557,9 @@ impl<'a> Parser<'a> {
             TokenKind::Sh => {
                 self.advance();
                 if self.match_kind(TokenKind::LParen) {
-                    let s = if let Some(TokenKind::String(s)) = self.peek_kind() {
-                        s.clone()
-                    } else {
-                        self.error("Expected string", self.current_span())?
-                    };
-                    self.advance();
+                    let expr = self.parse_expr()?;
                     self.expect(TokenKind::RParen)?;
-                    StmtKind::Sh(s)
+                    StmtKind::Sh(expr)
                 } else if self.match_kind(TokenKind::LBrace) {
                     let mut lines = Vec::new();
                     while !self.match_kind(TokenKind::RBrace) {

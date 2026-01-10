@@ -219,7 +219,7 @@ pub enum StmtKind {
     Cd {
         path: Expr,
     },
-    Sh(String),
+    Sh(Expr),
     ShBlock(Vec<String>),
     Call {
         name: String,

@@ -1,0 +1,16 @@
+func main() {
+    let cmd = "false"
+    sh(cmd)
+    if status() != 1 {
+        print_err("Expected status 1")
+        exit(1)
+    }
+
+    # Verify stdout capture (by side effect of print) isn't broken
+    let echo_cmd = "echo hello"
+    sh(echo_cmd)
+    if status() != 0 {
+        print_err("Expected status 0")
+        exit(1)
+    }
+}

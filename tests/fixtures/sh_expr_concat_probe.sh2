@@ -1,0 +1,9 @@
+func main() {
+    let msg = "dynamic"
+    # Note: Using & for concat as per sh2 lang
+    sh("echo " & msg)
+    if status() != 0 {
+        print_err("Concat cmd failed")
+        exit(1)
+    }
+}

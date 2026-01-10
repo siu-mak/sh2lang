@@ -167,7 +167,7 @@ fn format_stmt(stmt: &Stmt, depth: usize) -> String {
         }
         StmtKind::Unset { name } => format!("unset(\"{}\")", name),
         StmtKind::Source { path } => format!("source({})", format_expr(path)),
-        StmtKind::Sh(s) => format!("sh(\"{}\")", sh_escape(s)), // Must verify if Sh handles quoting
+        StmtKind::Sh(expr) => format!("sh({})", format_expr(expr)),
         StmtKind::ShBlock(lines) => {
              // sh { "line1", "line2" }
              let joined = lines.iter().map(|l| format!("\"{}\"", sh_escape(l))).collect::<Vec<_>>().join(", ");

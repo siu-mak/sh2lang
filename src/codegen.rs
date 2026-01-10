@@ -261,18 +261,14 @@ fn visit_cmd(cmd: &Cmd, usage: &mut PreludeUsage, include_diagnostics: bool) {
                 visit_cmd(c, usage, include_diagnostics);
             }
         }
-        Cmd::Break
-        | Cmd::Continue
-        | Cmd::Return(_)
-        | Cmd::Exit(_)
-        | Cmd::Unset(_)
-        | Cmd::Raw(_) => {
-            if let Cmd::Return(Some(v)) = cmd {
-                visit_val(v, usage);
-            }
-            if let Cmd::Exit(Some(v)) = cmd {
-                visit_val(v, usage);
-            }
+        Cmd::Break | Cmd::Continue | Cmd::Unset(_) => {}
+        Cmd::Return(opt) | Cmd::Exit(opt) => {
+             if let Some(v) = opt {
+                 visit_val(v, usage);
+             }
+        }
+        Cmd::Raw(val, _) => {
+             visit_val(val, usage);
         }
     }
 }
@@ -1673,13 +1669,24 @@ fn emit_cmd(
             out.push_str(&emit_val(path, target)?);
             out.push('\n');
         }
-        Cmd::Raw(s) => {
-            out.push_str(&pad);
-            out.push_str(s);
-            out.push('\n');
-            out.push_str(&format!("{}__sh2_status=$?\n", pad));
-             // sh("...") is a probe; never fail-fast.
-             // Callers must check status() if they care.
+        Cmd::Raw(val, loc) => {
+             // sh(expr) -> execute expression as a shell command in a subshell (bash -c or sh -c)
+             // This is a probe, so it sets __sh2_status but does not fail-fast.
+             
+             if let Some(l) = loc {
+                 out.push_str(&format!("{}__sh2_loc=\"{}\"\n", pad, l));
+             }
+
+             let cmd_str = emit_val(val, target)?;
+             out.push_str(&format!("{}__sh2_cmd={}\n", pad, cmd_str));
+             
+             let exec_cmd = match target {
+                 TargetShell::Bash => "bash -c \"$__sh2_cmd\"",
+                 TargetShell::Posix => "sh -c \"$__sh2_cmd\"",
+             };
+
+             // Use if/else to robustly prevent set-e/trap-ERR from triggering on failure
+             out.push_str(&format!("{}if {}; then __sh2_status=0; else __sh2_status=$?; fi\n", pad, exec_cmd));
         }
         Cmd::Call { name, args } => {
             out.push_str(&pad);
