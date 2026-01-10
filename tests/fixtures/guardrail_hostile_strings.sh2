@@ -1,0 +1,26 @@
+func main() {
+    // Test strings with hostile characters that should be safely handled
+    let space_str = "hello world"
+    let quote_str = "he said \"hello\""
+    let dollar_str = "$HOME and $USER"
+    let semicolon_str = "cmd1; cmd2"
+    let amp_str = "bg &"
+    let pipe_str = "a | b"
+    let newline_str = "line1\nline2"
+    
+    // Use only safe APIs - no sh() calls, no filesystem writes
+    run("echo", space_str)
+    run("echo", quote_str)
+    run("echo", dollar_str)
+    run("echo", semicolon_str)
+    run("echo", amp_str)
+    
+    // Test with pipelines (safe structured API)
+    run("printf", "%s", pipe_str) | run("cat")
+    
+    // Test with string operations (safe)
+    let combined = space_str & " " & quote_str
+    run("echo", combined)
+    
+    print("All hostile strings handled safely")
+}
