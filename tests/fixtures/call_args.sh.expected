@@ -15,9 +15,9 @@ set -o errtrace
 trap '__sh2_err_handler' ERR
 show() {
   local __sh2_loc=""
-  echo $@
-  __sh2_status=$?
-  __sh2_check "$__sh2_status" "${__sh2_loc:-}"
+  __sh2_loc="tests/fixtures/call_args.sh2:2:3"
+  __sh2_cmd='echo ''$@'
+  if bash -c "$__sh2_cmd"; then __sh2_status=0; else __sh2_status=$?; fi
 }
 
 main() {

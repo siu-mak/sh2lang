@@ -253,15 +253,24 @@ Replaces the current process. Execution does not continue after `exec`.
 exec("bash")
 ```
 
-### 6.3 `sh(expr)` (raw shell)
+### 6.3 `sh(expr)` (raw shell execution)
 
-Executes a shell snippet by passing it to the target shell (e.g., `bash -c` or `sh -c`).
+> [!WARNING]
+> **Unsafe escape hatch**: `sh(expr)` interprets `expr` as raw shell code and is **injection-prone** if you build `expr` by concatenating or interpolating untrusted input. This is intentional—it provides an escape hatch for advanced use cases, not a safe API.
 
-- Accepts any string expression (literal, variable, concatenation, etc.).
-- Runs in a **child shell process**, so it cannot modify the parent shell's local environment (variables, working directory, etc.), but it inherits exported variables.
-- Acts as a **probe**: updates `status()` but does not fail-fast.
+Executes a shell snippet by passing it to the target shell in a child process.
 
-✅
+**Execution model:**
+- **Child shell process**: Runs via `bash -c "$cmd"` (Bash target) or `sh -c "$cmd"` (POSIX target)
+- **No persistence**: Changes to working directory (`cd`), non-exported variables, or other local shell state do **not** affect subsequent statements
+- **Inherits environment**: Exported environment variables are inherited by the child shell
+
+**Probe semantics (non-fail-fast):**
+- Updates `status()` with the command's exit code
+- **Never** triggers fail-fast behavior or exits the script on non-zero status
+- Returns control unconditionally
+
+**Accepts any string expression:**
 ```sh2
 sh("echo hello")
 let cmd = "echo dynamic"
@@ -269,11 +278,31 @@ sh(cmd)
 sh("echo " & cmd)
 ```
 
-❌
+**Probe pattern** (explicit status check):
 ```sh2
-# sh() must take a string expression, not other types directly unless converted
-sh(123) # Error if not string
+sh("false")
+if status() != 0 {
+  print("Command failed as expected")
+}
+print("Script continues")  # Always executes
 ```
+
+**Non-persistence example:**
+```sh2
+sh("cd /tmp")
+# pwd() still returns original directory
+# cd inside sh() does not affect parent script
+```
+
+#### Safe alternatives
+
+For most use cases, prefer these safer options:
+- **`run(...)`**: Argument-safe command execution with proper quoting
+- **Native pipelines**: Use `|` operator for structured pipeline composition
+- **String helpers**: `lines(...)`, `split(...)`, `trim()`, `replace()` for text processing
+- **Upcoming helpers**: Additional safe utilities for common shell patterns
+
+Use `sh()` only when you need raw shell syntax that cannot be expressed through safe APIs.
 
 ### 6.4 `capture(...)` (capture stdout)
 

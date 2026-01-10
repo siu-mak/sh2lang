@@ -35,9 +35,9 @@ main() {
   infile="$( 'mktemp' )"
   __sh2_status=$?
   __sh2_check "$__sh2_status" "${__sh2_loc:-}"
-  echo hello > $infile
-  __sh2_status=$?
-  __sh2_check "$__sh2_status" "${__sh2_loc:-}"
+  __sh2_loc="tests/fixtures/redirect_io.sh2:23:3"
+  __sh2_cmd='echo hello > '"$infile"
+  if bash -c "$__sh2_cmd"; then __sh2_status=0; else __sh2_status=$?; fi
   {
     __sh2_loc="tests/fixtures/redirect_io.sh2:25:5"
     'cat'; __sh2_status=$?
