@@ -1678,12 +1678,8 @@ fn emit_cmd(
             out.push_str(s);
             out.push('\n');
             out.push_str(&format!("{}__sh2_status=$?\n", pad));
-
-            if in_cond_ctx {
-                out.push_str(&format!("{}__sh2_check \"$__sh2_status\" \"${{__sh2_loc:-}}\" \"return\"\n", pad));
-            } else {
-                out.push_str(&format!("{}__sh2_check \"$__sh2_status\" \"${{__sh2_loc:-}}\"\n", pad));
-            }
+             // sh("...") is a probe; never fail-fast.
+             // Callers must check status() if they care.
         }
         Cmd::Call { name, args } => {
             out.push_str(&pad);

@@ -1,0 +1,16 @@
+func die(m) {
+    print_err(m)
+    exit(1)
+}
+
+func need_root() {
+    sh("false")
+    if status() != 0 {
+        die("Custom Error Message")
+    }
+}
+
+func main() {
+    need_root()
+    print("ok")
+}

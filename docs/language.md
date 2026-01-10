@@ -262,6 +262,8 @@ Executes a raw shell snippet. **It only accepts a string literal** (not concaten
 sh("echo hello")
 ```
 
+`sh(...)` acts as a **probe**: it updates `status()` but does **not** automatically abort the script on failure (unlike `run(...)`).
+
 ❌
 ```sh2
 let cmd = "echo hello"
