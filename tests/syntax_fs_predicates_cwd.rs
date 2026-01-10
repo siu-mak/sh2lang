@@ -49,7 +49,7 @@ fn parse_fs_predicates_cwd() {
             panic!("Expected Var(d)");
         }
         assert_eq!(body.len(), 1);
-        assert!(matches!(body[0], Stmt { node: StmtKind::Sh(ref s), .. } if s == "touch f.txt"));
+        assert!(matches!(body[0], Stmt { node: StmtKind::Sh(ref e), .. } if matches!(e.node, ExprKind::Literal(ref s) if s == "touch f.txt")));
     } else {
         panic!("Expected WithCwd");
     }

@@ -1,0 +1,7 @@
+func main() {
+    if contains(["a", "b"], "b") {
+        print("true")
+    } else {
+        print("false")
+    }
+}

@@ -486,6 +486,21 @@ On `--target posix`, `with log` is not available.
 - JSON: `json_kv(...)`
 - process/system: `pid()`, `ppid()`, `uid()`, `pwd()`, `argc()`, `argv0()`, etc.
 
+### 10.4 List Utilities (Bash-only)
+
+#### `contains(list, value)`
+
+Evaluates to `true` if `list` (array or expression evaluating to list) contains exactly `value`. Performs strict string equality check (no globbing).
+
+```sh2
+let items = ["a", "b"]
+if contains(items, "b") { ... }
+
+let text = "foo\nbar\n"
+if contains(lines(text), "bar") { ... }
+```
+
+
 ---
 
 ## 11. Targets and Portability

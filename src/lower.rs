@@ -1019,6 +1019,19 @@ fn lower_expr<'a>(e: ast::Expr, ctx: &mut LoweringContext<'a>, sm: &SourceMap, f
                 let text = Box::new(lower_expr(iter.next().unwrap(), ctx, sm, file)?);
                 let regex = Box::new(lower_expr(iter.next().unwrap(), ctx, sm, file)?);
                 Ok(ir::Val::Matches(text, regex))
+            } else if name == "contains" {
+                if args.len() != 2 {
+                     return Err(CompileError::new(sm.format_diagnostic(
+                        file,
+                        opts.diag_base_dir.as_deref(),
+                        "contains() requires exactly 2 arguments (list, value)",
+                        e.span,
+                    )));
+                }
+                let mut iter = args.into_iter();
+                let list = Box::new(lower_expr(iter.next().unwrap(), ctx, sm, file)?);
+                let needle = Box::new(lower_expr(iter.next().unwrap(), ctx, sm, file)?);
+                Ok(ir::Val::Contains { list, needle })
             } else if name == "parse_args" {
                 if !args.is_empty() {
                     return Err(CompileError::new(sm.format_diagnostic(file, opts.diag_base_dir.as_deref(), "parse_args() takes no arguments", e.span)));

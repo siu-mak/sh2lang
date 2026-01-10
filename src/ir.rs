@@ -83,6 +83,10 @@ pub enum Val {
     Home,
     PathJoin(Vec<Val>),
     Lines(Box<Val>),
+    Contains {
+        list: Box<Val>,
+        needle: Box<Val>,
+    },
     Split { s: Box<Val>, delim: Box<Val> },
 }
 

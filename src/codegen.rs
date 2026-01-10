@@ -56,6 +56,7 @@ pub struct PreludeUsage {
     pub loc: bool,
     pub uid: bool,
     pub lines: bool,
+    pub contains: bool,
 }
 
 fn scan_usage(funcs: &[Function], include_diagnostics: bool) -> PreludeUsage {
@@ -396,6 +397,11 @@ fn visit_val(val: &Val, usage: &mut PreludeUsage) {
         Val::Uid => {
             usage.uid = true;
         }
+        Val::Contains { list, needle } => {
+            usage.contains = true;
+            visit_val(list, usage);
+            visit_val(needle, usage);
+        }
         _ => {}
     }
 }
@@ -487,6 +493,10 @@ struct CodegenContext {
 
 fn emit_val(v: &Val, target: TargetShell) -> Result<String, CompileError> {
     match v {
+        Val::Contains { .. } => {
+             let cond = emit_cond(v, target)?;
+             Ok(format!("\"$( if {}; then printf true; else printf false; fi )\"", cond))
+        }
         Val::Literal(s) => Ok(sh_single_quote(s)),
         Val::Var(s) => Ok(format!("\"${}\"", s)),
         Val::Concat(l, r) => Ok(format!("{}{}", emit_val(l, target)?, emit_val(r, target)?)),
@@ -840,8 +850,6 @@ fn emit_cond(v: &Val, target: TargetShell) -> Result<String, CompileError> {
         Val::Confirm(prompt) => match target {
             TargetShell::Bash => {
                 let p = emit_val(prompt, target)?;
-                // Subshell that loops until valid input
-                // Returns 0 for true, 1 for false
                 Ok(format!(
                     "( while true; do printf '%s' {} >&2; if ! IFS= read -r __sh2_ans; then exit 1; fi; case \"${{__sh2_ans,,}}\" in y|yes|true|1) exit 0 ;; n|no|false|0|\"\") exit 1 ;; esac; done )",
                     p
@@ -849,6 +857,42 @@ fn emit_cond(v: &Val, target: TargetShell) -> Result<String, CompileError> {
             }
             TargetShell::Posix => Err(CompileError::unsupported("confirm(...) is not supported in POSIX sh target", target)),
         },
+        Val::Contains { list, needle } => {
+            if target == TargetShell::Posix {
+                 return Err(CompileError::unsupported("contains() is bash-only", target));
+            }
+             match **list {
+                 Val::Var(ref name) => {
+                     let n = emit_val(needle, target)?;
+                     Ok(format!("__sh2_contains \"{}\" {}", name, n))
+                 }
+                 _ => {
+                      let n = emit_val(needle, target)?;
+                      let setup = match **list {
+                           Val::Lines(ref inner) => {
+                               format!("__sh2_lines {} __sh2_tmp_arr", emit_val(inner, target)?)
+                           }
+                           Val::List(ref elems) => {
+                               let mut s = String::from("__sh2_tmp_arr=(");
+                               for e in elems {
+                                   s.push_str(&emit_word(e, target)?);
+                                   s.push(' ');
+                               }
+                               s.push(')');
+                               s
+                           }
+                           Val::Split { ref s, ref delim } => {
+                               format!("__sh2_split __sh2_tmp_arr {} {}", emit_val(s, target)?, emit_val(delim, target)?)
+                           }
+                           _ => {
+                               format!("__sh2_tmp_arr=({})", emit_val(list, target)?)
+                           }
+                      };
+                      
+                      Ok(format!("( {}; __sh2_contains __sh2_tmp_arr {} )", setup, n))
+                 }
+             }
+        }
         Val::Bool(true) => Ok("true".to_string()),
         Val::Bool(false) => Ok("false".to_string()),
         Val::List(_) | Val::Args => {
@@ -2426,6 +2470,12 @@ __sh2_split() {
             TargetShell::Posix => {
                 // Not supported in POSIX sh
             }
+        }
+    }
+    if usage.contains {
+        if target == TargetShell::Bash {
+            s.push_str(r#"__sh2_contains() { local -n __arr=$1; local __val=$2; for __e in "${__arr[@]}"; do if [[ "$__e" == "$__val" ]]; then return 0; fi; done; return 1; }
+"#);
         }
     }
     if usage.log {
