@@ -1,0 +1,4 @@
+func main() {
+    sh { "false" }
+    print("should_not_print")
+}

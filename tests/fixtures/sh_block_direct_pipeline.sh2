@@ -1,0 +1,4 @@
+func main() {
+    sh { "printf '%s\n' a b | grep -Fxq -- b" }
+    print("after")
+}

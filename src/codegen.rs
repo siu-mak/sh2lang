@@ -169,11 +169,7 @@ fn visit_cmd(cmd: &Cmd, usage: &mut PreludeUsage, include_diagnostics: bool) {
             visit_val(content, usage);
         }
         Cmd::Cd(val) => visit_val(val, usage),
-        Cmd::Call { args, .. } => {
-            for a in args {
-                visit_val(a, usage)
-            }
-        }
+
         Cmd::Subshell { body } | Cmd::Group { body } => {
             for c in body {
                 visit_cmd(c, usage, include_diagnostics)
@@ -270,6 +266,13 @@ fn visit_cmd(cmd: &Cmd, usage: &mut PreludeUsage, include_diagnostics: bool) {
         }
         Cmd::Raw(val, _) => {
              visit_val(val, usage);
+        }
+        Cmd::RawLine { .. } => {}
+        Cmd::Call { args, name } => {
+            if name == "default" {
+                usage.coalesce = true;
+            }
+            visit_val(&Val::Call { name: name.clone(), args: args.clone() }, usage);
         }
     }
 }
@@ -1724,6 +1727,23 @@ fn emit_cmd(
             out.push_str("cd ");
             out.push_str(&emit_val(path, target)?);
             out.push('\n');
+        }
+        Cmd::RawLine { line, loc } => {
+            if let Some(l) = loc {
+                if !in_cond_ctx {
+                     out.push_str(&format!("{}__sh2_loc=\"{}\"\n", pad, l));
+                }
+            }
+            out.push_str(&pad);
+            out.push_str(line);
+            out.push('\n');
+            out.push_str(&format!("{}__sh2_status=$?\n", pad));
+
+            if in_cond_ctx {
+                out.push_str(&format!("{}__sh2_check \"$__sh2_status\" \"${{__sh2_loc:-}}\" \"return\"\n", pad));
+            } else {
+                out.push_str(&format!("{}__sh2_check \"$__sh2_status\" \"${{__sh2_loc:-}}\" \"exit\"\n", pad));
+            }
         }
         Cmd::Raw(val, loc) => {
              // sh(expr) -> execute expression as a shell command in a subshell (bash -c or sh -c)

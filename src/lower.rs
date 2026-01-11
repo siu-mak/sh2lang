@@ -506,7 +506,7 @@ fn lower_stmt<'a>(
         }
         ast::StmtKind::ShBlock(lines) => {
             for s in lines {
-                out.push(ir::Cmd::Raw(ir::Val::Literal(s), loc.clone()));
+                out.push(ir::Cmd::RawLine { line: s, loc: loc.clone() });
             }
             Ok(ctx)
         }

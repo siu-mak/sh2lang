@@ -187,6 +187,7 @@ pub enum Cmd {
     },
     Cd(Val),
     Raw(Val, Option<String>),
+    RawLine { line: String, loc: Option<String> },
     Call {
         name: String,
         args: Vec<Val>,
@@ -310,6 +311,7 @@ impl Cmd {
             Cmd::Log { .. } => {},
             Cmd::Cd(_) => {},
             Cmd::Raw(..) => {},
+            Cmd::RawLine { loc, .. } => *loc = None,
             Cmd::Call { .. } => {},
             Cmd::Wait(_) => {},
             Cmd::Export { .. } => {},
