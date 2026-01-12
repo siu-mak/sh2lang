@@ -57,6 +57,7 @@ pub struct PreludeUsage {
     pub uid: bool,
     pub lines: bool,
     pub contains: bool,
+    pub sh_probe: bool,
 }
 
 fn scan_usage(funcs: &[Function], include_diagnostics: bool) -> PreludeUsage {
@@ -265,6 +266,7 @@ fn visit_cmd(cmd: &Cmd, usage: &mut PreludeUsage, include_diagnostics: bool) {
              }
         }
         Cmd::Raw(val, _) => {
+             usage.sh_probe = true;
              visit_val(val, usage);
         }
         Cmd::RawLine { .. } => {}
@@ -1752,17 +1754,18 @@ fn emit_cmd(
              if let Some(l) = loc {
                  out.push_str(&format!("{}__sh2_loc=\"{}\"\n", pad, l));
              }
-
-             let cmd_str = emit_val(val, target)?;
-             out.push_str(&format!("{}__sh2_cmd={}\n", pad, cmd_str));
-             
-             let exec_cmd = match target {
-                 TargetShell::Bash => "bash -c \"$__sh2_cmd\"",
-                 TargetShell::Posix => "sh -c \"$__sh2_cmd\"",
-             };
-
-             // Use if/else to robustly prevent set-e/trap-ERR from triggering on failure
-             out.push_str(&format!("{}if {}; then __sh2_status=0; else __sh2_status=$?; fi\n", pad, exec_cmd));
+             match val {
+                 Val::Literal(s) => {
+                     let cmd_escaped = sh_single_quote(s);
+                     out.push_str(&format!("{}__sh2_sh_probe {}\n", pad, cmd_escaped));
+                 }
+                 _ => {
+                     out.push_str(&format!("{}__sh2_cmd=", pad));
+                     out.push_str(&emit_val(val, target)?);
+                     out.push('\n');
+                     out.push_str(&format!("{}__sh2_sh_probe \"$__sh2_cmd\"\n", pad));
+                 }
+             }
         }
         Cmd::Call { name, args } => {
             out.push_str(&pad);
@@ -2306,6 +2309,17 @@ fn emit_prelude(target: TargetShell, usage: &PreludeUsage) -> String {
         }
     }
 
+
+    if usage.sh_probe {
+        match target {
+            TargetShell::Bash => {
+                s.push_str("__sh2_sh_probe() { local cmd=\"$1\"; if bash -c \"$cmd\"; then __sh2_status=0; else __sh2_status=$?; fi; return 0; }\n");
+            }
+            TargetShell::Posix => {
+                s.push_str("__sh2_sh_probe() { cmd=\"$1\"; if sh -c \"$cmd\"; then __sh2_status=0; else __sh2_status=$?; fi; return 0; }\n");
+            }
+        }
+    }
 
     if usage.coalesce {
         s.push_str("__sh2_coalesce() { if [ -n \"$1\" ]; then printf '%s' \"$1\"; else printf '%s' \"$2\"; fi; }\n");

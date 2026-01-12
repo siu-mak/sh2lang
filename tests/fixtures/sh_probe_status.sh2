@@ -1,0 +1,13 @@
+func main() {
+    sh("exit 1")
+    print(status())
+    
+    sh("exit 2")
+    print(status())
+    
+    sh("true")
+    print(status())
+    
+    sh("echo ok")
+    print(status())
+}
