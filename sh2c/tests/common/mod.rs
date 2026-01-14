@@ -3,9 +3,14 @@ use sh2c::ast;
 pub use sh2c::codegen::TargetShell;
 use sh2c::{codegen, lexer, lower, parser};
 use std::fs;
-use std::path::Path;
+//use std::path::Path;
 use std::process::Command;
 use std::time::{SystemTime, UNIX_EPOCH};
+use std::path::{Path, PathBuf};
+
+fn crate_root() -> PathBuf {
+    Path::new(env!("CARGO_MANIFEST_DIR")).to_path_buf()
+}
 
 // Replaces existing compile_to_shell which took string.
 // Note: verify if any tests strictly rely on string-only compilation without files.
@@ -313,133 +318,104 @@ pub fn compile_and_run_err(fixture_name: &str, target: TargetShell) -> (String, 
 }
 
 
-pub fn assert_exec_matches_fixture_target(fixture_name: &str, target: TargetShell) {
-    let sh2_path = format!("tests/fixtures/{}.sh2", fixture_name);
+pub fn assert_exec_matches_fixture_target(
+    fixture_name: &str,
+    target: TargetShell,
+) {
+    use std::fs;
+    use std::path::{Path, PathBuf};
+    use std::process::Command;
+
+    let crate_root = crate_root();
+
+    let sh2_path = crate_root.join(format!("tests/fixtures/{}.sh2", fixture_name));
+
     let target_str = match target {
         TargetShell::Bash => "bash",
         TargetShell::Posix => "posix",
     };
-    let stdout_path_tgt = format!("tests/fixtures/{}.{}.stdout", fixture_name, target_str);
-    let stderr_path_tgt = format!("tests/fixtures/{}.{}.stderr", fixture_name, target_str);
-    let status_path_tgt = format!("tests/fixtures/{}.{}.status", fixture_name, target_str);
-    
-    let stdout_path = if Path::new(&stdout_path_tgt).exists() { stdout_path_tgt } else { format!("tests/fixtures/{}.stdout", fixture_name) };
-    let stderr_path = if Path::new(&stderr_path_tgt).exists() { stderr_path_tgt } else { format!("tests/fixtures/{}.stderr", fixture_name) };
-    let status_path = if Path::new(&status_path_tgt).exists() { status_path_tgt } else { format!("tests/fixtures/{}.status", fixture_name) };
 
-    let args_path = format!("tests/fixtures/{}.args", fixture_name);
-    let env_path = format!("tests/fixtures/{}.env", fixture_name);
-    let stdin_path = format!("tests/fixtures/{}.stdin", fixture_name);
-    let fs_path = format!("tests/fixtures/{}.fs", fixture_name);
+    let stdout_path_tgt =
+        crate_root.join(format!("tests/fixtures/{}.{}.stdout", fixture_name, target_str));
+    let stderr_path_tgt =
+        crate_root.join(format!("tests/fixtures/{}.{}.stderr", fixture_name, target_str));
+    let status_path_tgt =
+        crate_root.join(format!("tests/fixtures/{}.{}.status", fixture_name, target_str));
 
-    if !Path::new(&sh2_path).exists() {
-        panic!("Fixture {} does not exist", sh2_path);
+    let stdout_path = if stdout_path_tgt.exists() {
+        stdout_path_tgt
+    } else {
+        crate_root.join(format!("tests/fixtures/{}.stdout", fixture_name))
+    };
+
+    let stderr_path = if stderr_path_tgt.exists() {
+        stderr_path_tgt
+    } else {
+        crate_root.join(format!("tests/fixtures/{}.stderr", fixture_name))
+    };
+
+    let status_path = if status_path_tgt.exists() {
+        status_path_tgt
+    } else {
+        crate_root.join(format!("tests/fixtures/{}.status", fixture_name))
+    };
+
+    let args_path = crate_root.join(format!("tests/fixtures/{}.args", fixture_name));
+    let env_path = crate_root.join(format!("tests/fixtures/{}.env", fixture_name));
+    let stdin_path = crate_root.join(format!("tests/fixtures/{}.stdin", fixture_name));
+    let fs_path = crate_root.join(format!("tests/fixtures/{}.fs", fixture_name));
+
+    if !sh2_path.exists() {
+        panic!("Fixture {} does not exist", sh2_path.display());
     }
 
-    // Only run if at least one expectation file exists (checked generically or target specific)
-    if !Path::new(&stdout_path).exists()
-        && !Path::new(&stderr_path).exists()
-        && !Path::new(&status_path).exists()
-         // Also allow running if Update is requested, to create new snapshots? 
-         // But maybe limit to existing checks to avoid creating garbage for partial tests.
-    {
+    if !stdout_path.exists() && !stderr_path.exists() && !status_path.exists() {
         return;
     }
 
-    //     let src = fs::read_to_string(&sh2_path).expect("Failed to read fixture");
-    let shell_script = compile_path_to_shell(Path::new(&sh2_path), target);
+    let shell_script = compile_path_to_shell(&sh2_path, target);
 
     let shell_bin = match target {
         TargetShell::Bash => "bash".to_string(),
         TargetShell::Posix => {
-            // CI Support: Allow strict enforcement of a specific POSIX shell via env var.
-            // If SH2C_POSIX_SHELL is set, we use it. Allowed values: "dash", "sh".
-            // If set to anything else, or if the requested shell is missing, we PANIC.
-            // If unset, we fall back to auto-detection (dash -> sh -> skip).
             if let Ok(strict_shell) = std::env::var("SH2C_POSIX_SHELL") {
                 match strict_shell.as_str() {
-                    "dash" => {
-                        if Command::new("dash")
-                            .arg("-c")
-                            .arg("true")
-                            .status()
-                            .map(|s| s.success())
-                            .unwrap_or(false)
-                        {
-                            "dash".to_string()
-                        } else {
-                            panic!("SH2C_POSIX_SHELL=dash but dash is not available");
-                        }
-                    }
-                    "sh" => {
-                        if Command::new("sh")
-                            .arg("-c")
-                            .arg("true")
-                            .status()
-                            .map(|s| s.success())
-                            .unwrap_or(false)
-                        {
-                            "sh".to_string()
-                        } else {
-                            panic!("SH2C_POSIX_SHELL=sh but sh is not available");
-                        }
-                    }
-                    other => {
-                        panic!(
-                            "Invalid SH2C_POSIX_SHELL='{}'; expected 'dash' or 'sh'",
-                            other
-                        );
-                    }
+                    "dash" if Command::new("dash").arg("-c").arg("true").status().map(|s| s.success()).unwrap_or(false) =>
+                        "dash".to_string(),
+                    "sh" if Command::new("sh").arg("-c").arg("true").status().map(|s| s.success()).unwrap_or(false) =>
+                        "sh".to_string(),
+                    other =>
+                        panic!("Invalid SH2C_POSIX_SHELL='{}'", other),
                 }
+            } else if Command::new("dash").arg("-c").arg("true").status().map(|s| s.success()).unwrap_or(false) {
+                "dash".to_string()
+            } else if Command::new("sh").arg("-c").arg("true").status().map(|s| s.success()).unwrap_or(false) {
+                "sh".to_string()
             } else {
-                // Auto-detection
-                if Command::new("dash")
-                    .arg("-c")
-                    .arg("true")
-                    .status()
-                    .map(|s| s.success())
-                    .unwrap_or(false)
-                {
-                    "dash".to_string()
-                } else if Command::new("sh")
-                    .arg("-c")
-                    .arg("true")
-                    .status()
-                    .map(|s| s.success())
-                    .unwrap_or(false)
-                {
-                    "sh".to_string()
-                } else {
-                    eprintln!(
-                        "Skipping POSIX test for {} because 'dash' and 'sh' are not available",
-                        fixture_name
-                    );
-                    return;
-                }
+                eprintln!(
+                    "Skipping POSIX test for {} because no POSIX shell is available",
+                    fixture_name
+                );
+                return;
             }
         }
     };
 
     let mut env_vars = Vec::new();
-    if Path::new(&env_path).exists() {
+    if env_path.exists() {
         let env_content = fs::read_to_string(&env_path).expect("Failed to read env fixture");
         for line in env_content.lines() {
             if let Some((k, v)) = line.split_once('=') {
                 if k == "PATH" {
                     let current_path = std::env::var("PATH").unwrap_or_default();
                     let new_segment = if v.starts_with("tests/fixtures") {
-                        std::env::current_dir()
-                            .unwrap()
-                            .join(v)
-                            .to_string_lossy()
-                            .to_string()
+                        crate_root.join(v).to_string_lossy().to_string()
                     } else {
                         v.to_string()
                     };
-                    let new_path = format!("{}:{}", new_segment, current_path);
-                    env_vars.push((k.to_string(), new_path));
+                    env_vars.push((k.to_string(), format!("{}:{}", new_segment, current_path)));
                 } else if v.starts_with("tests/fixtures") {
-                    let abs_path = std::env::current_dir().unwrap().join(v);
+                    let abs_path = crate_root.join(v);
                     env_vars.push((k.to_string(), abs_path.to_string_lossy().to_string()));
                 } else {
                     env_vars.push((k.to_string(), v.to_string()));
@@ -447,33 +423,24 @@ pub fn assert_exec_matches_fixture_target(fixture_name: &str, target: TargetShel
             }
         }
     }
-    let env_refs: Vec<(&str, &str)> = env_vars
-        .iter()
-        .map(|(k, v)| (k.as_str(), v.as_str()))
-        .collect();
+
+    let env_refs: Vec<(&str, &str)> =
+        env_vars.iter().map(|(k, v)| (k.as_str(), v.as_str())).collect();
 
     let mut args = Vec::new();
-    if Path::new(&args_path).exists() {
+    if args_path.exists() {
         let args_content = fs::read_to_string(&args_path).expect("Failed to read args fixture");
-        for arg in args_content.lines() {
-            if !arg.trim().is_empty() {
-                args.push(arg.to_string());
-            }
+        for arg in args_content.lines().filter(|l| !l.trim().is_empty()) {
+            args.push(arg.to_string());
         }
     }
     let args_refs: Vec<&str> = args.iter().map(|s| s.as_str()).collect();
 
-    let stdin_content = if Path::new(&stdin_path).exists() {
-        Some(fs::read_to_string(&stdin_path).expect("Failed to read stdin fixture"))
-    } else {
-        None
-    };
+    let stdin_content = stdin_path.exists().then(|| {
+        fs::read_to_string(&stdin_path).expect("Failed to read stdin fixture")
+    });
 
-    let fs_setup = if Path::new(&fs_path).exists() {
-        Some(Path::new(&fs_path))
-    } else {
-        None
-    };
+    let fs_setup = fs_path.exists().then(|| fs_path.as_path());
 
     let (stdout, stderr, status) = run_shell_script(
         &shell_script,
@@ -484,50 +451,42 @@ pub fn assert_exec_matches_fixture_target(fixture_name: &str, target: TargetShel
         fs_setup,
     );
 
-    if Path::new(&stdout_path).exists() || std::env::var("SH2C_UPDATE_SNAPSHOTS").is_ok() {
+    if stdout_path.exists() || std::env::var("SH2C_UPDATE_SNAPSHOTS").is_ok() {
         if std::env::var("SH2C_UPDATE_SNAPSHOTS").is_ok() {
             fs::write(&stdout_path, &stdout).expect("Failed to update stdout snapshot");
         }
-        let expected_stdout = fs::read_to_string(&stdout_path)
+        let expected = fs::read_to_string(&stdout_path)
             .expect("Failed to read stdout fixture")
             .replace("\r\n", "\n");
         assert_eq!(
             stdout.trim(),
-            expected_stdout.trim(),
+            expected.trim(),
             "Stdout mismatch for {}.\nStderr:\n{}",
             fixture_name,
             stderr
         );
     }
 
-    if Path::new(&stderr_path).exists() || std::env::var("SH2C_UPDATE_SNAPSHOTS").is_ok() {
+    if stderr_path.exists() || std::env::var("SH2C_UPDATE_SNAPSHOTS").is_ok() {
         if std::env::var("SH2C_UPDATE_SNAPSHOTS").is_ok() {
             fs::write(&stderr_path, &stderr).expect("Failed to update stderr snapshot");
         }
-        let expected_stderr = fs::read_to_string(&stderr_path)
+        let expected = fs::read_to_string(&stderr_path)
             .expect("Failed to read stderr fixture")
             .replace("\r\n", "\n");
-        assert_eq!(
-            stderr.trim(),
-            expected_stderr.trim(),
-            "Stderr mismatch for {}",
-            fixture_name
-        );
+        assert_eq!(stderr.trim(), expected.trim(), "Stderr mismatch for {}", fixture_name);
     }
 
-    if Path::new(&status_path).exists() {
+    if status_path.exists() {
         let expected_status: i32 = fs::read_to_string(&status_path)
             .expect("Failed to read status fixture")
             .trim()
             .parse()
             .expect("Invalid status fixture content");
-        assert_eq!(
-            status, expected_status,
-            "Exit code mismatch for {}",
-            fixture_name
-        );
+        assert_eq!(status, expected_status, "Exit code mismatch for {}", fixture_name);
     }
 }
+
 
 /// Run shell script with additional shell flags (e.g., "-e" for errexit)
 pub fn run_shell_script_with_flags(

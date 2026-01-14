@@ -1,20 +1,34 @@
 use std::fs;
+use std::path::{Path, PathBuf};
+
+fn workspace_root() -> PathBuf {
+    Path::new(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .expect("crate has no parent directory")
+        .to_path_buf()
+}
+
 
 #[test]
 fn test_vscode_package_json_valid() {
-    let content = fs::read_to_string("editors/vscode/package.json")
-        .expect("Failed to read package.json");
-    
+    let path = workspace_root().join("editors/vscode/package.json");
+
+    let content = fs::read_to_string(&path)
+        .expect("Failed to read editors/vscode/package.json");
+
     // Verify it's valid JSON
     let _: serde_json::Value = serde_json::from_str(&content)
         .expect("package.json is not valid JSON");
 }
 
+
 #[test]
 fn test_vscode_language_config_valid() {
-    let content = fs::read_to_string("editors/vscode/language-configuration.json")
-        .expect("Failed to read language-configuration.json");
-    
+    let path = workspace_root()
+        .join("editors/vscode/language-configuration.json");
+
+    let content = fs::read_to_string(&path)
+        .expect("Failed to read editors/vscode/language-configuration.json");
     // Verify it's valid JSON
     let _: serde_json::Value = serde_json::from_str(&content)
         .expect("language-configuration.json is not valid JSON");
@@ -22,18 +36,26 @@ fn test_vscode_language_config_valid() {
 
 #[test]
 fn test_textmate_grammar_valid() {
-    let content = fs::read_to_string("editors/vscode/syntaxes/sh2.tmLanguage.json")
-        .expect("Failed to read sh2.tmLanguage.json");
-    
+    // Project-level artifact → workspace root
+    let path = workspace_root()
+        .join("editors/vscode/syntaxes/sh2.tmLanguage.json");
+
+    let content = fs::read_to_string(&path)
+        .expect("Failed to read editors/vscode/syntaxes/sh2.tmLanguage.json");
+
     // Verify it's valid JSON
     let _: serde_json::Value = serde_json::from_str(&content)
         .expect("sh2.tmLanguage.json is not valid JSON");
 }
 
+
 #[test]
 fn test_ebnf_grammar_exists() {
-    let content = fs::read_to_string("artifacts/grammar/sh2.ebnf")
-        .expect("Failed to read sh2.ebnf");
+    let path = workspace_root()
+        .join("artifacts/grammar/sh2.ebnf");
+
+    let content = fs::read_to_string(&path)
+        .expect("Failed to read artifacts/grammar/sh2.ebnf");
     
     // Basic sanity check - should contain some expected tokens
     assert!(content.contains("program"));
@@ -55,21 +77,25 @@ fn extract_tokens_from_pattern(pattern: &str) -> Vec<String> {
 #[test]
 fn test_textmate_keywords_coverage() {
     use sh2c::lang_spec::KEYWORDS;
-    
-    let content = fs::read_to_string("editors/vscode/syntaxes/sh2.tmLanguage.json")
-        .expect("Failed to read sh2.tmLanguage.json");
-    
+
+    // Project-level artifact → workspace root
+    let path = workspace_root()
+        .join("editors/vscode/syntaxes/sh2.tmLanguage.json");
+
+    let content = fs::read_to_string(&path)
+        .expect("Failed to read editors/vscode/syntaxes/sh2.tmLanguage.json");
+
     let grammar: serde_json::Value = serde_json::from_str(&content)
         .expect("Invalid JSON");
-    
+
     // Extract keyword pattern
     let keyword_pattern = grammar["repository"]["keywords"]["patterns"][0]["match"]
         .as_str()
         .expect("Missing keyword match pattern");
-    
+
     // Extract exact tokens from pattern
     let pattern_tokens = extract_tokens_from_pattern(keyword_pattern);
-    
+
     // Check for duplicates
     let mut seen = std::collections::HashSet::new();
     for token in &pattern_tokens {
@@ -79,7 +105,7 @@ fn test_textmate_keywords_coverage() {
             token
         );
     }
-    
+
     // Check that all keywords appear as exact tokens (not substrings)
     for keyword in KEYWORDS {
         assert!(
@@ -88,17 +114,21 @@ fn test_textmate_keywords_coverage() {
             keyword
         );
     }
-    
+
     // Optionally check no extra tokens (or allow extras for editor-specific needs)
     // For now, just ensure all required keywords are present
 }
+
 
 #[test]
 fn test_textmate_builtins_coverage() {
     use sh2c::lang_spec::BUILTINS;
     
-    let content = fs::read_to_string("editors/vscode/syntaxes/sh2.tmLanguage.json")
-        .expect("Failed to read sh2.tmLanguage.json");
+    let path = workspace_root()
+        .join("editors/vscode/syntaxes/sh2.tmLanguage.json");
+
+    let content = fs::read_to_string(&path)
+        .expect("Failed to read editors/vscode/syntaxes/sh2.tmLanguage.json");
     
     let grammar: serde_json::Value = serde_json::from_str(&content)
         .expect("Invalid JSON");
@@ -133,85 +163,116 @@ fn test_textmate_builtins_coverage() {
 
 #[test]
 fn test_artifact_snapshots() {
+    use std::fs;
+    use std::path::Path;
+
     let update_snapshots = std::env::var("SH2C_UPDATE_SNAPSHOTS").is_ok();
-    
+
     // Test VS Code package.json snapshot
     {
-        let actual = fs::read_to_string("editors/vscode/package.json")
-            .expect("Failed to read package.json");
-        let expected_path = "tests/fixtures/editor_package.json.expected";
-        
+        // Project-level artifact → workspace root
+        let actual_path = workspace_root()
+            .join("editors/vscode/package.json");
+
+        let actual = fs::read_to_string(&actual_path)
+            .expect("Failed to read editors/vscode/package.json");
+
+        // Test fixture → crate-local
+        let expected_path = Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("tests/fixtures/editor_package.json.expected");
+
         if update_snapshots {
-            fs::write(expected_path, &actual)
+            fs::write(&expected_path, &actual)
                 .expect("Failed to write snapshot");
         }
-        
-        let expected = fs::read_to_string(expected_path)
+
+        let expected = fs::read_to_string(&expected_path)
             .unwrap_or_default();
-        
+
         assert_eq!(
             actual.trim(),
             expected.trim(),
             "VS Code package.json doesn't match snapshot"
         );
     }
-    
+
     // Test TextMate grammar snapshot
     {
-        let actual = fs::read_to_string("editors/vscode/syntaxes/sh2.tmLanguage.json")
-            .expect("Failed to read sh2.tmLanguage.json");
-        let expected_path = "tests/fixtures/editor_sh2.tmLanguage.json.expected";
-        
+        // Project-level artifact → workspace root
+        let actual_path = workspace_root()
+            .join("editors/vscode/syntaxes/sh2.tmLanguage.json");
+
+        let actual = fs::read_to_string(&actual_path)
+            .expect("Failed to read editors/vscode/syntaxes/sh2.tmLanguage.json");
+
+        // Test fixture → crate-local
+        let expected_path = Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("tests/fixtures/editor_sh2.tmLanguage.json.expected");
+
         if update_snapshots {
-            fs::write(expected_path, &actual)
+            fs::write(&expected_path, &actual)
                 .expect("Failed to write snapshot");
         }
-        
-        let expected = fs::read_to_string(expected_path)
+
+        let expected = fs::read_to_string(&expected_path)
             .unwrap_or_default();
-        
+
         assert_eq!(
             actual.trim(),
             expected.trim(),
             "TextMate grammar doesn't match snapshot"
         );
     }
-    
+
     // Test language configuration snapshot
     {
-        let actual = fs::read_to_string("editors/vscode/language-configuration.json")
-            .expect("Failed to read language-configuration.json");
-        let expected_path = "tests/fixtures/editor_language-configuration.json.expected";
-        
+        // Project-level artifact → workspace root
+        let actual_path = workspace_root()
+            .join("editors/vscode/language-configuration.json");
+
+        let actual = fs::read_to_string(&actual_path)
+            .expect("Failed to read editors/vscode/language-configuration.json");
+
+        // Test fixture → crate-local
+        let expected_path = Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("tests/fixtures/editor_language-configuration.json.expected");
+
         if update_snapshots {
-            fs::write(expected_path, &actual)
+            fs::write(&expected_path, &actual)
                 .expect("Failed to write snapshot");
         }
-        
-        let expected = fs::read_to_string(expected_path)
+
+        let expected = fs::read_to_string(&expected_path)
             .unwrap_or_default();
-        
+
         assert_eq!(
             actual.trim(),
             expected.trim(),
             "Language configuration doesn't match snapshot"
         );
     }
-    
+
     // Test EBNF grammar snapshot
     {
-        let actual = fs::read_to_string("artifacts/grammar/sh2.ebnf")
-            .expect("Failed to read sh2.ebnf");
-        let expected_path = "tests/fixtures/editor_sh2.ebnf.expected";
-        
+        // Project-level artifact → workspace root
+        let actual_path = workspace_root()
+            .join("artifacts/grammar/sh2.ebnf");
+
+        let actual = fs::read_to_string(&actual_path)
+            .expect("Failed to read artifacts/grammar/sh2.ebnf");
+
+        // Test fixture → crate-local
+        let expected_path = Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("tests/fixtures/editor_sh2.ebnf.expected");
+
         if update_snapshots {
-            fs::write(expected_path, &actual)
+            fs::write(&expected_path, &actual)
                 .expect("Failed to write snapshot");
         }
-        
-        let expected = fs::read_to_string(expected_path)
+
+        let expected = fs::read_to_string(&expected_path)
             .unwrap_or_default();
-        
+
         assert_eq!(
             actual.trim(),
             expected.trim(),
