@@ -1,6 +1,7 @@
 [workspace]
 members = [
-    "sh2c"
+    "sh2c",
+    "sh2do"
 ]
 
 resolver = "3"
