@@ -545,6 +545,44 @@ let text = "foo\nbar\n"
 if contains(lines(text), "bar") { ... }
 ```
 
+### 10.5 File I/O
+
+#### `read_file(path)` → string
+
+Reads the contents of a file and returns it as a string. Must be used in an expression context (cannot be used as a statement).
+
+```sh2
+let content = read_file("config.txt")
+```
+
+- **Error behavior**: If the file does not exist or cannot be read, the script exits with a non-zero status (fail-fast).
+- **Newlines**: Content is returned exactly as stored, including trailing newlines.
+- **Portable**: Works on both Bash and POSIX targets.
+
+#### `write_file(path, content)`
+
+Creates or truncates `path` and writes `content` exactly as provided. This is a **statement**, not an expression.
+
+```sh2
+write_file("output.txt", "hello")
+write_file("data.txt", content & "\n")  # explicit newline
+```
+
+- **No implicit newline**: Content is written exactly; add `\n` explicitly if needed.
+- **Error behavior**: If the file cannot be written (e.g., path is a directory), the script exits with a non-zero status.
+- **Portable**: Works on both Bash and POSIX targets.
+
+#### `append_file(path, content)`
+
+Appends `content` to `path`, creating the file if it does not exist. This is a **statement**, not an expression.
+
+```sh2
+append_file("log.txt", "entry\n")
+```
+
+- **No implicit newline**: Content is appended exactly; add `\n` explicitly if needed.
+- **Error behavior**: Same as `write_file`.
+- **Portable**: Works on both Bash and POSIX targets.
 
 ---
 

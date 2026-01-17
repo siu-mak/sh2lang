@@ -201,17 +201,20 @@ try {
 }
 ```
 
-### `sh("...")` literal-only escape hatch
+### `sh("...")` raw shell escape hatch
 
-`sh("...")` executes raw shell, but only accepts a **string literal**:
+`sh(expr)` executes raw shell code. It accepts **any string expression** (literal, variable, or concatenation):
 
 ```sh2
-sh("echo hello")      # ✅
-# sh("echo " & x)     # ❌ (not allowed)
-# sh(cmd)             # ❌
+sh("echo hello")          # ✅ literal
+let cmd = "echo dynamic"
+sh(cmd)                   # ✅ variable
+sh("echo " & cmd)         # ✅ concatenation
 ```
 
-Prefer structured `run(...)`, pipelines, and `capture(...)` instead.
+> **Warning**: `sh(expr)` is injection-prone if you interpolate untrusted input. Prefer structured `run(...)`, pipelines, and `capture(...)` instead.
+
+`sh(expr)` uses **probe semantics**: it updates `status()` but never triggers fail-fast behavior.
 
 ---
 
@@ -250,6 +253,7 @@ See [`docs/sh2do.md`](docs/sh2do.md) for full documentation.
 
 ## Further Documentation
 
-- `language.md` — full language reference (syntax + semantics)
-- `grammar.ebnf` / `grammar.enbf.md` — language grammar
+- [`docs/language.md`](docs/language.md) — full language reference (syntax + semantics)
+- [`docs/feature_matrix.md`](docs/feature_matrix.md) — feature → test mapping
+- [`docs/sh2do.md`](docs/sh2do.md) — sh2do CLI documentation
 - `tests/` — fixtures and integration tests (acts as an executable spec)
