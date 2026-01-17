@@ -24,6 +24,30 @@ fn find_sh2c() -> Result<std::path::PathBuf, String> {
     }
 }
 
+const HELP_TEXT: &str = "\
+Usage: sh2do '<snippet>'
+       sh2do -
+       sh2do '<snippet>' [flags] -- [args...]
+
+Compile and execute sh2 snippets.
+
+Flags:
+  --emit-sh      Compile and emit shell to stdout, do not execute
+  --no-exec      Alias of --emit-sh
+  --target <t>   Target shell: bash (default) or posix
+  -h, --help     Show this help and exit
+
+Snippet input:
+  '<snippet>'    sh2 code as argument
+  -              Read snippet from stdin
+
+Arguments:
+  Everything after -- is passed to the executed script
+
+Exit codes:
+  Compile error: exits with sh2c's code
+  Runtime error: exits with script's code
+";
 
 fn main() -> ExitCode {
     match run() {
@@ -37,6 +61,12 @@ fn main() -> ExitCode {
 
 fn run() -> Result<ExitCode, String> {
     let args: Vec<String> = env::args().skip(1).collect();
+
+    // Check for help flag early
+    if args.iter().any(|arg| arg == "-h" || arg == "--help") {
+        print!("{}", HELP_TEXT);
+        return Ok(ExitCode::SUCCESS);
+    }
 
     // Split arguments at '--' separator
     let separator_pos = args.iter().position(|arg| arg == "--");
