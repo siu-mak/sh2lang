@@ -47,7 +47,7 @@ fn run() -> Result<ExitCode, String> {
         let t = args
             .next()
             .ok_or("--target requires a value (bash|posix)")?;
-        target = Some(t);
+        target = Some(t.clone());
 
         let next = args.next().ok_or("missing sh2 snippet or '-'")?;
         read_snippet(next)?
@@ -68,8 +68,9 @@ fn run() -> Result<ExitCode, String> {
     let sh2c_path = find_sh2c()?;
     let mut cmd = Command::new(sh2c_path);
 
+    let target_shell = target.as_deref().unwrap_or("bash");
 
-    if let Some(t) = target {
+    if let Some(t) = &target {
         cmd.arg("--target").arg(t);
     }
 
@@ -84,11 +85,21 @@ fn run() -> Result<ExitCode, String> {
         return Ok(ExitCode::from(status.code().unwrap_or(1) as u8));
     }
 
-    // Emit generated shell
-    let shell = fs::read_to_string(out.path()).map_err(|e| e.to_string())?;
-    print!("{shell}");
+    // Execute generated shell script
+    let interpreter = match target_shell {
+        "bash" => "bash",
+        "posix" => "sh",
+        _ => "bash", // fallback to bash
+    };
 
-    Ok(ExitCode::SUCCESS)
+    let exec_status = Command::new(interpreter)
+        .arg(out.path())
+        .stdout(std::process::Stdio::inherit())
+        .stderr(std::process::Stdio::inherit())
+        .status()
+        .map_err(|e| format!("failed to execute {}: {}", interpreter, e))?;
+
+    Ok(ExitCode::from(exec_status.code().unwrap_or(1) as u8))
 }
 
 fn read_snippet(arg: String) -> Result<String, String> {
