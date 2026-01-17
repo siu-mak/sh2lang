@@ -235,6 +235,19 @@ POSIX target prioritizes portability. Some features are restricted or unavailabl
 
 ---
 
+## sh2do — Snippet Runner
+
+**sh2do** is a thin wrapper around sh2c that compiles and executes sh2 snippets in one step. It's useful for quick one-liners and testing.
+
+```bash
+sh2do 'print("hello world")'
+sh2do 'print(arg(1))' -- myarg
+```
+
+See [`docs/sh2do.md`](docs/sh2do.md) for full documentation.
+
+---
+
 ## Further Documentation
 
 - `language.md` — full language reference (syntax + semantics)

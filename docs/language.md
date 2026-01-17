@@ -2,6 +2,8 @@
 
 sh2 is a small, structured shell language designed to bring safety, clarity, and modern programming constructs to shell scripting. Scripts written in sh2 are compiled by **sh2c** into either **bash** (feature-rich) or **POSIX sh** (portable).
 
+> **Note**: **sh2do** is a wrapper tool that compiles and executes sh2 snippets in one step. It does not change sh2 language semantics.
+
 ---
 
 ## 1. Program Structure
