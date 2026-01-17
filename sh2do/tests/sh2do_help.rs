@@ -104,3 +104,33 @@ fn test_help_does_not_execute() {
         stdout
     );
 }
+
+#[test]
+fn test_help_examples() {
+    let output = Command::new(sh2do_path())
+        .arg("--help")
+        .output()
+        .expect("Failed to run sh2do");
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    
+    // Check for "Examples:" header
+    assert!(
+        stdout.contains("Examples:"),
+        "Help text should contain 'Examples:', got: {}",
+        stdout
+    );
+
+    // Check for the specific example lines
+    assert!(
+        stdout.contains("sh2do 'print(\"hi\")'"),
+        "Help text should contain 'print(\"hi\")' example, got: {}", 
+        stdout
+    );
+
+    assert!(
+        stdout.contains("sh2do 'run(\"ls\")'"),
+        "Help text should contain 'run(\"ls\")' example, got: {}", 
+        stdout
+    );
+}

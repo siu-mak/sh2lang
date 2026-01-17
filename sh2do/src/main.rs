@@ -47,6 +47,10 @@ Arguments:
 Exit codes:
   Compile error: exits with sh2c's code
   Runtime error: exits with script's code
+
+Examples:
+  sh2do 'print(\"hi\")'
+  sh2do 'run(\"ls\")'
 ";
 
 fn main() -> ExitCode {
