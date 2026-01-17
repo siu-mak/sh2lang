@@ -38,18 +38,29 @@ fn main() -> ExitCode {
 fn run() -> Result<ExitCode, String> {
     let args: Vec<String> = env::args().skip(1).collect();
 
-    // Parse flags and snippet
+    // Split arguments at '--' separator
+    let separator_pos = args.iter().position(|arg| arg == "--");
+    let (pre_args, passthrough_args) = match separator_pos {
+        Some(pos) => {
+            let pre = &args[..pos];
+            let post = &args[pos + 1..];
+            (pre.to_vec(), post.to_vec())
+        }
+        None => (args.clone(), Vec::new()),
+    };
+
+    // Parse flags and snippet from pre_args only
     let mut target: Option<String> = None;
     let mut emit_only = false;
     let mut snippet_arg: Option<String> = None;
 
     let mut i = 0;
-    while i < args.len() {
-        let arg = &args[i];
+    while i < pre_args.len() {
+        let arg = &pre_args[i];
         
         if arg == "--target" {
-            if i + 1 < args.len() {
-                target = Some(args[i + 1].clone());
+            if i + 1 < pre_args.len() {
+                target = Some(pre_args[i + 1].clone());
                 i += 2;
             } else {
                 return Err("--target requires a value (bash|posix)".to_string());
@@ -101,21 +112,26 @@ fn run() -> Result<ExitCode, String> {
     // Branch on mode: emit or execute
     if emit_only {
         // Emit-only mode: print generated shell to stdout
+        // Passthrough args are ignored in emit-only mode
         let shell = fs::read_to_string(out.path()).map_err(|e| e.to_string())?;
         print!("{}", shell);
         Ok(ExitCode::SUCCESS)
     } else {
-        // Execute mode: run the generated shell script
+        // Execute mode: run the generated shell script with passthrough args
         let interpreter = match target_shell {
             "bash" => "bash",
             "posix" => "sh",
             _ => "bash", // fallback to bash
         };
 
-        let exec_status = Command::new(interpreter)
+        let mut exec_cmd = Command::new(interpreter);
+        exec_cmd
             .arg(out.path())
+            .args(&passthrough_args)
             .stdout(std::process::Stdio::inherit())
-            .stderr(std::process::Stdio::inherit())
+            .stderr(std::process::Stdio::inherit());
+
+        let exec_status = exec_cmd
             .status()
             .map_err(|e| format!("failed to execute {}: {}", interpreter, e))?;
 
