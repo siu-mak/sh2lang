@@ -36,24 +36,37 @@ fn main() -> ExitCode {
 }
 
 fn run() -> Result<ExitCode, String> {
-    let mut args = env::args().skip(1);
+    let args: Vec<String> = env::args().skip(1).collect();
 
-    // Optional: --target <bash|posix>
+    // Parse flags and snippet
     let mut target: Option<String> = None;
+    let mut emit_only = false;
+    let mut snippet_arg: Option<String> = None;
 
-    let first = args.next().ok_or("missing sh2 snippet or '-'")?;
+    let mut i = 0;
+    while i < args.len() {
+        let arg = &args[i];
+        
+        if arg == "--target" {
+            if i + 1 < args.len() {
+                target = Some(args[i + 1].clone());
+                i += 2;
+            } else {
+                return Err("--target requires a value (bash|posix)".to_string());
+            }
+        } else if arg == "--emit-sh" || arg == "--no-exec" {
+            emit_only = true;
+            i += 1;
+        } else if snippet_arg.is_none() {
+            snippet_arg = Some(arg.clone());
+            i += 1;
+        } else {
+            return Err(format!("unexpected argument: {}", arg));
+        }
+    }
 
-    let snippet = if first == "--target" {
-        let t = args
-            .next()
-            .ok_or("--target requires a value (bash|posix)")?;
-        target = Some(t.clone());
-
-        let next = args.next().ok_or("missing sh2 snippet or '-'")?;
-        read_snippet(next)?
-    } else {
-        read_snippet(first)?
-    };
+    let snippet_arg = snippet_arg.ok_or("missing sh2 snippet or '-'")?;
+    let snippet = read_snippet(snippet_arg)?;
 
     let wrapped = wrap_snippet(&snippet);
 
@@ -85,21 +98,29 @@ fn run() -> Result<ExitCode, String> {
         return Ok(ExitCode::from(status.code().unwrap_or(1) as u8));
     }
 
-    // Execute generated shell script
-    let interpreter = match target_shell {
-        "bash" => "bash",
-        "posix" => "sh",
-        _ => "bash", // fallback to bash
-    };
+    // Branch on mode: emit or execute
+    if emit_only {
+        // Emit-only mode: print generated shell to stdout
+        let shell = fs::read_to_string(out.path()).map_err(|e| e.to_string())?;
+        print!("{}", shell);
+        Ok(ExitCode::SUCCESS)
+    } else {
+        // Execute mode: run the generated shell script
+        let interpreter = match target_shell {
+            "bash" => "bash",
+            "posix" => "sh",
+            _ => "bash", // fallback to bash
+        };
 
-    let exec_status = Command::new(interpreter)
-        .arg(out.path())
-        .stdout(std::process::Stdio::inherit())
-        .stderr(std::process::Stdio::inherit())
-        .status()
-        .map_err(|e| format!("failed to execute {}: {}", interpreter, e))?;
+        let exec_status = Command::new(interpreter)
+            .arg(out.path())
+            .stdout(std::process::Stdio::inherit())
+            .stderr(std::process::Stdio::inherit())
+            .status()
+            .map_err(|e| format!("failed to execute {}: {}", interpreter, e))?;
 
-    Ok(ExitCode::from(exec_status.code().unwrap_or(1) as u8))
+        Ok(ExitCode::from(exec_status.code().unwrap_or(1) as u8))
+    }
 }
 
 fn read_snippet(arg: String) -> Result<String, String> {
