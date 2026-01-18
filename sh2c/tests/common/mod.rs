@@ -323,7 +323,6 @@ pub fn assert_exec_matches_fixture_target(
     target: TargetShell,
 ) {
     use std::fs;
-    use std::path::{Path, PathBuf};
     use std::process::Command;
 
     let crate_root = crate_root();
