@@ -129,21 +129,25 @@ Integer literals (e.g. `0`, `42`). Arithmetic operators: `+ - * / %`.
 
 `true` and `false`.
 
-> **Limitation**: Boolean expressions can be used directly in conditions (`if`, `while`, `case` guards), but **storing a boolean in a variable is not currently supported**:
+Boolean expressions can be stored in variables and used in conditions:
+
+```sh2
+let ok = (sum == 42)
+if ok {
+  print("yes")
+}
+```
+
+Stored booleans are represented as `"1"` (true) or `"0"` (false) internally.
+
+> **Limitation**: Boolean variables can only be used in conditions (`if`, `while`). Using them in string contexts (e.g., `print(ok)` or `"x=" & ok`) produces a compile error. If you need string output, use `bool_str()`:
 >
 > ```sh2
 > # ❌ Not supported:
-> let ok = (sum == 42)
+> print(ok)
 >
-> # ✅ Canonical patterns:
-> # 1. Use inline condition
-> if sum == 42 {
->   print("yes")
-> }
->
-> # 2. Use bool_str() to convert to "true"/"false" string
-> let ok = bool_str(sum == 42)
-> if ok == "true" { ... }
+> # ✅ Use bool_str():
+> print(bool_str(sum == 42))
 > ```
 
 

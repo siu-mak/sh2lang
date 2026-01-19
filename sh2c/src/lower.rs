@@ -8,6 +8,8 @@ use std::collections::HashSet;
 #[derive(Clone, Debug)]
 struct LoweringContext<'a> {
     run_results: HashSet<String>,
+    /// Variables that hold boolean values (assigned from boolean expressions)
+    bool_vars: HashSet<String>,
     opts: &'a LowerOptions,
 }
 
@@ -15,6 +17,7 @@ impl<'a> LoweringContext<'a> {
     fn new(opts: &'a LowerOptions) -> Self {
         Self {
             run_results: HashSet::new(),
+            bool_vars: HashSet::new(),
             opts,
         }
     }
@@ -27,14 +30,28 @@ impl<'a> LoweringContext<'a> {
         self.run_results.remove(name);
     }
 
+    fn insert_bool_var(&mut self, name: &str) {
+        self.bool_vars.insert(name.to_string());
+    }
+
+    fn is_bool_var(&self, name: &str) -> bool {
+        self.bool_vars.contains(name)
+    }
+
     fn intersection(&self, other: &Self) -> Self {
         let run_results = self
             .run_results
             .intersection(&other.run_results)
             .cloned()
             .collect();
+        let bool_vars = self
+            .bool_vars
+            .intersection(&other.bool_vars)
+            .cloned()
+            .collect();
         Self {
             run_results,
+            bool_vars,
             opts: self.opts,
         }
     }
@@ -151,6 +168,44 @@ fn resolve_span(
     format!("{}:{}:{}", display_file, line, col)
 }
 
+/// Check if an AST expression is boolean-typed (comparison, logical op, predicate, etc.)
+/// Used to determine if a let-binding should track the variable as bool-typed.
+///
+/// IMPORTANT: This is an intentional allowlist of known boolean-returning expressions:
+/// - Bool literals (true, false)
+/// - Comparisons (==, !=, <, >, <=, >=)
+/// - Logical operators (&&, ||, !)
+/// - Known predicate builtins: exists, is_dir, is_file, is_symlink, is_exec,
+///   is_readable, is_writable, is_non_empty, matches, contains, contains_line, confirm
+///
+/// If new boolean-returning builtins are added, this list must be updated.
+fn is_bool_expr(e: &ast::Expr) -> bool {
+    match &e.node {
+        ast::ExprKind::Bool(_) => true,
+        ast::ExprKind::Compare { .. } => true,
+        ast::ExprKind::And(_, _) | ast::ExprKind::Or(_, _) | ast::ExprKind::Not(_) => true,
+        ast::ExprKind::Call { name, .. } => {
+            // Allowlist of known boolean-returning builtins
+            matches!(
+                name.as_str(),
+                "exists"
+                    | "is_dir"
+                    | "is_file"
+                    | "is_symlink"
+                    | "is_exec"
+                    | "is_readable"
+                    | "is_writable"
+                    | "is_non_empty"
+                    | "matches"
+                    | "contains"
+                    | "contains_line"
+                    | "confirm"
+            )
+        }
+        _ => false,
+    }
+}
+
 /// Lower one AST statement into IR commands. Returns the updated context after this statement.
 fn lower_stmt<'a>(
     stmt: ast::Stmt,
@@ -201,12 +256,17 @@ fn lower_stmt<'a>(
                     return Ok(ctx);
                 }
             }
+            // Check if RHS is a boolean expression and track it
+            let is_bool = is_bool_expr(&value);
             out.push(ir::Cmd::Assign(
                 name.clone(),
                 lower_expr(value, &mut ctx, sm, file)?,
                 loc,
             ));
             ctx.remove(&name);
+            if is_bool {
+                ctx.insert_bool_var(&name);
+            }
             Ok(ctx)
         }
 
@@ -828,7 +888,13 @@ fn lower_expr<'a>(e: ast::Expr, ctx: &mut LoweringContext<'a>, sm: &SourceMap, f
     let opts = ctx.opts; // Get opts from context for diagnostic formatting
     match e.node {
         ast::ExprKind::Literal(s) => Ok(ir::Val::Literal(s)),
-        ast::ExprKind::Var(s) => Ok(ir::Val::Var(s)),
+        ast::ExprKind::Var(s) => {
+            if ctx.is_bool_var(&s) {
+                Ok(ir::Val::BoolVar(s))
+            } else {
+                Ok(ir::Val::Var(s))
+            }
+        }
         ast::ExprKind::Concat(l, r) => Ok(ir::Val::Concat(
             Box::new(lower_expr(*l, ctx, sm, file)?),
             Box::new(lower_expr(*r, ctx, sm, file)?),

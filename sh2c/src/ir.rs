@@ -92,6 +92,9 @@ pub enum Val {
         needle: Box<Val>,
     },
     Split { s: Box<Val>, delim: Box<Val> },
+    /// A variable known to hold a boolean value ("1" or "0").
+    /// Used in conditions to emit `[ "$var" = "1" ]` instead of non-empty check.
+    BoolVar(String),
 }
 
 #[derive(Debug, Clone, PartialEq)]

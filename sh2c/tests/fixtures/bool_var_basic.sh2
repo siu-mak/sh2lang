@@ -1,0 +1,39 @@
+func main() {
+    let x = 42
+    
+    # Test: true case
+    let ok = (x == 42)
+    if ok {
+        print("ok is true")
+    } else {
+        print("ok is false")
+    }
+    
+    # Test: false case  
+    let not_ok = (x == 99)
+    if not_ok {
+        print("not_ok is true")
+    } else {
+        print("not_ok is false")
+    }
+    
+    # Test: comparison with bool var
+    let a = (1 == 1)
+    let b = (1 == 2)
+    
+    if a {
+        print("a is true")
+    }
+    
+    if b {
+        print("b should not print")
+    }
+    
+    # Test: predicate bool var
+    if exists("/") {
+        let root_exists = exists("/")
+        if root_exists {
+            print("root_exists works")
+        }
+    }
+}

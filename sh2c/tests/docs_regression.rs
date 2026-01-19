@@ -243,29 +243,9 @@ fn docs_no_and_or_operators_in_sh2_blocks() {
     }
 }
 
-#[test]
-fn docs_no_unmarked_boolean_materialization() {
-    let docs = gather_doc_paths();
-    let mut all_errors = Vec::new();
-
-    for doc in &docs {
-        let errors = check_doc_for_all_patterns(doc);
-        // Filter to only boolean materialization errors
-        let filtered: Vec<_> = errors
-            .into_iter()
-            .filter(|e| e.contains("Boolean materialization"))
-            .collect();
-        all_errors.extend(filtered);
-    }
-
-    if !all_errors.is_empty() {
-        panic!(
-            "Found {} unmarked boolean materialization example(s) in sh2 code blocks:\n\n{}\n\nLabel unsupported examples with `# ❌ Not supported:` or rewrite to use inline conditions/bool_str().",
-            all_errors.len(),
-            all_errors.join("\n\n")
-        );
-    }
-}
+// NOTE: docs_no_unmarked_boolean_materialization test was removed because
+// boolean materialization is now supported (let ok = (x == 42) is valid).
+// The test was designed to catch the old limitation, which no longer applies.
 
 #[test]
 fn feature_matrix_exists_if_referenced() {

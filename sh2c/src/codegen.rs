@@ -495,6 +495,31 @@ fn sh_single_quote(s: &str) -> String {
 
 use std::collections::HashSet;
 
+/// Check if a Val represents a boolean expression (comparison, logical op, predicate, etc.)
+/// These require special handling when assigned to variables.
+fn is_boolean_val(v: &Val) -> bool {
+    matches!(
+        v,
+        Val::Bool(_)
+            | Val::Compare { .. }
+            | Val::And(_, _)
+            | Val::Or(_, _)
+            | Val::Not(_)
+            | Val::Exists(_)
+            | Val::IsDir(_)
+            | Val::IsFile(_)
+            | Val::IsSymlink(_)
+            | Val::IsExec(_)
+            | Val::IsReadable(_)
+            | Val::IsWritable(_)
+            | Val::IsNonEmpty(_)
+            | Val::Matches(_, _)
+            | Val::Contains { .. }
+            | Val::ContainsLine { .. }
+            | Val::Confirm(_)
+    )
+}
+
 #[derive(Default)]
 struct CodegenContext {
     known_lists: HashSet<String>,
@@ -760,6 +785,9 @@ fn emit_val(v: &Val, target: TargetShell) -> Result<String, CompileError> {
         | Val::Split { .. }
         | Val::ContainsLine { .. }
         | Val::Confirm(..) => Err(CompileError::new("Cannot emit boolean/list value as string").with_target(target)),
+        Val::BoolVar(_) => Err(CompileError::new(
+            "bool is not a string; bool→string conversion is not supported yet"
+        ).with_target(target)),
     }
 }
 
@@ -921,6 +949,10 @@ fn emit_cond(v: &Val, target: TargetShell) -> Result<String, CompileError> {
                 emit_val(text, target)?,
                 emit_val(regex, target)?
             ))
+        }
+        Val::BoolVar(name) => {
+            // Boolean variable: check if equals "1"
+            Ok(format!("[ \"${}\" = \"1\" ]", name))
         }
         // "Truthiness" fallback for scalar values: check if non-empty string.
         v => Ok(format!("[ -n {} ]", emit_val(v, target)?)),
@@ -1161,6 +1193,20 @@ fn emit_cmd(
                     pad = pad,
                     name = name
                 ));
+            } else if is_boolean_val(val) {
+                // Boolean assignment: emit as "1"/"0" string
+                // Format: var="$( if <cond>; then printf 1; else printf 0; fi )"
+                // The condition result is captured as 1/0, not via $?.
+                // Boolean assignment always "succeeds" (status=0) since it's just
+                // evaluating a condition and storing the result.
+                out.push_str(name);
+                out.push_str("=\"$( if ");
+                out.push_str(&emit_cond(val, target)?);
+                out.push_str("; then printf 1; else printf 0; fi )\"");
+                out.push('\n');
+                // Boolean assignment always succeeds - the condition result is stored
+                // as 1/0, not reflected in exit status.
+                out.push_str(&format!("{}__sh2_status=0\n", pad));
             } else if let Val::Args = val {
                 out.push_str(name);
                 out.push_str("=(\"$@\")\n");

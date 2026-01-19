@@ -1,6 +1,5 @@
 use common::assert_exec_matches_fixture;
 use assert_cmd::Command;
-use predicates::prelude::*;
 
 mod common;
 
@@ -15,21 +14,19 @@ fn compile_bool_compare_variations() {
 }
 
 #[test]
-fn compile_bool_usage_error() {
+fn compile_bool_var_from_predicate() {
+    // This now compiles successfully - boolean variables are supported
     let mut cmd = Command::new(env!("CARGO_BIN_EXE_sh2c"));
     cmd.arg("tests/fixtures/bool_usage_error.sh2")
        .assert()
-       .failure()
-       .stderr(predicate::str::contains("Cannot emit boolean/list value as string"))
-       .stderr(predicate::str::contains("Internal error").not());
+       .success();
 }
 
 #[test]
-fn compile_bool_literal_usage_error() {
+fn compile_bool_var_from_literal() {
+    // This now compiles successfully - boolean variables are supported
     let mut cmd = Command::new(env!("CARGO_BIN_EXE_sh2c"));
     cmd.arg("tests/fixtures/bool_literal_usage_error.sh2")
        .assert()
-       .failure()
-       .stderr(predicate::str::contains("Cannot emit boolean value as string/word"))
-       .stderr(predicate::str::contains("Internal error").not());
+       .success();
 }
