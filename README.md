@@ -131,16 +131,16 @@ let env_name = "dev"
 let env = "dev"
 ```
 
-### Logical operators are `and` / `or`
+### Logical operators are `&&` / `||`
 
-Use textual boolean operators in expressions:
+Use `&&` for logical AND and `||` for logical OR:
 
 ```sh2
-if exists("a") and exists("b") {
+if exists("a") && exists("b") {
   print("both")
 }
 
-if exists("a") or exists("b") {
+if exists("a") || exists("b") {
   print("either")
 }
 ```
@@ -150,8 +150,8 @@ if exists("a") or exists("b") {
 `run(...)` can be used as a statement, but also participates in boolean logic:
 
 ```sh2
-run("true") and run("echo", "only if success")
-run("false") or run("echo", "only if failure")
+run("true") && run("echo", "only if success")
+run("false") || run("echo", "only if failure")
 ```
 
 To allow a command to fail without aborting the script, use `allow_fail=true`:
@@ -254,6 +254,5 @@ See [`docs/sh2do.md`](docs/sh2do.md) for full documentation.
 ## Further Documentation
 
 - [`docs/language.md`](docs/language.md) — full language reference (syntax + semantics)
-- [`docs/feature_matrix.md`](docs/feature_matrix.md) — feature → test mapping
 - [`docs/sh2do.md`](docs/sh2do.md) — sh2do CLI documentation
 - `tests/` — fixtures and integration tests (acts as an executable spec)

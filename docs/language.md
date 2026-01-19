@@ -129,6 +129,24 @@ Integer literals (e.g. `0`, `42`). Arithmetic operators: `+ - * / %`.
 
 `true` and `false`.
 
+> **Limitation**: Boolean expressions can be used directly in conditions (`if`, `while`, `case` guards), but **storing a boolean in a variable is not currently supported**:
+>
+> ```sh2
+> # ❌ Not supported:
+> let ok = (sum == 42)
+>
+> # ✅ Canonical patterns:
+> # 1. Use inline condition
+> if sum == 42 {
+>   print("yes")
+> }
+>
+> # 2. Use bool_str() to convert to "true"/"false" string
+> let ok = bool_str(sum == 42)
+> if ok == "true" { ... }
+> ```
+
+
 ### 3.4 Lists (Bash-only)
 
 ```sh2
@@ -184,8 +202,8 @@ unset("DEBUG")
 ### 5.1 Operator precedence (lowest → highest)
 
 1. `|` (pipeline)
-2. `or`
-3. `and`
+2. `||`
+3. `&&`
 4. comparisons: `== != < <= > >=`
 5. `&` (string concatenation)
 6. `+ -`
@@ -193,16 +211,16 @@ unset("DEBUG")
 8. unary: `!` and unary `-`
 9. postfix: calls `f(...)`, indexing `x[i]`, member access `x.field`
 
-### 5.2 Logical operators: `and` / `or`
+### 5.2 Logical operators: `&&` / `||`
 
-Use `and` / `or` (textual operators), not `&&` / `||`.
+Use `&&` for logical AND and `||` for logical OR:
 
 ```sh2
-if exists("a") and exists("b") {
+if exists("a") && exists("b") {
   print("both")
 }
 
-if exists("a") or exists("b") {
+if exists("a") || exists("b") {
   print("at least one")
 }
 ```
@@ -231,13 +249,13 @@ run("printf", "hello\n") | run("tee", "out.txt")
 `run(...)` executes an external command with safely separated arguments. It is an **expression**, so it can be used:
 
 - as a standalone statement (expression statement), and
-- inside boolean logic (`and`/`or`) and conditions.
+- inside boolean logic (`&&`/`||`) and conditions.
 
 ```sh2
 run("echo", "hello")
 
-run("true") and run("echo", "only if true succeeded")
-run("false") or run("echo", "only if false failed")
+run("true") && run("echo", "only if true succeeded")
+run("false") || run("echo", "only if false failed")
 ```
 
 By default, failures abort the script (set -e-like behavior), unless you enable `allow_fail=true`.
