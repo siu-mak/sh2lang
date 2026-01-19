@@ -32,8 +32,8 @@
         "comments": {
             "patterns": [
                 {
-                    "name": "comment.line.double-slash.sh2",
-                    "match": "//.*$"
+                    "name": "comment.line.number-sign.sh2",
+                    "match": "#.*$"
                 }
             ]
         },
@@ -112,6 +112,10 @@
         },
         "operators": {
             "patterns": [
+                {
+                    "name": "keyword.operator.pipe-block.sh2",
+                    "match": "\\|>"
+                },
                 {
                     "name": "keyword.operator.comparison.sh2",
                     "match": "(==|!=|<=|>=|<|>)"
