@@ -13,14 +13,18 @@ jobs:
   test-bash:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
+    - uses: dtolnay/rust-toolchain@stable
+      with:
+        toolchain: stable
     - name: Run tests (Bash + Default Posix fallback)
       run: cargo test
 
   test-posix-dash:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
+    - uses: dtolnay/rust-toolchain@stable
+      with:
+        toolchain: stable
     - name: Install dash
       run: |
         sudo apt-get update
