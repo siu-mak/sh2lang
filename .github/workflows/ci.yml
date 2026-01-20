@@ -13,21 +13,28 @@ jobs:
   test-bash:
     runs-on: ubuntu-latest
     steps:
-    - uses: dtolnay/rust-toolchain@stable
-      with:
-        toolchain: stable
-    - name: Run tests (Bash + Default Posix fallback)
-      run: cargo test
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+
+      - name: Run tests (Bash + Default Posix fallback)
+        run: cargo test --workspace
 
   test-posix-dash:
     runs-on: ubuntu-latest
     steps:
-    - uses: dtolnay/rust-toolchain@stable
-      with:
-        toolchain: stable
-    - name: Install dash
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y dash
-    - name: Run tests (Strict POSIX=dash)
-      run: SH2C_POSIX_SHELL=dash cargo test
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+
+      - name: Install dash
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y dash
+
+      - name: Run tests (Strict POSIX=dash)
+        run: SH2C_POSIX_SHELL=dash cargo test --workspace
