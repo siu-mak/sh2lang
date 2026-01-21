@@ -11,16 +11,42 @@ sh2c can compile the same `.sh2` source to either:
 
 ## Install / Build
 
-From the repo root:
+### Build from source
 
 ```bash
-cargo build
+git clone https://github.com/siu-mak/sh2lang.git
+cd sh2lang
+cargo build --workspace
 ```
 
 Run the compiler:
 
 ```bash
-target/debug/sh2c --help
+./target/debug/sh2c --help
+./target/debug/sh2do --help
+```
+
+### Install to PATH (recommended for regular use)
+
+Install both tools to `~/.cargo/bin`:
+
+```bash
+cargo install --path sh2c --locked
+cargo install --path sh2do --locked
+```
+
+Ensure `~/.cargo/bin` is on your PATH:
+
+```bash
+# Add to ~/.bashrc or ~/.zshrc:
+export PATH="$HOME/.cargo/bin:$PATH"
+```
+
+Then from any directory:
+
+```bash
+sh2c --help
+sh2do 'print("hello")'
 ```
 
 ---

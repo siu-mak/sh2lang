@@ -12,6 +12,134 @@ fn crate_root() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).to_path_buf()
 }
 
+fn repo_root() -> PathBuf {
+    let crate_dir = crate_root();
+    crate_dir.parent()
+        .unwrap_or_else(|| panic!("Failed to find repo root (parent of {})", crate_dir.display()))
+        .to_path_buf()
+}
+
+/// Normalize paths relative to the repository root to <SH2C_ROOT>.
+/// <SH2C_ROOT> represents the repository root (e.g., /path/to/repo), 
+/// NOT the sh2c crate directory. Fixtures should use this placeholder
+/// rather than absolute paths to ensure portability between local and CI.
+///
+/// Replacement only occurs at valid path boundaries (start of string, whitespace, quotes, etc.)
+fn normalize_repo_paths(text: &str, repo_root: &Path) -> String {
+    let root_str = repo_root.to_string_lossy();
+    let root_len = root_str.len();
+    if root_len == 0 {
+        return text.to_string();
+    }
+
+    let mut result = String::with_capacity(text.len());
+    let mut last_idx = 0;
+
+    // Iterate through all occurrences of root_str
+    for (idx, _) in text.match_indices(&*root_str) {
+        // Append everything before this match
+        result.push_str(&text[last_idx..idx]);
+        
+        // Check prefix boundary (whitespace, start-of-line, quote, colon, left-paren, equals, brace, bracket, comma)
+        let is_valid_prefix = if idx == 0 {
+            true
+        } else {
+            let prev_char = text[..idx].chars().last().unwrap();
+            prev_char.is_whitespace() || 
+            prev_char == ':' || 
+            prev_char == '"' || 
+            prev_char == '\'' || 
+            prev_char == '(' ||
+            prev_char == '=' ||
+            prev_char == '{' ||
+            prev_char == '[' ||
+            prev_char == ',' ||
+            prev_char == ';'
+        };
+
+        // Check suffix boundary (slash, end-of-line)
+        let end_idx = idx + root_len;
+        let is_valid_suffix = if end_idx == text.len() {
+            true
+        } else {
+            let next_char = text[end_idx..].chars().next().unwrap();
+            next_char == '/' || next_char == '\\'
+        };
+
+        if is_valid_prefix && is_valid_suffix {
+            result.push_str("<SH2C_ROOT>");
+        } else {
+            // Not a valid boundary, keep original text
+            result.push_str(&text[idx..end_idx]);
+        }
+        last_idx = end_idx;
+    }
+    
+    result.push_str(&text[last_idx..]);
+    result
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    
+    #[test]
+    fn test_normalizes_absolute_repo_paths_in_stdout() {
+        let root = Path::new("/srv/sh2lang");
+        let input = "Found: /srv/sh2lang/tests/fixtures/x";
+        let expected = "Found: <SH2C_ROOT>/tests/fixtures/x";
+        assert_eq!(normalize_repo_paths(input, root), expected);
+    }
+    
+    #[test]
+    fn test_does_not_replace_when_preceded_by_non_boundary_char() {
+        let root = Path::new("/srv/sh2lang");
+        // The root string "/srv/sh2lang" appears but is preceded by 'x' (not a boundary char)
+        let input = "pathx/srv/sh2lang/foo";
+        assert_eq!(normalize_repo_paths(input, root), input);
+    }
+
+    #[test]
+    fn test_replaces_after_equals_boundary() {
+        let root = Path::new("/srv/sh2lang");
+        let input = "path=/srv/sh2lang/bin";
+        let expected = "path=<SH2C_ROOT>/bin";
+        assert_eq!(normalize_repo_paths(input, root), expected);
+    }
+    
+    #[test]
+    fn test_replaces_immediately_after_comma_and_brace() {
+        let root = Path::new("/srv/sh2lang");
+        // No whitespace between comma/brace and the path
+        let input = "{/srv/sh2lang/a,/srv/sh2lang/b}";
+        let expected = "{<SH2C_ROOT>/a,<SH2C_ROOT>/b}";
+        assert_eq!(normalize_repo_paths(input, root), expected);
+    }
+    
+    #[test]
+    fn test_replaces_after_semicolon_and_bracket() {
+        let root = Path::new("/srv/sh2lang");
+        let input = "paths=[/srv/sh2lang/a;/srv/sh2lang/b]";
+        let expected = "paths=[<SH2C_ROOT>/a;<SH2C_ROOT>/b]";
+        assert_eq!(normalize_repo_paths(input, root), expected);
+    }
+    
+    #[test]
+    fn test_does_not_replace_unrelated_paths() {
+        let root = Path::new("/srv/sh2lang");
+        let input = "/tmp/other/path";
+        assert_eq!(normalize_repo_paths(input, root), input);
+    }
+    
+    #[test]
+    fn test_handles_json_quotes_boundary() {
+        let root = Path::new("/srv/sh2lang");
+        let input = "\"path\": \"/srv/sh2lang/bin\"";
+        let expected = "\"path\": \"<SH2C_ROOT>/bin\"";
+        assert_eq!(normalize_repo_paths(input, root), expected);
+    }
+}
+
 // Replaces existing compile_to_shell which took string.
 // Note: verify if any tests strictly rely on string-only compilation without files.
 // Most tests in common/mod.rs read from fixtures.
@@ -450,30 +578,40 @@ pub fn assert_exec_matches_fixture_target(
         fs_setup,
     );
 
+    // Use helper for safe path normalization
+    let root = repo_root();
+    let stdout_normalized = normalize_repo_paths(&stdout, &root);
+    let stderr_normalized = normalize_repo_paths(&stderr, &root);
+
     if stdout_path.exists() || std::env::var("SH2C_UPDATE_SNAPSHOTS").is_ok() {
         if std::env::var("SH2C_UPDATE_SNAPSHOTS").is_ok() {
-            fs::write(&stdout_path, &stdout).expect("Failed to update stdout snapshot");
+            fs::write(&stdout_path, &stdout_normalized).expect("Failed to update stdout snapshot");
         }
         let expected = fs::read_to_string(&stdout_path)
             .expect("Failed to read stdout fixture")
             .replace("\r\n", "\n");
         assert_eq!(
-            stdout.trim(),
+            stdout_normalized.trim(),
             expected.trim(),
             "Stdout mismatch for {}.\nStderr:\n{}",
             fixture_name,
-            stderr
+            stderr_normalized
         );
     }
 
     if stderr_path.exists() || std::env::var("SH2C_UPDATE_SNAPSHOTS").is_ok() {
         if std::env::var("SH2C_UPDATE_SNAPSHOTS").is_ok() {
-            fs::write(&stderr_path, &stderr).expect("Failed to update stderr snapshot");
+            fs::write(&stderr_path, &stderr_normalized).expect("Failed to update stderr snapshot");
         }
         let expected = fs::read_to_string(&stderr_path)
             .expect("Failed to read stderr fixture")
             .replace("\r\n", "\n");
-        assert_eq!(stderr.trim(), expected.trim(), "Stderr mismatch for {}", fixture_name);
+        assert_eq!(
+            stderr_normalized.trim(),
+            expected.trim(),
+            "Stderr mismatch for {}",
+            fixture_name
+        );
     }
 
     if status_path.exists() {
@@ -702,25 +840,37 @@ pub fn assert_exec_matches_fixture_target_with_flags(
         },
     );
 
-    if Path::new(&stdout_path).exists() {
-        let expected_stdout = fs::read_to_string(&stdout_path)
+    let root = repo_root();
+    // Use helper for safe path normalization
+    let stdout_normalized = normalize_repo_paths(&stdout, &root);
+    let stderr_normalized = normalize_repo_paths(&stderr, &root);
+
+    if Path::new(&stdout_path).exists() || std::env::var("SH2C_UPDATE_SNAPSHOTS").is_ok() {
+        if std::env::var("SH2C_UPDATE_SNAPSHOTS").is_ok() {
+            fs::write(&stdout_path, &stdout_normalized).expect("Failed to update stdout snapshot");
+        }
+        let expected = fs::read_to_string(&stdout_path)
             .expect("Failed to read stdout fixture")
             .replace("\r\n", "\n");
         assert_eq!(
-            stdout.trim(),
-            expected_stdout.trim(),
-            "Stdout mismatch for {}",
-            fixture_name
+            stdout_normalized.trim(),
+            expected.trim(),
+            "Stdout mismatch for {}.\nStderr:\n{}",
+            fixture_name,
+            stderr_normalized
         );
     }
 
-    if Path::new(&stderr_path).exists() {
-        let expected_stderr = fs::read_to_string(&stderr_path)
+    if Path::new(&stderr_path).exists() || std::env::var("SH2C_UPDATE_SNAPSHOTS").is_ok() {
+        if std::env::var("SH2C_UPDATE_SNAPSHOTS").is_ok() {
+            fs::write(&stderr_path, &stderr_normalized).expect("Failed to update stderr snapshot");
+        }
+        let expected = fs::read_to_string(&stderr_path)
             .expect("Failed to read stderr fixture")
             .replace("\r\n", "\n");
         assert_eq!(
-            stderr.trim(),
-            expected_stderr.trim(),
+            stderr_normalized.trim(),
+            expected.trim(),
             "Stderr mismatch for {}",
             fixture_name
         );
