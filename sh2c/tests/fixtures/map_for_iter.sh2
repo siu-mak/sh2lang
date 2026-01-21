@@ -1,6 +1,8 @@
+func main() {
 
 let m = { "x": "10", "y": "20" }
 for(k, v) in m {
     print(k)
     print(v)
+}
 }

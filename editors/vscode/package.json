@@ -3,6 +3,7 @@
     "displayName": "sh2",
     "description": "Syntax highlighting for sh2 shell scripting language",
     "version": "0.1.0",
+    "icon": "images/sh2logo_256.png",
     "publisher": "siu-mak",
     "license": "Apache-2.0",
     "repository": {

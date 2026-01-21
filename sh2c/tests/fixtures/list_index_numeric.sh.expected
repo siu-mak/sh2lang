@@ -15,7 +15,7 @@ set -o errtrace
 trap '__sh2_err_handler' ERR
 main() {
   local __sh2_loc=""
-  __sh2_loc="tests/fixtures/list_index_numeric.sh2:2:1"
+  __sh2_loc="tests/fixtures/list_index_numeric.sh2:3:1"
   xs=('a' 'b')
   printf '%s\n' "${xs[0]}"
   printf '%s\n' "${xs[1]}"

@@ -28,7 +28,7 @@ pub type Stmt = Spanned<StmtKind>;
 pub struct Program {
     pub imports: Vec<String>,
     pub functions: Vec<Function>,
-    pub top_level: Vec<Stmt>,
+
     pub span: Span,
     pub source_maps: HashMap<String, SourceMap>,
     pub entry_file: String,
@@ -300,9 +300,7 @@ impl Program {
         for f in &mut self.functions {
             f.strip_spans();
         }
-        for s in &mut self.top_level {
-            s.strip_spans();
-        }
+
     }
 }
 

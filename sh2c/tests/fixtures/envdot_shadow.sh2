@@ -3,6 +3,8 @@ func shadow(FOO) {
   print(FOO)
 }
 
-let FOO = "outer"
-export("FOO")
-shadow("local")
+func main() {
+  let FOO = "outer"
+  export("FOO")
+  shadow("local")
+}

@@ -10,6 +10,6 @@ fn codegen_comments() {
 fn codegen_nothing_panics() {
     common::assert_codegen_panics(
         "nothing",
-        "No entrypoint: define `func main()` or add top-level statements.",
+        "No entrypoint: define `func main()`.",
     );
 }

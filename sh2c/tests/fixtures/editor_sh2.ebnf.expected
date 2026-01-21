@@ -1,7 +1,7 @@
 (* sh2 Grammar - EBNF *)
 (* This is a descriptive grammar for the sh2 language *)
 
-program = { import_stmt } , { function_def } , { statement } ;
+program = { import_stmt } , { function_def } ;
 
 (* Imports *)
 import_stmt = "import" , string_literal ;

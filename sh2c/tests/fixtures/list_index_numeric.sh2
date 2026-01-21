@@ -1,4 +1,6 @@
+func main() {
 
 let xs = ["a", "b"]
 print(xs[0])
 print(xs[1])
+}

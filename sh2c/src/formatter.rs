@@ -23,12 +23,7 @@ pub fn format_program(program: &Program) -> String {
     }
 
     // Top-level statements
-    if !program.top_level.is_empty() {
-        if !program.imports.is_empty() || !program.functions.is_empty() {
-            out.push_str("\n\n");
-        }
-        out.push_str(&format_block(&program.top_level, 0, false));
-    }
+
     
     // Ensure single trailing newline
     if !out.ends_with('\n') {

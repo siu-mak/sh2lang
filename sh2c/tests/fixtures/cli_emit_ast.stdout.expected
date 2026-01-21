@@ -62,7 +62,6 @@ Program {
             file: "",
         },
     ],
-    top_level: [],
     span: Span {
         start: 0,
         end: 0,

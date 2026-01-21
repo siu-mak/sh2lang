@@ -81,7 +81,7 @@ pub fn lower(p: ast::Program) -> Result<Vec<ir::Function>, CompileError> {
 
 pub fn lower_with_options(p: ast::Program, opts: &LowerOptions) -> Result<Vec<ir::Function>, CompileError> {
     let has_main = p.functions.iter().any(|f| f.name == "main");
-    let has_top_level = !p.top_level.is_empty();
+
 
     let entry_file = &p.entry_file;
     let maps = &p.source_maps;
@@ -92,34 +92,12 @@ pub fn lower_with_options(p: ast::Program, opts: &LowerOptions) -> Result<Vec<ir
 
     let mut ir_funcs = Vec::new();
 
-    if has_top_level {
-        if has_main {
-            return Err(CompileError::new(entry_sm.format_diagnostic(entry_file, opts.diag_base_dir.as_deref(), "Top-level statements are not allowed when `func main` is defined; move statements into main or remove main to use implicit main.", p.span)));
-        }
-        // Synthesize main
-        let main_func = ast::Function {
-            name: "main".to_string(),
-            params: vec![],
-            body: p.top_level,
-            span: p.span,
-            file: entry_file.clone(),
-        };
-
-        for f in p.functions {
-            let sm = maps.get(&f.file).expect("Missing source map");
-            ir_funcs.push(lower_function(f, sm, opts)?);
-        }
-
-        let sm = maps.get(&main_func.file).expect("Missing source map");
-        ir_funcs.push(lower_function(main_func, sm, opts)?);
-    } else {
-        if !has_main {
-            return Err(CompileError::new(entry_sm.format_diagnostic(entry_file, opts.diag_base_dir.as_deref(), "No entrypoint: define `func main()` or add top-level statements.", p.span)));
-        }
-        for f in p.functions {
-            let sm = maps.get(&f.file).expect("Missing source map");
-            ir_funcs.push(lower_function(f, sm, opts)?);
-        }
+    if !has_main {
+        return Err(CompileError::new(entry_sm.format_diagnostic(entry_file, opts.diag_base_dir.as_deref(), "No entrypoint: define `func main()`.", p.span)));
+    }
+    for f in p.functions {
+        let sm = maps.get(&f.file).expect("Missing source map");
+        ir_funcs.push(lower_function(f, sm, opts)?);
     }
 
     Ok(ir_funcs)

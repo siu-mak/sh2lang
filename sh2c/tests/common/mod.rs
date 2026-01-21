@@ -947,9 +947,6 @@ pub fn strip_spans_program(p: &mut sh2c::ast::Program) {
     for f in &mut p.functions {
         strip_spans_fn(f);
     }
-    for s in &mut p.top_level {
-        strip_spans_stmt(s);
-    }
 }
 
 pub fn strip_spans_fn(f: &mut sh2c::ast::Function) {

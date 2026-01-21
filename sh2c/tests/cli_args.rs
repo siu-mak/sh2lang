@@ -14,7 +14,7 @@ fn test_cli_out_flag_after_script() {
     let script_path = "tests/fixtures/cli_repro_panic.sh2";
     let out_path = "tests/fixtures/cli_repro_panic.sh";
     
-    std::fs::write(script_path, "run(\"echo\", \"-foo\")").unwrap();
+    std::fs::write(script_path, "func main() { run(\"echo\", \"-foo\") }").unwrap();
     
     let output = Command::new(sh2c_path())
         .arg("--target")
@@ -72,7 +72,7 @@ fn test_lexer_panic_on_arrow() {
 fn test_cli_missing_arg() {
     // sh2c ./a.sh2 -o  (missing value) -> should error cleanly
     let script_path = "tests/fixtures/cli_missing_arg.sh2";
-    std::fs::write(script_path, "run(\"true\")").unwrap();
+    std::fs::write(script_path, "func main() { run(\"true\") }").unwrap();
 
     let output = Command::new(sh2c_path())
         .arg(script_path)
@@ -98,7 +98,7 @@ fn test_cli_out_flag_before_script() {
     let script_path = "tests/fixtures/cli_repro_panic_pre.sh2";
     let out_path = "tests/fixtures/cli_repro_panic_pre.sh";
     
-    std::fs::write(script_path, "run(\"echo\", \"-foo\")").unwrap();
+    std::fs::write(script_path, "func main() { run(\"echo\", \"-foo\") }").unwrap();
     
     let output = Command::new(sh2c_path())
         .arg("--target")

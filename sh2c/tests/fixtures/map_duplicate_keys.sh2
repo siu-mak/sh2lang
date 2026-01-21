@@ -1,3 +1,4 @@
+func main() {
 
 let m = { "a": "1", "a": "2", "b": "3" }
 for(k, v) in m {
@@ -5,3 +6,4 @@ for(k, v) in m {
     print(v)
 }
 print(m["a"])
+}

@@ -12,7 +12,7 @@ pub fn parse(tokens: &[Token], sm: &SourceMap, file: &str) -> ParsResult<Program
     let mut parser = Parser::new(tokens, sm, file);
     let mut imports = Vec::new();
     let mut functions = Vec::new();
-    let mut top_level = Vec::new();
+
 
     let start_span = parser.current_span();
 
@@ -76,7 +76,10 @@ pub fn parse(tokens: &[Token], sm: &SourceMap, file: &str) -> ParsResult<Program
                 file: file.to_string(),
             });
         } else {
-            top_level.push(parser.parse_stmt()?);
+            return parser.error(
+                "Top-level statements are not allowed. Move code into func main() { ... }.",
+                parser.current_span(),
+            );
         }
     }
 
@@ -90,7 +93,6 @@ pub fn parse(tokens: &[Token], sm: &SourceMap, file: &str) -> ParsResult<Program
     Ok(Program {
         imports,
         functions,
-        top_level,
         span,
         source_maps: HashMap::new(),  // Filled by loader later
         entry_file: file.to_string(), // Initial parse sets this, loader might override or correct it

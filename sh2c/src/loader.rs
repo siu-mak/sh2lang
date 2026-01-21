@@ -1,4 +1,4 @@
-use crate::ast::{Function, Program, Stmt};
+use crate::ast::{Function, Program};
 use crate::lexer;
 use crate::parser;
 use crate::span::SourceMap;
@@ -15,7 +15,6 @@ struct Loader {
     source_maps: HashMap<String, SourceMap>,
     functions: HashMap<String, (Function, PathBuf)>,
     function_order: Vec<String>,
-    entry_top_level: Vec<Stmt>,
 }
 
 impl Loader {
@@ -27,7 +26,7 @@ impl Loader {
             source_maps: HashMap::new(),
             functions: HashMap::new(),
             function_order: Vec::new(),
-            entry_top_level: Vec::new(),
+
         }
     }
 }
@@ -38,7 +37,7 @@ pub fn load_program_with_imports(entry_path: &Path) -> Result<Program, Diagnosti
 
 // ...
 
-fn load_program_with_imports_impl(loader: &mut Loader, entry_path: &Path, is_entry: bool) -> Result<(), Diagnostic> {
+fn load_program_with_imports_impl(loader: &mut Loader, entry_path: &Path) -> Result<(), Diagnostic> {
     let canonical_path = match fs::canonicalize(entry_path) {
         Ok(p) => p,
         Err(e) => panic!("Failed to resolve path {}: {}", entry_path.display(), e),
@@ -90,7 +89,7 @@ fn load_program_with_imports_impl(loader: &mut Loader, entry_path: &Path, is_ent
         if import_path.extension().is_none() {
             import_path.set_extension("sh2");
         }
-        load_program_with_imports_impl(loader, &import_path, false)?;
+        load_program_with_imports_impl(loader, &import_path)?;
     }
     
     // ... rest of loop ...
@@ -121,16 +120,7 @@ fn load_program_with_imports_impl(loader: &mut Loader, entry_path: &Path, is_ent
             .insert(name, (func, canonical_path.clone()));
     }
 
-    if is_entry {
-        loader.entry_top_level = program.top_level;
-    } else {
-        if !program.top_level.is_empty() {
-            panic!(
-                "Top-level statements are only allowed in the entry file (found in {})",
-                canonical_path.display()
-            );
-        }
-    }
+
 
     loader.visiting.remove(&canonical_path);
     loader.stack.pop();
@@ -140,7 +130,7 @@ fn load_program_with_imports_impl(loader: &mut Loader, entry_path: &Path, is_ent
 
 pub fn load(entry_path: &Path) -> Result<Program, Diagnostic> {
     let mut loader = Loader::new();
-    load_program_with_imports_impl(&mut loader, entry_path, true)?;
+    load_program_with_imports_impl(&mut loader, entry_path)?;
 
     // Construct final program in deterministic order
     let mut functions = Vec::new();
@@ -159,7 +149,7 @@ pub fn load(entry_path: &Path) -> Result<Program, Diagnostic> {
     Ok(Program {
         imports: vec![],
         functions,
-        top_level: loader.entry_top_level,
+
         span,
         source_maps: loader.source_maps,
         entry_file,
