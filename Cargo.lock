@@ -308,6 +308,8 @@ dependencies = [
 name = "sh2do"
 version = "0.1.0"
 dependencies = [
+ "assert_cmd",
+ "predicates",
  "tempfile",
 ]
 

@@ -1,4 +1,6 @@
 #!/bin/bash
+# Reproduces transient environment variable behavior in shell functions.
+# Usage: ./scripts/repro/repro_transient_env.sh
 
 f() {
     local x="local"

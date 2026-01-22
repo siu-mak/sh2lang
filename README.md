@@ -1,6 +1,20 @@
-# sh2c — A Structured Shell Language Compiler
+# sh2lang
 
-sh2c is a prototype compiler for **sh2**, a small structured shell language. sh2 is designed to reduce common shell “footguns” by making intent explicit (structured control flow, explicit variable declaration, scoped environment/IO changes) while compiling down to a conventional shell script.
+<img src="images/logo/sh2logo_256.png" alt="sh2 logo" width="128" />
+
+This repository contains tools for **sh2**, a structured shell language designed to compile down to conventional shell scripts (bash/posix targets).
+
+## Repo contains
+
+- **sh2c**: The compiler implementation (Rust)
+- **sh2do**: A snippet runner for quick one-liners and testing
+- **editors/vscode**: Syntax highlighting extension for VS Code ([Manual Install Guide](editors/vscode/README.md))
+
+---
+
+## About sh2
+
+sh2 is designed to reduce common shell “footguns” by making intent explicit (structured control flow, explicit variable declaration, scoped environment/IO changes) while compiling down to a conventional shell script.
 
 sh2c can compile the same `.sh2` source to either:
 

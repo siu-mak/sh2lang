@@ -11,3 +11,4 @@ Flags:
   --emit-ir              Emit IR (debug)
   --emit-sh              Emit Shell (default)
   -h, --help             Print help information
+  -V, --version          Print version information and exit

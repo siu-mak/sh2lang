@@ -66,7 +66,8 @@ fn usage_text() -> &'static str {
      \x20 --emit-ast             Emit AST (debug)\n\
      \x20 --emit-ir              Emit IR (debug)\n\
      \x20 --emit-sh              Emit Shell (default)\n\
-     \x20 -h, --help             Print help information"
+     \x20 -h, --help             Print help information\n\
+     \x20 -V, --version          Print version information and exit"
 }
 
 fn main() {
@@ -115,6 +116,9 @@ fn parse_args(args: Vec<String>) -> Result<Config, CliError> {
         let arg = &args[i];
         if arg == "-h" || arg == "--help" {
             println!("{}", usage_text());
+            process::exit(0);
+        } else if arg == "-V" || arg == "--version" {
+            println!("sh2c {}", env!("CARGO_PKG_VERSION"));
             process::exit(0);
         } else if arg == "--target" {
             if i + 1 < args.len() {

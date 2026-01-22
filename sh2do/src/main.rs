@@ -36,6 +36,7 @@ Flags:
   --no-exec      Alias of --emit-sh
   --target <t>   Target shell: bash (default) or posix
   -h, --help     Show this help and exit
+  -V, --version  Print version information and exit
 
 Snippet input:
   '<snippet>'    sh2 code as argument
@@ -69,6 +70,12 @@ fn run() -> Result<ExitCode, String> {
     // Check for help flag early
     if args.iter().any(|arg| arg == "-h" || arg == "--help") {
         print!("{}", HELP_TEXT);
+        return Ok(ExitCode::SUCCESS);
+    }
+    
+    // Check for version flag early
+    if args.iter().any(|arg| arg == "-V" || arg == "--version") {
+        println!("sh2do {}", env!("CARGO_PKG_VERSION"));
         return Ok(ExitCode::SUCCESS);
     }
 
