@@ -1,0 +1,3 @@
+func main() {
+    sudo("env", env_keep=["HTTP_PROXY", "HTTPS_PROXY"])
+}

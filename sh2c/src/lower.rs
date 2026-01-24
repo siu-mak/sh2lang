@@ -3,6 +3,7 @@ use crate::ir;
 use crate::span::SourceMap;
 use crate::span::Span;
 use crate::error::CompileError;
+use crate::sudo::SudoSpec;
 use std::collections::HashSet;
 
 #[derive(Clone, Debug)]
@@ -880,8 +881,50 @@ fn lower_stmt<'a>(
             });
             Ok(ctx.intersection(&ctx_body))
         }
+
     }
 }
+
+fn lower_sudo_command<'a>(
+    args: Vec<ast::Expr>,
+    options: Vec<ast::RunOption>,
+    ctx: &mut LoweringContext<'a>,
+    sm: &SourceMap,
+    file: &str,
+) -> Result<(Vec<ir::Val>, Option<crate::span::Span>), CompileError> {
+    let opts = ctx.opts;
+
+    // Use SudoSpec to parse/validate options
+    // Note: SudoSpec::from_options uses (String, Span), we need compatibility
+    let spec = SudoSpec::from_options(&options)
+        .map_err(|(msg, span)| CompileError::new(sm.format_diagnostic(file, opts.diag_base_dir.as_deref(), &msg, span)))?;
+
+    let mut argv = Vec::new();
+    argv.push(ir::Val::Literal("sudo".to_string()));
+
+    // Use deterministic flag generation from spec
+    let flags = spec.to_flags_argv();
+    for flag in flags {
+        argv.push(ir::Val::Literal(flag));
+    }
+
+    // Add positional args (command + args), lowered
+    for arg in args {
+        argv.push(lower_expr(arg, ctx, sm, file)?);
+    }
+    
+    // Extract allow_fail check from spec (it handles the boolean logic)
+    // Note spec maps (bool, span).
+    // We return the span if allow_fail is present (true or false doesn't matter for the error check in Expr, 
+    // but usually user=true is the trigger. Wait, spec says "is_some() -> Err".
+    // We traverse options to find the name span for correct highlighting
+    let allow_fail_name_span = options.iter()
+        .find(|o| o.name == "allow_fail")
+        .map(|o| o.span);
+
+    Ok((argv, allow_fail_name_span))
+}
+
 
 fn lower_expr<'a>(e: ast::Expr, ctx: &mut LoweringContext<'a>, sm: &SourceMap, file: &str) -> Result<ir::Val, CompileError> {
     let opts = ctx.opts; // Get opts from context for diagnostic formatting
@@ -1102,6 +1145,20 @@ fn lower_expr<'a>(e: ast::Expr, ctx: &mut LoweringContext<'a>, sm: &SourceMap, f
                 }
             };
             Ok(ir::Val::Confirm { prompt: Box::new(prompt_val), default: default_bool })
+        }
+        ast::ExprKind::Sudo { args, options } => {
+            let (argv, allow_fail_span) = lower_sudo_command(args, options, ctx, sm, file)?;
+            
+            if let Some(span) = allow_fail_span {
+                 return Err(CompileError::new(sm.format_diagnostic(
+                    file,
+                    opts.diag_base_dir.as_deref(),
+                    "allow_fail is only valid on statement-form sudo(...); use capture(sudo(...), allow_fail=true) to allow failure during capture",
+                    span,
+                )));
+            }
+            
+            Ok(ir::Val::Command(argv))
         }
         ast::ExprKind::Call { name, args } => {
             if name == "matches" {

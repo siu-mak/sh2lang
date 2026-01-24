@@ -1,0 +1,4 @@
+func main() {
+    // Test ordering: -u, -n, -k, -p, -E, --preserve-env
+    sudo("ls", user="root", n=true, k=true, prompt="Password:", E=true, env_keep=["A", "B"])
+}

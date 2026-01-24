@@ -150,6 +150,10 @@ pub enum ExprKind {
         prompt: Box<Expr>,
         default: Option<Box<Expr>>,
     },
+    Sudo {
+        args: Vec<Expr>,
+        options: Vec<RunOption>,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -274,6 +278,7 @@ pub enum StmtKind {
     PipeBlocks {
         segments: Vec<Vec<Stmt>>,
     },
+
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -419,6 +424,7 @@ impl StmtKind {
                     for s in &mut arm.body { s.strip_spans(); }
                 }
             },
+
             _ => {}
         }
     }
@@ -479,6 +485,13 @@ impl ExprKind {
                 prompt.strip_spans();
                 if let Some(d) = default {
                     d.strip_spans();
+                }
+            }
+            ExprKind::Sudo { args, options } => {
+                for a in args { a.strip_spans(); }
+                for o in options {
+                    // o.span = Span::new(0, 0); // Preserve span for diagnostics
+                    o.value.strip_spans();
                 }
             }
             _ => {}

@@ -9,5 +9,6 @@ pub mod ir;
 pub mod parser;
 pub mod span;
 pub mod target;
+pub mod sudo;
 pub mod formatter;
 pub mod lang_spec;

@@ -245,6 +245,7 @@ fn format_stmt(stmt: &Stmt, depth: usize) -> String {
                 None => "wait".to_string(),
             }
         }
+
     }
 }
 
@@ -421,6 +422,13 @@ fn format_expr_prec(kind: &ExprKind, min_prec: u8) -> String {
                 Some(d) => format!("confirm({}, default={})", format_expr(prompt), format_expr(d)),
                 None => format!("confirm({})", format_expr(prompt)),
             }
+        }
+        ExprKind::Sudo { args, options } => {
+            let mut parts: Vec<String> = args.iter().map(format_expr).collect();
+            for opt in options {
+                parts.push(format!("{}={}", opt.name, format_expr(&opt.value)));
+            }
+            format!("sudo({})", parts.join(", "))
         }
         _ => panic!("Formatting unimplemented for ExprKind: {:?}", kind),
     }

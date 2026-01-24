@@ -42,6 +42,7 @@ This document maps implemented features to their proving test files, ensuring do
 | `capture(...)` | stdout capture | `syntax_capture_pipe.rs`, `syntax_cmd_sub.rs` | |
 | `capture(..., allow_fail=true)` | non-aborting capture | `syntax_capture.rs` (fixture: `capture_allow_fail.sh2`) | `.status`, `.stdout`, `.stderr` |
 | `try_run(...)` | result object | `syntax_try_run.rs` | `.status`, `.stdout`, `.stderr` |
+| `sudo(cmd, ...)` | sudo wrapper | `syntax_sudo.rs` | statement & capture support |
 
 ---
 

@@ -1,6 +1,7 @@
 use super::common::{ParsResult, Parser};
 use crate::ast::*;
 use crate::lexer::TokenKind;
+use crate::sudo::SudoSpec;
 
 impl<'a> Parser<'a> {
     pub fn parse_stmt(&mut self) -> ParsResult<Stmt> {
@@ -690,7 +691,95 @@ impl<'a> Parser<'a> {
                     ];
                     
                     StmtKind::Run(RunCall { args, options })
-                } else {
+                } else if name == "sudo" {
+                    self.expect(TokenKind::LParen)?;
+
+                    let mut args = Vec::new();
+                    let mut options = Vec::new();
+
+                    if !self.match_kind(TokenKind::RParen) {
+                        loop {
+                            // Check for named arg: IDENT = ...
+                            // Allow mixed positional/named options.
+                            let mut is_named = false;
+                            if let Some(TokenKind::Ident(_)) = self.peek_kind() {
+                                if self.tokens.get(self.pos + 1).map(|t| &t.kind) == Some(&TokenKind::Equals) {
+                                   is_named = true;
+                                }
+                            }
+
+                            if is_named {
+                                let name_token = if let Some(TokenKind::Ident(s)) = self.peek_kind() {
+                                    s.clone()
+                                } else {
+                                    unreachable!()
+                                };
+                                let name_span = self.advance().unwrap().span;
+                                self.expect(TokenKind::Equals)?;
+                                let value = self.parse_expr()?;
+
+                                options.push(RunOption {
+                                    name: name_token,
+                                    value,
+                                    span: name_span,
+                                });
+                            } else {
+                                args.push(self.parse_expr()?);
+                            }
+
+                            if !self.match_kind(TokenKind::Comma) {
+                                break;
+                            }
+                        }
+                        self.expect(TokenKind::RParen)?;
+                    }
+
+                    // Validate options
+                    let spec = match SudoSpec::from_options(&options) {
+                         Ok(s) => s,
+                         Err((msg, span)) => return self.error(&msg, span),
+                    };
+
+                    if args.is_empty() {
+                        return self.error(
+                            "sudo() requires at least one positional argument (the command)",
+                            start_span,
+                        );
+                    }
+                    
+                    // Construct argv: ["sudo", flags..., cmd_args...]
+                    let mut run_args = Vec::new();
+                    run_args.push(Expr {
+                        node: ExprKind::Literal("sudo".to_string()),
+                        span: start_span,
+                    });
+                    
+                    for flag in spec.to_flags_argv() {
+                        run_args.push(Expr {
+                            node: ExprKind::Literal(flag),
+                            span: start_span, // Using call span for generated flags
+                        });
+                    }
+                    
+                    run_args.extend(args);
+
+                    // Handle allow_fail: passing it to StmtKind::Run options
+                    let mut run_options = Vec::new();
+                    if let Some((allow, span)) = spec.allow_fail {
+                        run_options.push(RunOption {
+                            name: "allow_fail".to_string(),
+                            value: Expr {
+                                node: ExprKind::Bool(allow),
+                                span,
+                            },
+                            span,
+                        });
+                    }
+
+                    StmtKind::Run(RunCall {
+                        args: run_args,
+                        options: run_options,
+                    })                } else {
                     self.expect(TokenKind::LParen)?;
                     let mut args = Vec::new();
                     if !self.match_kind(TokenKind::RParen) {

@@ -45,6 +45,7 @@ fn test_concat_amp_basic_no_unsafe_shell_c() {
 }
 
 #[test]
+// #[ignore] // TODO: fix parser regression with run after variable
 fn test_guardrail_hostile_strings_no_unsafe_shell_c() {
     verify_shell_c_safety("guardrail_hostile_strings");
 }

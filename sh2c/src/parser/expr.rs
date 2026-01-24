@@ -2,6 +2,7 @@ use super::common::{ParsResult, Parser};
 use crate::ast::*;
 use crate::lexer::TokenKind;
 use crate::span::Span;
+use crate::sudo::SudoSpec;
 
 impl<'a> Parser<'a> {
     pub fn parse_expr(&mut self) -> ParsResult<Expr> {
@@ -316,6 +317,7 @@ impl<'a> Parser<'a> {
                     span: full_span,
                 })
             }
+
             TokenKind::LBrace => {
                 let mut entries = Vec::new();
                 while !self.match_kind(TokenKind::RBrace) {
@@ -362,9 +364,84 @@ impl<'a> Parser<'a> {
             TokenKind::String(s) => self.parse_interpolated_string(s, span),
             TokenKind::Ident(s) => {
                 let s = s.clone();
-                if self.match_kind(TokenKind::LParen) {
+                let is_call = self.peek_kind() == Some(&TokenKind::LParen);
+                if is_call {
+                    if s == "sudo" {
+                        self.expect(TokenKind::LParen)?;
+
+                        let mut args = Vec::new();
+                        let mut options = Vec::new();
+
+                        if !self.match_kind(TokenKind::RParen) {
+                            loop {
+                                // Check for named arg: IDENT = ...
+                                // Allow mixed positional/named options.
+                                let mut is_named = false;
+                                if let Some(TokenKind::Ident(_)) = self.peek_kind() {
+                                    if self.tokens.get(self.pos + 1).map(|t| &t.kind) == Some(&TokenKind::Equals) {
+                                       is_named = true;
+                                    }
+                                }
+
+                                if is_named {
+                                    let name = if let Some(TokenKind::Ident(s)) = self.peek_kind() {
+                                        s.clone()
+                                    } else {
+                                        unreachable!()
+                                    };
+                                    let name_span = self.advance().unwrap().span;
+                                    self.expect(TokenKind::Equals)?;
+                                    let value = self.parse_expr()?;
+
+                                    options.push(RunOption {
+                                        name,
+                                        value,
+                                        span: name_span,
+                                    });
+                                } else {
+                                    args.push(self.parse_expr()?);
+                                }
+
+                                if !self.match_kind(TokenKind::Comma) {
+                                    break;
+                                }
+                            }
+                            self.expect(TokenKind::RParen)?;
+                        }
+
+                        // Validate options
+                        // Map lightweight error to full Diagnostic for parser
+                        let spec = match SudoSpec::from_options(&options) {
+                             Ok(s) => s,
+                             Err((msg, span)) => return self.error(&msg, span),
+                        };
+
+                        if spec.allow_fail.is_some() {
+                             // Correctly identifying the span for the error
+                             let opt_span = options.iter().find(|o| o.name == "allow_fail").unwrap().span;
+                             return self.error(
+                                 "allow_fail is only valid on statement-form sudo(...); use capture(sudo(...), allow_fail=true) to allow failure during capture",
+                                 opt_span
+                             );
+                        }
+
+                        if args.is_empty() {
+                            return self.error(
+                                "sudo() requires at least one positional argument (the command)",
+                                span,
+                            );
+                        }
+
+                        let full_span = span.merge(self.previous_span());
+                        return Ok(Expr {
+                            node: ExprKind::Sudo { args, options },
+                            span: full_span,
+                        });
+                    }
+
                     // Special case for sh() builtin
                     if s == "sh" {
+                        self.expect(TokenKind::LParen)?;
                         let cmd = self.parse_expr()?;
                         let mut options = Vec::new();
                         
@@ -409,6 +486,7 @@ impl<'a> Parser<'a> {
                         });
                     }
                     
+                    self.expect(TokenKind::LParen)?;
                     let mut args = Vec::new();
                     if !self.match_kind(TokenKind::RParen) {
                         loop {
@@ -757,25 +835,95 @@ impl<'a> Parser<'a> {
                     }
                 }
             } else if let Some(TokenKind::Ident(name)) = self.peek_kind() {
-                // Function call shorthand $(func_name, args...)
                 let name = name.clone();
-                let name_span = self.advance().unwrap().span;
-                args.push(Expr {
-                    node: ExprKind::Literal(name),
-                    span: name_span,
-                });
-                self.expect(TokenKind::LParen)?;
-                loop {
-                    if self.peek_kind() == Some(&TokenKind::RParen) {
-                        self.advance();
-                        break;
-                    }
-                    args.push(self.parse_expr()?);
-                    if !self.match_kind(TokenKind::Comma) {
+                let start_span = self.current_span();
+
+                if name == "sudo" {
+                    self.advance(); // consume 'sudo'
+                    self.expect(TokenKind::LParen)?;
+
+                    let mut sudo_args = Vec::new();
+                    let mut options = Vec::new();
+                    if !self.match_kind(TokenKind::RParen) {
+                        loop {
+                            let is_named = if let Some(TokenKind::Ident(_)) = self.peek_kind() {
+                                self.tokens.get(self.pos + 1).map(|t| &t.kind) == Some(&TokenKind::Equals)
+                            } else {
+                                false
+                            };
+
+                            if is_named {
+                                let name_token = if let Some(TokenKind::Ident(s)) = self.peek_kind() {
+                                    s.clone()
+                                } else {
+                                    unreachable!()
+                                };
+                                let name_span = self.advance().unwrap().span;
+                                self.expect(TokenKind::Equals)?;
+                                let value = self.parse_expr()?;
+
+                                options.push(RunOption {
+                                    name: name_token,
+                                    value,
+                                    span: name_span,
+                                });
+                            } else {
+                                sudo_args.push(self.parse_expr()?);
+                            }
+
+                            if !self.match_kind(TokenKind::Comma) {
+                                break;
+                            }
+                        }
                         self.expect(TokenKind::RParen)?;
-                        break;
                     }
-                }
+
+                    // Validate options using SudoSpec (just like StmtKind::Run logic)
+                    // Validate options using SudoSpec (just like StmtKind::Run logic)
+                    let _spec = match SudoSpec::from_options(&options) {
+                         Ok(s) => s,
+                         Err((msg, span)) => return self.error(&msg, span),
+                    };
+
+                    if sudo_args.is_empty() {
+                        return self.error(
+                            "sudo() requires at least one positional argument (the command)",
+                            start_span,
+                        );
+                    }
+
+                    args.push(Expr {
+                        node: ExprKind::Sudo {
+                            args: sudo_args,
+                            options,
+                        },
+                        span: start_span.merge(self.previous_span()),
+                    });
+
+                } else {
+                    let name_span = self.advance().unwrap().span;
+                    
+                    // Push command name as literal
+                    args.push(Expr {
+                        node: ExprKind::Literal(name),
+                        span: name_span,
+                    });
+
+                    // Optional function call syntax: ident(arg1, arg2)
+                    if self.match_kind(TokenKind::LParen) {
+                        loop {
+                            if self.match_kind(TokenKind::RParen) {
+                                break;
+                            }
+                            args.push(self.parse_expr()?);
+                            if !self.match_kind(TokenKind::Comma) {
+                                self.expect(TokenKind::RParen)?;
+                                break;
+                            }
+                        }
+                    }
+                    }
+
             } else if let Some(TokenKind::String(s)) = self.peek_kind() {
                 // String shorthand $( "cmd", "arg1", ... )
                 let s = s.clone();
