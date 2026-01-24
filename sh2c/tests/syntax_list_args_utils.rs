@@ -23,26 +23,47 @@ fn parse_list_args_utils() {
     ));
 
     // print(arg(1)), print(arg(3))
-    assert!(matches!(
-        test_fn.body[1],
-        Stmt {
-            node: StmtKind::Print(Expr {
-                node: ExprKind::Arg(1),
-                ..
-            }),
+    if let Stmt {
+        node: StmtKind::Print(Expr {
+            node: ExprKind::Arg(arg_expr),
             ..
-        }
-    ));
-    assert!(matches!(
-        test_fn.body[2],
-        Stmt {
-            node: StmtKind::Print(Expr {
-                node: ExprKind::Arg(3),
-                ..
-            }),
+        }),
+        ..
+    } = &test_fn.body[1]
+    {
+        if let Expr {
+            node: ExprKind::Number(1),
             ..
+        } = &**arg_expr
+        {
+            // arg(1) found
+        } else {
+            panic!("Expected arg(1)");
         }
-    ));
+    } else {
+        panic!("Expected print(arg(1))");
+    }
+    
+    if let Stmt {
+        node: StmtKind::Print(Expr {
+            node: ExprKind::Arg(arg_expr),
+            ..
+        }),
+        ..
+    } = &test_fn.body[2]
+    {
+        if let Expr {
+            node: ExprKind::Number(3),
+            ..
+        } = &**arg_expr
+        {
+            // arg(3) found
+        } else {
+            panic!("Expected arg(3)");
+        }
+    } else {
+        panic!("Expected print(arg(3))");
+    }
 
     // print(index(args, 0)), print(index(args, 2))
     assert!(matches!(

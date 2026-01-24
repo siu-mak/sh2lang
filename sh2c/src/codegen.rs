@@ -57,6 +57,7 @@ pub struct PreludeUsage {
     pub uid: bool,
     pub lines: bool,
     pub contains: bool,
+    pub arg_dynamic: bool,
     pub sh_probe: bool,
 }
 
@@ -413,6 +414,10 @@ fn visit_val(val: &Val, usage: &mut PreludeUsage) {
             visit_val(list, usage);
             visit_val(needle, usage);
         }
+        Val::ArgDynamic(index) => {
+            usage.arg_dynamic = true;
+            visit_val(index, usage);
+        }
         Val::ContainsLine { text, needle } => {
             visit_val(text, usage);
             visit_val(needle, usage);
@@ -585,6 +590,10 @@ fn emit_val(v: &Val, target: TargetShell) -> Result<String, CompileError> {
             ))
         }
         Val::Arg(n) => Ok(format!("\"${}\"", n)),
+        Val::ArgDynamic(index) => {
+            let idx_expr = emit_arith_expr(index, target)?;
+            Ok(format!("\"$( __sh2_arg_by_index {} \"$@\" )\"", idx_expr))
+        }
         Val::ParseArgs => Ok("\"${__sh2_parsed_args}\"".to_string()),
         Val::ArgsFlags(inner) => Ok(format!("\"$( __sh2_args_flags {} )\"", emit_val(inner, target)?)),
         Val::ArgsPositionals(inner) => Ok(format!(
@@ -1002,6 +1011,10 @@ fn emit_arith_expr(v: &Val, target: TargetShell) -> Result<String, CompileError>
         Val::Number(n) => Ok(n.to_string()),
         Val::Var(s) => Ok(s.clone()),
         Val::Arg(n) => Ok(format!("${}", n)),
+        Val::ArgDynamic(index) => {
+            let idx_expr = emit_arith_expr(index, target)?;
+            Ok(format!("$( __sh2_arg_by_index {} \"$@\" )", idx_expr))
+        }
         Val::Status => Ok("$__sh2_status".to_string()),
         Val::Pid => Ok("$!".to_string()),
         Val::Uid => Ok("$__sh2_uid".to_string()),
@@ -2628,6 +2641,28 @@ __sh2_split() {
             }
         }
     }
+
+    if usage.arg_dynamic {
+        match target {
+            TargetShell::Bash => {
+                s.push_str("__sh2_arg_by_index() { local __sh2_idx=\"$1\"; shift; ");
+                s.push_str("case \"$__sh2_idx\" in (''|*[!0-9]*) printf ''; return 0;; esac; ");
+                s.push_str("[ \"$__sh2_idx\" -ge 1 ] 2>/dev/null || { printf ''; return 0; }; ");
+                s.push_str("[ \"$__sh2_idx\" -le \"$#\" ] 2>/dev/null || { printf ''; return 0; }; ");
+                s.push_str("eval \"printf '%s' \\\"\\${$__sh2_idx}\\\"\"; ");
+                s.push_str("}\n");
+            }
+            TargetShell::Posix => {
+                s.push_str("__sh2_arg_by_index() { __sh2_idx=\"$1\"; shift; ");
+                s.push_str("case \"$__sh2_idx\" in (''|*[!0-9]*) printf ''; return 0;; esac; ");
+                s.push_str("[ \"$__sh2_idx\" -ge 1 ] 2>/dev/null || { printf ''; return 0; }; ");
+                s.push_str("[ \"$__sh2_idx\" -le \"$#\" ] 2>/dev/null || { printf ''; return 0; }; ");
+                s.push_str("eval \"printf '%s' \\\"\\${$__sh2_idx}\\\"\"; ");
+                s.push_str("}\n");
+            }
+        }
+    }
+
     if usage.contains {
         if target == TargetShell::Bash {
             s.push_str(r#"__sh2_contains() { local -n __arr=$1; local __val=$2; for __e in "${__arr[@]}"; do if [[ "$__e" == "$__val" ]]; then return 0; fi; done; return 1; }

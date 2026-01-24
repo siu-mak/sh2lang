@@ -36,6 +36,7 @@ pub enum Val {
     IsNonEmpty(Box<Val>),
     Len(Box<Val>),
     Arg(u32),
+    ArgDynamic(Box<Val>),
     Index {
         list: Box<Val>,
         index: Box<Val>,

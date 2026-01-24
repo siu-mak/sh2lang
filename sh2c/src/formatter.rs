@@ -353,7 +353,7 @@ fn format_expr_prec(kind: &ExprKind, min_prec: u8) -> String {
              }).collect();
              format!("capture({})", seg_strs.join(" | "))
         }
-        ExprKind::Arg(n) => format!("arg({})", n),
+        ExprKind::Arg(expr) => format!("arg({})", format_expr(expr)),
         ExprKind::Env(e) => format!("env({})", format_expr(e)),
         ExprKind::Exists(e) => format!("exists({})", format_expr(e)),
         ExprKind::IsDir(e) => format!("is_dir({})", format_expr(e)),

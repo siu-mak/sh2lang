@@ -100,7 +100,7 @@ pub enum ExprKind {
     IsNonEmpty(Box<Expr>),
     BoolStr(Box<Expr>),
     Len(Box<Expr>),
-    Arg(u32),
+    Arg(Box<Expr>),
     Index {
         list: Box<Expr>,
         index: Box<Expr>,

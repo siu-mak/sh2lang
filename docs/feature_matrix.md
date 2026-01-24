@@ -93,6 +93,7 @@ This document maps implemented features to their proving test files, ensuring do
 | `let x = expr` | variable binding | `syntax_arith_exec.rs` |
 | `set x = expr` | variable update | `syntax_set.rs`, `syntax_set_var_basic.rs` |
 | `set env.X = expr` | env update | `syntax_set_env_basic.rs`, `syntax_set_env_and_read.rs` |
+| `arg(expr)` | dynamic argument access | `syntax_arg_dynamic.rs` (fixture: `arg_dynamic_loop.sh2`) |
 
 ---
 

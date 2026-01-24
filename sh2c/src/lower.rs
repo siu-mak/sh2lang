@@ -1000,7 +1000,22 @@ fn lower_expr<'a>(e: ast::Expr, ctx: &mut LoweringContext<'a>, sm: &SourceMap, f
             Ok(ir::Val::BoolStr(Box::new(lower_expr(*inner, ctx, sm, file)?)))
         }
         ast::ExprKind::Len(expr) => Ok(ir::Val::Len(Box::new(lower_expr(*expr, ctx, sm, file)?))),
-        ast::ExprKind::Arg(n) => Ok(ir::Val::Arg(n)),
+        ast::ExprKind::Arg(expr) => {
+            let index_val = lower_expr(*expr, ctx, sm, file)?;
+            
+            // Optimize: if literal number >= 1, use Val::Arg(n) for direct $n expansion
+            if let ir::Val::Number(n) = &index_val {
+                if *n >= 1 {
+                    Ok(ir::Val::Arg(*n))
+                } else {
+                    // Invalid literal (0 or would-be-negative): use dynamic path which returns empty
+                    Ok(ir::Val::ArgDynamic(Box::new(index_val)))
+                }
+            } else {
+                // Dynamic case: use helper function
+                Ok(ir::Val::ArgDynamic(Box::new(index_val)))
+            }
+        }
         ast::ExprKind::Index { list, index } => Ok(ir::Val::Index {
             list: Box::new(lower_expr(*list, ctx, sm, file)?),
             index: Box::new(lower_expr(*index, ctx, sm, file)?),

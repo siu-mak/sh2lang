@@ -50,6 +50,7 @@ const EXCLUDED_SYNTAX_TESTS: &[(&str, &str)] = &[
     ("syntax_concat_amp_precedence.rs", "implementation detail: concat precedence"),
     // Dollar pipe internals
     ("syntax_dollar_pipe.rs", "implementation detail: $() pipe handling"),
+    ("syntax_arg_lowering.rs", "infrastructure: arg() lowering validation tests"),
 ];
 
 /// Extract all evidence references from feature_matrix.md.

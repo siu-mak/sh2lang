@@ -1,0 +1,8 @@
+argc: 3
+arg[1]: foo
+arg[2]: bar
+arg[3]: baz
+out of bounds: ''
+arg[2]: bar
+arg[0]: ''
+arg[neg]: ''

@@ -507,15 +507,10 @@ impl<'a> Parser<'a> {
             }
             TokenKind::Arg => {
                 self.expect(TokenKind::LParen)?;
-                let n = if let Some(TokenKind::Number(n)) = self.peek_kind() {
-                    *n
-                } else {
-                    self.error("Expected number in arg(n)", self.current_span())?
-                };
-                self.advance();
+                let index_expr = self.parse_expr()?;
                 self.expect(TokenKind::RParen)?;
                 Ok(Expr {
-                    node: ExprKind::Arg(n),
+                    node: ExprKind::Arg(Box::new(index_expr)),
                     span: span.merge(self.previous_span()),
                 })
             }

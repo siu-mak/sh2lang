@@ -56,13 +56,23 @@ fn parse_args_ops() {
             ..
         } = cond
         {
-            assert!(matches!(
-                **left,
-                Expr {
-                    node: ExprKind::Arg(2),
+            if let Expr {
+                node: ExprKind::Arg(arg_expr),
+                ..
+            } = &**left
+            {
+                if let Expr {
+                    node: ExprKind::Number(2),
                     ..
+                } = &**arg_expr
+                {
+                    // arg(2) found
+                } else {
+                    panic!("Expected arg(2)");
                 }
-            ));
+            } else {
+                panic!("Expected Arg");
+            }
         } else {
             panic!("Expected Compare");
         }

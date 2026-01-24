@@ -1,0 +1,22 @@
+func main() {
+    print("argc: " & argc())
+    
+    for i in 1..argc() {
+        print("arg[" & i & "]: " & arg(i))
+    }
+    
+    // Out of bounds test
+    let oob = arg(argc() + 1)
+    print("out of bounds: '" & oob & "'")
+    
+    // Variable index
+    let idx = 2
+    if argc() >= 2 {
+        print("arg[" & idx & "]: " & arg(idx))
+    }
+    
+    // Edge cases: invalid indices
+    print("arg[0]: '" & arg(0) & "'")
+    let neg = 0 - 1
+    print("arg[neg]: '" & arg(neg) & "'")
+}

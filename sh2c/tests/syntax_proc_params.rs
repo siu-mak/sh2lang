@@ -29,11 +29,19 @@ fn parse_proc_params_builtins() {
             ));
             assert_eq!(*op, CompareOp::Eq);
             if let Expr {
-                node: ExprKind::Arg(n),
+                node: ExprKind::Arg(arg_expr),
                 ..
-            } = **right
+            } = &**right
             {
-                assert_eq!(n, 0);
+                if let Expr {
+                    node: ExprKind::Number(n),
+                    ..
+                } = &**arg_expr
+                {
+                    assert_eq!(*n, 0);
+                } else {
+                    panic!("Expected Number(0) inside Arg");
+                }
             } else {
                 panic!("Expected Arg(0)");
             }
