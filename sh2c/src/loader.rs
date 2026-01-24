@@ -40,7 +40,14 @@ pub fn load_program_with_imports(entry_path: &Path) -> Result<Program, Diagnosti
 fn load_program_with_imports_impl(loader: &mut Loader, entry_path: &Path) -> Result<(), Diagnostic> {
     let canonical_path = match fs::canonicalize(entry_path) {
         Ok(p) => p,
-        Err(e) => panic!("Failed to resolve path {}: {}", entry_path.display(), e),
+        Err(e) => {
+            return Err(Diagnostic {
+                msg: format!("Failed to resolve path {}: {}", entry_path.display(), e),
+                span: crate::span::Span::new(0, 0),
+                sm: None,
+                file: Some(entry_path.to_string_lossy().to_string()),
+            });
+        }
     };
 
     // Idempotency: If already loaded, do nothing (no-op).
@@ -63,7 +70,12 @@ fn load_program_with_imports_impl(loader: &mut Loader, entry_path: &Path) -> Res
         }
         cycle_msg.push_str(&format!("{}", canonical_path.display()));
 
-        panic!("Import cycle detected: {}", cycle_msg);
+        return Err(Diagnostic {
+            msg: format!("Import cycle detected: {}", cycle_msg),
+            span: crate::span::Span::new(0, 0),
+            sm: None,
+            file: Some(canonical_path.to_string_lossy().to_string()),
+        });
     }
 
     loader.visiting.insert(canonical_path.clone());
@@ -71,7 +83,14 @@ fn load_program_with_imports_impl(loader: &mut Loader, entry_path: &Path) -> Res
 
     let src = match fs::read_to_string(&canonical_path) {
         Ok(s) => s,
-        Err(e) => panic!("Failed to read {}: {}", canonical_path.display(), e),
+        Err(e) => {
+            return Err(Diagnostic {
+                msg: format!("Failed to read {}: {}", canonical_path.display(), e),
+                span: crate::span::Span::new(0, 0),
+                sm: None,
+                file: Some(canonical_path.to_string_lossy().to_string()),
+            });
+        }
     };
 
     let file_str = canonical_path.to_string_lossy().to_string();
@@ -95,22 +114,32 @@ fn load_program_with_imports_impl(loader: &mut Loader, entry_path: &Path) -> Res
     // ... rest of loop ...
     for func in program.functions {
         // ... (keep panics for semantics) ...
-         if matches!(
+        if matches!(
             func.name.as_str(),
             "trim" | "before" | "after" | "replace" | "split"
         ) {
-            panic!(
-                "Function name '{}' is reserved (prelude helper); choose a different name.",
-                func.name
-            );
+            return Err(Diagnostic {
+                msg: format!(
+                    "Function name '{}' is reserved (prelude helper); choose a different name.",
+                    func.name
+                ),
+                span: func.span, // We have func.span here!
+                sm: loader.source_maps.get(&func.file).cloned(),
+                file: Some(func.file.clone()),
+            });
         }
 
         if let Some((_, defined_at)) = loader.functions.get(&func.name) {
-            panic!(
-                "Function '{}' is already defined in {}",
-                func.name,
-                defined_at.display()
-            );
+            return Err(Diagnostic {
+                msg: format!(
+                    "Function '{}' is already defined in {}",
+                    func.name,
+                    defined_at.display()
+                ),
+                span: func.span,
+                sm: loader.source_maps.get(&func.file).cloned(),
+                file: Some(func.file.clone()),
+            });
         }
         // Extract function to own it
         let name = func.name.clone();
@@ -142,7 +171,12 @@ pub fn load(entry_path: &Path) -> Result<Program, Diagnostic> {
     // ... same span logic ...
     let span = crate::span::Span { start: 0, end: 0 };
     let entry_file = fs::canonicalize(entry_path)
-        .unwrap()
+        .map_err(|e| Diagnostic {
+            msg: format!("Failed to resolve path {}: {}", entry_path.display(), e),
+            span: crate::span::Span::new(0, 0),
+            sm: None,
+            file: Some(entry_path.to_string_lossy().to_string()),
+        })?
         .to_string_lossy()
         .to_string();
 
