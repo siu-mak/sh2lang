@@ -362,7 +362,6 @@ fn format_expr_prec(kind: &ExprKind, min_prec: u8) -> String {
         ExprKind::BoolStr(e) => format!("bool_str({})", format_expr(e)),
         ExprKind::Count(e) => format!("count({})", format_expr(e)),
         ExprKind::Input(e) => format!("input({})", format_expr(e)),
-        ExprKind::Confirm(e) => format!("confirm({})", format_expr(e)),
         ExprKind::Index { list, index } => {
             // Suffix precedence 8
             wrap_parens(min_prec, 8, format!("{}[{}]", format_expr_prec(&list.node, 8), format_expr(index)))
@@ -416,6 +415,12 @@ fn format_expr_prec(kind: &ExprKind, min_prec: u8) -> String {
                 parts.push(format!("{}={}", opt.name, format_expr(&opt.value)));
             }
             format!("sh({})", parts.join(", "))
+        }
+        ExprKind::Confirm { prompt, default } => {
+            match default {
+                Some(d) => format!("confirm({}, default={})", format_expr(prompt), format_expr(d)),
+                None => format!("confirm({})", format_expr(prompt)),
+            }
         }
         _ => panic!("Formatting unimplemented for ExprKind: {:?}", kind),
     }

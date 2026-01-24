@@ -129,7 +129,6 @@ pub enum ExprKind {
     Argc,
     EnvDot(String),
     Input(Box<Expr>),
-    Confirm(Box<Expr>),
     Call {
         name: String,
         args: Vec<Expr>,
@@ -146,6 +145,10 @@ pub enum ExprKind {
     Sh {
         cmd: Box<Expr>,
         options: Vec<RunOption>,
+    },
+    Confirm {
+        prompt: Box<Expr>,
+        default: Option<Box<Expr>>,
     },
 }
 
@@ -456,7 +459,6 @@ impl ExprKind {
             ExprKind::List(items) => for i in items { i.strip_spans(); },
             ExprKind::Env(e) => e.strip_spans(),
             ExprKind::Input(e) => e.strip_spans(),
-            ExprKind::Confirm(e) => e.strip_spans(),
             ExprKind::Call { args, .. } => for a in args { a.strip_spans(); },
             ExprKind::MapLiteral(entries) => for (_, v) in entries { v.strip_spans(); },
             ExprKind::Capture { expr, options } => {
@@ -471,6 +473,12 @@ impl ExprKind {
                 for o in options {
                     o.span = Span::new(0, 0);
                     o.value.strip_spans();
+                }
+            }
+            ExprKind::Confirm { prompt, default } => {
+                prompt.strip_spans();
+                if let Some(d) = default {
+                    d.strip_spans();
                 }
             }
             _ => {}

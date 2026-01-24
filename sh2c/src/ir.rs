@@ -62,7 +62,7 @@ pub enum Val {
     Argv0,
     Argc,
     Input(Box<Val>),
-    Confirm(Box<Val>),
+    Confirm { prompt: Box<Val>, default: bool },
     Matches(Box<Val>, Box<Val>),
     ParseArgs,
     ArgsFlags(Box<Val>),

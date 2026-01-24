@@ -1,0 +1,8 @@
+func main() {
+    set env.CI = "true"
+    if confirm("go?", default=true) {
+        print("yes")
+    } else {
+        print("no")
+    }
+}

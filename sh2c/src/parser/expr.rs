@@ -276,10 +276,43 @@ impl<'a> Parser<'a> {
             TokenKind::Confirm => {
                 self.expect(TokenKind::LParen)?;
                 let prompt = self.parse_expr()?;
+                
+                // Parse optional default= option
+                let mut default_expr = None;
+                let mut seen_default = false;
+                
+                while self.match_kind(TokenKind::Comma) {
+                    let opt_start = self.current_span();
+                    if let Some(TokenKind::Ident(opt_name)) = self.peek_kind() {
+                        let opt_name = opt_name.clone();
+                        self.advance();
+                        self.expect(TokenKind::Equals)?;
+                        let value = self.parse_expr()?;
+                        
+                        match opt_name.as_str() {
+                            "default" => {
+                                if seen_default {
+                                    return self.error("default specified more than once", opt_start);
+                                }
+                                seen_default = true;
+                                default_expr = Some(Box::new(value));
+                            }
+                            _ => {
+                                return self.error(
+                                    &format!("unknown confirm() option '{}'; supported: default", opt_name),
+                                    opt_start,
+                                );
+                            }
+                        }
+                    } else {
+                        return self.error("expected option name", self.current_span());
+                    }
+                }
+                
                 self.expect(TokenKind::RParen)?;
                 let full_span = span.merge(self.previous_span());
                 Ok(Expr {
-                    node: ExprKind::Confirm(Box::new(prompt)),
+                    node: ExprKind::Confirm { prompt: Box::new(prompt), default: default_expr },
                     span: full_span,
                 })
             }

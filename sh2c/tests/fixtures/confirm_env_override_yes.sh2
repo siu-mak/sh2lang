@@ -1,0 +1,9 @@
+func main() {
+    set env.CI = "true"
+    set env.SH2_YES = "1"
+    if confirm("go?") {
+        print("yes")
+    } else {
+        print("no")
+    }
+}

@@ -59,6 +59,7 @@ pub struct PreludeUsage {
     pub contains: bool,
     pub arg_dynamic: bool,
     pub sh_probe: bool,
+    pub confirm: bool,
 }
 
 fn scan_usage(funcs: &[Function], include_diagnostics: bool) -> PreludeUsage {
@@ -353,7 +354,6 @@ fn visit_val(val: &Val, usage: &mut PreludeUsage) {
         | Val::Count(v)
         | Val::BoolStr(v)
         | Val::Input(v)
-        | Val::Confirm(v)
         | Val::Env(v)
         | Val::ArgsFlags(v)
         | Val::ArgsPositionals(v)
@@ -372,6 +372,10 @@ fn visit_val(val: &Val, usage: &mut PreludeUsage) {
             if let Val::JsonKv(_) = val {
                 usage.json_kv = true;
             }
+        }
+        Val::Confirm { prompt, .. } => {
+            visit_val(prompt, usage);
+            usage.confirm = true;
         }
         Val::Matches(t, r) => {
             usage.matches = true;
@@ -527,7 +531,7 @@ fn is_boolean_val(v: &Val) -> bool {
             | Val::Matches(_, _)
             | Val::Contains { .. }
             | Val::ContainsLine { .. }
-            | Val::Confirm(_)
+            | Val::Confirm { .. }
     )
 }
 
@@ -805,7 +809,7 @@ fn emit_val(v: &Val, target: TargetShell) -> Result<String, CompileError> {
         | Val::List(..)
         | Val::Split { .. }
         | Val::ContainsLine { .. }
-        | Val::Confirm(..) => Err(CompileError::new("Cannot emit boolean/list value as string").with_target(target)),
+        | Val::Confirm { .. } => Err(CompileError::new("Cannot emit boolean/list value as string").with_target(target)),
         Val::BoolVar(_) => Err(CompileError::new(
             "bool is not a string; bool→string conversion is not supported yet"
         ).with_target(target)),
@@ -906,16 +910,11 @@ fn emit_cond(v: &Val, target: TargetShell) -> Result<String, CompileError> {
         Val::IsNonEmpty(path) => {
             Ok(format!("[ -s {} ]", emit_val(path, target)?))
         }
-        Val::Confirm(prompt) => match target {
-            TargetShell::Bash => {
-                let p = emit_val(prompt, target)?;
-                Ok(format!(
-                    "( while true; do printf '%s' {} >&2; if ! IFS= read -r __sh2_ans; then exit 1; fi; case \"${{__sh2_ans,,}}\" in y|yes|true|1) exit 0 ;; n|no|false|0|\"\") exit 1 ;; esac; done )",
-                    p
-                ))
-            }
-            TargetShell::Posix => Err(CompileError::unsupported("confirm(...) is not supported in POSIX sh target", target)),
-        },
+        Val::Confirm { prompt, default } => {
+            let p = emit_val(prompt, target)?;
+            let d = if *default { "1" } else { "0" };
+            Ok(format!("[ \"$( __sh2_confirm {} {} \"$@\" )\" = \"1\" ]", p, d))
+        }
         Val::Contains { list, needle } => {
             if target == TargetShell::Posix {
                  return Err(CompileError::unsupported("contains() is bash-only", target));
@@ -2684,6 +2683,27 @@ __sh2_split() {
     if usage.path_join {
         s.push_str(r#"__sh2_path_join() { out=''; for p in "$@"; do [ -z "$p" ] && continue; case "$p" in /*) out="$p";; *) if [ -z "$out" ]; then out="$p"; else while [ "${out%/}" != "$out" ]; do out="${out%/}"; done; while [ "${p#/}" != "$p" ]; do p="${p#/}"; done; out="${out}/${p}"; fi;; esac; done; printf '%s' "$out"; }
 "#);
+    }
+
+    if usage.confirm {
+        // __sh2_confirm prompt default "$@"
+        // Prints "1" or "0" to stdout. Prompt goes to stderr.
+        // Precedence: SH2_NO/SH2_YES > --no/--yes > CI/non-tty default > interactive prompt
+        s.push_str(r#"__sh2_confirm() { __sh2_prompt="$1"; __sh2_default="$2"; shift 2; "#);
+        // Env overrides (highest precedence)
+        s.push_str(r#"if [ "${SH2_NO:-}" = "1" ]; then printf '%s' '0'; return 0; fi; "#);
+        s.push_str(r#"if [ "${SH2_YES:-}" = "1" ]; then printf '%s' '1'; return 0; fi; "#);
+        // Arg overrides
+        s.push_str(r#"for __a in "$@"; do case "$__a" in --yes) printf '%s' '1'; return 0;; --no) printf '%s' '0'; return 0;; esac; done; "#);
+        // Non-interactive: CI=true or stdin not a TTY
+        s.push_str(r#"if [ "${CI:-}" = "true" ] || ! [ -t 0 ]; then printf '%s' "$__sh2_default"; return 0; fi; "#);
+        // Interactive prompt loop
+        s.push_str(r#"while true; do "#);
+        s.push_str(r#"if [ "$__sh2_default" = "1" ]; then printf '%s [Y/n] ' "$__sh2_prompt" >&2; else printf '%s [y/N] ' "$__sh2_prompt" >&2; fi; "#);
+        s.push_str(r#"if ! IFS= read -r __sh2_ans; then printf '%s' "$__sh2_default"; return 0; fi; "#);
+        s.push_str(r#"__sh2_ans_lc="$(printf '%s' "$__sh2_ans" | tr '[:upper:]' '[:lower:]')"; "#);
+        s.push_str(r#"case "$__sh2_ans_lc" in y|yes) printf '%s' '1'; return 0;; n|no) printf '%s' '0'; return 0;; '') printf '%s' "$__sh2_default"; return 0;; esac; "#);
+        s.push_str("done; }\n");
     }
 
     if usage.uid {

@@ -1084,7 +1084,25 @@ fn lower_expr<'a>(e: ast::Expr, ctx: &mut LoweringContext<'a>, sm: &SourceMap, f
         ast::ExprKind::Argc => Ok(ir::Val::Argc),
         ast::ExprKind::EnvDot(name) => Ok(ir::Val::EnvDot(name)),
         ast::ExprKind::Input(e) => Ok(ir::Val::Input(Box::new(lower_expr(*e, ctx, sm, file)?))),
-        ast::ExprKind::Confirm(e) => Ok(ir::Val::Confirm(Box::new(lower_expr(*e, ctx, sm, file)?))),
+        ast::ExprKind::Confirm { prompt, default } => {
+            let prompt_val = lower_expr(*prompt, ctx, sm, file)?;
+            let default_bool = match default {
+                None => false,
+                Some(d) => {
+                    if let ast::ExprKind::Bool(b) = d.node {
+                        b
+                    } else {
+                        return Err(CompileError::new(sm.format_diagnostic(
+                            file,
+                            opts.diag_base_dir.as_deref(),
+                            "confirm(default=...) must be a true/false literal",
+                            d.span,
+                        )));
+                    }
+                }
+            };
+            Ok(ir::Val::Confirm { prompt: Box::new(prompt_val), default: default_bool })
+        }
         ast::ExprKind::Call { name, args } => {
             if name == "matches" {
                 if args.len() != 2 {

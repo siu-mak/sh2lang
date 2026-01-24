@@ -1,3 +1,4 @@
 func main() {
+    set env.SH2_YES = "1"
     if confirm("Continue? ") { print("YES") } else { print("NO") }
 }

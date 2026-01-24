@@ -1093,7 +1093,10 @@ pub fn strip_spans_expr(e: &mut sh2c::ast::Expr) {
         sh2c::ast::ExprKind::List(items) => for i in items { strip_spans_expr(i); },
         sh2c::ast::ExprKind::Env(e) => strip_spans_expr(e),
         sh2c::ast::ExprKind::Input(e) => strip_spans_expr(e),
-        sh2c::ast::ExprKind::Confirm(e) => strip_spans_expr(e),
+        sh2c::ast::ExprKind::Confirm { prompt, default } => {
+            strip_spans_expr(prompt);
+            if let Some(d) = default { strip_spans_expr(d); }
+        }
         sh2c::ast::ExprKind::Call { args, .. } => for a in args { strip_spans_expr(a); },
         sh2c::ast::ExprKind::MapLiteral(entries) => for (_, v) in entries { strip_spans_expr(v); },
         _ => {}
