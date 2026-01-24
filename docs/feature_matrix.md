@@ -94,6 +94,7 @@ This document maps implemented features to their proving test files, ensuring do
 | `set x = expr` | variable update | `syntax_set.rs`, `syntax_set_var_basic.rs` |
 | `set env.X = expr` | env update | `syntax_set_env_basic.rs`, `syntax_set_env_and_read.rs` |
 | `arg(expr)` | dynamic argument access | `syntax_arg_dynamic.rs` (fixture: `arg_dynamic_loop.sh2`) |
+| `sh(cmd, ...)` | shell command helper | `syntax_sh.rs` (fixtures: `sh_basic.sh2`, `sh_allow_fail_capture.sh2`, `sh_allow_fail_stmt.sh2`, `sh_shell_option.sh2`) |
 
 ---
 

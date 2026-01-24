@@ -1,0 +1,6 @@
+func main() {
+    sh("printf explicit", shell="sh")
+    print("")
+    sh("printf default")
+    print("")
+}

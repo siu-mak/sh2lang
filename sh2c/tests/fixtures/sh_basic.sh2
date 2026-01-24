@@ -1,0 +1,6 @@
+func main() {
+    sh("printf hello")
+    print("")
+    let out = capture(sh("printf world"))
+    print(out)
+}

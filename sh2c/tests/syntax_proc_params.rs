@@ -9,7 +9,7 @@ fn parse_proc_params_builtins() {
     let program = parse_fixture("proc_params_builtins");
     let func = &program.functions[0];
 
-    // Check first If: argv0() == arg(0)
+    // Check first If: len(argv0()) > 0
     if let Stmt {
         node: StmtKind::If { cond, .. },
         ..
@@ -20,31 +20,30 @@ fn parse_proc_params_builtins() {
             ..
         } = cond
         {
+            // left should be Len(Argv0)
+            if let Expr {
+                node: ExprKind::Len(inner),
+                ..
+            } = &**left
+            {
+                assert!(matches!(
+                    &**inner,
+                    Expr {
+                        node: ExprKind::Argv0,
+                        ..
+                    }
+                ));
+            } else {
+                panic!("Expected Len(Argv0)");
+            }
+            assert_eq!(*op, CompareOp::Gt);
             assert!(matches!(
-                **left,
+                **right,
                 Expr {
-                    node: ExprKind::Argv0,
+                    node: ExprKind::Number(0),
                     ..
                 }
             ));
-            assert_eq!(*op, CompareOp::Eq);
-            if let Expr {
-                node: ExprKind::Arg(arg_expr),
-                ..
-            } = &**right
-            {
-                if let Expr {
-                    node: ExprKind::Number(n),
-                    ..
-                } = &**arg_expr
-                {
-                    assert_eq!(*n, 0);
-                } else {
-                    panic!("Expected Number(0) inside Arg");
-                }
-            } else {
-                panic!("Expected Arg(0)");
-            }
         } else {
             panic!("Expected Compare");
         }

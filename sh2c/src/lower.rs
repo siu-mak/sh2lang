@@ -1324,5 +1324,74 @@ fn lower_expr<'a>(e: ast::Expr, ctx: &mut LoweringContext<'a>, sm: &SourceMap, f
                 allow_fail,
             })
         }
+        ast::ExprKind::Sh { cmd, options } => {
+            // Extract shell option (default "sh") and allow_fail option
+            let mut shell_expr = ast::Expr {
+                node: ast::ExprKind::Literal("sh".to_string()),
+                span: Span::new(0, 0),
+            };
+            let mut allow_fail = false;
+            let mut seen_shell = false;
+            let mut seen_allow_fail = false;
+            
+            for opt in options {
+                if opt.name == "shell" {
+                    if seen_shell {
+                        return Err(CompileError::new(sm.format_diagnostic(
+                            file,
+                            opts.diag_base_dir.as_deref(),
+                            "shell specified more than once",
+                            opt.span,
+                        )));
+                    }
+                    seen_shell = true;
+                    shell_expr = opt.value;
+                } else if opt.name == "allow_fail" {
+                    if seen_allow_fail {
+                        return Err(CompileError::new(sm.format_diagnostic(
+                            file,
+                            opts.diag_base_dir.as_deref(),
+                            "allow_fail specified more than once",
+                            opt.span,
+                        )));
+                    }
+                    seen_allow_fail = true;
+                    if let ast::ExprKind::Bool(b) = opt.value.node {
+                        allow_fail = b;
+                    } else {
+                        return Err(CompileError::new(sm.format_diagnostic(
+                            file,
+                            opts.diag_base_dir.as_deref(),
+                            "allow_fail must be true/false literal",
+                            opt.value.span,
+                        )));
+                    }
+                } else {
+                    // Match run() behavior: only allow_fail is supported
+                    return Err(CompileError::new(sm.format_diagnostic(
+                        file,
+                        opts.diag_base_dir.as_deref(),
+                        &format!("unknown sh() option '{}'; supported: shell, allow_fail", opt.name),
+                        opt.span,
+                    )));
+                }
+            }
+            
+            // Build argv: [shell, "-c", cmd]
+            let shell_val = lower_expr(shell_expr, ctx, sm, file)?;
+            let dash_c_val = ir::Val::Literal("-c".to_string());
+            let cmd_val = lower_expr(*cmd, ctx, sm, file)?;
+            let command = ir::Val::Command(vec![shell_val, dash_c_val, cmd_val]);
+            
+            // If allow_fail is set, wrap in Capture so codegen can handle it
+            if allow_fail {
+                Ok(ir::Val::Capture {
+                    value: Box::new(command),
+                    allow_fail: true,
+                })
+            } else {
+                Ok(command)
+            }
+        }
     }
 }

@@ -410,6 +410,13 @@ fn format_expr_prec(kind: &ExprKind, min_prec: u8) -> String {
             }
             format!("capture({})", parts.join(", "))
         },
+        ExprKind::Sh { cmd, options } => {
+            let mut parts = vec![format_expr(cmd)];
+            for opt in options {
+                parts.push(format!("{}={}", opt.name, format_expr(&opt.value)));
+            }
+            format!("sh({})", parts.join(", "))
+        }
         _ => panic!("Formatting unimplemented for ExprKind: {:?}", kind),
     }
 }

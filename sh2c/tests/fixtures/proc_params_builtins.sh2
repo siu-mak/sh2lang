@@ -1,5 +1,6 @@
 func main() {
-    if argv0() == arg(0) {
+    // argv0() returns the script name, arg(0) is invalid (returns empty)
+    if len(argv0()) > 0 {
         print("argv0_ok")
     } else {
         print("argv0_bad")

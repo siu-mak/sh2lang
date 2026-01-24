@@ -1,0 +1,6 @@
+func main() {
+    let r = capture(sh("printf out; printf err 1>&2; exit 7"), allow_fail=true)
+    print("status: " & r.status)
+    print("stdout: " & r.stdout)
+    print("stderr: " & r.stderr)
+}

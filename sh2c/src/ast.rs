@@ -143,6 +143,10 @@ pub enum ExprKind {
         expr: Box<Expr>,
         options: Vec<RunOption>,
     },
+    Sh {
+        cmd: Box<Expr>,
+        options: Vec<RunOption>,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -461,7 +465,14 @@ impl ExprKind {
                     o.span = Span::new(0, 0);
                     o.value.strip_spans();
                 }
-            },
+            }
+            ExprKind::Sh { cmd, options } => {
+                cmd.strip_spans();
+                for o in options {
+                    o.span = Span::new(0, 0);
+                    o.value.strip_spans();
+                }
+            }
             _ => {}
         }
     }

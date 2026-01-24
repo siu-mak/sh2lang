@@ -1,0 +1,5 @@
+func main() {
+    // sh() with allow_fail=true in statement form should not abort
+    sh("exit 7", allow_fail=true)
+    print("status: " & status())
+}

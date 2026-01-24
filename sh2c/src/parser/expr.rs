@@ -330,6 +330,46 @@ impl<'a> Parser<'a> {
             TokenKind::Ident(s) => {
                 let s = s.clone();
                 if self.match_kind(TokenKind::LParen) {
+                    // Special case for sh() builtin
+                    if s == "sh" {
+                        let cmd = self.parse_expr()?;
+                        let mut options = Vec::new();
+                        
+                        while self.match_kind(TokenKind::Comma) {
+                            let opt_start = self.current_span();
+                            if let Some(TokenKind::Ident(opt_name)) = self.peek_kind() {
+                                let opt_name = opt_name.clone();
+                                let name_span = self.advance().unwrap().span;
+                                self.expect(TokenKind::Equals)?;
+                                let value = self.parse_expr()?;
+                                
+                                match opt_name.as_str() {
+                                    "shell" | "allow_fail" => {
+                                        options.push(RunOption {
+                                            name: opt_name,
+                                            value,
+                                            span: name_span,
+                                        });
+                                    }
+                                    _ => {
+                                        return self.error(
+                                            &format!("unknown sh() option '{}'; supported: shell, allow_fail", opt_name),
+                                            opt_start,
+                                        );
+                                    }
+                                }
+                            } else {
+                                return self.error("expected option name", self.current_span());
+                            }
+                        }
+                        
+                        self.expect(TokenKind::RParen)?;
+                        return Ok(Expr {
+                            node: ExprKind::Sh { cmd: Box::new(cmd), options },
+                            span: span.merge(self.previous_span()),
+                        });
+                    }
+                    
                     let mut args = Vec::new();
                     if !self.match_kind(TokenKind::RParen) {
                         loop {
