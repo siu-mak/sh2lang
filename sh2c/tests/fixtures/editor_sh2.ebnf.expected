@@ -79,10 +79,10 @@ case_arm = pattern , { "|" , pattern } , "=>" , block ;
 pattern = string_literal | "glob" , "(" , string_literal , ")" | "_" ;
 
 with_stmt = "with" , with_modifier , block ;
-with_modifier = "env" , "{" , env_bindings , "}"
-              | "cwd" , "(" , expression , ")"
+with_modifier = "env" , [ "{" , [ env_bindings ] , "}" ]
+              | "cwd" , "(" , string_literal , ")" (* restriction: must be literal *)
               | "log" , "(" , expression , [ "," , "append" , "=" , bool_literal ] , ")"
-              | "redirect" , "{" , redirect_spec , "}"
+              | "redirect" , "{" , [ redirect_spec ] , "}"
               ;
 env_bindings = identifier , "=" , expression , { "," , identifier , "=" , expression } ;
 redirect_spec = redirect_item , { "," , redirect_item } ;

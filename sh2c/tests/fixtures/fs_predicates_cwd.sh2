@@ -1,12 +1,11 @@
 func main() {
   # Create a temp directory and a file inside it
-  let d = capture("mktemp", "-d")
-
-  with cwd d {
+  run("mkdir", "-p", "sh2_test_scratch_fs_predicates_cwd")
+  with cwd "sh2_test_scratch_fs_predicates_cwd" {
     sh("touch f.txt")
   }
 
-  let f = d + "/f.txt"
+  let f = "sh2_test_scratch_fs_predicates_cwd/f.txt"
 
   if exists(f) && is_file(f) && !is_dir(f) {
     print("fs_ok")
@@ -14,6 +13,8 @@ func main() {
     print("fs_bad")
   }
 
+  # Test cd(expr) - should still work
+  let d = capture("mktemp", "-d")
   cd(d)
   if pwd() == d {
     print("cd_ok")
@@ -23,4 +24,6 @@ func main() {
 
   # cleanup
   run("rm", "-rf", d)
+  run("rm", "-rf", "sh2_test_scratch_fs_predicates_cwd")
 }
+

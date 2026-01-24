@@ -514,6 +514,14 @@ fn lower_stmt<'a>(
             Ok(ctx_left.intersection(&ctx_right))
         }
         ast::StmtKind::WithCwd { path, body } => {
+            if !matches!(path.node, ast::ExprKind::Literal(_)) {
+                 return Err(CompileError::new(sm.format_diagnostic(
+                    file,
+                    opts.diag_base_dir.as_deref(),
+                    "cwd(...) currently requires a string literal (e.g., with cwd(\"/abs/path\") { ... }).\nIf you need a computed path, use `cd(expr)` (scoped via `subshell { ... }` if needed) or `sh(\"cd ...\")`; expressions are not yet supported in cwd().",
+                    path.span,
+                )));
+            }
             let lowered_path = lower_expr(path, &mut ctx, sm, file)?;
             let mut lower_body = Vec::new();
             let ctx_body = lower_block(body, &mut lower_body, ctx.clone(), sm, file, opts)?;

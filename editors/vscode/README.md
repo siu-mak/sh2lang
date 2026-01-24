@@ -1,7 +1,7 @@
 # sh2 for Visual Studio Code
 
 
-<img src="../../images/logo/sh2logo_256.png" alt="sh2 logo" width="128" />
+<img src="../../images/sh2logo_256.png" alt="sh2 logo" width="128" />
 
 Syntax highlighting for the **sh2** structured shell language.
 

@@ -481,6 +481,8 @@ with cwd("/tmp") {
 }
 ```
 
+> **Note**: `cwd(...)` currently requires a string literal argument (e.g., `"/path"`). Computed paths are not yet supported. If you need a dynamic working directory, use `cd(expr)` (scoped via `subshell { ... }` if needed) or `sh("cd ...")`.
+
 ### 9.3 `with redirect { ... } { ... }`
 
 Redirection supports common patterns including append and stream merge (see `syntax_io` tests). Typical intent:

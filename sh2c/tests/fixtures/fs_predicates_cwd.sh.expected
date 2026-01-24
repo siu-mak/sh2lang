@@ -17,16 +17,15 @@ trap '__sh2_err_handler' ERR
 main() {
   local __sh2_loc=""
   __sh2_loc="tests/fixtures/fs_predicates_cwd.sh2:3:3"
-  d="$( 'mktemp' '-d' )"
-  __sh2_status=$?
-  __sh2_check "$__sh2_status" "${__sh2_loc:-}"
+  'mkdir' '-p' 'sh2_test_scratch_fs_predicates_cwd'; __sh2_status=$?
+  __sh2_check "$__sh2_status" "${__sh2_loc:-}" "exit"
   (
-    cd "$d"
-    __sh2_loc="tests/fixtures/fs_predicates_cwd.sh2:6:5"
+    cd 'sh2_test_scratch_fs_predicates_cwd'
+    __sh2_loc="tests/fixtures/fs_predicates_cwd.sh2:5:5"
     __sh2_sh_probe 'touch f.txt'
   )
-  __sh2_loc="tests/fixtures/fs_predicates_cwd.sh2:9:3"
-  f="$d"'/f.txt'
+  __sh2_loc="tests/fixtures/fs_predicates_cwd.sh2:8:3"
+  f='sh2_test_scratch_fs_predicates_cwd/f.txt'
   __sh2_status=$?
   __sh2_check "$__sh2_status" "${__sh2_loc:-}"
   if [ -e "$f" ] && [ -f "$f" ] && ! [ -d "$f" ]; then
@@ -34,14 +33,21 @@ main() {
   else
     printf '%s\n' 'fs_bad'
   fi
+  __sh2_loc="tests/fixtures/fs_predicates_cwd.sh2:17:3"
+  d="$( 'mktemp' '-d' )"
+  __sh2_status=$?
+  __sh2_check "$__sh2_status" "${__sh2_loc:-}"
   cd "$d"
   if [ "$PWD" = "$d" ]; then
     printf '%s\n' 'cd_ok'
   else
     printf '%s\n' 'cd_bad'
   fi
-  __sh2_loc="tests/fixtures/fs_predicates_cwd.sh2:25:3"
+  __sh2_loc="tests/fixtures/fs_predicates_cwd.sh2:26:3"
   'rm' '-rf' "$d"; __sh2_status=$?
+  __sh2_check "$__sh2_status" "${__sh2_loc:-}" "exit"
+  __sh2_loc="tests/fixtures/fs_predicates_cwd.sh2:27:3"
+  'rm' '-rf' 'sh2_test_scratch_fs_predicates_cwd'; __sh2_status=$?
   __sh2_check "$__sh2_status" "${__sh2_loc:-}" "exit"
 }
 __sh2_status=0
