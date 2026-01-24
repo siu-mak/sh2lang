@@ -390,7 +390,7 @@ impl<'a> Parser<'a> {
                     let full_span = span.merge(str_span);
                     self.parse_brace_interpolated_string(&s, full_span)
                 } else {
-                    self.parse_command_substitution(span)
+                    self.parse_command_substitution(span, false)
                 }
             }
             TokenKind::LBracket => {
@@ -414,7 +414,7 @@ impl<'a> Parser<'a> {
                 node: ExprKind::Args,
                 span,
             }),
-            TokenKind::Capture => self.parse_command_substitution(span),
+            TokenKind::Capture => self.parse_command_substitution(span, true),
             TokenKind::Exists => {
                 self.expect(TokenKind::LParen)?;
                 let path = self.parse_expr()?;
@@ -662,27 +662,19 @@ impl<'a> Parser<'a> {
         }
     }
 
-    fn parse_command_substitution(&mut self, start_span: Span) -> ParsResult<Expr> {
+    fn parse_command_substitution(&mut self, start_span: Span, is_capture: bool) -> ParsResult<Expr> {
         self.expect(TokenKind::LParen)?;
         let mut segments: Vec<Vec<Expr>> = Vec::new();
+        
+        // Phase 1: Parse command/pipe segments
         loop {
             let mut args: Vec<Expr> = Vec::new();
             if self.match_kind(TokenKind::Run) {
                 self.expect(TokenKind::LParen)?;
                 loop {
-                    // run(...) arguments loop
                     if self.peek_kind() == Some(&TokenKind::RParen) {
                         self.advance(); // consume RParen
                         break;
-                    }
-                    if let Some(TokenKind::Ident(_)) = self.peek_kind() {
-                        // Check for unsupported named arguments like allow_fail=...
-                        let next_t = self.tokens.get(self.pos + 1);
-                        if let Some(nt) = next_t {
-                            if nt.kind == TokenKind::Equals {
-                                self.error("run options like allow_fail=... are not supported inside command substitution", self.current_span())?;
-                            }
-                        }
                     }
                     args.push(self.parse_expr()?);
                     if !self.match_kind(TokenKind::Comma) {
@@ -711,15 +703,16 @@ impl<'a> Parser<'a> {
                     }
                 }
             } else if let Some(TokenKind::String(s)) = self.peek_kind() {
+                // String shorthand $( "cmd", "arg1", ... )
                 let s = s.clone();
                 let s_span = self.advance().unwrap().span;
                 args.push(Expr {
                     node: ExprKind::Literal(s),
                     span: s_span,
                 });
+                
+                // Parse arguments
                 loop {
-                    // String shorthand arguments loop
-                    // Break on RParen (end of interpolation) or Pipe (next segment) without consuming
                     if self.peek_kind() == Some(&TokenKind::RParen) {
                         break;
                     }
@@ -727,7 +720,22 @@ impl<'a> Parser<'a> {
                         break;
                     }
 
-                    if self.match_kind(TokenKind::Comma) {}
+                    // Strict lookahead for capture options: Comma -> Ident -> Equals
+                    if is_capture && self.peek_kind() == Some(&TokenKind::Comma) {
+                         if let (Some(t1), Some(t2)) = (self.tokens.get(self.pos + 1), self.tokens.get(self.pos + 2)) {
+                             if let TokenKind::Ident(_) = t1.kind {
+                                 if t2.kind == TokenKind::Equals {
+                                     // Confirmed option start. Break args loop.
+                                     break;
+                                 }
+                             }
+                         }
+                    }
+
+                    if self.match_kind(TokenKind::Comma) {
+                        // Consumed comma between args
+                    }
+
                     args.push(self.parse_expr()?);
                 }
             } else {
@@ -741,22 +749,78 @@ impl<'a> Parser<'a> {
                 break;
             }
         }
+
+        // Phase 2: Parse Options
+        let mut options = Vec::new();
+        
+        while self.peek_kind() == Some(&TokenKind::Comma) {
+            // Check if it is really an option start (Ident = ...)
+            // If not, it might be a dangling comma or invalid syntax which we handle by breaking
+            let is_opt = if let (Some(t1), Some(t2)) = (self.tokens.get(self.pos + 1), self.tokens.get(self.pos + 2)) {
+                 matches!(t1.kind, TokenKind::Ident(_)) && t2.kind == TokenKind::Equals
+            } else {
+                false
+            };
+
+            if is_opt {
+                if !is_capture {
+                     self.error("run options like allow_fail=... are not supported inside command substitution $(...); use capture(...) instead", self.current_span())?;
+                }
+                
+                self.advance(); // consume Comma
+                let name = if let Some(TokenKind::Ident(s)) = self.peek_kind() {
+                    s.clone()
+                } else {
+                    unreachable!()
+                };
+                let name_span = self.advance().unwrap().span;
+                
+                self.expect(TokenKind::Equals)?;
+                let val = self.parse_expr()?;
+                
+                options.push(RunOption {
+                    name,
+                    value: val,
+                    span: name_span, 
+                });
+            } else {
+                break; 
+            }
+        }
+
         self.expect(TokenKind::RParen)?;
         let full_span = start_span.merge(self.previous_span());
 
-        if segments.len() == 1 {
+        let cmd_node = if segments.len() == 1 {
+            Expr {
+                node: ExprKind::Command(segments.pop().unwrap()), // Reuse inner vec
+                span: full_span,
+            }
+        } else {
+            Expr {
+                node: ExprKind::CommandPipe(segments),
+                span: full_span,
+            }
+        };
+
+        // AST Compatibility: Only wrap in Capture if we have distinct capture logic (options).
+        // If no options, return the raw Command/CommandPipe to match legacy/standard structure.
+        if is_capture && !options.is_empty() {
             Ok(Expr {
-                node: ExprKind::Command(segments.pop().unwrap()),
+                node: ExprKind::Capture {
+                    expr: Box::new(cmd_node),
+                    options,
+                },
                 span: full_span,
             })
         } else {
             Ok(Expr {
-                node: ExprKind::CommandPipe(segments),
+                node: cmd_node.node,
                 span: full_span,
             })
         }
     }
-
+                    
     fn parse_interpolated_string(&mut self, raw: &str, span: Span) -> ParsResult<Expr> {
         // Implementation from old parser.rs, but constructing Exprs with relative spans would be hard
         // because we don't track byte offsets inside string literal content easily without recalculating.

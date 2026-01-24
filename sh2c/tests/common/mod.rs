@@ -145,6 +145,23 @@ mod tests {
 // Most tests in common/mod.rs read from fixtures.
 use sh2c::loader;
 
+pub fn try_compile_to_shell(src: &str, target: TargetShell) -> Result<String, String> {
+    let sm = sh2c::span::SourceMap::new(src.to_string());
+    let tokens = lexer::lex(&sm, src).map_err(|d| d.format(None))?;
+    let mut program = parser::parse(&tokens, &sm, "inline_test").map_err(|d| d.format(None))?;
+    program.source_maps.insert("inline_test".to_string(), sm);
+    
+    let opts = sh2c::lower::LowerOptions {
+        include_diagnostics: true,
+        diag_base_dir: Some(std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))),
+    };
+
+    // Use formatted diagnostics for better error messages
+    let ir = lower::lower_with_options(program, &opts).map_err(|e| e.message)?; 
+    
+    codegen::emit_with_options(&ir, codegen::CodegenOptions { target, include_diagnostics: true }).map_err(|e| e.message)
+}
+
 pub fn compile_path_to_shell(path: &Path, target: TargetShell) -> String {
     let program = loader::load_program_with_imports(path)
         .unwrap_or_else(|d| panic!("{}", d.format(path.parent())));

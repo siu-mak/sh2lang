@@ -1,0 +1,34 @@
+func main() {
+    # Test 1: Successful capture with allow_fail
+    let res1 = capture(run("printf", "hello"), allow_fail=true)
+    if res1.status == 0 && res1.stdout == "hello" {
+        print("ok1")
+    } else {
+        print("fail1")
+        print(res1.status)
+        print(res1.stdout)
+    }
+
+    # Test 2: Failing capture
+    let res2 = capture(run("sh", "-c", "exit 42"), allow_fail=true)
+    if res2.status == 42 {
+        print("ok2 status")
+    } else {
+        print("fail2")
+        print(res2.status)
+    }
+    
+    # Test 3: Stderr capture
+    let res3 = capture(run("sh", "-c", "printf err >&2; exit 1"), allow_fail=true)
+    if res3.stderr == "err" && res3.status == 1 {
+        print("ok3 stderr")
+    } else {
+        print("fail3")
+        print(res3.stderr)
+        print(res3.status)
+    }
+
+    # Test 4: Default behavior (no allow_fail) - should be just a string
+    let s = capture(run("printf", "legacy"))
+    print(s)
+}

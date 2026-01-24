@@ -40,6 +40,7 @@ This document maps implemented features to their proving test files, ensuring do
 | `sh(expr)` | raw shell (any expr) | `syntax_sh_expr_probe.rs`, `syntax_sh_probe_semantics.rs` | probe semantics |
 | `sh { block }` | raw shell block | `syntax_sh_block_semantics.rs` | fail-fast |
 | `capture(...)` | stdout capture | `syntax_capture_pipe.rs`, `syntax_cmd_sub.rs` | |
+| `capture(..., allow_fail=true)` | non-aborting capture | `syntax_capture.rs` (fixture: `capture_allow_fail.sh2`) | `.status`, `.stdout`, `.stderr` |
 | `try_run(...)` | result object | `syntax_try_run.rs` | `.status`, `.stdout`, `.stderr` |
 
 ---

@@ -139,6 +139,10 @@ pub enum ExprKind {
         map: String,
         key: String,
     },
+    Capture {
+        expr: Box<Expr>,
+        options: Vec<RunOption>,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -451,6 +455,13 @@ impl ExprKind {
             ExprKind::Confirm(e) => e.strip_spans(),
             ExprKind::Call { args, .. } => for a in args { a.strip_spans(); },
             ExprKind::MapLiteral(entries) => for (_, v) in entries { v.strip_spans(); },
+            ExprKind::Capture { expr, options } => {
+                expr.strip_spans();
+                for o in options {
+                    o.span = Span::new(0, 0);
+                    o.value.strip_spans();
+                }
+            },
             _ => {}
         }
     }

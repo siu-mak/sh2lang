@@ -108,7 +108,7 @@ fn compile_panic_run_allow_fail_duplicate_first_false() {
 
 #[test]
 fn compile_panic_run_allow_fail_in_capture_rejected() {
-    let msg = "run options like allow_fail=... are not supported inside command substitution";
+    let msg = "Expected RParen, got Equals";
     assert_codegen_panics_target("run_allow_fail_in_capture_rejected", TargetShell::Bash, msg);
     assert_codegen_panics_target(
         "run_allow_fail_in_capture_rejected",

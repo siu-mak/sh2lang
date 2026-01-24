@@ -95,6 +95,10 @@ pub enum Val {
     /// A variable known to hold a boolean value ("1" or "0").
     /// Used in conditions to emit `[ "$var" = "1" ]` instead of non-empty check.
     BoolVar(String),
+    Capture {
+        value: Box<Val>,
+        allow_fail: bool,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq)]

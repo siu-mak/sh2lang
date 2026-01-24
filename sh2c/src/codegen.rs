@@ -399,6 +399,12 @@ fn visit_val(val: &Val, usage: &mut PreludeUsage) {
                 visit_val(a, usage);
             }
         }
+        Val::Capture { value, allow_fail } => {
+            if *allow_fail {
+                usage.tmpfile = true;
+            }
+            visit_val(value, usage);
+        }
         Val::Uid => {
             usage.uid = true;
         }
@@ -555,6 +561,12 @@ fn emit_val(v: &Val, target: TargetShell) -> Result<String, CompileError> {
         Val::Command(args) => {
             let parts: Vec<String> = args.iter().map(|a| emit_word(a, target)).collect::<Result<_, _>>()?;
             Ok(format!("\"$( {} )\"", parts.join(" ")))
+        }
+        Val::Capture { value, allow_fail } => {
+            if *allow_fail {
+                return Err(CompileError::new("capture(..., allow_fail=true) is only allowed in 'let' assignment (e.g. let res = capture(...))").with_target(target));
+            }
+            emit_val(value, target)
         }
         Val::CommandPipe(segments) => {
             let seg_strs: Vec<String> = segments
@@ -963,20 +975,25 @@ fn emit_index_expr(v: &Val, target: TargetShell) -> Result<String, CompileError>
     emit_arith_expr(v, target)
 }
 
-fn emit_cmdsub_raw(args: &[Val], target: TargetShell) -> Result<String, CompileError> {
+fn emit_cmd_body_raw(args: &[Val], target: TargetShell) -> Result<String, CompileError> {
     let parts: Vec<String> = args.iter().map(|a| emit_word(a, target)).collect::<Result<_, _>>()?;
-    Ok(format!("$( {} )", parts.join(" ")))
+    Ok(parts.join(" "))
+}
+
+fn emit_cmdsub_raw(args: &[Val], target: TargetShell) -> Result<String, CompileError> {
+    Ok(format!("$( {} )", emit_cmd_body_raw(args, target)?))
+}
+
+fn emit_cmd_pipe_body_raw(segments: &[Vec<Val>], target: TargetShell) -> Result<String, CompileError> {
+    let seg_strs: Vec<String> = segments
+        .iter()
+        .map(|seg| emit_cmd_body_raw(seg, target))
+        .collect::<Result<_, CompileError>>()?;
+    Ok(seg_strs.join(" | "))
 }
 
 fn emit_cmdsub_pipe_raw(segments: &[Vec<Val>], target: TargetShell) -> Result<String, CompileError> {
-    let seg_strs: Vec<String> = segments
-        .iter()
-        .map(|seg| {
-            let words: Vec<String> = seg.iter().map(|w| emit_word(w, target)).collect::<Result<_, _>>()?;
-            Ok(words.join(" "))
-        })
-        .collect::<Result<_, CompileError>>()?;
-    Ok(format!("$( {} )", seg_strs.join(" | ")))
+    Ok(format!("$( {} )", emit_cmd_pipe_body_raw(segments, target)?))
 }
 
 fn emit_arith_expr(v: &Val, target: TargetShell) -> Result<String, CompileError> {
@@ -1207,6 +1224,53 @@ fn emit_cmd(
                 // Boolean assignment always succeeds - the condition result is stored
                 // as 1/0, not reflected in exit status.
                 out.push_str(&format!("{}__sh2_status=0\n", pad));
+            } else if let Val::Capture { value, allow_fail: true } = val {
+                // capture(..., allow_fail=true) logic
+                // Generates:
+                //   name__stdout_tmp=$(__sh2_tmpfile)
+                //   name__stderr_tmp=$(__sh2_tmpfile)
+                //   ( cmd ) >"$name__stdout_tmp" 2>"$name__stderr_tmp"
+                //   name__status=$?
+                //   name__stdout=$(__sh2_read_file "$name__stdout_tmp")
+                //   name__stderr=$(__sh2_read_file "$name__stderr_tmp")
+                //   name="$name__stdout"
+                //   rm -f "$name__stdout_tmp" "$name__stderr_tmp"
+                //   __sh2_status=0 (since allowed fail)
+
+                // Note: We avoid 'local' to support top-level usage and POSIX sh.
+
+                out.push_str(&format!("{}{}__stdout_tmp=$(__sh2_tmpfile)\n", pad, name));
+                out.push_str(&format!("{}{}__stderr_tmp=$(__sh2_tmpfile)\n", pad, name));
+                
+                let cmd_str = match &**value {
+                    Val::Command(args) => emit_cmd_body_raw(args, target)?,
+                    Val::CommandPipe(segments) => emit_cmd_pipe_body_raw(segments, target)?,
+                    _ => return Err(CompileError::internal("Capture expects Command or CommandPipe", target)),
+                };
+
+                out.push_str(&format!(
+                    "{}( {} ) >\"${{{}__stdout_tmp}}\" 2>\"${{{}__stderr_tmp}}\"\n",
+                    pad, cmd_str, name, name
+                ));
+                
+                out.push_str(&format!("{}{}__status=$?\n", pad, name));
+                 // Use safe read_file helper or cat? cat is standard. read_file might have trap logic.
+                 // The original code used cat. 
+                 // But wait, existing code used $(cat ...).
+                 // Safe read file for bash handles ERR trap.
+                 // Let's use cat for simplicity as in original, or __sh2_read_file if available.
+                 // __sh2_read_file is generated in prelude.
+                 // Original used `cat`. Let's stick to `cat` to minimize diff risk, or upgrade to `__sh2_read_file` if safe.
+                 // `emit_val` for `Val::ReadFile` uses `__sh2_read_file`.
+                 // Let's use `cat` as it was verified to work.
+                out.push_str(&format!("{}{}__stdout=$(cat \"${{{}__stdout_tmp}}\")\n", pad, name, name));
+                out.push_str(&format!("{}{}__stderr=$(cat \"${{{}__stderr_tmp}}\")\n", pad, name, name));
+                out.push_str(&format!("{}{}=\"${{{}__stdout}}\"\n", pad, name, name));
+                out.push_str(&format!("{}rm -f \"${{{}__stdout_tmp}}\" \"${{{}__stderr_tmp}}\"\n", pad, name, name));
+                
+                out.push_str(&format!("{}__sh2_status=0\n", pad)); // Always succeed
+
+
             } else if let Val::Args = val {
                 out.push_str(name);
                 out.push_str("=(\"$@\")\n");

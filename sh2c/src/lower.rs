@@ -11,6 +11,7 @@ struct LoweringContext<'a> {
     /// Variables that hold boolean values (assigned from boolean expressions)
     bool_vars: HashSet<String>,
     opts: &'a LowerOptions,
+    in_let_rhs: bool,
 }
 
 impl<'a> LoweringContext<'a> {
@@ -19,6 +20,7 @@ impl<'a> LoweringContext<'a> {
             run_results: HashSet::new(),
             bool_vars: HashSet::new(),
             opts,
+            in_let_rhs: false,
         }
     }
 
@@ -53,6 +55,7 @@ impl<'a> LoweringContext<'a> {
             run_results,
             bool_vars,
             opts: self.opts,
+            in_let_rhs: self.in_let_rhs,
         }
     }
 }
@@ -236,12 +239,22 @@ fn lower_stmt<'a>(
             }
             // Check if RHS is a boolean expression and track it
             let is_bool = is_bool_expr(&value);
+            
+            ctx.in_let_rhs = true;
+            let val_ir = lower_expr(value, &mut ctx, sm, file)?;
+            ctx.in_let_rhs = false;
+            
+            let is_capture_result = matches!(&val_ir, ir::Val::Capture { allow_fail: true, .. });
+
             out.push(ir::Cmd::Assign(
                 name.clone(),
-                lower_expr(value, &mut ctx, sm, file)?,
+                val_ir,
                 loc,
             ));
             ctx.remove(&name);
+            if is_capture_result {
+                ctx.insert(&name);
+            }
             if is_bool {
                 ctx.insert_bool_var(&name);
             }
@@ -1256,5 +1269,45 @@ fn lower_expr<'a>(e: ast::Expr, ctx: &mut LoweringContext<'a>, sm: &SourceMap, f
             Ok(ir::Val::MapLiteral(lowered_entries))
         }
         ast::ExprKind::MapIndex { map, key } => Ok(ir::Val::MapIndex { map, key }),
+        ast::ExprKind::Capture { expr, options } => {
+            let expr_span = expr.span;
+            let lowered_expr = lower_expr(*expr, ctx, sm, file)?;
+            let mut allow_fail = false;
+            let mut seen_allow_fail = false;
+            for opt in options {
+                if opt.name == "allow_fail" {
+                    if seen_allow_fail {
+                        return Err(CompileError::new(sm.format_diagnostic(file, opts.diag_base_dir.as_deref(), "allow_fail specified more than once", opt.span)));
+                    }
+                    seen_allow_fail = true;
+                    if let ast::ExprKind::Bool(b) = opt.value.node {
+                        allow_fail = b;
+                    } else {
+                        return Err(CompileError::new(sm.format_diagnostic(file, opts.diag_base_dir.as_deref(), "allow_fail must be true/false literal", opt.value.span)));
+                    }
+                } else {
+                    return Err(CompileError::new(sm.format_diagnostic(
+                        file,
+                        opts.diag_base_dir.as_deref(),
+                        format!("Unknown option '{}'. Supported options: allow_fail", opt.name).as_str(),
+                        opt.span,
+                    )));
+                }
+            }
+
+            if allow_fail && !ctx.in_let_rhs {
+                 return Err(CompileError::new(sm.format_diagnostic(
+                     file,
+                     opts.diag_base_dir.as_deref(),
+                     "capture(..., allow_fail=true) is only allowed in 'let' assignment (e.g. let res = capture(...))",
+                     expr_span, // Use safe span
+                 )));
+            }
+
+            Ok(ir::Val::Capture {
+                value: Box::new(lowered_expr),
+                allow_fail,
+            })
+        }
     }
 }

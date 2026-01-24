@@ -390,6 +390,26 @@ fn format_expr_prec(kind: &ExprKind, min_prec: u8) -> String {
         ExprKind::Status => "status()".to_string(),
         ExprKind::Args => "args".to_string(),
         ExprKind::Pid => "pid()".to_string(),
+        ExprKind::Capture { expr, options } => {
+            let inner_str = if let ExprKind::Command(args) = &expr.node {
+                 let parts: Vec<String> = args.iter().map(format_expr).collect();
+                 format!("run({})", parts.join(", "))
+            } else if let ExprKind::CommandPipe(segs) = &expr.node {
+                 let seg_strs: Vec<String> = segs.iter().map(|s| {
+                     let args: Vec<String> = s.iter().map(format_expr).collect();
+                     format!("run({})", args.join(", ")) 
+                 }).collect();
+                 seg_strs.join(" | ")
+            } else {
+                 format_expr(expr)
+            };
+
+            let mut parts = vec![inner_str];
+            for opt in options {
+                parts.push(format!("{} = {}", opt.name, format_expr(&opt.value)));
+            }
+            format!("capture({})", parts.join(", "))
+        },
         _ => panic!("Formatting unimplemented for ExprKind: {:?}", kind),
     }
 }
