@@ -623,18 +623,87 @@ impl<'a> Parser<'a> {
             TokenKind::Ident(name) => {
                 let name = name.clone();
                 self.advance();
-                self.expect(TokenKind::LParen)?;
-                let mut args = Vec::new();
-                if !self.match_kind(TokenKind::RParen) {
-                    loop {
-                        args.push(self.parse_expr()?);
-                        if !self.match_kind(TokenKind::Comma) {
-                            break;
+                
+                // Special handling for statement-form sh()
+                if name == "sh" {
+                    self.expect(TokenKind::LParen)?;
+                    let cmd = self.parse_expr()?;
+                    
+                    // Parse options: shell=..., allow_fail=...
+                    let mut shell_expr = Expr {
+                        node: ExprKind::Literal("sh".to_string()),
+                        span: start_span,
+                    };
+                    let mut options = Vec::new();
+                    let mut seen_shell = false;
+                    let mut seen_allow_fail = false;
+                    
+                    while self.match_kind(TokenKind::Comma) {
+                        let opt_start = self.current_span();
+                        if let Some(TokenKind::Ident(opt_name)) = self.peek_kind() {
+                            let opt_name = opt_name.clone();
+                            let name_span = self.advance().unwrap().span;
+                            self.expect(TokenKind::Equals)?;
+                            let value = self.parse_expr()?;
+                            
+                            match opt_name.as_str() {
+                                "shell" => {
+                                    if seen_shell {
+                                        self.error("shell specified more than once", opt_start)?;
+                                    }
+                                    seen_shell = true;
+                                    shell_expr = value;
+                                }
+                                "allow_fail" => {
+                                    if seen_allow_fail {
+                                        self.error("allow_fail specified more than once", opt_start)?;
+                                    }
+                                    seen_allow_fail = true;
+                                    options.push(RunOption {
+                                        name: opt_name,
+                                        value,
+                                        span: name_span,
+                                    });
+                                }
+                                _ => {
+                                    return self.error(
+                                        &format!("unknown sh() option '{}'; supported: shell, allow_fail", opt_name),
+                                        opt_start,
+                                    );
+                                }
+                            }
+                        } else {
+                            return self.error("expected option name", self.current_span());
                         }
                     }
+                    
                     self.expect(TokenKind::RParen)?;
+                    
+                    // Build argv: [shell, "-c", cmd]
+                    let args = vec![
+                        shell_expr,
+                        Expr {
+                            node: ExprKind::Literal("-c".to_string()),
+                            span: start_span,
+                        },
+                        cmd,
+                    ];
+                    
+                    StmtKind::Run(RunCall { args, options })
+                } else {
+                    self.expect(TokenKind::LParen)?;
+                    let mut args = Vec::new();
+                    if !self.match_kind(TokenKind::RParen) {
+                        loop {
+                            args.push(self.parse_expr()?);
+                            if !self.match_kind(TokenKind::Comma) {
+                                break;
+                            }
+                        }
+                        self.expect(TokenKind::RParen)?;
+                    }
+                    StmtKind::Call { name, args }
                 }
-                StmtKind::Call { name, args }
             }
             _ => self.error(&format!("Expected statement, got {:?}", kind), start_span)?,
         };

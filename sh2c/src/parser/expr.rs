@@ -344,16 +344,22 @@ impl<'a> Parser<'a> {
                                 let value = self.parse_expr()?;
                                 
                                 match opt_name.as_str() {
-                                    "shell" | "allow_fail" => {
+                                    "shell" => {
                                         options.push(RunOption {
                                             name: opt_name,
                                             value,
                                             span: name_span,
                                         });
                                     }
+                                    "allow_fail" => {
+                                        return self.error(
+                                            "allow_fail is only valid on statement-form sh(...); use capture(sh(...), allow_fail=true) for expression capture",
+                                            opt_start,
+                                        );
+                                    }
                                     _ => {
                                         return self.error(
-                                            &format!("unknown sh() option '{}'; supported: shell, allow_fail", opt_name),
+                                            &format!("unknown sh() option '{}'; supported: shell", opt_name),
                                             opt_start,
                                         );
                                     }
