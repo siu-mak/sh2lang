@@ -99,13 +99,28 @@ let x = "hello" # inline comment
 ### 3.1 Strings
 
 - Double-quoted strings support interpolation (`$name`, `${expr}`) depending on context.
-- Concatenation uses `&`.
+- Concatenation uses `&` (requires whitespace on both sides, e.g. `x & y`).
+
 
 ```sh2
 let name = "Alice"
 print("Hello, " & name)
 print("Hello, $name")
 ```
+
+### 3.2 No Implicit Expansion
+
+Unlike implicit shells (Bash/Zsh), sh2 does **not** perform implicit word splitting, globbing/wildcard expansion, or tilde expansion on string literals or variable content.
+
+- `~` is treated as a literal character.
+- `*` is treated as a literal character.
+- Spaces in variables are preserved as-is.
+
+**Recommendation**:
+- Use `env.HOME` instead of `~`.
+- Use `sh("ls *.txt")` or similar if you need shell expansion.
+
+If you attempt to use `~/path` in `with cwd()` or similar, sh2 will fail at runtime and emit a helper hint advising you to use `env.HOME`.
 
 Multiline and raw strings are supported (where implemented by your compiler target):
 

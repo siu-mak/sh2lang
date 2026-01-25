@@ -1,36 +1,9 @@
 use std::fs;
 use std::path::Path;
-use std::process::Command;
-use tempfile::TempDir;
 
 mod common;
-use common::{compile_path_to_shell, TargetShell};
+use common::{compile_path_to_shell, read_file_in_dir, run_bash_script_in_tempdir, TargetShell};
 
-/// Helper to run a compiled bash script in a temp directory and capture output
-fn run_bash_script_in_tempdir(script_content: &str) -> (String, String, i32, TempDir) {
-    let temp_dir = TempDir::new().expect("Failed to create temp dir");
-    let script_path = temp_dir.path().join("test_script.sh");
-    
-    fs::write(&script_path, script_content).expect("Failed to write script");
-    
-    let output = Command::new("bash")
-        .arg(&script_path)
-        .current_dir(temp_dir.path())
-        .output()
-        .expect("Failed to execute script");
-    
-    let stdout = String::from_utf8_lossy(&output.stdout).to_string();
-    let stderr = String::from_utf8_lossy(&output.stderr).to_string();
-    let exit_code = output.status.code().unwrap_or(-1);
-    
-    (stdout, stderr, exit_code, temp_dir)
-}
-
-/// Helper to read file content from temp dir
-fn read_file_in_dir(dir: &Path, filename: &str) -> Option<String> {
-    let path = dir.join(filename);
-    fs::read_to_string(path).ok()
-}
 
 #[test]
 fn test_stdout_file_and_inherit() {

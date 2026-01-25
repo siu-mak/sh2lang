@@ -1,0 +1,7 @@
+func main() {
+    // This fails to compile because cwd() requires string literal.
+    // It should NOT emit the runtime tilde hint.
+    with cwd(env.HOME & "/subdir") {
+        print("x")
+    }
+}

@@ -1,0 +1,7 @@
+func main() {
+    // This should fail at runtime because nested '~' directory likely doesn't exist 
+    // and tilde is not expanded.
+    with cwd("~root/__sh2_definitely_missing_dir__") {
+        print("should not reach here")
+    }
+}

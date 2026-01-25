@@ -1085,6 +1085,16 @@ fn emit_arith_expr(v: &Val, target: TargetShell) -> Result<String, CompileError>
     }
 }
 
+fn is_tilde_literal_path(val: &Val) -> bool {
+    // Ticket 9: Detect if path is a string literal starting with tilde (e.g. "~/" or "~user")
+    // Note: Val::Literal corresponds to string literals in source.
+    if let Val::Literal(s) = val {
+        s.starts_with("~")
+    } else {
+        false
+    }
+}
+
 fn emit_cmd(
     cmd: &Cmd,
     out: &mut String,
@@ -1862,7 +1872,19 @@ fn emit_cmd(
         }
         Cmd::WithCwd { path, body } => {
             out.push_str(&format!("{pad}(\n"));
-            out.push_str(&format!("{pad}  cd {}\n", emit_val(path, target)?));
+            let path_str = emit_val(path, target)?;
+            
+            // Ticket 9: Add runtime hint if path starts with "~" (e.g. "~/" or "~user")
+            let is_tilde_literal = is_tilde_literal_path(path);
+
+            if is_tilde_literal {
+                // Wrap cd in failure check with hint (use exit as this is a subshell)
+                // Use printf for safer output
+                out.push_str(&format!("{pad}  cd {} || {{ __sh2_err=$?; printf '%s\\n' \"hint: '~' is not expanded; use env.HOME & \\\"/path\\\" (or an absolute path).\" >&2; exit $__sh2_err; }}\n", path_str));
+            } else {
+                out.push_str(&format!("{pad}  cd {}\n", path_str));
+            }
+
             for cmd in body {
                 emit_cmd(cmd, out, indent + 2, opts, in_cond_ctx, ctx)?;
             }

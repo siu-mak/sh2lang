@@ -189,6 +189,21 @@ let env = "dev"
  }
  ```
 
+### No Implicit Expansion
+sh2 is stricter than Bash: it performs **no implicit expansion** (no tilde expansion, no globbing, no splitting) in string literals or variables.
+- Use `env.HOME` instead of `~`.
+- Join paths with `&`.
+
+```sh2
+# Correct
+with cwd(env.HOME & "/repos") { ... }
+
+# Incorrect (treated as literal tilde)
+with cwd("~/repos") { ... }
+```
+
+### Variables
+
 ### Logical operators are `&&` / `||`
 
 Use `&&` for logical AND and `||` for logical OR:
@@ -331,3 +346,8 @@ See [`docs/sh2do.md`](docs/sh2do.md) for full documentation.
 - [`docs/language.md`](docs/language.md) — full language reference (syntax + semantics)
 - [`docs/sh2do.md`](docs/sh2do.md) — sh2do CLI documentation
 - `tests/` — fixtures and integration tests (acts as an executable spec)
+
+## Versions
+
+- [v0.1.1](docs/releases/v0.1.1.md) — Improved tilde hint and strict expansion policy.
+```

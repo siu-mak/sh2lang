@@ -7,6 +7,7 @@ use std::fs;
 use std::process::Command;
 use std::time::{SystemTime, UNIX_EPOCH};
 use std::path::{Path, PathBuf};
+use tempfile::TempDir;
 
 fn crate_root() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).to_path_buf()
@@ -163,14 +164,20 @@ pub fn try_compile_to_shell(src: &str, target: TargetShell) -> Result<String, St
 }
 
 pub fn compile_path_to_shell(path: &Path, target: TargetShell) -> String {
+    try_compile_path_to_shell(path, target).unwrap_or_else(|e| panic!("{}", e))
+}
+
+pub fn try_compile_path_to_shell(path: &Path, target: TargetShell) -> Result<String, String> {
     let program = loader::load_program_with_imports(path)
-        .unwrap_or_else(|d| panic!("{}", d.format(path.parent())));
+        .map_err(|d| d.format(path.parent()))?;
+        
     let opts = sh2c::lower::LowerOptions {
         include_diagnostics: true,
         diag_base_dir: Some(std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))),
     };
-    let ir = lower::lower_with_options(program, &opts).expect("Lowering failed");
-    codegen::emit_with_options(&ir, codegen::CodegenOptions { target, include_diagnostics: true }).expect("Codegen failed")
+    
+    let ir = lower::lower_with_options(program, &opts).map_err(|e| e.message)?;
+    codegen::emit_with_options(&ir, codegen::CodegenOptions { target, include_diagnostics: true }).map_err(|e| e.message)
 }
 
 pub fn compile_to_bash(src: &str) -> String {
@@ -1120,4 +1127,30 @@ pub fn strip_spans_run_call(c: &mut sh2c::ast::RunCall) {
          o.span = sh2c::span::Span::new(0, 0);
          strip_spans_expr(&mut o.value);
      }
+}
+
+/// Helper to run a compiled bash script in a temp directory and capture output
+pub fn run_bash_script_in_tempdir(script_content: &str) -> (String, String, i32, TempDir) {
+    let temp_dir = TempDir::new().expect("Failed to create temp dir");
+    let script_path = temp_dir.path().join("test_script.sh");
+    
+    fs::write(&script_path, script_content).expect("Failed to write script");
+    
+    let output = Command::new("bash")
+        .arg(&script_path)
+        .current_dir(temp_dir.path())
+        .output()
+        .expect("Failed to execute script");
+    
+    let stdout = String::from_utf8_lossy(&output.stdout).to_string();
+    let stderr = String::from_utf8_lossy(&output.stderr).to_string();
+    let exit_code = output.status.code().unwrap_or(-1);
+    
+    (stdout, stderr, exit_code, temp_dir)
+}
+
+/// Helper to read file content from temp dir
+pub fn read_file_in_dir(dir: &Path, filename: &str) -> Option<String> {
+    let path = dir.join(filename);
+    fs::read_to_string(path).ok()
 }

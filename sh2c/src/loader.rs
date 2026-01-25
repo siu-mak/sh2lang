@@ -42,7 +42,14 @@ fn load_program_with_imports_impl(loader: &mut Loader, entry_path: &Path) -> Res
         Ok(p) => p,
         Err(e) => {
             return Err(Diagnostic {
-                msg: format!("Failed to resolve path {}: {}", entry_path.display(), e),
+                msg: {
+                    let mut m = format!("Failed to resolve path {}: {}", entry_path.display(), e);
+                    let p_str = entry_path.to_string_lossy();
+                    if p_str.starts_with("~") {
+                        m.push_str("\nhint: '~' is not expanded; use env.HOME & \"/path\" (or an absolute path).");
+                    }
+                    m
+                },
                 span: crate::span::Span::new(0, 0),
                 sm: None,
                 file: Some(entry_path.to_string_lossy().to_string()),
@@ -172,7 +179,14 @@ pub fn load(entry_path: &Path) -> Result<Program, Diagnostic> {
     let span = crate::span::Span { start: 0, end: 0 };
     let entry_file = fs::canonicalize(entry_path)
         .map_err(|e| Diagnostic {
-            msg: format!("Failed to resolve path {}: {}", entry_path.display(), e),
+            msg: {
+                let mut m = format!("Failed to resolve path {}: {}", entry_path.display(), e);
+                let p_str = entry_path.to_string_lossy();
+                if p_str.starts_with("~") {
+                    m.push_str("\nhint: '~' is not expanded; use env.HOME & \"/path\" (or an absolute path).");
+                }
+                m
+            },
             span: crate::span::Span::new(0, 0),
             sm: None,
             file: Some(entry_path.to_string_lossy().to_string()),

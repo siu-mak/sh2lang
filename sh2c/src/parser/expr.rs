@@ -70,8 +70,23 @@ impl<'a> Parser<'a> {
 
     fn parse_concat(&mut self) -> ParsResult<Expr> {
         let mut left = self.parse_sum()?;
-        while self.match_kind(TokenKind::Amp) {
+        while self.peek_kind() == Some(&TokenKind::Amp) {
+            let amp_token = self.advance().unwrap();
+            let amp_span = amp_token.span;
+            
+            // Ticket 10: Enforce whitespace around &
+            // If the previous expression ends exactly where & starts, there is no whitespace.
+            if left.span.end == amp_span.start { 
+                return self.error("The & operator requires whitespace", amp_span);
+            }
+
             let right = self.parse_sum()?;
+            
+            // Check whitespace after &
+            if amp_span.end == right.span.start {
+                 return self.error("The & operator requires whitespace", amp_span);
+            }
+
             let span = left.span.merge(right.span);
             left = Expr {
                 node: ExprKind::Concat(Box::new(left), Box::new(right)),

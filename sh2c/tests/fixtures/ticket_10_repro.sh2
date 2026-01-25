@@ -1,0 +1,6 @@
+func main() {
+    let a = "A"
+    let b = "B"
+    let x = a&b
+    print(x)
+}
