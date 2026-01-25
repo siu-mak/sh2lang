@@ -1,6 +1,7 @@
 use sh2c::ast::ExprKind;
 use sh2c::ast::StmtKind;
 use sh2c::ast::{Expr, RedirectOutputTarget, RedirectInputTarget, Stmt};
+use std::path::Path;
 mod common;
 use common::*;
 
@@ -304,13 +305,19 @@ fn parse_redirect_list_errors() {
         ("with redirect { stdout: [inherit_stdout(), inherit_stdout()] } { print(1) }", "duplicate inherit_stdout()"),
         ("with redirect { stderr: [inherit_stderr(), inherit_stderr()] } { print(1) }", "duplicate inherit_stderr()"),
         
-        // Cross-stream in list
+        // Cross-stream in list (function form)
         ("with redirect { stdout: [to_stderr(), file(\"x\")] } { print(1) }", "cross-stream redirect not allowed in multi-sink list"),
         ("with redirect { stderr: [to_stdout(), file(\"x\")] } { print(1) }", "cross-stream redirect not allowed in multi-sink list"),
+        
+        // Cross-stream in list (legacy keyword form)
+        ("with redirect { stdout: [stdout, file(\"x\")] } { print(1) }", "cross-stream redirect not allowed in multi-sink list"),
+        ("with redirect { stdout: [stderr, file(\"x\")] } { print(1) }", "cross-stream redirect not allowed in multi-sink list"),
+        ("with redirect { stderr: [stdout, file(\"x\")] } { print(1) }", "cross-stream redirect not allowed in multi-sink list"),
+        ("with redirect { stderr: [stderr, file(\"x\")] } { print(1) }", "cross-stream redirect not allowed in multi-sink list"),
     ];
 
     for (src, err_msg) in cases {
-        let full_src = format!("fn main() {{ {} }}", src);
+        let full_src = format!("func main() {{ {} }}", src);
         // Using try_compile_to_shell fails at parser stage for these
         let result = try_compile_to_shell(&full_src, TargetShell::Bash);
         match result {
@@ -322,26 +329,51 @@ fn parse_redirect_list_errors() {
     }
 }
 
-#[test]
-fn codegen_redirect_safety_gate() {
-    let cases = vec![
-        // Multi-sink (len > 1)
-        ("with redirect { stdout: [file(\"a\"), file(\"b\")] } { print(1) }", "multi-sink redirect is not implemented yet; use a single redirect target"),
-        ("with redirect { stderr: [file(\"a\"), file(\"b\")] } { print(1) }", "multi-sink redirect is not implemented yet; use a single redirect target"),
-        
-        // Inherit (len == 1 but implied fan-out logic not implemented)
-        ("with redirect { stdout: [inherit_stdout()] } { print(1) }", "multi-sink redirect is not implemented yet; use a single redirect target"),
-        ("with redirect { stderr: [inherit_stderr()] } { print(1) }", "multi-sink redirect is not implemented yet; use a single redirect target"),
-    ];
 
-    for (src, err_msg) in cases {
-        let full_src = format!("fn main() {{ {} }}", src);
-        let result = try_compile_to_shell(&full_src, TargetShell::Bash);
-        match result {
-            Ok(_) => panic!("Expected failure for '{}', but it succeeded", src),
-            Err(msg) => if !msg.contains(err_msg) {
-                panic!("Expected error '{}' for input '{}', but got: {}", err_msg, src, msg);
-            }
+#[test]
+fn test_mixed_append_compile_error() {
+    let fixture_path = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("tests/fixtures/redirect_multi_mixed_append_error.sh2");
+    
+    let result = try_compile_to_shell_path(&fixture_path, TargetShell::Bash);
+    match result {
+        Ok(_) => panic!("Expected compilation to fail for mixed append modes"),
+        Err(msg) => {
+            assert!(msg.contains("redirect list cannot mix append and overwrite modes"),
+                    "Error should mention mixed append restriction, got: {}", msg);
         }
     }
+}
+
+#[test]
+fn test_posix_multi_sink_unsupported() {
+    let fixture_path = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("tests/fixtures/redirect_multi_posix_unsupported.sh2");
+    
+    let result = try_compile_to_shell_path(&fixture_path, TargetShell::Posix);
+    match result {
+        Ok(_) => panic!("Expected compilation to fail for POSIX multi-sink"),
+        Err(msg) => {
+            assert!(msg.contains("multi-sink redirect is not supported for POSIX target"),
+                    "Error should mention POSIX limitation, got: {}", msg);
+            assert!(msg.contains("switch to --target bash"),
+                    "Error should suggest bash target, got: {}", msg);
+        }
+    }
+}
+
+#[test]
+fn test_posix_single_list_ok() {
+    let fixture_path = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("tests/fixtures/redirect_multi_posix_single_list_ok.sh2");
+    
+    let result = try_compile_to_shell_path(&fixture_path, TargetShell::Posix);
+    assert!(result.is_ok(), 
+            "Single-element list should compile for POSIX, got error: {:?}", result.err());
+}
+
+fn try_compile_to_shell_path(path: &Path, target: TargetShell) -> Result<String, String> {
+    let content = std::fs::read_to_string(path)
+        .map_err(|e| format!("Failed to read {}: {}", path.display(), e))?;
+    try_compile_to_shell(&content, target)
 }

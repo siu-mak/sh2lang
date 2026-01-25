@@ -171,6 +171,24 @@ let env_name = "dev"
 let env = "dev"
 ```
 
+### `with` environment and redirects
+ 
+ ```sh2
+ with env { DEBUG: "1" } {
+   run("build")
+ }
+ 
+ # Simple redirect
+ with redirect { stdout: file("out.log", append=true) } {
+   run("echo", "data")
+ }
+ 
+ # Multi-sink redirect (fan-out to file + terminal)
+ with redirect { stdout: [file("out.log"), inherit_stdout()] } {
+   print("hello")
+ }
+ ```
+
 ### Logical operators are `&&` / `||`
 
 Use `&&` for logical AND and `||` for logical OR:

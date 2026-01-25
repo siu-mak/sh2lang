@@ -1,0 +1,5 @@
+func main() {
+    with redirect { stdout: [file("a.log"), file("b.log", append=true)] } {
+        print("mixed append modes")
+    }
+}

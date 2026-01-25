@@ -1,0 +1,5 @@
+func main() {
+    with redirect { stderr: [file("err.log"), inherit_stderr()] } {
+        run("sh", "-c", "echo 'stderr test line' 1>&2")
+    }
+}

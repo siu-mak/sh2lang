@@ -542,20 +542,42 @@ with cwd("/tmp") {
 
 ### 9.3 `with redirect { ... } { ... }`
 
-Redirection supports common patterns including append and stream merge (see `syntax_io` tests). Typical intent:
+Configure file descriptors for the scoped block. Supports single targets and **multi-sink lists** (fan-out).
+
+**Single Targets**:
 
 ```sh2
-# stdout to file
-with redirect { stdout: "out.log" } { run("echo", "hi") }
+# stdout to file (overwrite)
+with redirect { stdout: file("out.log") } { ... }
 
-# append
-with redirect { stdout: file("out.log", append=true) } { run("echo", "more") }
+# append mode
+with redirect { stdout: file("out.log", append=true) } { ... }
 
-# stderr → stdout
-with redirect { stderr: stdout } { run("sh", "-c", "echo err 1>&2") }
+# stderr to stdout (merge)
+with redirect { stderr: to_stdout() } { ... }
 ```
 
-> Exact redirect target surface forms are target-dependent; use the forms validated in your fixtures (`with_redirect_stdout_append`, `with_redirect_stderr_to_stdout`, etc.).
+**Multi-Sink Lists (Fan-out)**:
+
+You can provide a list of targets to duplicate output (similar to `tee`).
+
+```sh2
+# Write to file AND keep visible on terminal
+with redirect { stdout: [file("out.log"), inherit_stdout()] } { ... }
+
+# Write to multiple files (silent on terminal)
+with redirect { stdout: [file("a.log"), file("b.log")] } { ... }
+```
+
+- `inherit_stdout()` / `inherit_stderr()`: Keeps the output visible on the parent stream. If omitted from a list, the output is not shown on the terminal.
+- **Legacy Keywords**: `stdout` and `stderr` can be used as synonyms for `to_stdout()` / `to_stderr()` in single-target contexts, but function-style `to_stdout()` is preferred.
+
+**Restrictions**:
+
+1. **Mixed Append**: A list cannot mix append modes. `[file("a", append=true), file("b")]` is invalid. All files in a multi-sink list must share the same append setting.
+2. **POSIX Limitation**: Multi-sink redirects (lists with >1 target or usage of `inherit_*` with a file) are **not supported** when compiling with `--target posix`.
+   - Error: *"multi-sink redirect is not supported for POSIX target; use a single redirect target or switch to --target bash"*
+   - Exception: A single-element list like `[file("out.log")]` is allowed on POSIX.
 
 ### 9.4 `with log(path, append=true|false) { ... }` (Bash-only)
 

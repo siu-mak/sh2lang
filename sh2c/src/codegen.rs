@@ -551,6 +551,15 @@ fn is_boolean_val(v: &Val) -> bool {
 #[derive(Default)]
 struct CodegenContext {
     known_lists: HashSet<String>,
+    uid_counter: usize,
+}
+
+impl CodegenContext {
+    fn next_id(&mut self) -> usize {
+        let id = self.uid_counter;
+        self.uid_counter += 1;
+        id
+    }
 }
 
 fn emit_val(v: &Val, target: TargetShell) -> Result<String, CompileError> {
@@ -1937,162 +1946,373 @@ fn emit_cmd(
             stdin,
             body,
         } => {
-            // Enforce: multi-sink redirect not implemented yet
-            // Reject if len > 1 or contains inherit_*
-            if let Some(targets) = stdout {
-                if targets.len() > 1 {
+            // TICKET 6: Multi-Sink Redirect Logic
+            
+            // Analyze stdout targets
+            let mut stdout_files = Vec::new();
+            let mut stdout_inherit = false;
+            let mut stdout_cross = None;
+            if let Some(ts) = stdout.as_ref() {
+                for t in ts {
+                    match t {
+                        RedirectOutputTarget::File { path, append } => stdout_files.push((path, *append)),
+                        RedirectOutputTarget::InheritStdout => stdout_inherit = true,
+                        t @ RedirectOutputTarget::ToStdout | t @ RedirectOutputTarget::ToStderr => stdout_cross = Some(t),
+                        _ => {}, // InheritStderr and other cases are ignored for stdout
+                    }
+                }
+            }
+
+            // Analyze stderr targets
+            let mut stderr_files = Vec::new();
+            let mut stderr_inherit = false;
+            // stderr cross ignored in lists by parser
+            if let Some(ts) = stderr.as_ref() {
+                for t in ts {
+                    match t {
+                         RedirectOutputTarget::File { path, append } => stderr_files.push((path, *append)),
+                         RedirectOutputTarget::InheritStderr => stderr_inherit = true,
+                         _ => {},
+                    }
+                }
+            }
+
+            // Mixed-append validation: reject lists with both append=true and append=false
+            if stdout_files.len() > 1 {
+                let has_append = stdout_files.iter().any(|(_, append)| *append);
+                let has_non_append = stdout_files.iter().any(|(_, append)| !*append);
+                if has_append && has_non_append {
                     return Err(CompileError::unsupported(
-                        "multi-sink redirect is not implemented yet; use a single redirect target",
+                        "redirect list cannot mix append and overwrite modes; all file() targets must use the same append setting",
                         target,
                     ));
                 }
-                // Check for inherit_* even in len==1 case
-                for t in targets {
-                    match t {
-                        RedirectOutputTarget::InheritStdout | RedirectOutputTarget::InheritStderr => {
-                            return Err(CompileError::unsupported(
-                                "multi-sink redirect is not implemented yet; use a single redirect target",
-                                target,
-                            ));
-                        }
-                        _ => {}
-                    }
-                }
             }
-            if let Some(targets) = stderr {
-                if targets.len() > 1 {
+            if stderr_files.len() > 1 {
+                let has_append = stderr_files.iter().any(|(_, append)| *append);
+                let has_non_append = stderr_files.iter().any(|(_, append)| !*append);
+                if has_append && has_non_append {
                     return Err(CompileError::unsupported(
-                        "multi-sink redirect is not implemented yet; use a single redirect target",
+                        "redirect list cannot mix append and overwrite modes; all file() targets must use the same append setting",
                         target,
                     ));
                 }
-                // Check for inherit_* even in len==1 case
-                for t in targets {
-                    match t {
-                        RedirectOutputTarget::InheritStdout | RedirectOutputTarget::InheritStderr => {
-                            return Err(CompileError::unsupported(
-                                "multi-sink redirect is not implemented yet; use a single redirect target",
-                                target,
-                            ));
-                        }
-                        _ => {}
-                    }
+            }
+
+
+            // "Tee needed" if:
+            // 1. More than 1 file target
+            // 2. 1 file target AND inherit (fan-out to file + terminal)
+            // Note: cross-stream checks are handled by parser/simple logic usually,
+            // but parser rejects cross-stream in list. So if we have cross-stream, it's a single target.
+            
+            let tee_stdout = stdout_files.len() > 1 || (stdout_files.len() == 1 && stdout_inherit);
+            let tee_stderr = stderr_files.len() > 1 || (stderr_files.len() == 1 && stderr_inherit);
+
+            // POSIX Check: Reject if tee is needed
+            // Also reject if list > 1 but parser allowed it (e.g. cross-stream which shouldn't happen in list, but checking len is safe)
+            if target == TargetShell::Posix {
+                if tee_stdout || (stdout.as_ref().map_or(false, |v| v.len() > 1)) {
+                     return Err(CompileError::unsupported(
+                        "multi-sink redirect is not supported for POSIX target; use a single redirect target or switch to --target bash",
+                        target,
+                    ));
+                }
+                if tee_stderr || (stderr.as_ref().map_or(false, |v| v.len() > 1)) {
+                     return Err(CompileError::unsupported(
+                        "multi-sink redirect is not supported for POSIX target; use a single redirect target or switch to --target bash",
+                        target,
+                    ));
                 }
             }
 
-            out.push_str(&format!("{pad}{{\n"));
-            for cmd in body {
-                emit_cmd(cmd, out, indent + 2, opts, in_cond_ctx, ctx)?;
-            }
-            out.push_str(&format!("{pad}}}")); // No newline yet, redirections follow
+            if tee_stdout || tee_stderr {
+                // Bash Multi-Sink Implementation
+                // We wrap the body in an outer block that sets up FDs/tees
+                if target != TargetShell::Bash {
+                     return Err(CompileError::unsupported("multi-sink redirect requires bash", target));
+                }
 
-            // Handle stdin redirection
-            let mut heredoc_content = None;
+                // Generate unique ID for this redirect block
+                let uid = ctx.next_id();
 
-            if let Some(target_redir) = stdin {
-                match target_redir {
-                    RedirectInputTarget::File { path } => {
-                        out.push_str(&format!(" < {}", emit_val(path, target)?));
+                out.push_str(&format!("{pad}{{\n")); // Wrapper block start
+
+                // 1. Setup FIFO + Tee Processes
+                let mut stdout_fifo_opt = None;
+                let mut stdout_pid_opt = None;
+                
+                if tee_stdout {
+                    let fifo_var = format!("__sh2_fifo_out_{}", uid);
+                    let pid_var = format!("__sh2_pid_out_{}", uid);
+                    stdout_fifo_opt = Some(fifo_var.clone());
+                    stdout_pid_opt = Some(pid_var.clone());
+
+                    // Create FIFO
+                    out.push_str(&format!("{pad}  {}=\"/tmp/.${{USER:-user}}.sh2.fifo.out.{}.$$\"\n", fifo_var, uid));
+                    out.push_str(&format!("{pad}  mkfifo \"${}\" || {{ __sh2_status=1; return 1; }}\n", fifo_var));
+                    
+                    // Setup cleanup trap
+                    out.push_str(&format!("{pad}  trap 'rm -f \"${}\"' RETURN\n", fifo_var));
+                    
+                    // Start tee in background reading from FIFO
+                    out.push_str(&format!("{pad}  ( tee"));
+                    for (path, append) in &stdout_files {
+                        let op = if *append { "-a" } else { "" };
+                        out.push_str(&format!(" {} {}", op, emit_val(path, target)?));
                     }
-                    RedirectInputTarget::HereDoc { content } => {
-                        heredoc_content = Some(content);
+                    if stdout_inherit {
+                         // Inherit means keep printing to current stdout (default)
+                    } else {
+                         // No inherit: suppress tee's stdout
+                         out.push_str(" >/dev/null");
+                    }
+                    out.push_str(&format!(" < \"${}\" ) &\n", fifo_var));
+                    out.push_str(&format!("{pad}  {}=$!\n", pid_var));
+                }
+
+                let mut stderr_fifo_opt = None;
+                let mut stderr_pid_opt = None;
+                
+                if tee_stderr {
+                    let fifo_var = format!("__sh2_fifo_err_{}", uid);
+                    let pid_var = format!("__sh2_pid_err_{}", uid);
+                    stderr_fifo_opt = Some(fifo_var.clone());
+                    stderr_pid_opt = Some(pid_var.clone());
+
+                    // Create FIFO
+                    out.push_str(&format!("{pad}  {}=\"/tmp/.${{USER:-user}}.sh2.fifo.err.{}.$$\"\n", fifo_var, uid));
+                    out.push_str(&format!("{pad}  mkfifo \"${}\" || {{ __sh2_status=1; return 1; }}\n", fifo_var));
+                    
+                    // Setup cleanup trap
+                    out.push_str(&format!("{pad}  trap 'rm -f \"${}\"' RETURN\n", fifo_var));
+                     
+                    // Start tee in background reading from FIFO
+                    out.push_str(&format!("{pad}  ( tee"));
+                    for (path, append) in &stderr_files {
+                         let op = if *append { "-a" } else { "" };
+                         out.push_str(&format!(" {} {}", op, emit_val(path, target)?));
+                    }
+                    if stderr_inherit {
+                         out.push_str(" >&2"); // Write to current stderr
+                    } else {
+                         out.push_str(" >/dev/null");
+                    }
+                    out.push_str(&format!(" < \"${}\" ) &\n", fifo_var));
+                    out.push_str(&format!("{pad}  {}=$!\n", pid_var));
+                }
+
+                // 2. Emit Inner Body
+                out.push_str(&format!("{pad}  {{\n"));
+                for cmd in body {
+                    emit_cmd(cmd, out, indent + 4, opts, in_cond_ctx, ctx)?;
+                }
+            out.push_str(&format!("{pad}  }}")); // Close inner body
+
+                // 3. Apply Redirects to Inner Body
+                
+                // Stdout application
+                if let Some(ref fifo) = stdout_fifo_opt {
+                    out.push_str(&format!(" >\"${}\"", fifo));
+                } else if let Some(first) = stdout_files.first() {
+                    let (path, append) = first;
+                    let op = if *append { ">>" } else { ">" };
+                    out.push_str(&format!(" {} {}", op, emit_val(path, target)?));
+                } else if let Some(cross) = stdout_cross {
+                     match cross {
+                         RedirectOutputTarget::ToStderr => out.push_str(" 1>&2"),
+                         _ => {}
+                     }
+                }
+
+                // Stderr application
+                if let Some(ref fifo) = stderr_fifo_opt {
+                    out.push_str(&format!(" 2>\"${}\"", fifo));
+                } else {
+                    if let Some((path, append)) = stderr_files.first() {
+                        let op = if *append { ">>" } else { ">" };
+                        out.push_str(&format!(" 2{} {}", op, emit_val(path, target)?));
+                    } else if let Some(types) = stderr.as_ref().and_then(|v| v.first()) {
+                         if matches!(types, RedirectOutputTarget::ToStdout) {
+                             out.push_str(" 2>&1");
+                         }
                     }
                 }
-            }
 
-            // For Phase 1: handle only single-target redirects (first element of vec)
-            // Multi-sink fan-out will be implemented in Phase 3/4
-            let stdout_single = stdout.as_ref().and_then(|v| v.first());
-            let stderr_single = stderr.as_ref().and_then(|v| v.first());
-
-            // Determine emission order: standard (stdout then stderr) or swapped
-            let mut emit_stdout_first = true;
-            if let Some(stdout_target) = stdout_single {
-                if let Some(stderr_target) = stderr_single {
-                    if matches!(stdout_target, RedirectOutputTarget::ToStderr)
-                        && matches!(stderr_target, RedirectOutputTarget::File { .. })
-                    {
-                        emit_stdout_first = false;
-                    }
-                    if matches!(stdout_target, RedirectOutputTarget::ToStderr)
-                        && matches!(stderr_target, RedirectOutputTarget::ToStdout)
-                    {
-                        return Err(CompileError::unsupported(
-                            "Cyclic redirection: stdout to stderr AND stderr to stdout is not supported"
-                        , target));
-                    }
-                }
-            }
-
-            let emit_stdout = |out: &mut String| -> Result<(), CompileError> {
-                if let Some(target_redir) = stdout_single {
+                // Stdin application + Heredoc content preparation
+                let mut heredoc_to_emit = None;
+                if let Some(target_redir) = stdin {
                     match target_redir {
-                        RedirectOutputTarget::File { path, append } => {
-                            let op = if *append { ">>" } else { ">" };
-                            out.push_str(&format!(" {} {}", op, emit_val(path, target)?));
+                        RedirectInputTarget::File { path } => {
+                            out.push_str(&format!(" < {}", emit_val(path, target)?));
                         }
-                        RedirectOutputTarget::ToStderr => {
-                            out.push_str(" 1>&2");
-                        }
-                        RedirectOutputTarget::ToStdout => {
-                            // no-op
-                        }
-                        RedirectOutputTarget::InheritStdout | RedirectOutputTarget::InheritStderr => {
-                            // For now, treat as no-op (multi-sink implementation in Phase 3/4)
-                        }
-                    }
-                }
-                Ok(())
-            };
-
-            let emit_stderr = |out: &mut String| -> Result<(), CompileError> {
-                if let Some(target_redir) = stderr_single {
-                    match target_redir {
-                        RedirectOutputTarget::File { path, append } => {
-                            let op = if *append { ">>" } else { ">" };
-                            out.push_str(&format!(" 2{} {}", op, emit_val(path, target)?));
-                        }
-                        RedirectOutputTarget::ToStdout => {
-                            out.push_str(" 2>&1");
-                        }
-                        RedirectOutputTarget::ToStderr => {
-                            // no-op
-                        }
-                        RedirectOutputTarget::InheritStdout | RedirectOutputTarget::InheritStderr => {
-                            // For now, treat as no-op (multi-sink implementation in Phase 3/4)
+                        RedirectInputTarget::HereDoc { content } => {
+                           // Use unique delimiter with collision avoidance
+                            let mut delim = format!("__SH2_EOF_{}__", uid);
+                            let mut counter = 1;
+                            while content.contains(&delim) {
+                                delim = format!("__SH2_EOF_{}_{}__", uid, counter);
+                                counter += 1;
+                            }
+                            out.push_str(&format!(" <<'{}'", delim));
+                            heredoc_to_emit = Some((content, delim));
                         }
                     }
                 }
-                Ok(())
-            };
+                
+                // End redirect line
+                out.push_str("\n");
 
-            if emit_stdout_first {
-                emit_stdout(out)?;
-                emit_stderr(out)?;
+                // Emit Heredoc content inside the wrapper
+                if let Some((content, delim)) = heredoc_to_emit {
+                    out.push_str(content);
+                    if !content.ends_with('\n') { out.push('\n'); }
+                    out.push_str(&format!("{}\n", delim));
+                }
+                
+                // 4. Capture Status & Cleanup (Wait for tee completion)
+                let cmd_status_var = format!("__sh2_cs_{}", uid);
+                out.push_str(&format!("{pad}  {}=$?\\n", cmd_status_var));
+                
+                // Wait for tee processes to complete and capture their statuses
+                let mut has_stdout_tee = false;
+                let mut has_stderr_tee = false;
+                
+                if let Some(_fifo) = &stdout_fifo_opt {
+                     out.push_str(&format!("{pad}  wait \"${}\"\\n", stdout_pid_opt.as_ref().unwrap())); 
+                     let tee_status_var = format!("__sh2_ts_out_{}", uid);
+                     out.push_str(&format!("{pad}  {}=$?\\n", tee_status_var));
+                     has_stdout_tee = true;
+                }
+                if let Some(_fifo) = &stderr_fifo_opt {
+                     out.push_str(&format!("{pad}  wait \"${}\"\\n", stderr_pid_opt.as_ref().unwrap()));
+                     let tee_status_var = format!("__sh2_ts_err_{}", uid);
+                     out.push_str(&format!("{pad}  {}=$?\\n", tee_status_var));
+                     has_stderr_tee = true;
+                }
+
+                // Compute final status with deterministic precedence: cmd < stdout_tee < stderr_tee
+                let final_status_var = format!("__sh2_final_{}", uid);
+                out.push_str(&format!("{pad}  {}=${}\n", final_status_var, cmd_status_var));
+                if has_stdout_tee {
+                    let tee_status_var = format!("__sh2_ts_out_{}", uid);
+                    out.push_str(&format!("{pad}  if [ ${} -ne 0 ]; then {}=${}; fi\n", tee_status_var, final_status_var, tee_status_var));
+                }
+                if has_stderr_tee {
+                    let tee_status_var = format!("__sh2_ts_err_{}", uid);
+                    out.push_str(&format!("{pad}  if [ ${} -ne 0 ]; then {}=${}; fi\n", tee_status_var, final_status_var, tee_status_var));
+                }
+
+                // Propagate to global status variable
+                out.push_str(&format!("{pad}  __sh2_status=${}\n", final_status_var));
+                out.push_str(&format!("{pad}}}"));// Close wrapper block
+                out.push('\n');
+
             } else {
-                emit_stderr(out)?;
-                emit_stdout(out)?;
-            }
+                 // Simple / Single Target Case (POSIX compatible usually, or Bash single)
+                 // Existing logic preserved for compatibility and simplicity where tee is not needed.
 
-            // Emit heredoc operator and content if present
-            if let Some(content) = heredoc_content {
-                // Find safe delimiter
-                let mut delim = "__SH2_EOF__".to_string();
-                let mut counter = 1;
-                while content.contains(&delim) {
-                    delim = format!("__SH2_EOF__{}__", counter);
-                    counter += 1;
+                out.push_str(&format!("{pad}{{\n"));
+                for cmd in body {
+                    emit_cmd(cmd, out, indent + 2, opts, in_cond_ctx, ctx)?;
+                }
+                out.push_str(&format!("{pad}}}")); 
+
+                // Handle stdin redirection
+                let mut heredoc_content = None;
+
+                if let Some(target_redir) = stdin {
+                    match target_redir {
+                        RedirectInputTarget::File { path } => {
+                            out.push_str(&format!(" < {}", emit_val(path, target)?));
+                        }
+                        RedirectInputTarget::HereDoc { content } => {
+                            heredoc_content = Some(content);
+                            // Standard heredoc marker
+                            // Use safe delimiter check
+                            let mut delim = "__SH2_EOF__".to_string();
+                            let mut counter = 1;
+                            while content.contains(&delim) {
+                                delim = format!("__SH2_EOF__{}__", counter);
+                                counter += 1;
+                            }
+                            out.push_str(&format!(" <<'{}'", delim));
+                        }
+                    }
                 }
 
-                out.push_str(&format!(" <<'{}'\n", delim));
-                out.push_str(content);
-                if !content.ends_with('\n') {
+                // Single target handling
+                let stdout_single = stdout.as_ref().and_then(|v| v.first());
+                let stderr_single = stderr.as_ref().and_then(|v| v.first());
+
+                // Emission order logic (same as legacy)
+                let mut emit_stdout_first = true;
+                if let Some(stdout_target) = stdout_single {
+                   if let Some(stderr_target) = stderr_single {
+                       if matches!(stdout_target, RedirectOutputTarget::ToStderr)
+                           && matches!(stderr_target, RedirectOutputTarget::File { .. }) {
+                           emit_stdout_first = false;
+                       }
+                        if matches!(stdout_target, RedirectOutputTarget::ToStderr)
+                           && matches!(stderr_target, RedirectOutputTarget::ToStdout) {
+                            return Err(CompileError::unsupported(
+                                "Cyclic redirection: stdout to stderr AND stderr to stdout is not supported"
+                            , target));
+                       }
+                   }
+                }
+                
+                let emit_stdout = |out: &mut String, target_redir: &RedirectOutputTarget| -> Result<(), CompileError> {
+                        match target_redir {
+                            RedirectOutputTarget::File { path, append } => {
+                                let op = if *append { ">>" } else { ">" };
+                                out.push_str(&format!(" {} {}", op, emit_val(path, target)?));
+                            }
+                            RedirectOutputTarget::ToStderr => out.push_str(" 1>&2"),
+                            RedirectOutputTarget::ToStdout => {}, 
+                            RedirectOutputTarget::InheritStdout | RedirectOutputTarget::InheritStderr => {}
+                        }
+                        Ok(())
+                };
+                let emit_stderr = |out: &mut String, target_redir: &RedirectOutputTarget| -> Result<(), CompileError> {
+                        match target_redir {
+                            RedirectOutputTarget::File { path, append } => {
+                                let op = if *append { ">>" } else { ">" };
+                                out.push_str(&format!(" 2{} {}", op, emit_val(path, target)?));
+                            }
+                            RedirectOutputTarget::ToStdout => out.push_str(" 2>&1"),
+                            RedirectOutputTarget::ToStderr => {},
+                            RedirectOutputTarget::InheritStdout | RedirectOutputTarget::InheritStderr => {} 
+                        }
+                        Ok(())
+                };
+
+                if emit_stdout_first {
+                    if let Some(t) = stdout_single { emit_stdout(out, t)?; }
+                    if let Some(t) = stderr_single { emit_stderr(out, t)?; }
+                } else {
+                    if let Some(t) = stderr_single { emit_stderr(out, t)?; }
+                    if let Some(t) = stdout_single { emit_stdout(out, t)?; }
+                }
+
+                // Heredoc body
+                if let Some(content) = heredoc_content {
+                    let mut delim = "__SH2_EOF__".to_string();
+                    let mut counter = 1;
+                    while content.contains(&delim) {
+                        delim = format!("__SH2_EOF__{}__", counter);
+                        counter += 1;
+                    }
                     out.push('\n');
+                    out.push_str(content);
+                    if !content.ends_with('\n') { out.push('\n'); }
+                    out.push_str(&delim);
                 }
-                out.push_str(&delim);
+                out.push('\n');
             }
 
-            out.push('\n');
+
+
         }
         Cmd::Spawn(cmd) => {
             // Wrap the entire spawned command in a subshell so & applies to the whole unit.

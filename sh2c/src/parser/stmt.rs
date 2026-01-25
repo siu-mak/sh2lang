@@ -987,6 +987,10 @@ impl<'a> Parser<'a> {
                 }
                 _ => self.error("Expected redirect output target (file, to_stdout, to_stderr, inherit_stdout, inherit_stderr)", self.current_span())?
             }
+        } else if self.match_kind(TokenKind::Stdout) {
+            Ok(RedirectOutputTarget::ToStdout)
+        } else if self.match_kind(TokenKind::Stderr) {
+            Ok(RedirectOutputTarget::ToStderr)
         } else {
             self.error("Expected redirect output target (file, to_stdout, to_stderr, inherit_stdout, inherit_stderr)", self.current_span())?
         }

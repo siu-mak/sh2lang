@@ -1,0 +1,8 @@
+func main() {
+    with redirect { 
+        stdout: [file("heredoc_out.log"), inherit_stdout()], 
+        stdin: heredoc("Line 1\nLine 2\nLine 3")
+    } {
+        run("cat")
+    }
+}

@@ -1,0 +1,5 @@
+func main() {
+    with redirect { stdout: [file("single.log")] } {
+        print("single-element list OK on POSIX")
+    }
+}

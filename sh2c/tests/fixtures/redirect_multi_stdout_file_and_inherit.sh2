@@ -1,0 +1,5 @@
+func main() {
+    with redirect { stdout: [file("out.log"), inherit_stdout()] } {
+        print("fan-out test line")
+    }
+}

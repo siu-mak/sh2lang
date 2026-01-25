@@ -1,0 +1,8 @@
+// Test: command fails with exit 7, should propagate to final exit code
+// Expected: exit code 7
+
+func main() {
+    with redirect { stdout: [file("cmd_fail.log"), inherit_stdout()] } {
+        run("sh", "-c", "exit 7")
+    }
+}

@@ -1,0 +1,9 @@
+func main() {
+    with redirect { stdout: [file("outer.log"), inherit_stdout()] } {
+        print("outer line")
+        with redirect { stdout: [file("inner.log")] } {
+            print("inner line")
+        }
+        print("outer again")
+    }
+}

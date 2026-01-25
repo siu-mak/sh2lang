@@ -1,0 +1,5 @@
+func main() {
+    with redirect { stdout: [file("out_a.log"), file("out_b.log")] } {
+        print("two-file test line")
+    }
+}

@@ -1,0 +1,5 @@
+func main() {
+    with redirect { stdout: [inherit_stdout()] } {
+        print("inherit-only line")
+    }
+}

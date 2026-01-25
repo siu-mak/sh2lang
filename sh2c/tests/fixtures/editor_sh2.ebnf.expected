@@ -98,7 +98,9 @@ output_target = "file" , "(" , expression , [ "," , "append" , "=" , bool_litera
               | "to_stdout" , "(" , ")"
               | "to_stderr" , "(" , ")"
               | "inherit_stdout" , "(" , ")"
-              | "inherit_stderr" , "(" , ")" ;
+              | "inherit_stderr" , "(" , ")"
+              | "stdout" (* legacy: same as to_stdout() *)
+              | "stderr" (* legacy: same as to_stderr() *) ;
 
 input_target = "file" , "(" , expression , ")"
              | "heredoc" , "(" , string_literal , ")" ;
