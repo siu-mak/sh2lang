@@ -10,7 +10,7 @@ This document maps implemented features to their proving test files, ensuring do
 |---------|-------------|--------------|
 | Program structure | imports + func only | `syntax_toplevel.rs`, `syntax_import.rs` |
 | Named parameters | `func foo(a, b)` | `syntax_functions.rs`, `syntax_proc_params.rs` |
-| Statement separation | newlines only | `syntax_toplevel.rs` |
+| Statement separation | semicolons or newlines | `syntax_toplevel.rs`, `syntax_semicolon.rs` |
 | Comments | `# ...` | `syntax_toplevel.rs` |
 | Heredocs | `<<EOF ... EOF` | `syntax_heredoc.rs` |
 

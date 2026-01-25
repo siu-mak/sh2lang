@@ -98,4 +98,13 @@ impl<'a> Parser<'a> {
         }
         false
     }
+
+    /// Consumes explicit separators (semicolons). 
+    /// Newlines are treated as whitespace by the lexer, so statements separated by newlines 
+    /// are parsed sequentially without explicit separator tokens.
+    pub fn consume_separators(&mut self) {
+        while self.match_kind(TokenKind::Semi) {
+            // Consume
+        }
+    }
 }

@@ -451,6 +451,10 @@ pub fn lex(sm: &SourceMap, file: &str) -> Result<Vec<Token>, Diagnostic> {
                     span: Span::new(start, lexer.pos),
                 });
             }
+            ';' => {
+                lexer.next();
+                tokens.push(Token { kind: TokenKind::Semi, span: Span::new(start, lexer.pos) });
+            }
             _ => { 
                 return lexer.error(&format!("Unexpected character: {}", c), start);
             }
@@ -563,6 +567,7 @@ pub enum TokenKind {
     Import,
     Input,
     Confirm,
+    Semi,
 }
 
 #[derive(Debug, Clone, PartialEq)]

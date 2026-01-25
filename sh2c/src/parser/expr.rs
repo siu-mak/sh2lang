@@ -365,6 +365,9 @@ impl<'a> Parser<'a> {
             }
             TokenKind::LParen => {
                 let e = self.parse_expr()?;
+                if self.peek_kind() == Some(&TokenKind::Semi) {
+                    return self.error("Unexpected statement separator ';' inside expression. Use ';' only between statements.", self.current_span());
+                }
                 self.expect(TokenKind::RParen)?;
                 // Parenthesized expression span shouldn't be extended? Or should it?
                 // Using 'e.span' discards parens. Usually we want inner span or outer?
@@ -510,6 +513,9 @@ impl<'a> Parser<'a> {
                                 break;
                             }
                         }
+                        if self.peek_kind() == Some(&TokenKind::Semi) {
+                             return self.error("Unexpected statement separator ';' inside expression. Use ';' only between statements.", self.current_span());
+                        }
                         self.expect(TokenKind::RParen)?;
                     }
                     let full_span = span.merge(self.previous_span());
@@ -573,6 +579,9 @@ impl<'a> Parser<'a> {
                         if !self.match_kind(TokenKind::Comma) {
                             break;
                         }
+                    }
+                    if self.peek_kind() == Some(&TokenKind::Semi) {
+                         return self.error("Unexpected statement separator ';' inside expression. Use ';' only between statements.", self.current_span());
                     }
                     self.expect(TokenKind::RBracket)?;
                 }
@@ -823,6 +832,9 @@ impl<'a> Parser<'a> {
                 node: ExprKind::Number(*n),
                 span,
             }),
+            TokenKind::Semi => {
+                 return self.error("Unexpected statement separator ';' inside expression. Use ';' only between statements.", span);
+             }
             _ => {
                 self.error(&format!("Expected expression, got {:?}", t.kind), span)
             }

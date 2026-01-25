@@ -51,23 +51,24 @@ func main() {
 ## 2. Core Syntax Rules
 
 ### 2.1 Statement separation
-
-Inside `{ ... }` blocks, statements are separated by **newlines**. Semicolons (`;`) are not valid statement separators.
-
-✅ Correct:
-```sh2
-func ok() {
-  let a = "x"
-  let b = "y"
-}
-```
-
-❌ Incorrect:
-```sh2
-func bad() {
-  let a = "x"; let b = "y"
-}
-```
+ 
+ Statements are separated by **newlines** or **semicolons** (`;`). Semicolons act as optional statement terminators.
+ 
+ ✅ Correct:
+ ```sh2
+ func ok() {
+   let a = "x"
+   let b = "y"
+   print("one"); print("two")
+   print("three");
+ }
+ ```
+ 
+ Semicolons are not allowed inside expressions:
+ ❌ Incorrect:
+ ```sh2
+ let x = (1; 2)
+ ```
 
 ### 2.2 Reserved identifiers
 

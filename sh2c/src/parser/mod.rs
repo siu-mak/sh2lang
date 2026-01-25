@@ -17,6 +17,11 @@ pub fn parse(tokens: &[Token], sm: &SourceMap, file: &str) -> ParsResult<Program
     let start_span = parser.current_span();
 
     while parser.peek().is_some() {
+        parser.consume_separators();
+        if parser.peek().is_none() {
+            break;
+        }
+
         if parser.match_kind(TokenKind::Import) {
             if let Some(TokenKind::String(path)) = parser.peek_kind() {
                 imports.push(path.clone());
@@ -53,17 +58,7 @@ pub fn parse(tokens: &[Token], sm: &SourceMap, file: &str) -> ParsResult<Program
                 parser.expect(TokenKind::RParen)?;
             }
 
-            parser.expect(TokenKind::LBrace)?;
-            let mut body = Vec::new();
-            while !parser.match_kind(TokenKind::RBrace) {
-                if parser.match_kind(TokenKind::Import) {
-                    parser.error(
-                        "import is only allowed at top-level",
-                        parser.previous_span(),
-                    )?;
-                }
-                body.push(parser.parse_stmt()?);
-            }
+            let body = parser.parse_brace_stmt_block()?;
             // RBrace consumed
             let end = parser.previous_span();
             let span = start.merge(end);

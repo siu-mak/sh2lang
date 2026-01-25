@@ -161,6 +161,10 @@
                     "match": ":"
                 },
                 {
+                    "name": "punctuation.separator.semicolon.sh2",
+                    "match": ";"
+                },
+                {
                     "name": "punctuation.separator.comma.sh2",
                     "match": ","
                 },

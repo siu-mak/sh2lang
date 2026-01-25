@@ -36,6 +36,20 @@ impl<'a> Parser<'a> {
         Ok(left)
     }
 
+    pub fn parse_brace_stmt_block(&mut self) -> ParsResult<Vec<Stmt>> {
+        self.expect(TokenKind::LBrace)?;
+        let mut body = Vec::new();
+        loop {
+            self.consume_separators();
+            if self.peek_kind() == Some(&TokenKind::RBrace) {
+                break;
+            }
+            body.push(self.parse_stmt()?);
+        }
+        self.expect(TokenKind::RBrace)?;
+        Ok(body)
+    }
+
     fn parse_stmt_atom(&mut self) -> ParsResult<Stmt> {
         let start_span = self.current_span();
         let kind = self.peek_kind().cloned();
@@ -114,21 +128,13 @@ impl<'a> Parser<'a> {
             TokenKind::If => {
                 self.advance();
                 let cond = self.parse_expr()?;
-                self.expect(TokenKind::LBrace)?;
-                let mut then_body = Vec::new();
-                while !self.match_kind(TokenKind::RBrace) {
-                    then_body.push(self.parse_stmt()?);
-                }
+                let then_body = self.parse_brace_stmt_block()?;
 
                 let mut elifs = Vec::new();
                 loop {
                     if self.match_kind(TokenKind::Elif) {
                         let cond = self.parse_expr()?;
-                        self.expect(TokenKind::LBrace)?;
-                        let mut body = Vec::new();
-                        while !self.match_kind(TokenKind::RBrace) {
-                            body.push(self.parse_stmt()?);
-                        }
+                        let body = self.parse_brace_stmt_block()?;
                         elifs.push(Elif { cond, body });
                     } else if self.peek_kind() == Some(&TokenKind::Else) {
                         // Check if `else if` (legacy/compat?)
@@ -137,11 +143,7 @@ impl<'a> Parser<'a> {
                             self.advance(); // else
                             self.advance(); // if
                             let cond = self.parse_expr()?;
-                            self.expect(TokenKind::LBrace)?;
-                            let mut body = Vec::new();
-                            while !self.match_kind(TokenKind::RBrace) {
-                                body.push(self.parse_stmt()?);
-                            }
+                            let body = self.parse_brace_stmt_block()?;
                             elifs.push(Elif { cond, body });
                         } else {
                             break;
@@ -152,12 +154,7 @@ impl<'a> Parser<'a> {
                 }
 
                 let else_body = if self.match_kind(TokenKind::Else) {
-                    self.expect(TokenKind::LBrace)?;
-                    let mut body = Vec::new();
-                    while !self.match_kind(TokenKind::RBrace) {
-                        body.push(self.parse_stmt()?);
-                    }
-                    Some(body)
+                    Some(self.parse_brace_stmt_block()?)
                 } else {
                     None
                 };
@@ -175,6 +172,10 @@ impl<'a> Parser<'a> {
                 self.expect(TokenKind::LBrace)?;
                 let mut arms = Vec::new();
                 while !self.match_kind(TokenKind::RBrace) {
+                    self.consume_separators();
+                    if self.match_kind(TokenKind::RBrace) {
+                        break;
+                    }
                     let mut patterns = Vec::new();
                     loop {
                         if let Some(TokenKind::String(s)) = self.peek_kind() {
@@ -212,11 +213,7 @@ impl<'a> Parser<'a> {
                         }
                     }
                     self.expect(TokenKind::Arrow)?;
-                    self.expect(TokenKind::LBrace)?;
-                    let mut body = Vec::new();
-                    while !self.match_kind(TokenKind::RBrace) {
-                        body.push(self.parse_stmt()?);
-                    }
+                    let body = self.parse_brace_stmt_block()?;
                     arms.push(CaseArm { patterns, body });
                 }
                 StmtKind::Case { expr, arms }
@@ -224,11 +221,7 @@ impl<'a> Parser<'a> {
             TokenKind::While => {
                 self.advance();
                 let cond = self.parse_expr()?;
-                self.expect(TokenKind::LBrace)?;
-                let mut body = Vec::new();
-                while !self.match_kind(TokenKind::RBrace) {
-                    body.push(self.parse_stmt()?);
-                }
+                let body = self.parse_brace_stmt_block()?;
                 StmtKind::While { cond, body }
             }
             TokenKind::For => {
@@ -257,11 +250,7 @@ impl<'a> Parser<'a> {
                     };
                     self.advance();
 
-                    self.expect(TokenKind::LBrace)?;
-                    let mut body = Vec::new();
-                    while !self.match_kind(TokenKind::RBrace) {
-                        body.push(self.parse_stmt()?);
-                    }
+                    let body = self.parse_brace_stmt_block()?;
                     StmtKind::ForMap {
                         key_var,
                         val_var,
@@ -293,11 +282,7 @@ impl<'a> Parser<'a> {
                         vec![self.parse_expr()?]
                     };
 
-                    self.expect(TokenKind::LBrace)?;
-                    let mut body = Vec::new();
-                    while !self.match_kind(TokenKind::RBrace) {
-                        body.push(self.parse_stmt()?);
-                    }
+                    let body = self.parse_brace_stmt_block()?;
                     StmtKind::For { var, items, body }
                 }
             }
@@ -348,19 +333,11 @@ impl<'a> Parser<'a> {
                         bindings.push((name, val));
                         self.match_kind(TokenKind::Comma);
                     }
-                    self.expect(TokenKind::LBrace)?;
-                    let mut body = Vec::new();
-                    while !self.match_kind(TokenKind::RBrace) {
-                        body.push(self.parse_stmt()?);
-                    }
+                    let body = self.parse_brace_stmt_block()?;
                     StmtKind::WithEnv { bindings, body }
                 } else if self.match_kind(TokenKind::Cwd) {
                     let path = self.parse_expr()?;
-                    self.expect(TokenKind::LBrace)?;
-                    let mut body = Vec::new();
-                    while !self.match_kind(TokenKind::RBrace) {
-                        body.push(self.parse_stmt()?);
-                    }
+                    let body = self.parse_brace_stmt_block()?;
                     StmtKind::WithCwd { path, body }
                 } else if self.match_kind(TokenKind::Redirect) {
                     self.expect(TokenKind::LBrace)?;
@@ -389,11 +366,7 @@ impl<'a> Parser<'a> {
                         }
                         self.match_kind(TokenKind::Comma);
                     }
-                    self.expect(TokenKind::LBrace)?;
-                    let mut body = Vec::new();
-                    while !self.match_kind(TokenKind::RBrace) {
-                        body.push(self.parse_stmt()?);
-                    }
+                    let body = self.parse_brace_stmt_block()?;
                     StmtKind::WithRedirect {
                         stdout,
                         stderr,
@@ -419,11 +392,7 @@ impl<'a> Parser<'a> {
                         }
                     }
                     self.expect(TokenKind::RParen)?;
-                    self.expect(TokenKind::LBrace)?;
-                    let mut body = Vec::new();
-                    while !self.match_kind(TokenKind::RBrace) {
-                        body.push(self.parse_stmt()?);
-                    }
+                    let body = self.parse_brace_stmt_block()?;
                     StmtKind::WithLog { path, append, body }
                 } else {
                     self.error(
@@ -434,11 +403,8 @@ impl<'a> Parser<'a> {
             }
             TokenKind::Spawn => {
                 self.advance();
-                if self.match_kind(TokenKind::LBrace) {
-                    let mut body = Vec::new();
-                    while !self.match_kind(TokenKind::RBrace) {
-                        body.push(self.parse_stmt()?);
-                    }
+                if self.peek_kind() == Some(&TokenKind::LBrace) {
+                    let body = self.parse_brace_stmt_block()?;
                     StmtKind::Spawn {
                         stmt: Box::new(Stmt {
                             node: StmtKind::Group { body },
@@ -465,17 +431,9 @@ impl<'a> Parser<'a> {
             }
             TokenKind::Try => {
                 self.advance();
-                self.expect(TokenKind::LBrace)?;
-                let mut try_body = Vec::new();
-                while !self.match_kind(TokenKind::RBrace) {
-                    try_body.push(self.parse_stmt()?);
-                }
+                let try_body = self.parse_brace_stmt_block()?;
                 self.expect(TokenKind::Catch)?;
-                self.expect(TokenKind::LBrace)?;
-                let mut catch_body = Vec::new();
-                while !self.match_kind(TokenKind::RBrace) {
-                    catch_body.push(self.parse_stmt()?);
-                }
+                let catch_body = self.parse_brace_stmt_block()?;
                 StmtKind::TryCatch {
                     try_body,
                     catch_body,
@@ -526,20 +484,12 @@ impl<'a> Parser<'a> {
             }
             TokenKind::Subshell => {
                 self.advance();
-                self.expect(TokenKind::LBrace)?;
-                let mut body = Vec::new();
-                while !self.match_kind(TokenKind::RBrace) {
-                    body.push(self.parse_stmt()?);
-                }
+                let body = self.parse_brace_stmt_block()?;
                 StmtKind::Subshell { body }
             }
             TokenKind::Group => {
                 self.advance();
-                self.expect(TokenKind::LBrace)?;
-                let mut body = Vec::new();
-                while !self.match_kind(TokenKind::RBrace) {
-                    body.push(self.parse_stmt()?);
-                }
+                let body = self.parse_brace_stmt_block()?;
                 StmtKind::Group { body }
             }
             TokenKind::Sh => {
@@ -781,6 +731,9 @@ impl<'a> Parser<'a> {
                     StmtKind::Call { name, args }
                 }
             }
+            TokenKind::Import => {
+                self.error("import is only allowed at top-level", start_span)?
+            }
             _ => self.error(&format!("Expected statement, got {:?}", kind), start_span)?,
         };
 
@@ -831,12 +784,8 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_pipe_segment(&mut self) -> ParsResult<Vec<Stmt>> {
-        if self.match_kind(TokenKind::LBrace) {
-            let mut body = Vec::new();
-            while !self.match_kind(TokenKind::RBrace) {
-                body.push(self.parse_stmt()?);
-            }
-            Ok(body)
+        if self.peek_kind() == Some(&TokenKind::LBrace) {
+            self.parse_brace_stmt_block()
         } else {
             Ok(vec![self.parse_stmt_atom()?])
         }

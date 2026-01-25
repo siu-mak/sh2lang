@@ -1,7 +1,7 @@
 # sh2 for Visual Studio Code
 
 
-<img src="../../images/sh2logo_256.png" alt="sh2 logo" width="128" />
+<img src="images/sh2logo_256.png" alt="sh2 logo" width="128" />
 
 Syntax highlighting for the **sh2** structured shell language.
 
@@ -11,14 +11,13 @@ Since sh2 is not yet on the VS Code Marketplace, you must install it manually us
 
 ### Option A: Install from local .vsix (recommended)
 
-**Prerequisites:** Node.js + npm (or equivalent).
+**Prerequisites:** Node.js 20+ and npm.
 
 1.  **Build the package:**
     ```bash
     cd editors/vscode
     npm install
-    npx vsce package
-    # If vsce is missing: npx @vscode/vsce package
+    npx @vscode/vsce package
     ```
 
 2.  **Install:**

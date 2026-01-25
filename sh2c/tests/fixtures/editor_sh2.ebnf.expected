@@ -11,7 +11,10 @@ function_def = "func" , identifier , "(" , [ param_list ] , ")" , block ;
 param_list = identifier , { "," , identifier } ;
 
 (* Blocks *)
-block = "{" , { statement } , "}" ;
+block = "{" , stmt_list , "}" ;
+stmt_list = { stmt_sep } , [ statement , { stmt_seps , statement } ] , { stmt_sep } ;
+stmt_seps = stmt_sep , { stmt_sep } ;
+stmt_sep = ";" | ? NEWLINE ? ; (* Lexer treats newlines as whitespace; explicit NEWLINE tokens do not exist *)
 
 (* Statements *)
 statement = let_stmt

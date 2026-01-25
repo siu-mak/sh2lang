@@ -14,12 +14,73 @@ This repository contains tools for **sh2**, a structured shell language designed
 
 ## About sh2
 
-sh2 is designed to reduce common shell “footguns” by making intent explicit (structured control flow, explicit variable declaration, scoped environment/IO changes) while compiling down to a conventional shell script.
+Shell is everywhere, but it’s also easy to write a script that *looks fine* and still breaks in boring, expensive ways: a space in a filename, a missed quote, a `cd` that leaks into the rest of the script, or an error code that gets ignored.
 
-sh2c can compile the same `.sh2` source to either:
+sh2 exists to keep the “I can run anything” power of shell, while making the risky parts harder to do by accident. The idea is simple:
 
-- **bash** (default; more features)
-- **POSIX sh** (more portable; fewer features)
+- **Make intent obvious** (real `if/while/case`, real variables)
+- **Make side-effects local** (change env/cwd/redirects in a block, then automatically go back)
+- **Make commands safe by default** (`run("cmd", "arg1", "arg2")` instead of stringly shell code)
+
+### Example: quoting and spaces (classic shell pain)
+
+Bash (easy to get wrong with spaces/word-splitting):
+
+```bash
+pattern="foo bar"
+file="my file.txt"
+grep $pattern $file   # breaks: becomes 4 args instead of 2
+```
+
+sh2 (args are always separate):
+
+```sh2
+let pattern = "foo bar"
+let file = "my file.txt"
+run("grep", pattern, file)
+```
+
+### Example: “did that command fail?” (and what happens next)
+
+Bash often ends up with scattered `|| exit 1`, `$?`, or half-working `set -e` patterns.
+
+sh2 defaults to “fail fast”, but you can explicitly allow failure and then check the exit code:
+
+```sh2
+run("grep", "x", "missing.txt", allow_fail=true)
+print("exit code was " & status())
+
+if status() != 0 {
+  print("not found (but script continues)")
+}
+```
+
+### Example: stop leaking `cd`, env vars, and redirects everywhere
+
+Bash:
+
+```bash
+cd /tmp
+DEBUG=1 mytool >out.log 2>&1
+cd - >/dev/null
+```
+
+sh2 keeps those changes inside a block:
+
+```sh2
+with cwd("/tmp") {
+  with env { DEBUG: "1" } {
+    with redirect { stdout: "out.log", stderr: stdout } {
+      run("mytool")
+    }
+  }
+}
+# after the block: cwd/env/redirect are back to normal
+```
+
+### Bottom line
+
+You still end up with a regular **bash/POSIX sh script** as output, but you write the source in a way that’s easier to review, harder to accidentally break, and more predictable to run.
 
 ---
 
@@ -118,22 +179,39 @@ sh2c --emit-sh  your_script.sh2   # default
 
 ---
 
-## Quick sh2 Example (tested-shape)
+## Examples
 
-A minimal program is **imports + functions only**. The compiler-generated shell will invoke `main()`.
+### 1. Compilation with `sh2c`
+
+**Input (`hello.sh2`):**
 
 ```sh2
 func main() {
-  let who = capture(run("whoami"))
-  print("hello " & who)
+  print("Hello from sh2")
+  run("echo", "Args handled safely")
 }
 ```
 
-Compile and run (bash target):
+**Compile and run:**
 
 ```bash
+# Compile to bash script
 sh2c --target bash -o hello.sh hello.sh2
+
+# Run it
 ./hello.sh
+```
+
+### 2. One-liners with `sh2do`
+
+`sh2do` compiles and runs snippets instantly.
+
+```bash
+# Simple print
+sh2do 'print("Hello World")'
+
+# Semicolons allow multiple statements
+sh2do 'print("Start"); run("date"); print("End")'
 ```
 
 ---
@@ -155,9 +233,17 @@ func greet(name, title) {
 }
 ```
 
-### Newline-separated statements (no `;`)
+### Statement Separation
 
-Statements inside `{ ... }` must be separated by newlines. `;` is not a statement separator.
+Statements inside `{ ... }` can be separated by newlines or semicolons (`;`). Semicolons are optional and mainly useful for one-liners.
+
+```sh2
+func main() {
+  print("first"); print("second")
+}
+```
+
+Semicolons are **not** allowed inside expressions (e.g. `(1; 2)` is invalid).
 
 ### `env` is reserved
 
@@ -349,5 +435,7 @@ See [`docs/sh2do.md`](docs/sh2do.md) for full documentation.
 
 ## Versions
 
-- [v0.1.1](docs/releases/v0.1.1.md) — Improved tilde hint and strict expansion policy.
-```
+- [v0.1.1](docs/releases/v0.1.1.md) — Improved tilde hint, strict expansion policy, and semicolon support.
+
+
+
