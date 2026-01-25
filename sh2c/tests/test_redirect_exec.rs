@@ -79,6 +79,32 @@ fn test_stdout_two_files_no_inherit() {
 }
 
 #[test]
+fn test_stdout_two_files_append() {
+    let fixture_path = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("tests/fixtures/redirect_multi_stdout_two_files_append.sh2");
+    
+    let bash_script = compile_path_to_shell(&fixture_path, TargetShell::Bash);
+    let (stdout, _stderr, exit_code, temp_dir) = run_bash_script_in_tempdir(&bash_script);
+    
+    assert_eq!(exit_code, 0, "Script should exit successfully");
+    
+    // Assert stdout does NOT contain the lines (no inherit)
+    assert!(!stdout.contains("L1") && !stdout.contains("L2"), 
+            "stdout should NOT contain lines (no inherit_stdout), got: {}", stdout);
+    
+    // Assert both files contain both lines in order
+    let file_a_content = read_file_in_dir(temp_dir.path(), "a.log")
+        .expect("a.log should exist");
+    let file_b_content = read_file_in_dir(temp_dir.path(), "b.log")
+        .expect("b.log should exist");
+    
+    assert!(file_a_content.contains("L1") && file_a_content.contains("L2"),
+            "a.log should contain both lines, got: {}", file_a_content);
+    assert!(file_b_content.contains("L1") && file_b_content.contains("L2"),
+            "b.log should contain both lines, got: {}", file_b_content);
+}
+
+#[test]
 fn test_stderr_file_and_inherit() {
     let fixture_path = Path::new(env!("CARGO_MANIFEST_DIR"))
         .join("tests/fixtures/redirect_multi_stderr_file_and_inherit.sh2");

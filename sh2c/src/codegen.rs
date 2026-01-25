@@ -2041,25 +2041,51 @@ fn emit_cmd(
                 // 1. Setup FIFO + Tee Processes
                 let mut stdout_fifo_opt = None;
                 let mut stdout_pid_opt = None;
+                let mut stderr_fifo_opt = None;
+                let mut stderr_pid_opt = None;
                 
+                // Declare FIFO variables first (needed for consolidated trap)
                 if tee_stdout {
                     let fifo_var = format!("__sh2_fifo_out_{}", uid);
-                    let pid_var = format!("__sh2_pid_out_{}", uid);
                     stdout_fifo_opt = Some(fifo_var.clone());
+                    out.push_str(&format!("{pad}  {}=\"/tmp/.${{USER:-user}}.sh2.fifo.out.{}.$$\"\n", fifo_var, uid));
+                }
+                if tee_stderr {
+                    let fifo_var = format!("__sh2_fifo_err_{}", uid);
+                    stderr_fifo_opt = Some(fifo_var.clone());
+                    out.push_str(&format!("{pad}  {}=\"/tmp/.${{USER:-user}}.sh2.fifo.err.{}.$$\"\n", fifo_var, uid));
+                }
+                
+                // Install single cleanup trap for both FIFOs (if any)
+                if tee_stdout || tee_stderr {
+                    let mut trap_cmd = String::from("rm -f");
+                    if let Some(ref fifo) = stdout_fifo_opt {
+                        trap_cmd.push_str(&format!(" \"${}\"", fifo));
+                    }
+                    if let Some(ref fifo) = stderr_fifo_opt {
+                        trap_cmd.push_str(&format!(" \"${}\"", fifo));
+                    }
+                    out.push_str(&format!("{pad}  trap '{}' RETURN\n", trap_cmd));
+                }
+                
+                // Create FIFOs and start tee processes
+                if tee_stdout {
+                    let fifo_var = stdout_fifo_opt.as_ref().unwrap();
+                    let pid_var = format!("__sh2_pid_out_{}", uid);
                     stdout_pid_opt = Some(pid_var.clone());
 
                     // Create FIFO
-                    out.push_str(&format!("{pad}  {}=\"/tmp/.${{USER:-user}}.sh2.fifo.out.{}.$$\"\n", fifo_var, uid));
                     out.push_str(&format!("{pad}  mkfifo \"${}\" || {{ __sh2_status=1; return 1; }}\n", fifo_var));
                     
-                    // Setup cleanup trap
-                    out.push_str(&format!("{pad}  trap 'rm -f \"${}\"' RETURN\n", fifo_var));
-                    
                     // Start tee in background reading from FIFO
+                    // Determine append mode once (all files must share same mode)
+                    let append_mode = stdout_files.first().map(|(_, a)| *a).unwrap_or(false);
                     out.push_str(&format!("{pad}  ( tee"));
-                    for (path, append) in &stdout_files {
-                        let op = if *append { "-a" } else { "" };
-                        out.push_str(&format!(" {} {}", op, emit_val(path, target)?));
+                    if append_mode {
+                        out.push_str(" -a");
+                    }
+                    for (path, _append) in &stdout_files {
+                        out.push_str(&format!(" {}", emit_val(path, target)?));
                     }
                     if stdout_inherit {
                          // Inherit means keep printing to current stdout (default)
@@ -2071,27 +2097,23 @@ fn emit_cmd(
                     out.push_str(&format!("{pad}  {}=$!\n", pid_var));
                 }
 
-                let mut stderr_fifo_opt = None;
-                let mut stderr_pid_opt = None;
-                
                 if tee_stderr {
-                    let fifo_var = format!("__sh2_fifo_err_{}", uid);
+                    let fifo_var = stderr_fifo_opt.as_ref().unwrap();
                     let pid_var = format!("__sh2_pid_err_{}", uid);
-                    stderr_fifo_opt = Some(fifo_var.clone());
                     stderr_pid_opt = Some(pid_var.clone());
 
                     // Create FIFO
-                    out.push_str(&format!("{pad}  {}=\"/tmp/.${{USER:-user}}.sh2.fifo.err.{}.$$\"\n", fifo_var, uid));
                     out.push_str(&format!("{pad}  mkfifo \"${}\" || {{ __sh2_status=1; return 1; }}\n", fifo_var));
-                    
-                    // Setup cleanup trap
-                    out.push_str(&format!("{pad}  trap 'rm -f \"${}\"' RETURN\n", fifo_var));
                      
                     // Start tee in background reading from FIFO
+                    // Determine append mode once (all files must share same mode)
+                    let append_mode = stderr_files.first().map(|(_, a)| *a).unwrap_or(false);
                     out.push_str(&format!("{pad}  ( tee"));
-                    for (path, append) in &stderr_files {
-                         let op = if *append { "-a" } else { "" };
-                         out.push_str(&format!(" {} {}", op, emit_val(path, target)?));
+                    if append_mode {
+                        out.push_str(" -a");
+                    }
+                    for (path, _append) in &stderr_files {
+                         out.push_str(&format!(" {}", emit_val(path, target)?));
                     }
                     if stderr_inherit {
                          out.push_str(" >&2"); // Write to current stderr

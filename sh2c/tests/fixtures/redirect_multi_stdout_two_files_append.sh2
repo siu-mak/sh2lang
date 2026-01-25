@@ -1,0 +1,9 @@
+// Test: Multi-file append mode fan-out
+// Expected: both files appended, no terminal output
+
+func main() {
+    with redirect { stdout: [file("a.log", append=true), file("b.log", append=true)] } {
+        print("L1")
+        print("L2")
+    }
+}
