@@ -156,12 +156,18 @@ builtin_expr = "arg" , "(" , number , ")"
              | "count" , "(" , expression , ")"
              | "join" , "(" , expression , "," , expression , ")"
              | "input" , "(" , expression , ")"
-             | "confirm" , "(" , expression , ")"
+             | "confirm" , "(" , expression , [ "," , "default" , "=" , bool_literal ] , ")"
              | "bool_str" , "(" , expression , ")"
+             | "sudo" , "(" , arg_list , ")"
+             | "sh" , "(" , expression , [ "," , arg_list ] , ")"
              ;
 
 arg_list = expression , { "," , expression } ;
 lvalue = identifier | "env" , "." , identifier ;
+
+(* Note: sudo(...) and sh(...) accept mixed positional/named arguments.
+   Semantic restrictions (literal-only options, valid option names) are
+   enforced during parsing/lowering, not by grammar productions. *)
 
 (* Literals *)
 literal = string_literal | number | bool_literal ;

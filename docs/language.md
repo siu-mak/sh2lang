@@ -358,7 +358,64 @@ if r.status == 0 {
 
 **Target note:** On `--target posix`, implementations may restrict or omit `.stdout` / `.stderr` capture (documented as target-dependent). `.status` is always available.
 
----
+### 6.6 `sudo(...)` (privileged execution)
+
+Structured wrapper for `sudo` command execution with type-safe options:
+
+```sh2
+# Basic usage
+sudo("systemctl", "restart", "nginx")
+
+# With user option
+sudo("ls", "/root", user="admin")
+
+# With environment preservation
+sudo("env", env_keep=["PATH", "HOME"])
+```
+
+**Supported options:**
+- `user` (string literal) — run as specified user (generates `-u`)
+- `n` (boolean) — non-interactive mode (generates `-n`)
+- `k` (boolean) — invalidate cached credentials (generates `-k`)
+- `prompt` (string literal) — custom password prompt (generates `-p`)
+- `E` (boolean) — preserve environment (generates `-E`)
+- `env_keep` (list of string literals) — preserve specific variables (generates `--preserve-env=...`)
+- `allow_fail` (boolean, statement-form only) — non-aborting execution
+
+**Argument ordering:**
+Mixed positional and named arguments are allowed:
+```sh2
+sudo(user="root", "ls")        # ✅
+sudo("ls", user="root")        # ✅
+sudo(n=true, "ls", user="root") # ✅
+```
+
+**Compile-time validation:**
+- Option values must be literals:
+  - `user`, `prompt`: string literals
+  - `n`, `k`, `E`, `allow_fail`: boolean literals
+  - `env_keep`: list of string literals
+- Duplicate options are rejected
+- Unknown options are rejected
+- `allow_fail` in expression context is rejected with specific diagnostic
+
+**Lowering behavior:**
+- Generates stable flag ordering: `sudo -u ... -n -k -p ... -E --preserve-env=... -- cmd args...`
+- Mandatory `--` separator before command arguments
+- Statement-form with `allow_fail=true` behaves like `run(..., allow_fail=true)`
+
+**Expression-form restriction:**
+```sh2
+# ❌ Not allowed:
+let x = capture(sudo("ls", allow_fail=true))
+
+# ✅ Use capture's allow_fail instead:
+let x = capture(sudo("ls"), allow_fail=true)
+```
+
+Error message: `"allow_fail is only valid on statement-form sudo(...); use capture(sudo(...), allow_fail=true) to allow failure during capture"`
+
+
 
 ## 7. Status, Errors, and `try/catch`
 
@@ -541,7 +598,55 @@ On `--target posix`, `with log` is not available.
 - JSON: `json_kv(...)`
 - process/system: `pid()`, `ppid()`, `uid()`, `pwd()`, `argc()`, `argv0()`, etc.
 
-### 10.4 String and List Utilities
+### 10.4 Interactive Helpers
+
+#### `confirm(prompt, default=...)` → boolean
+
+Interactive yes/no confirmation prompt:
+
+```sh2
+if confirm("Proceed with deployment?") {
+    run("deploy.sh")
+}
+
+# With default value
+if confirm("Delete files?", default=false) {
+    run("rm", "-rf", "data/")
+}
+```
+
+**Behavior:**
+- Returns `true` for yes, `false` for no
+- Accepts `y`, `yes`, `Y`, `YES` as affirmative (case-insensitive)
+- Accepts `n`, `no`, `N`, `NO` as negative (case-insensitive)
+- Optional `default=true` or `default=false` parameter
+
+**Non-interactive mode:**
+- If `default` is provided, uses that value when stdin is not a terminal
+- If `default` is not provided, fails with error in non-interactive mode
+
+**Environment overrides:**
+- `SH2_YES=1` — always return `true`
+- `SH2_NO=1` — always return `false`
+
+**Example with default:**
+```sh2
+# Safe for CI/automation
+if confirm("Apply changes?", default=false) {
+    run("apply.sh")
+}
+```
+
+#### `input(prompt)` → string
+
+Read user input from stdin:
+
+```sh2
+let name = input("Enter your name: ")
+print("Hello, " & name)
+```
+
+### 10.5 String and List Utilities
 
 #### `contains_line(text, needle)`
 

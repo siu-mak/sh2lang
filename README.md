@@ -201,6 +201,23 @@ run("grep", "x", "missing.txt", allow_fail=true)
 print("exit code: " & status())
 ```
 
+### `sudo(...)` for privileged commands
+
+Execute commands with `sudo` using structured options:
+
+```sh2
+# Basic usage
+sudo("systemctl", "restart", "nginx")
+
+# With user option
+sudo("ls", "/root", user="admin")
+
+# Mixed argument ordering
+sudo(user="root", "apt-get", "update")
+```
+
+Supported options: `user`, `n` (non-interactive), `k`, `prompt`, `E`, `env_keep`, `allow_fail` (statement-form only).
+
 ### Pipelines are more than `run | run`
 
 Pipelines connect stages with `|`. The implementation supports **mixed stages** (not just `run(...)`), as validated by pipe-block mixed-stage tests.
