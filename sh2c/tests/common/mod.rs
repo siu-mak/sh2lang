@@ -1041,10 +1041,21 @@ pub fn strip_spans_stmt(s: &mut sh2c::ast::Stmt) {
              for s in body { strip_spans_stmt(s); }
         }
         sh2c::ast::StmtKind::WithRedirect { stdout, stderr, stdin, body } => {
-            if let Some(t) = stdout { strip_spans_redirect(t); }
-            if let Some(t) = stderr { strip_spans_redirect(t); }
-            if let Some(t) = stdin { strip_spans_redirect(t); }
-            for s in body { strip_spans_stmt(s); }
+            // stdout/stderr are now Option<Vec<Spanned<RedirectOutputTarget>>>
+            if let Some(targets) = stdout {
+                for t in targets {
+                    t.node.strip_spans();
+                }
+            }
+            if let Some(targets) = stderr {
+                for t in targets {
+                    t.node.strip_spans();
+                }
+            }
+            if let Some(t) = stdin { t.strip_spans(); }
+            for stmt in body {
+                strip_spans_stmt(stmt);
+            }
         }
         sh2c::ast::StmtKind::Subshell { body } => {
              for s in body { strip_spans_stmt(s); }
@@ -1108,12 +1119,5 @@ pub fn strip_spans_run_call(c: &mut sh2c::ast::RunCall) {
      for o in &mut c.options { 
          o.span = sh2c::span::Span::new(0, 0);
          strip_spans_expr(&mut o.value);
-     }
-}
-
-pub fn strip_spans_redirect(t: &mut sh2c::ast::RedirectTarget) {
-     match t {
-         sh2c::ast::RedirectTarget::File { path, .. } => strip_spans_expr(path),
-         _ => {}
      }
 }

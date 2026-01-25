@@ -86,9 +86,22 @@ with_modifier = "env" , [ "{" , [ env_bindings ] , "}" ]
               ;
 env_bindings = identifier , "=" , expression , { "," , identifier , "=" , expression } ;
 redirect_spec = redirect_item , { "," , redirect_item } ;
-redirect_item = ( "stdout" | "stderr" | "stdin" ) , ":" , redirect_target ;
-redirect_target = "stdout" | "stderr" | "file" , "(" , expression , [ "," , "append" , "=" , bool_literal ] , ")"
-                | "heredoc" , "(" , string_literal , ")" ;
+redirect_item = "stdout" , ":" , stdout_spec
+              | "stderr" , ":" , stderr_spec
+              | "stdin" , ":" , stdin_spec ;
+
+stdout_spec = output_target | "[" , output_target , { "," , output_target } , "]" ;
+stderr_spec = output_target | "[" , output_target , { "," , output_target } , "]" ;
+stdin_spec = input_target ; (* Stdin does not support list *)
+
+output_target = "file" , "(" , expression , [ "," , "append" , "=" , bool_literal ] , ")"
+              | "to_stdout" , "(" , ")"
+              | "to_stderr" , "(" , ")"
+              | "inherit_stdout" , "(" , ")"
+              | "inherit_stderr" , "(" , ")" ;
+
+input_target = "file" , "(" , expression , ")"
+             | "heredoc" , "(" , string_literal , ")" ;
 
 subshell_stmt = "subshell" , block ;
 group_stmt = "group" , block ;

@@ -369,21 +369,19 @@ impl<'a> Parser<'a> {
                     let mut stdin = None;
                     while !self.match_kind(TokenKind::RBrace) {
                         if self.match_kind(TokenKind::Stdout) {
-                            let start = self.previous_span();
                             self.expect(TokenKind::Colon)?;
-                            let t = self.parse_redirect_output_target()?;
-                            let end = self.previous_span();
-                            let span = Span::new(start.start, end.end);
-                            stdout = Some(vec![Spanned::new(t, span)]);
+                            let targets = self.parse_redirect_output_list("stdout")?;
+                            stdout = if targets.is_empty() { None } else { Some(targets) };
                         } else if self.match_kind(TokenKind::Stderr) {
-                            let start = self.previous_span();
                             self.expect(TokenKind::Colon)?;
-                            let t = self.parse_redirect_output_target()?;
-                            let end = self.previous_span();
-                            let span = Span::new(start.start, end.end);
-                            stderr = Some(vec![Spanned::new(t, span)]);
+                            let targets = self.parse_redirect_output_list("stderr")?;
+                            stderr = if targets.is_empty() { None } else { Some(targets) };
                         } else if self.match_kind(TokenKind::Stdin) {
                             self.expect(TokenKind::Colon)?;
+                            // Check for list form (not supported for stdin)
+                            if self.match_kind(TokenKind::LBracket) {
+                                self.error("stdin does not support multi-sink redirect", self.previous_span())?;
+                            }
                             let t = self.parse_redirect_input_target()?;
                             stdin = Some(t);
                         } else {
@@ -845,6 +843,91 @@ impl<'a> Parser<'a> {
     }
 
 
+    // Parse stdout/stderr redirect target (single or list)
+    fn parse_redirect_output_list(&mut self, stream_name: &str) -> ParsResult<Vec<Spanned<RedirectOutputTarget>>> {
+        // Check if it's a list
+        if self.match_kind(TokenKind::LBracket) {
+            let list_start = self.previous_span();
+            let mut targets = Vec::new();
+            let mut seen_inherit = false;
+
+            if self.match_kind(TokenKind::RBracket) {
+                // Empty list
+                let list_span = Span::new(list_start.start, self.previous_span().end);
+                return self.error("redirect target list cannot be empty", list_span);
+            }
+
+            loop {
+                let target_start = self.current_span();
+                let target = self.parse_redirect_output_target()?;
+                let target_end = self.previous_span();
+                let target_span = Span::new(target_start.start, target_end.end);
+
+                // Validate per-element constraints
+                match &target {
+                    // Check for wrong stream inherit
+                    RedirectOutputTarget::InheritStdout if stream_name == "stderr" => {
+                        return self.error("inherit_stdout() is only valid for stdout redirects", target_span);
+                    }
+                    RedirectOutputTarget::InheritStderr if stream_name == "stdout" => {
+                        return self.error("inherit_stderr() is only valid for stderr redirects", target_span);
+                    }
+                    // Check for duplicate inherit
+                    RedirectOutputTarget::InheritStdout if stream_name == "stdout" => {
+                        if seen_inherit {
+                            return self.error("duplicate inherit_stdout()", target_span);
+                        }
+                        seen_inherit = true;
+                    }
+                    RedirectOutputTarget::InheritStderr if stream_name == "stderr" => {
+                        if seen_inherit {
+                            return self.error("duplicate inherit_stderr()", target_span);
+                        }
+                        seen_inherit = true;
+                    }
+                    // Check for cross-stream in list
+                    RedirectOutputTarget::ToStdout | RedirectOutputTarget::ToStderr => {
+                        return self.error("cross-stream redirect not allowed in multi-sink list", target_span);
+                    }
+                    _ => {}
+                }
+
+                targets.push(Spanned::new(target, target_span));
+
+                if !self.match_kind(TokenKind::Comma) {
+                    break;
+                }
+                // Allow trailing comma
+                if matches!(self.peek_kind(), Some(TokenKind::RBracket)) {
+                    break;
+                }
+            }
+
+            self.expect(TokenKind::RBracket)?;
+
+            Ok(targets)
+        } else {
+            // Single target (non-list)
+            let target_start = self.current_span();
+            let target = self.parse_redirect_output_target()?;
+            let target_end = self.previous_span();
+            let target_span = Span::new(target_start.start, target_end.end);
+            
+            // Reject inherit_* in non-list form
+            match &target {
+                RedirectOutputTarget::InheritStdout => {
+                    return self.error("inherit_stdout() is only valid in redirect lists", target_span);
+                }
+                RedirectOutputTarget::InheritStderr => {
+                    return self.error("inherit_stderr() is only valid in redirect lists", target_span);
+                }
+                _ => {}
+            }
+            
+            Ok(vec![Spanned::new(target, target_span)])
+        }
+    }
+
     fn parse_redirect_output_target(&mut self) -> ParsResult<RedirectOutputTarget> {
         if self.match_kind(TokenKind::File) {
             self.expect(TokenKind::LParen)?;
@@ -874,12 +957,38 @@ impl<'a> Parser<'a> {
             }
             self.expect(TokenKind::RParen)?;
             Ok(RedirectOutputTarget::File { path, append })
-        } else if self.match_kind(TokenKind::Stdout) {
-            Ok(RedirectOutputTarget::ToStdout)
-        } else if self.match_kind(TokenKind::Stderr) {
-            Ok(RedirectOutputTarget::ToStderr)
+        } else if let Some(TokenKind::Ident(s)) = self.peek_kind() {
+            // Parse function-like forms: to_stdout(), to_stderr(), inherit_stdout(), inherit_stderr()
+            let name = s.clone();
+            match name.as_str() {
+                "to_stdout" => {
+                    self.advance();
+                    self.expect(TokenKind::LParen)?;
+                    self.expect(TokenKind::RParen)?;
+                    Ok(RedirectOutputTarget::ToStdout)
+                }
+                "to_stderr" => {
+                    self.advance();
+                    self.expect(TokenKind::LParen)?;
+                    self.expect(TokenKind::RParen)?;
+                    Ok(RedirectOutputTarget::ToStderr)
+                }
+                "inherit_stdout" => {
+                    self.advance();
+                    self.expect(TokenKind::LParen)?;
+                    self.expect(TokenKind::RParen)?;
+                    Ok(RedirectOutputTarget::InheritStdout)
+                }
+                "inherit_stderr" => {
+                    self.advance();
+                    self.expect(TokenKind::LParen)?;
+                    self.expect(TokenKind::RParen)?;
+                    Ok(RedirectOutputTarget::InheritStderr)
+                }
+                _ => self.error("Expected redirect output target (file, to_stdout, to_stderr, inherit_stdout, inherit_stderr)", self.current_span())?
+            }
         } else {
-            self.error("Expected redirect output target (file, stdout, stderr)", self.current_span())?
+            self.error("Expected redirect output target (file, to_stdout, to_stderr, inherit_stdout, inherit_stderr)", self.current_span())?
         }
     }
 
@@ -887,9 +996,21 @@ impl<'a> Parser<'a> {
         if self.match_kind(TokenKind::File) {
             self.expect(TokenKind::LParen)?;
             let path = self.parse_expr()?;
+            // Handle optional comma + parameters (must reject append)
             if self.match_kind(TokenKind::Comma) {
                 if self.match_kind(TokenKind::Append) {
-                    self.error("Cannot append to stdin", self.previous_span())?;
+                    // Consume the = and value to avoid leaving tokens
+                    self.expect(TokenKind::Equals)?;
+                    if self.match_kind(TokenKind::True) || self.match_kind(TokenKind::False) {
+                        // consumed
+                    } else if let Some(TokenKind::Ident(s)) = self.peek_kind() {
+                        if s == "true" || s == "false" {
+                            self.advance();
+                        }
+                    }
+                    return self.error("cannot append to stdin", self.previous_span());
+                } else {
+                    return self.error("unexpected parameter for stdin file()", self.current_span());
                 }
             }
             self.expect(TokenKind::RParen)?;

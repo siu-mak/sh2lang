@@ -40,7 +40,7 @@ fn compile_panic_heredoc_stdout_rejected_bash() {
     assert_codegen_panics_target(
         "heredoc_stdout_rejected",
         TargetShell::Bash,
-        "heredoc only allowed for stdin",
+        "Expected redirect output target",
     );
 }
 
@@ -49,7 +49,7 @@ fn compile_panic_heredoc_stdout_rejected_posix() {
     assert_codegen_panics_target(
         "heredoc_stdout_rejected",
         TargetShell::Posix,
-        "heredoc only allowed for stdin",
+        "Expected redirect output target",
     );
 }
 
@@ -58,7 +58,7 @@ fn compile_panic_heredoc_stderr_rejected_bash() {
     assert_codegen_panics_target(
         "heredoc_stderr_rejected",
         TargetShell::Bash,
-        "heredoc only allowed for stdin",
+        "Expected redirect output target",
     );
 }
 
@@ -67,6 +67,6 @@ fn compile_panic_heredoc_stderr_rejected_posix() {
     assert_codegen_panics_target(
         "heredoc_stderr_rejected",
         TargetShell::Posix,
-        "heredoc only allowed for stdin",
+        "Expected redirect output target",
     );
 }

@@ -741,6 +741,8 @@ fn lower_stmt<'a>(
             stdout,
             stderr,
             stdin,
+            body,
+        } => {
             let mut lowered_body = Vec::new();
             let ctx_body = lower_block(body, &mut lowered_body, ctx.clone(), sm, file, opts)?;
 

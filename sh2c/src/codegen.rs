@@ -1937,41 +1937,85 @@ fn emit_cmd(
             stdin,
             body,
         } => {
+            // Enforce: multi-sink redirect not implemented yet
+            // Reject if len > 1 or contains inherit_*
+            if let Some(targets) = stdout {
+                if targets.len() > 1 {
+                    return Err(CompileError::unsupported(
+                        "multi-sink redirect is not implemented yet; use a single redirect target",
+                        target,
+                    ));
+                }
+                // Check for inherit_* even in len==1 case
+                for t in targets {
+                    match t {
+                        RedirectOutputTarget::InheritStdout | RedirectOutputTarget::InheritStderr => {
+                            return Err(CompileError::unsupported(
+                                "multi-sink redirect is not implemented yet; use a single redirect target",
+                                target,
+                            ));
+                        }
+                        _ => {}
+                    }
+                }
+            }
+            if let Some(targets) = stderr {
+                if targets.len() > 1 {
+                    return Err(CompileError::unsupported(
+                        "multi-sink redirect is not implemented yet; use a single redirect target",
+                        target,
+                    ));
+                }
+                // Check for inherit_* even in len==1 case
+                for t in targets {
+                    match t {
+                        RedirectOutputTarget::InheritStdout | RedirectOutputTarget::InheritStderr => {
+                            return Err(CompileError::unsupported(
+                                "multi-sink redirect is not implemented yet; use a single redirect target",
+                                target,
+                            ));
+                        }
+                        _ => {}
+                    }
+                }
+            }
+
             out.push_str(&format!("{pad}{{\n"));
             for cmd in body {
                 emit_cmd(cmd, out, indent + 2, opts, in_cond_ctx, ctx)?;
             }
             out.push_str(&format!("{pad}}}")); // No newline yet, redirections follow
 
-            // Handle regular stdin file redirection (before others, or order doesn't matter much for inputs vs outputs)
-            // But preserving existing behavior: currently it emits stdin first.
-            // Plan said: "Keep existing stdin handling position, but since heredoc is not a < redirection, emit heredoc operator after stdout/stderr redirections"
-
+            // Handle stdin redirection
             let mut heredoc_content = None;
 
             if let Some(target_redir) = stdin {
                 match target_redir {
-                    RedirectTarget::File { path, .. } => {
+                    RedirectInputTarget::File { path } => {
                         out.push_str(&format!(" < {}", emit_val(path, target)?));
                     }
-                    RedirectTarget::HereDoc { content } => {
+                    RedirectInputTarget::HereDoc { content } => {
                         heredoc_content = Some(content);
                     }
-                    _ => return Err(CompileError::unsupported("stdin redirected to something invalid", target)),
                 }
             }
 
+            // For Phase 1: handle only single-target redirects (first element of vec)
+            // Multi-sink fan-out will be implemented in Phase 3/4
+            let stdout_single = stdout.as_ref().and_then(|v| v.first());
+            let stderr_single = stderr.as_ref().and_then(|v| v.first());
+
             // Determine emission order: standard (stdout then stderr) or swapped
             let mut emit_stdout_first = true;
-            if let Some(stdout_target) = &stdout {
-                if let Some(stderr_target) = &stderr {
-                    if matches!(stdout_target, RedirectTarget::Stderr)
-                        && matches!(stderr_target, RedirectTarget::File { .. })
+            if let Some(stdout_target) = stdout_single {
+                if let Some(stderr_target) = stderr_single {
+                    if matches!(stdout_target, RedirectOutputTarget::ToStderr)
+                        && matches!(stderr_target, RedirectOutputTarget::File { .. })
                     {
                         emit_stdout_first = false;
                     }
-                    if matches!(stdout_target, RedirectTarget::Stderr)
-                        && matches!(stderr_target, RedirectTarget::Stdout)
+                    if matches!(stdout_target, RedirectOutputTarget::ToStderr)
+                        && matches!(stderr_target, RedirectOutputTarget::ToStdout)
                     {
                         return Err(CompileError::unsupported(
                             "Cyclic redirection: stdout to stderr AND stderr to stdout is not supported"
@@ -1981,38 +2025,42 @@ fn emit_cmd(
             }
 
             let emit_stdout = |out: &mut String| -> Result<(), CompileError> {
-                if let Some(target_redir) = &stdout {
+                if let Some(target_redir) = stdout_single {
                     match target_redir {
-                        RedirectTarget::File { path, append } => {
+                        RedirectOutputTarget::File { path, append } => {
                             let op = if *append { ">>" } else { ">" };
                             out.push_str(&format!(" {} {}", op, emit_val(path, target)?));
                         }
-                        RedirectTarget::Stderr => {
+                        RedirectOutputTarget::ToStderr => {
                             out.push_str(" 1>&2");
                         }
-                        RedirectTarget::Stdout => {
+                        RedirectOutputTarget::ToStdout => {
                             // no-op
                         }
-                        RedirectTarget::HereDoc { .. } => return Err(CompileError::unsupported("Heredoc not valid for stdout", target)),
+                        RedirectOutputTarget::InheritStdout | RedirectOutputTarget::InheritStderr => {
+                            // For now, treat as no-op (multi-sink implementation in Phase 3/4)
+                        }
                     }
                 }
                 Ok(())
             };
 
             let emit_stderr = |out: &mut String| -> Result<(), CompileError> {
-                if let Some(target_redir) = &stderr {
+                if let Some(target_redir) = stderr_single {
                     match target_redir {
-                        RedirectTarget::File { path, append } => {
+                        RedirectOutputTarget::File { path, append } => {
                             let op = if *append { ">>" } else { ">" };
                             out.push_str(&format!(" 2{} {}", op, emit_val(path, target)?));
                         }
-                        RedirectTarget::Stdout => {
+                        RedirectOutputTarget::ToStdout => {
                             out.push_str(" 2>&1");
                         }
-                        RedirectTarget::Stderr => {
+                        RedirectOutputTarget::ToStderr => {
                             // no-op
                         }
-                        RedirectTarget::HereDoc { .. } => return Err(CompileError::unsupported("Heredoc not valid for stderr", target)),
+                        RedirectOutputTarget::InheritStdout | RedirectOutputTarget::InheritStderr => {
+                            // For now, treat as no-op (multi-sink implementation in Phase 3/4)
+                        }
                     }
                 }
                 Ok(())
