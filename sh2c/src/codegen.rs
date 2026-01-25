@@ -2,7 +2,8 @@ pub mod posix_lint;
 pub use posix_lint::{PosixLint, PosixLintKind, lint_script, render_lints};
 
 use crate::error::CompileError;
-use crate::ir::{Cmd, Function, LogLevel, RedirectTarget, Val};
+use crate::ir::{Cmd, Function, LogLevel, RedirectOutputTarget, RedirectInputTarget, Val};
+use crate::span::{Span, SourceMap};
 pub use crate::target::TargetShell;
 
 #[derive(Clone, Debug, Copy)]
@@ -184,14 +185,18 @@ fn visit_cmd(cmd: &Cmd, usage: &mut PreludeUsage, include_diagnostics: bool) {
             stdin,
             body,
         } => {
-            if let Some(t) = stdout {
-                visit_redirect(t, usage);
+            if let Some(targets) = stdout {
+                for t in targets {
+                    visit_redirect_output(t, usage);
+                }
             }
-            if let Some(t) = stderr {
-                visit_redirect(t, usage);
+            if let Some(targets) = stderr {
+                for t in targets {
+                    visit_redirect_output(t, usage);
+                }
             }
             if let Some(t) = stdin {
-                visit_redirect(t, usage);
+                visit_redirect_input(t, usage);
             }
             for c in body {
                 visit_cmd(c, usage, include_diagnostics);
@@ -281,9 +286,17 @@ fn visit_cmd(cmd: &Cmd, usage: &mut PreludeUsage, include_diagnostics: bool) {
     }
 }
 
-fn visit_redirect(target: &RedirectTarget, usage: &mut PreludeUsage) {
+
+fn visit_redirect_output(target: &RedirectOutputTarget, usage: &mut PreludeUsage) {
     match target {
-        RedirectTarget::File { path, .. } => visit_val(path, usage),
+        RedirectOutputTarget::File { path, .. } => visit_val(path, usage),
+        _ => {}
+    }
+}
+
+fn visit_redirect_input(target: &RedirectInputTarget, usage: &mut PreludeUsage) {
+    match target {
+        RedirectInputTarget::File { path } => visit_val(path, usage),
         _ => {}
     }
 }

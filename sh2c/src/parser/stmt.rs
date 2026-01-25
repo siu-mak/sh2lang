@@ -1,6 +1,7 @@
 use super::common::{ParsResult, Parser};
 use crate::ast::*;
 use crate::lexer::TokenKind;
+use crate::span::Span;
 use crate::sudo::SudoSpec;
 
 impl<'a> Parser<'a> {
@@ -368,34 +369,22 @@ impl<'a> Parser<'a> {
                     let mut stdin = None;
                     while !self.match_kind(TokenKind::RBrace) {
                         if self.match_kind(TokenKind::Stdout) {
+                            let start = self.previous_span();
                             self.expect(TokenKind::Colon)?;
-                            let t = self.parse_redirect_target()?;
-                            if let RedirectTarget::HereDoc { .. } = t {
-                                self.error("heredoc only allowed for stdin", self.previous_span())?;
-                            }
-                            stdout = Some(t);
+                            let t = self.parse_redirect_output_target()?;
+                            let end = self.previous_span();
+                            let span = Span::new(start.start, end.end);
+                            stdout = Some(vec![Spanned::new(t, span)]);
                         } else if self.match_kind(TokenKind::Stderr) {
+                            let start = self.previous_span();
                             self.expect(TokenKind::Colon)?;
-                            let t = self.parse_redirect_target()?;
-                            if let RedirectTarget::HereDoc { .. } = t {
-                                self.error("heredoc only allowed for stdin", self.previous_span())?;
-                            }
-                            stderr = Some(t);
+                            let t = self.parse_redirect_output_target()?;
+                            let end = self.previous_span();
+                            let span = Span::new(start.start, end.end);
+                            stderr = Some(vec![Spanned::new(t, span)]);
                         } else if self.match_kind(TokenKind::Stdin) {
                             self.expect(TokenKind::Colon)?;
-                            let t = self.parse_redirect_target()?;
-                            match t {
-                                RedirectTarget::HereDoc { .. } => {}
-                                RedirectTarget::File { append, .. } => {
-                                    if append {
-                                        self.error("Cannot append to stdin", self.previous_span())?;
-                                    }
-                                }
-                                _ => self.error(
-                                    "stdin can only be redirected from a file or heredoc",
-                                    self.previous_span(),
-                                )?,
-                            }
+                            let t = self.parse_redirect_input_target()?;
                             stdin = Some(t);
                         } else {
                             self.error("Expected stdout, stderr, or stdin", self.current_span())?;
@@ -855,7 +844,8 @@ impl<'a> Parser<'a> {
         }
     }
 
-    fn parse_redirect_target(&mut self) -> ParsResult<RedirectTarget> {
+
+    fn parse_redirect_output_target(&mut self) -> ParsResult<RedirectOutputTarget> {
         if self.match_kind(TokenKind::File) {
             self.expect(TokenKind::LParen)?;
             let path = self.parse_expr()?;
@@ -883,11 +873,27 @@ impl<'a> Parser<'a> {
                 }
             }
             self.expect(TokenKind::RParen)?;
-            Ok(RedirectTarget::File { path, append })
+            Ok(RedirectOutputTarget::File { path, append })
         } else if self.match_kind(TokenKind::Stdout) {
-            Ok(RedirectTarget::Stdout)
+            Ok(RedirectOutputTarget::ToStdout)
         } else if self.match_kind(TokenKind::Stderr) {
-            Ok(RedirectTarget::Stderr)
+            Ok(RedirectOutputTarget::ToStderr)
+        } else {
+            self.error("Expected redirect output target (file, stdout, stderr)", self.current_span())?
+        }
+    }
+
+    fn parse_redirect_input_target(&mut self) -> ParsResult<RedirectInputTarget> {
+        if self.match_kind(TokenKind::File) {
+            self.expect(TokenKind::LParen)?;
+            let path = self.parse_expr()?;
+            if self.match_kind(TokenKind::Comma) {
+                if self.match_kind(TokenKind::Append) {
+                    self.error("Cannot append to stdin", self.previous_span())?;
+                }
+            }
+            self.expect(TokenKind::RParen)?;
+            Ok(RedirectInputTarget::File { path })
         } else if let Some(TokenKind::Ident(s)) = self.peek_kind() {
             if s == "heredoc" {
                 self.advance();
@@ -899,12 +905,12 @@ impl<'a> Parser<'a> {
                 };
                 self.advance();
                 self.expect(TokenKind::RParen)?;
-                Ok(RedirectTarget::HereDoc { content })
+                Ok(RedirectInputTarget::HereDoc { content })
             } else {
-                self.error("Expected redirect target", self.current_span())?
+                self.error("Expected redirect input target (file or heredoc)", self.current_span())?
             }
         } else {
-            self.error("Expected redirect target", self.current_span())?
+            self.error("Expected redirect input target (file or heredoc)", self.current_span())?
         }
     }
 }

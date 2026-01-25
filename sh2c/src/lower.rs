@@ -1,7 +1,6 @@
-use crate::ast;
+use crate::ast::{self, ArithOp, CompareOp, Expr, ExprKind, LValue, Pattern, Spanned, Stmt, StmtKind};
 use crate::ir;
-use crate::span::SourceMap;
-use crate::span::Span;
+use crate::span::{Span, SourceMap};
 use crate::error::CompileError;
 use crate::sudo::SudoSpec;
 use std::collections::HashSet;
@@ -742,28 +741,39 @@ fn lower_stmt<'a>(
             stdout,
             stderr,
             stdin,
-            body,
-        } => {
             let mut lowered_body = Vec::new();
             let ctx_body = lower_block(body, &mut lowered_body, ctx.clone(), sm, file, opts)?;
 
-            // Cannot use closure easily with Result propagation from captures
-            let lower_target = |t: ast::RedirectTarget, c: &mut LoweringContext| -> Result<ir::RedirectTarget, CompileError> {
+            let lower_output_target = |t: ast::RedirectOutputTarget, c: &mut LoweringContext| -> Result<ir::RedirectOutputTarget, CompileError> {
                  Ok(match t {
-                    ast::RedirectTarget::File { path, append } => ir::RedirectTarget::File {
+                    ast::RedirectOutputTarget::File { path, append } => ir::RedirectOutputTarget::File {
                         path: lower_expr(path, c, sm, file)?,
                         append,
                     },
-                    ast::RedirectTarget::HereDoc { content } => ir::RedirectTarget::HereDoc { content },
-                    ast::RedirectTarget::Stdout => ir::RedirectTarget::Stdout,
-                    ast::RedirectTarget::Stderr => ir::RedirectTarget::Stderr,
+                    ast::RedirectOutputTarget::ToStdout => ir::RedirectOutputTarget::ToStdout,
+                    ast::RedirectOutputTarget::ToStderr => ir::RedirectOutputTarget::ToStderr,
+                    ast::RedirectOutputTarget::InheritStdout => ir::RedirectOutputTarget::InheritStdout,
+                    ast::RedirectOutputTarget::InheritStderr => ir::RedirectOutputTarget::InheritStderr,
                 })
             };
 
+            let lower_input_target = |t: ast::RedirectInputTarget, c: &mut LoweringContext| -> Result<ir::RedirectInputTarget, CompileError> {
+                 Ok(match t {
+                    ast::RedirectInputTarget::File { path } => ir::RedirectInputTarget::File {
+                        path: lower_expr(path, c, sm, file)?,
+                    },
+                    ast::RedirectInputTarget::HereDoc { content } => ir::RedirectInputTarget::HereDoc { content },
+                })
+            };
+
+            let lower_output_vec = |targets: Vec<Spanned<ast::RedirectOutputTarget>>, c: &mut LoweringContext| -> Result<Vec<ir::RedirectOutputTarget>, CompileError> {
+                targets.into_iter().map(|spanned| lower_output_target(spanned.node, c)).collect()
+            };
+
             out.push(ir::Cmd::WithRedirect {
-                stdout: stdout.map(|t| lower_target(t, &mut ctx)).transpose()?,
-                stderr: stderr.map(|t| lower_target(t, &mut ctx)).transpose()?,
-                stdin: stdin.map(|t| lower_target(t, &mut ctx)).transpose()?,
+                stdout: stdout.map(|targets| lower_output_vec(targets, &mut ctx)).transpose()?,
+                stderr: stderr.map(|targets| lower_output_vec(targets, &mut ctx)).transpose()?,
+                stdin: stdin.map(|t| lower_input_target(t, &mut ctx)).transpose()?,
                 body: lowered_body,
             });
             Ok(ctx_body)

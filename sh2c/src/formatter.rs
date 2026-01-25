@@ -213,14 +213,25 @@ fn format_stmt(stmt: &Stmt, depth: usize) -> String {
         }
         StmtKind::WithRedirect { stdout, stderr, stdin, body } => {
             let mut opts = Vec::new();
-            if let Some(t) = stdout {
-                opts.push(format!("stdout: {}", format_redirect_target(t)));
+            if let Some(targets) = stdout {
+                // For single target, format without list syntax (backwards compat)
+                if targets.len() == 1 {
+                    opts.push(format!("stdout: {}", format_redirect_output_target(&targets[0].node)));
+                } else {
+                    let target_strs: Vec<_> = targets.iter().map(|t| format_redirect_output_target(&t.node)).collect();
+                    opts.push(format!("stdout: [{}]", target_strs.join(", ")));
+                }
             }
-            if let Some(t) = stderr {
-                opts.push(format!("stderr: {}", format_redirect_target(t)));
+            if let Some(targets) = stderr {
+                if targets.len() == 1 {
+                    opts.push(format!("stderr: {}", format_redirect_output_target(&targets[0].node)));
+                } else {
+                    let target_strs: Vec<_> = targets.iter().map(|t| format_redirect_output_target(&t.node)).collect();
+                    opts.push(format!("stderr: [{}]", target_strs.join(", ")));
+                }
             }
-             if let Some(t) = stdin {
-                opts.push(format!("stdin: {}", format_redirect_target(t)));
+            if let Some(t) = stdin {
+                opts.push(format!("stdin: {}", format_redirect_input_target(t)));
             }
             format!("with redirect {{ {} }} {{\n{}\n{}}}", opts.join(", "), format_block(body, depth + 1, false), indent_str(depth))
         }
@@ -249,18 +260,28 @@ fn format_stmt(stmt: &Stmt, depth: usize) -> String {
     }
 }
 
-fn format_redirect_target(t: &RedirectTarget) -> String {
+fn format_redirect_output_target(t: &RedirectOutputTarget) -> String {
     match t {
-         RedirectTarget::Stdout => "stdout".to_string(),
-         RedirectTarget::Stderr => "stderr".to_string(),
-         RedirectTarget::File { path, append } => {
+         RedirectOutputTarget::ToStdout => "to_stdout()".to_string(),
+         RedirectOutputTarget::ToStderr => "to_stderr()".to_string(),
+         RedirectOutputTarget::InheritStdout => "inherit_stdout()".to_string(),
+         RedirectOutputTarget::InheritStderr => "inherit_stderr()".to_string(),
+         RedirectOutputTarget::File { path, append } => {
              if *append {
                  format!("file({}, append=true)", format_expr(path))
              } else {
                  format!("file({})", format_expr(path))
              }
          }
-         RedirectTarget::HereDoc { content } => {
+    }
+}
+
+fn format_redirect_input_target(t: &RedirectInputTarget) -> String {
+    match t {
+         RedirectInputTarget::File { path } => {
+             format!("file({})", format_expr(path))
+         }
+         RedirectInputTarget::HereDoc { content } => {
              format!("heredoc(\"{}\")", sh_escape(content))
          }
     }

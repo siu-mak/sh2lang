@@ -207,9 +207,9 @@ pub enum Cmd {
         body: Vec<Cmd>,
     },
     WithRedirect {
-        stdout: Option<RedirectTarget>,
-        stderr: Option<RedirectTarget>,
-        stdin: Option<RedirectTarget>,
+        stdout: Option<Vec<RedirectOutputTarget>>,
+        stderr: Option<Vec<RedirectOutputTarget>>,
+        stdin: Option<RedirectInputTarget>,
         body: Vec<Cmd>,
     },
     Spawn(Box<Cmd>),
@@ -240,11 +240,18 @@ pub enum Cmd {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub enum RedirectTarget {
+pub enum RedirectOutputTarget {
     File { path: Val, append: bool },
+    ToStdout,         // cross-stream: stderr → stdout
+    ToStderr,         // cross-stream: stdout → stderr
+    InheritStdout,    // keep stdout visible to terminal
+    InheritStderr,    // keep stderr visible to terminal
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum RedirectInputTarget {
+    File { path: Val },
     HereDoc { content: String },
-    Stdout,
-    Stderr,
 }
 
 #[derive(Debug, Clone, PartialEq)]

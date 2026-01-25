@@ -247,9 +247,9 @@ pub enum StmtKind {
         body: Vec<Stmt>,
     },
     WithRedirect {
-        stdout: Option<RedirectTarget>,
-        stderr: Option<RedirectTarget>,
-        stdin: Option<RedirectTarget>,
+        stdout: Option<Vec<Spanned<RedirectOutputTarget>>>,
+        stderr: Option<Vec<Spanned<RedirectOutputTarget>>>,
+        stdin: Option<RedirectInputTarget>,
         body: Vec<Stmt>,
     },
     Spawn {
@@ -282,11 +282,18 @@ pub enum StmtKind {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub enum RedirectTarget {
+pub enum RedirectOutputTarget {
     File { path: Expr, append: bool },
+    ToStdout,         // cross-stream: stderr → stdout
+    ToStderr,         // cross-stream: stdout → stderr
+    InheritStdout,    // keep stdout visible to terminal
+    InheritStderr,    // keep stderr visible to terminal
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum RedirectInputTarget {
+    File { path: Expr },
     HereDoc { content: String },
-    Stdout,
-    Stderr,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -404,8 +411,18 @@ impl StmtKind {
                  for s in body { s.strip_spans(); }
             }
             StmtKind::WithRedirect { stdout, stderr, stdin, body } => {
-                if let Some(t) = stdout { t.strip_spans(); }
-                if let Some(t) = stderr { t.strip_spans(); }
+                if let Some(targets) = stdout {
+                    for t in targets {
+                        t.span = Span::new(0, 0);
+                        t.node.strip_spans();
+                    }
+                }
+                if let Some(targets) = stderr {
+                    for t in targets {
+                        t.span = Span::new(0, 0);
+                        t.node.strip_spans();
+                    }
+                }
                 if let Some(t) = stdin { t.strip_spans(); }
                 for s in body { s.strip_spans(); }
             }
@@ -509,12 +526,18 @@ impl RunCall {
     }
 }
 
-impl RedirectTarget {
+impl RedirectOutputTarget {
     pub fn strip_spans(&mut self) {
-         match self {
-             RedirectTarget::File { path, .. } => path.strip_spans(),
-             _ => {}
-         }
+        if let RedirectOutputTarget::File { path, .. } = self {
+            path.strip_spans();
+        }
     }
 }
 
+impl RedirectInputTarget {
+    pub fn strip_spans(&mut self) {
+        if let RedirectInputTarget::File { path } = self {
+            path.strip_spans();
+        }
+    }
+}
