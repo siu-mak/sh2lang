@@ -58,6 +58,7 @@ pub struct PreludeUsage {
     pub uid: bool,
     pub lines: bool,
     pub contains: bool,
+    pub starts_with: bool,
     pub arg_dynamic: bool,
     pub sh_probe: bool,
     pub confirm: bool,
@@ -395,6 +396,11 @@ fn visit_val(val: &Val, usage: &mut PreludeUsage) {
             visit_val(t, usage);
             visit_val(r, usage);
         }
+        Val::StartsWith { text, prefix } => {
+            usage.starts_with = true;
+            visit_val(text, usage);
+            visit_val(prefix, usage);
+        }
         Val::ParseArgs => usage.parse_args = true,
         Val::Index { list, index } => {
             visit_val(list, usage);
@@ -543,6 +549,7 @@ fn is_boolean_val(v: &Val) -> bool {
             | Val::IsNonEmpty(_)
             | Val::Matches(_, _)
             | Val::Contains { .. }
+            | Val::StartsWith { .. }
             | Val::ContainsLine { .. }
             | Val::Confirm { .. }
     )
@@ -802,7 +809,7 @@ fn emit_val(v: &Val, target: TargetShell) -> Result<String, CompileError> {
         Val::JsonKv(blob) => {
             Ok(format!("\"$( __sh2_json_kv {} )\"", emit_word(blob, target)?))
         }
-        Val::Matches(..) => {
+        Val::Matches(..) | Val::StartsWith { .. } => {
             Ok(format!(
                 "\"$( if {}; then printf \"%s\" \"true\"; else printf \"%s\" \"false\"; fi )\"",
                 emit_cond(v, target)?
@@ -990,6 +997,13 @@ fn emit_cond(v: &Val, target: TargetShell) -> Result<String, CompileError> {
                 "__sh2_matches {} {}",
                 emit_val(text, target)?,
                 emit_val(regex, target)?
+            ))
+        }
+        Val::StartsWith { text, prefix } => {
+            Ok(format!(
+                "__sh2_starts_with {} {}",
+                emit_val(text, target)?,
+                emit_val(prefix, target)?
             ))
         }
         Val::BoolVar(name) => {
@@ -2996,6 +3010,18 @@ __sh2_split() {
             s.push_str(r#"__sh2_contains() { local -n __arr=$1; local __val=$2; for __e in "${__arr[@]}"; do if [[ "$__e" == "$__val" ]]; then return 0; fi; done; return 1; }
 "#);
         }
+    }
+    if usage.starts_with {
+         match target {
+            TargetShell::Bash => {
+                s.push_str(r#"__sh2_starts_with() { [[ "$1" == "$2"* ]]; return $?; }
+"#);
+            }
+             TargetShell::Posix => {
+                 s.push_str(r#"__sh2_starts_with() { case "$1" in "$2"*) return 0;; *) return 1;; esac; }
+"#);
+             }
+         }
     }
     if usage.log {
         s.push_str(r#"__sh2_log_now() { if [ -n "${SH2_LOG_TS:-}" ]; then printf '%s' "$SH2_LOG_TS"; return 0; fi; date '+%Y-%m-%dT%H:%M:%S%z' 2>/dev/null || date 2>/dev/null || printf '%s' 'unknown-time'; }

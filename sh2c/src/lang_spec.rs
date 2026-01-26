@@ -79,6 +79,7 @@ pub const BUILTINS: &[&str] = &[
     "matches",
     "contains",
     "contains_line",
+    "starts_with",
     "json_kv",
     "load_envfile",
     "save_envfile",

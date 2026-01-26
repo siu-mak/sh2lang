@@ -1272,6 +1272,19 @@ fn lower_expr<'a>(e: ast::Expr, ctx: &mut LoweringContext<'a>, sm: &SourceMap, f
                 let text = Box::new(lower_expr(iter.next().unwrap(), ctx, sm, file)?);
                 let needle = Box::new(lower_expr(iter.next().unwrap(), ctx, sm, file)?);
                 Ok(ir::Val::ContainsLine { text, needle })
+            } else if name == "starts_with" {
+                if args.len() != 2 {
+                     return Err(CompileError::new(sm.format_diagnostic(
+                        file,
+                        opts.diag_base_dir.as_deref(),
+                        "starts_with() requires exactly 2 arguments (text, prefix)",
+                        e.span,
+                    )));
+                }
+                let mut iter = args.into_iter();
+                let text = Box::new(lower_expr(iter.next().unwrap(), ctx, sm, file)?);
+                let prefix = Box::new(lower_expr(iter.next().unwrap(), ctx, sm, file)?);
+                Ok(ir::Val::StartsWith { text, prefix })
             } else if name == "parse_args" {
                 if !args.is_empty() {
                     return Err(CompileError::new(sm.format_diagnostic(file, opts.diag_base_dir.as_deref(), "parse_args() takes no arguments", e.span)));

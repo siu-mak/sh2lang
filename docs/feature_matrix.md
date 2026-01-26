@@ -149,6 +149,7 @@ This document maps implemented features to their proving test files, ensuring do
 | `contains_line(text, needle)` | `syntax_contains_line.rs` |
 | `contains(list, value)` | `syntax_contains.rs` |
 | `matches(text, regex)` | `syntax_matches.rs` |
+| `starts_with(text, prefix)` | `syntax_starts_with.rs` |
 
 ---
 

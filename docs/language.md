@@ -737,6 +737,14 @@ print("Hello, " & name)
 
 ### 10.6 String and List Utilities
 
+#### `starts_with(text, prefix)`
+
+Boolean predicate that evaluates to `true` if `text` starts with `prefix`.
+
+```sh2
+if starts_with("foobar", "foo") { ... }
+```
+
 #### `contains_line(text, needle)`
 
 Boolean predicate that evaluates to `true` if `text` contains a line exactly equal to `needle`.

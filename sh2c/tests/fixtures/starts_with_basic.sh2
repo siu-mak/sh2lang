@@ -1,0 +1,16 @@
+func main() {
+    if starts_with("abc", "a") {
+        print("yes")
+    } else {
+        print("no")
+    }
+
+    if starts_with("abc", "b") {
+        print("no")
+    } else {
+        print("yes")
+    }
+
+    print(bool_str(starts_with("foo", "foo")))
+    print(bool_str(starts_with("foo", "")))
+}
