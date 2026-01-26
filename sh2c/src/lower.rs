@@ -311,12 +311,12 @@ fn lower_stmt<'a>(
                     )));
                 }
             }
-            out.push(ir::Cmd::Print(lower_expr(e, &mut ctx, sm, file)?));
+            out.push(ir::Cmd::Print(lower_expr(e.clone(), &mut ctx, sm, file)?));
             Ok(ctx)
         }
 
         ast::StmtKind::PrintErr(e) => {
-            out.push(ir::Cmd::PrintErr(lower_expr(e, &mut ctx, sm, file)?));
+            out.push(ir::Cmd::PrintErr(lower_expr(e.clone(), &mut ctx, sm, file)?));
             Ok(ctx)
         }
         ast::StmtKind::If {
@@ -335,7 +335,7 @@ fn lower_stmt<'a>(
 
             for elif in elifs {
                 let mut body_cmds = Vec::new();
-                let elif_cond = lower_expr(elif.cond, &mut ctx, sm, file)?; // Evaluate cond in original context
+                let elif_cond = lower_expr(elif.cond.clone(), &mut ctx, sm, file)?; // Evaluate cond in original context
                 let ctx_elif = lower_block(&elif.body, &mut body_cmds, ctx.clone(), sm, file, opts)?;
                 lowered_elifs.push((elif_cond, body_cmds));
                 ctx_elifs.push(ctx_elif);
