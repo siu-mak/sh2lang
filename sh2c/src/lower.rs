@@ -125,7 +125,7 @@ fn lower_function(f: ast::Function, sm: &SourceMap, opts: &LowerOptions) -> Resu
 
 /// Helper to lower a block of statements sequentially
 fn lower_block<'a>(
-    stmts: Vec<ast::Stmt>,
+    stmts: &[ast::Stmt],
     out: &mut Vec<ir::Cmd>,
     mut ctx: LoweringContext<'a>,
     sm: &SourceMap,
@@ -133,7 +133,13 @@ fn lower_block<'a>(
     opts: &'a LowerOptions,
 ) -> Result<LoweringContext<'a>, CompileError> {
     for stmt in stmts {
-        ctx = lower_stmt(stmt, out, ctx, sm, file, opts)?;
+        // We pass a clone of the statement because lower_stmt consumes it
+        // Note: lower_stmt signature might need update or we keep cloning here if lower_stmt consumes.
+        // lower_stmt(stmt, ...) -> Stmt is large? Spanned<StmtKind>.
+        // StmtKind can be large. 
+        // If lower_stmt consumes Stmt, we must clone if we have &Stmt.
+        // Let's check lower_stmt.
+        ctx = lower_stmt(stmt.clone(), out, ctx, sm, file, opts)?;
     }
     Ok(ctx)
 }
@@ -322,7 +328,7 @@ fn lower_stmt<'a>(
             let cond_val = lower_expr(cond, &mut ctx, sm, file)?;
 
             let mut t_cmds = Vec::new();
-            let ctx_then = lower_block(then_body, &mut t_cmds, ctx.clone(), sm, file, opts)?;
+            let ctx_then = lower_block(&then_body, &mut t_cmds, ctx.clone(), sm, file, opts)?;
 
             let mut lowered_elifs = Vec::new();
             let mut ctx_elifs = Vec::new();
@@ -330,14 +336,14 @@ fn lower_stmt<'a>(
             for elif in elifs {
                 let mut body_cmds = Vec::new();
                 let elif_cond = lower_expr(elif.cond, &mut ctx, sm, file)?; // Evaluate cond in original context
-                let ctx_elif = lower_block(elif.body, &mut body_cmds, ctx.clone(), sm, file, opts)?;
+                let ctx_elif = lower_block(&elif.body, &mut body_cmds, ctx.clone(), sm, file, opts)?;
                 lowered_elifs.push((elif_cond, body_cmds));
                 ctx_elifs.push(ctx_elif);
             }
 
             let mut e_cmds = Vec::new();
             let ctx_else = if let Some(body) = else_body {
-                lower_block(body, &mut e_cmds, ctx.clone(), sm, file, opts)?
+                lower_block(&body, &mut e_cmds, ctx.clone(), sm, file, opts)?
             } else {
                 ctx.clone()
             };
@@ -371,7 +377,7 @@ fn lower_stmt<'a>(
                     }
                 }
 
-                let ctx_arm = lower_block(arm.body, &mut body_cmds, ctx.clone(), sm, file, opts)?;
+                let ctx_arm = lower_block(&arm.body, &mut body_cmds, ctx.clone(), sm, file, opts)?;
 
                 let patterns = arm
                     .patterns
@@ -410,7 +416,7 @@ fn lower_stmt<'a>(
         ast::StmtKind::While { cond, body } => {
             let cond_val = lower_expr(cond, &mut ctx, sm, file)?;
             let mut lower_body = Vec::new();
-            let ctx_body = lower_block(body, &mut lower_body, ctx.clone(), sm, file, opts)?;
+            let ctx_body = lower_block(&body, &mut lower_body, ctx.clone(), sm, file, opts)?;
             out.push(ir::Cmd::While {
                 cond: cond_val,
                 body: lower_body,
@@ -423,7 +429,7 @@ fn lower_stmt<'a>(
                 .map(|i| lower_expr(i, &mut ctx, sm, file))
                 .collect::<Result<Vec<_>, _>>()?;
             let mut lower_body = Vec::new();
-            let ctx_body = lower_block(body, &mut lower_body, ctx.clone(), sm, file, opts)?;
+            let ctx_body = lower_block(&body, &mut lower_body, ctx.clone(), sm, file, opts)?;
 
             out.push(ir::Cmd::For {
                 var,
@@ -433,35 +439,59 @@ fn lower_stmt<'a>(
             Ok(ctx.intersection(&ctx_body))
         }
         ast::StmtKind::Pipe(segments) => {
-            let mut lowered_segments = Vec::new();
-            for run_call in segments {
-                let lowered_args = run_call
-                    .args
-                    .into_iter()
-                    .map(|a| lower_expr(a, &mut ctx, sm, file))
-                    .collect::<Result<Vec<_>, _>>()?;
+            // Optimization: if all segments are Run(...), use ir::Cmd::Pipe which maps heavily to optimized shell pipelines
+            // If any segment is a Block { ... }, we must use ir::Cmd::PipeBlocks (which shells out to subshells/groups)
+            
+            let all_run = segments.iter().all(|s| matches!(s.node, ast::PipeSegment::Run(_)));
 
-                let mut allow_fail = false;
-                let mut seen_allow_fail = false;
-                for opt in run_call.options {
-                    if opt.name == "allow_fail" {
-                        if seen_allow_fail {
-                            return Err(CompileError::new(sm.format_diagnostic(file, opts.diag_base_dir.as_deref(), "allow_fail specified more than once", opt.span)));
-                        }
-                        seen_allow_fail = true;
-                        if let ast::ExprKind::Bool(b) = opt.value.node {
-                            allow_fail = b;
-                        } else {
-                            return Err(CompileError::new(sm.format_diagnostic(file, opts.diag_base_dir.as_deref(), "allow_fail must be true/false literal", opt.value.span)));
-                        }
+            if all_run {
+                // Pure run-pipeline optimization path
+                let mut lowered_segments = Vec::new();
+                for seg in segments {
+                    if let ast::PipeSegment::Run(run_call) = &seg.node {
+                         let (args, allow_fail) = lower_run_call_args(run_call, &mut ctx, sm, file, opts)?;
+                         lowered_segments.push((args, allow_fail));
                     } else {
-                        return Err(CompileError::new(sm.format_diagnostic(file, opts.diag_base_dir.as_deref(), format!("unknown run option: {}", opt.name).as_str(), opt.span)));
+                        unreachable!();
                     }
                 }
+                out.push(ir::Cmd::Pipe(lowered_segments, loc));
+            } else {
+                // Mixed or Block pipeline path -> ir::Cmd::PipeBlocks
+                let mut lower_segments = Vec::new();
+                
+                for seg in segments {
+                    let mut block_cmds = Vec::new(); 
+                    // In a pipeline, each segment runs in a subshell (conceptually or physically).
+                    // We must isolate the context for EACH segment to prevent side effects (like variable assignments) 
+                    // from leaking or persisting in the parent, mirroring existing PipeBlocks behavior.
+                    
+                    let seg_loc = if opts.include_diagnostics {
+                        Some(resolve_span(seg.span, sm, file, opts.diag_base_dir.as_deref()))
+                    } else {
+                        None
+                    };
 
-                lowered_segments.push((lowered_args, allow_fail));
+                    match &seg.node {
+                        ast::PipeSegment::Block(stmts) => {
+                             lower_block(stmts, &mut block_cmds, ctx.clone(), sm, file, opts)?;
+                        }
+                        ast::PipeSegment::Run(run_call) => {
+                            // Use cloned context for Run segments too
+                            let mut seg_ctx = ctx.clone();
+                            let (args, allow_fail) = lower_run_call_args(run_call, &mut seg_ctx, sm, file, opts)?;
+                            
+                            block_cmds.push(ir::Cmd::Exec {
+                                args,
+                                allow_fail,
+                                loc: seg_loc, 
+                            });
+                        }
+                    }
+                    lower_segments.push(block_cmds);
+                }
+                out.push(ir::Cmd::PipeBlocks(lower_segments, loc));
             }
-            out.push(ir::Cmd::Pipe(lowered_segments, loc));
             Ok(ctx)
         }
         ast::StmtKind::Break => {
@@ -493,7 +523,7 @@ fn lower_stmt<'a>(
                 })
                 .collect::<Result<Vec<_>, _>>()?;
             let mut lower_body = Vec::new();
-            let ctx_body = lower_block(body, &mut lower_body, ctx.clone(), sm, file, opts)?;
+            let ctx_body = lower_block(&body, &mut lower_body, ctx.clone(), sm, file, opts)?;
             out.push(ir::Cmd::WithEnv {
                 bindings: lowered_bindings,
                 body: lower_body,
@@ -502,10 +532,10 @@ fn lower_stmt<'a>(
         }
         ast::StmtKind::AndThen { left, right } => {
             let mut lower_left = Vec::new();
-            let ctx_left = lower_block(left, &mut lower_left, ctx.clone(), sm, file, opts)?;
+            let ctx_left = lower_block(&left, &mut lower_left, ctx.clone(), sm, file, opts)?;
 
             let mut lower_right = Vec::new();
-            let ctx_right = lower_block(right, &mut lower_right, ctx_left.clone(), sm, file, opts)?;
+            let ctx_right = lower_block(&right, &mut lower_right, ctx_left.clone(), sm, file, opts)?;
 
             out.push(ir::Cmd::AndThen {
                 left: lower_left,
@@ -515,10 +545,10 @@ fn lower_stmt<'a>(
         }
         ast::StmtKind::OrElse { left, right } => {
             let mut lower_left = Vec::new();
-            let ctx_left = lower_block(left, &mut lower_left, ctx.clone(), sm, file, opts)?;
+            let ctx_left = lower_block(&left, &mut lower_left, ctx.clone(), sm, file, opts)?;
 
             let mut lower_right = Vec::new();
-            let ctx_right = lower_block(right, &mut lower_right, ctx_left.clone(), sm, file, opts)?;
+            let ctx_right = lower_block(&right, &mut lower_right, ctx_left.clone(), sm, file, opts)?;
 
             out.push(ir::Cmd::OrElse {
                 left: lower_left,
@@ -537,7 +567,7 @@ fn lower_stmt<'a>(
             }
             let lowered_path = lower_expr(path, &mut ctx, sm, file)?;
             let mut lower_body = Vec::new();
-            let ctx_body = lower_block(body, &mut lower_body, ctx.clone(), sm, file, opts)?;
+            let ctx_body = lower_block(&body, &mut lower_body, ctx.clone(), sm, file, opts)?;
             out.push(ir::Cmd::WithCwd {
                 path: lowered_path,
                 body: lower_body,
@@ -547,7 +577,7 @@ fn lower_stmt<'a>(
         ast::StmtKind::WithLog { path, append, body } => {
             let lowered_path = lower_expr(path, &mut ctx, sm, file)?;
             let mut lower_body = Vec::new();
-            let ctx_body = lower_block(body, &mut lower_body, ctx.clone(), sm, file, opts)?;
+            let ctx_body = lower_block(&body, &mut lower_body, ctx.clone(), sm, file, opts)?;
             out.push(ir::Cmd::WithLog {
                 path: lowered_path,
                 append,
@@ -727,13 +757,13 @@ fn lower_stmt<'a>(
         }
         ast::StmtKind::Subshell { body } => {
             let mut lower_body = Vec::new();
-            lower_block(body, &mut lower_body, ctx.clone(), sm, file, opts)?;
+            lower_block(&body, &mut lower_body, ctx.clone(), sm, file, opts)?;
             out.push(ir::Cmd::Subshell { body: lower_body });
             Ok(ctx)
         }
         ast::StmtKind::Group { body } => {
             let mut lower_body = Vec::new();
-            let ctx_body = lower_block(body, &mut lower_body, ctx.clone(), sm, file, opts)?;
+            let ctx_body = lower_block(&body, &mut lower_body, ctx.clone(), sm, file, opts)?;
             out.push(ir::Cmd::Group { body: lower_body });
             Ok(ctx_body)
         }
@@ -744,7 +774,7 @@ fn lower_stmt<'a>(
             body,
         } => {
             let mut lowered_body = Vec::new();
-            let ctx_body = lower_block(body, &mut lowered_body, ctx.clone(), sm, file, opts)?;
+            let ctx_body = lower_block(&body, &mut lowered_body, ctx.clone(), sm, file, opts)?;
 
             let lower_output_target = |t: ast::RedirectOutputTarget, c: &mut LoweringContext| -> Result<ir::RedirectOutputTarget, CompileError> {
                  Ok(match t {
@@ -804,10 +834,10 @@ fn lower_stmt<'a>(
             catch_body,
         } => {
             let mut lower_try = Vec::new();
-            let ctx_try = lower_block(try_body, &mut lower_try, ctx.clone(), sm, file, opts)?;
+            let ctx_try = lower_block(&try_body, &mut lower_try, ctx.clone(), sm, file, opts)?;
 
             let mut lower_catch = Vec::new();
-            let ctx_catch = lower_block(catch_body, &mut lower_catch, ctx.clone(), sm, file, opts)?;
+            let ctx_catch = lower_block(&catch_body, &mut lower_catch, ctx.clone(), sm, file, opts)?;
 
             out.push(ir::Cmd::TryCatch {
                 try_body: lower_try,
@@ -867,16 +897,6 @@ fn lower_stmt<'a>(
             }
             Ok(ctx)
         }
-        ast::StmtKind::PipeBlocks { segments } => {
-            let mut lower_segments = Vec::new();
-            for seg in segments {
-                let mut lowered = Vec::new();
-                lower_block(seg, &mut lowered, ctx.clone(), sm, file, opts)?;
-                lower_segments.push(lowered);
-            }
-            out.push(ir::Cmd::PipeBlocks(lower_segments, loc));
-            Ok(ctx)
-        }
         ast::StmtKind::ForMap {
             key_var,
             val_var,
@@ -884,7 +904,7 @@ fn lower_stmt<'a>(
             body,
         } => {
             let mut lower_body = Vec::new();
-            let ctx_body = lower_block(body, &mut lower_body, ctx.clone(), sm, file, opts)?;
+            let ctx_body = lower_block(&body, &mut lower_body, ctx.clone(), sm, file, opts)?;
             out.push(ir::Cmd::ForMap {
                 key_var,
                 val_var,
@@ -895,6 +915,37 @@ fn lower_stmt<'a>(
         }
 
     }
+}
+
+fn lower_run_call_args<'a>(
+    run_call: &ast::RunCall,
+    ctx: &mut LoweringContext<'a>,
+    sm: &SourceMap,
+    file: &str,
+    opts: &'a LowerOptions,
+) -> Result<(Vec<ir::Val>, bool), CompileError> {
+    let lowered_args = run_call
+        .args
+        .iter()
+        .map(|a| lower_expr(a.clone(), ctx, sm, file))
+        .collect::<Result<Vec<_>, _>>()?;
+
+    let mut allow_fail = false;
+    for opt in &run_call.options {
+        if opt.name == "shell" {
+             return Err(CompileError::new(sm.format_diagnostic(file, opts.diag_base_dir.as_deref(), "shell option is not supported in run(...); use sh(...) for raw shell code", opt.span)));
+        } else if opt.name == "allow_fail" {
+             if let ast::ExprKind::Bool(b) = opt.value.node {
+                 allow_fail = b;
+             } else {
+                 return Err(CompileError::new(sm.format_diagnostic(file, opts.diag_base_dir.as_deref(), "allow_fail must be true/false", opt.value.span)));
+             }
+        } else {
+             return Err(CompileError::new(sm.format_diagnostic(file, opts.diag_base_dir.as_deref(), &format!("Unknown option {:?}", opt.name), opt.span)));
+        }
+    }
+    
+    Ok((lowered_args, allow_fail))
 }
 
 fn lower_sudo_command<'a>(

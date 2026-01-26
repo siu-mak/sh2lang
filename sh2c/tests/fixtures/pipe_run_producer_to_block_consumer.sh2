@@ -1,0 +1,6 @@
+func main() {
+    run("printf", "line1\nline2\n") | {
+        let captured = capture(run("grep", "2"))
+        print("Found: " & captured)
+    }
+}

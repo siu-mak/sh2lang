@@ -51,7 +51,7 @@ This document maps implemented features to their proving test files, ensuring do
 | Feature | Description | Test File(s) |
 |---------|-------------|--------------|
 | `cmd \| cmd` | command pipes | `syntax_pipe.rs`, `syntax_pipe_propagation.rs` |
-| `{ block } \|> { block }` | block pipes | `syntax_pipe_blocks_basic.rs`, `syntax_pipe_blocks_mixed_left_stmt.rs`, `syntax_pipe_blocks_mixed_right_stmt.rs` |
+| `{ block } | { block }` | block pipes | `syntax_pipe_blocks_basic.rs`, `syntax_pipe_blocks_mixed_left_stmt.rs`, `syntax_pipe_blocks_mixed_right_stmt.rs`, `syntax_pipe_blocks_interactions.rs` |
 
 ---
 

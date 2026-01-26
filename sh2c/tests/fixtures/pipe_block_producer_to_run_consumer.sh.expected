@@ -15,14 +15,13 @@ set -o errtrace
 trap '__sh2_err_handler' ERR
 main() {
   local __sh2_loc=""
-  __sh2_loc="tests/fixtures/pipe_blocks_mixed_left_stmt.sh2:2:3"
+  __sh2_loc="tests/fixtures/pipe_block_producer_to_run_consumer.sh2:2:5"
   if ( set -o pipefail; set +e; {
-    __sh2_loc="tests/fixtures/pipe_blocks_mixed_left_stmt.sh2:2:8"
-    'sh' '-c' 'echo a; echo b'; __sh2_status=$?
-    __sh2_check "$__sh2_status" "${__sh2_loc:-}" "exit"
+    printf '%s\n' 'line1'
+    printf '%s\n' 'line2'
   } | {
-    __sh2_loc="tests/fixtures/pipe_blocks_mixed_left_stmt.sh2:2:46"
-    'grep' 'b'; __sh2_status=$?
+    __sh2_loc="tests/fixtures/pipe_block_producer_to_run_consumer.sh2:5:9"
+    'grep' '2'; __sh2_status=$?
     __sh2_check "$__sh2_status" "${__sh2_loc:-}" "exit"
   } ); then __sh2_status=0; else __sh2_status=$?; fi; (exit $__sh2_status)
 }

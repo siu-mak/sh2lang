@@ -1016,10 +1016,13 @@ pub fn strip_spans_stmt(s: &mut sh2c::ast::Stmt) {
             for s in catch_body { strip_spans_stmt(s); }
         }
         sh2c::ast::StmtKind::Pipe(segments) => {
-            for c in segments { strip_spans_run_call(c); }
-        }
-        sh2c::ast::StmtKind::PipeBlocks { segments } => {
-            for seg in segments { for s in seg { strip_spans_stmt(s); } }
+            for seg in segments {
+                seg.span = sh2c::span::Span::new(0, 0);
+                match &mut seg.node {
+                    sh2c::ast::PipeSegment::Run(call) => strip_spans_run_call(call),
+                    sh2c::ast::PipeSegment::Block(stmts) => for s in stmts { strip_spans_stmt(s); },
+                }
+            }
         }
         sh2c::ast::StmtKind::Return(Some(e)) => strip_spans_expr(e),
         sh2c::ast::StmtKind::Exit(Some(e)) => strip_spans_expr(e),

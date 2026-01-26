@@ -361,6 +361,18 @@ run("printf", "hello\n") | run("tee", "out.txt")
 run("printf", "hello\n") | run("tee", "out.txt")
 ```
 
+### Pipe blocks
+Pipelines can also include blocks using the `pipe` keyword or by mixing `run` and `{ ... }`:
+
+```sh2
+pipe {
+  print("producing lines...")
+  run("ls", "-1")
+} | {
+  run("grep", "txt")
+}
+```
+
 ### `case` uses `=>` and supports `glob(...)` + `_`
 
 ```sh2

@@ -268,15 +268,26 @@ if exists("a") || exists("b") {
 Pipelines connect **stages** with `|`.
 
 - They are broader than just `run(...) | run(...)`.
-- Implementations include pipeline stages that may be blocks / statements in pipe contexts (as verified by pipe-block mixed-stage tests).
-
-Common pattern:
+- Implementations include pipeline stages that may be blocks / statements in pipe contexts.
 
 ```sh2
-run("printf", "hello\n") | run("tee", "out.txt")
+# Block as producer
+pipe {
+  print("line 1")
+  print("line 2")
+} | run("grep", "2")
+
+# Block as consumer
+run("ls") | {
+  let output = capture(input(""))
+  print("Captured: " & output)
+}
+
+# Mixed run/block
+pipe run("echo", "data") | { run("cat") }
 ```
 
-> Note: `print(...)` is a **statement**, not a pipeline stage. To “print and pipe”, use `run("printf", ...)`.
+> Note: `print(...)` is a **statement**, not a pipeline stage. To “print and pipe”, use `run("printf", ...)` OR use a `pipe { ... }` block where `print` writes to stdout of the block.
 
 ---
 

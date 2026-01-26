@@ -74,21 +74,25 @@ impl<'a> Parser<'a> {
             }
             TokenKind::Run => {
                 let mut segments = Vec::new();
-                segments.push(self.parse_run_call()?);
+                // Special case: First segment is Run. 
+                
+                // Parse first run call
+                let start_run = self.current_span();
+                let run_call = self.parse_run_call()?;
+                segments.push(Spanned::new(PipeSegment::Run(run_call), start_run.merge(self.previous_span())));
 
                 while self.match_kind(TokenKind::Pipe) {
-                    if self.peek_kind() == Some(&TokenKind::Run) {
-                        segments.push(self.parse_run_call()?);
-                    } else {
-                        self.error(
-                            "expected run(...) after '|' in pipeline",
-                            self.current_span(),
-                        )?;
-                    }
+                    segments.push(self.parse_pipe_segment()?);
                 }
 
                 if segments.len() == 1 {
-                    StmtKind::Run(segments.pop().unwrap())
+                    // Extract back if just one
+                    let seg = segments.pop().unwrap();
+                    if let PipeSegment::Run(r) = seg.node {
+                        StmtKind::Run(r)
+                    } else {
+                        unreachable!()
+                    }
                 } else {
                     StmtKind::Pipe(segments)
                 }
@@ -548,15 +552,18 @@ impl<'a> Parser<'a> {
                 let mut segments = Vec::new();
 
                 segments.push(self.parse_pipe_segment()?);
+                
                 if !self.match_kind(TokenKind::Pipe) {
-                    self.error("pipe requires at least two segments", self.current_span())?;
+                     // Check if we just have one segment and no pipe
+                     // Improve diagnostic
+                     self.error("pipe requires at least two segments (missing '|')", self.current_span())?;
                 }
                 segments.push(self.parse_pipe_segment()?);
 
                 while self.match_kind(TokenKind::Pipe) {
                     segments.push(self.parse_pipe_segment()?);
                 }
-                StmtKind::PipeBlocks { segments }
+                StmtKind::Pipe(segments)
             }
             TokenKind::Ident(name) => {
                 let name = name.clone();
@@ -597,6 +604,13 @@ impl<'a> Parser<'a> {
                                         self.error("allow_fail specified more than once", opt_start)?;
                                     }
                                     seen_allow_fail = true;
+                                    if let ExprKind::Bool(_) = value.node {
+                                        // OK
+                                    } else {
+                                        self.error("allow_fail must be a boolean", value.span)?;
+                                    }
+                                    
+                                    // Add to options so lowering sees it
                                     options.push(RunOption {
                                         name: opt_name,
                                         value,
@@ -604,30 +618,22 @@ impl<'a> Parser<'a> {
                                     });
                                 }
                                 _ => {
-                                    return self.error(
-                                        &format!("unknown sh() option '{}'; supported: shell, allow_fail", opt_name),
-                                        opt_start,
-                                    );
+                                    self.error(format!("Unknown option '{}'", opt_name).as_str(), opt_start)?;
                                 }
                             }
                         } else {
-                            return self.error("expected option name", self.current_span());
+                             self.error("Expected option name", self.current_span())?;
                         }
                     }
-                    
                     self.expect(TokenKind::RParen)?;
                     
-                    // Build argv: [shell, "-c", cmd]
-                    let args = vec![
-                        shell_expr,
-                        Expr {
-                            node: ExprKind::Literal("-c".to_string()),
-                            span: start_span,
+                    StmtKind::Sh(Expr {
+                        node: ExprKind::Sh {
+                            cmd: Box::new(cmd),
+                            options,
                         },
-                        cmd,
-                    ];
-                    
-                    StmtKind::Run(RunCall { args, options })
+                        span: start_span.merge(self.previous_span()),
+                    })
                 } else if name == "sudo" {
                     self.expect(TokenKind::LParen)?;
 
@@ -716,7 +722,9 @@ impl<'a> Parser<'a> {
                     StmtKind::Run(RunCall {
                         args: run_args,
                         options: run_options,
-                    })                } else {
+                    })
+                } else if self.peek_kind() == Some(&TokenKind::LParen) {
+                    // Generic Call: name(args, ...)
                     self.expect(TokenKind::LParen)?;
                     let mut args = Vec::new();
                     if !self.match_kind(TokenKind::RParen) {
@@ -729,17 +737,28 @@ impl<'a> Parser<'a> {
                         self.expect(TokenKind::RParen)?;
                     }
                     StmtKind::Call { name, args }
+                } else {
+                    // Regular assignment? Ident = Expr
+                    self.expect(TokenKind::Equals)?;
+                    let value = self.parse_expr()?;
+                    StmtKind::Set {
+                        target: LValue::Var(name),
+                        value,
+                    }
                 }
             }
             TokenKind::Import => {
                 self.error("import is only allowed at top-level", start_span)?
             }
-            _ => self.error(&format!("Expected statement, got {:?}", kind), start_span)?,
+            _ => {
+                self.error(format!("Unexpected token: {:?}", kind).as_str(), start_span)?
+            }
         };
 
+        let span = start_span.merge(self.previous_span());
         Ok(Stmt {
             node: stmt_kind,
-            span: start_span.merge(self.previous_span()),
+            span,
         })
     }
 
@@ -750,25 +769,30 @@ impl<'a> Parser<'a> {
         let mut options = Vec::new();
 
         while !self.match_kind(TokenKind::RParen) {
-            // Check for named arg: IDENT = ...
-            let is_named_arg = if let Some(TokenKind::Ident(_)) = self.peek_kind() {
-                self.tokens.get(self.pos + 1).map(|t| &t.kind) == Some(&TokenKind::Equals)
+            // Check if named option: ident = val
+            // Speculative lookahead? Or just parse expr.
+            // But 'allow_fail = true' looks like assignment expr?
+            // sh2 doesn't have assignment expr.
+            // But we need to distinguish `run("cmd", arg)` from `run("cmd", opt=val)`.
+            // Options must be at the end? Or mixed?
+            // `sudo` allows mixed. `run` usually args then options?
+            // Let's support mixed for now if we can distinguish.
+            
+            let is_option = if let Some(TokenKind::Ident(_)) = self.peek_kind() {
+                if let Some(TokenKind::Equals) = self.tokens.get(self.pos + 1).map(|t| &t.kind) {
+                    true
+                } else {
+                    false
+                }
             } else {
                 false
             };
 
-            if is_named_arg {
-                let start_span = self.current_span();
-                let name = if let Some(TokenKind::Ident(s)) = self.peek_kind() {
-                    s.clone()
-                } else {
-                    unreachable!()
-                };
-                self.advance(); // consume ident
-                let name_span = start_span.merge(self.previous_span());
+            if is_option {
+                let name = if let Some(TokenKind::Ident(s)) = self.peek_kind() { s.clone() } else { unreachable!() };
+                let name_span = self.advance().unwrap().span;
                 self.expect(TokenKind::Equals)?;
                 let value = self.parse_expr()?;
-                
                 options.push(RunOption {
                     name,
                     value,
@@ -783,11 +807,19 @@ impl<'a> Parser<'a> {
         Ok(RunCall { args, options })
     }
 
-    fn parse_pipe_segment(&mut self) -> ParsResult<Vec<Stmt>> {
+    fn parse_pipe_segment(&mut self) -> ParsResult<Spanned<PipeSegment>> {
         if self.peek_kind() == Some(&TokenKind::LBrace) {
-            self.parse_brace_stmt_block()
+            let start = self.current_span();
+            let body = self.parse_brace_stmt_block()?;
+            let end = self.previous_span();
+            Ok(Spanned::new(PipeSegment::Block(body), start.merge(end)))
+        } else if self.peek_kind() == Some(&TokenKind::Run) {
+            let start = self.current_span();
+            let call = self.parse_run_call()?;
+            let end = self.previous_span();
+            Ok(Spanned::new(PipeSegment::Run(call), start.merge(end)))
         } else {
-            Ok(vec![self.parse_stmt_atom()?])
+             self.error("Expected run(...) or { ... } segment", self.current_span())
         }
     }
 

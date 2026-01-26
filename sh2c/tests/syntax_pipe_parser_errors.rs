@@ -16,6 +16,6 @@ fn test_pipe_parser_error() {
     assert!(result.is_err(), "Parser should return error on non-run pipe segment");
     
     let err = result.unwrap_err();
-    let expected = "expected run(...) after '|' in pipeline";
+    let expected = "Expected run(...) or { ... } segment";
     assert!(err.msg.contains(expected), "Error message did not contain expected text: {}", err.msg);
 }

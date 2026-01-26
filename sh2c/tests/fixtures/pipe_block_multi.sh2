@@ -1,0 +1,9 @@
+func main() {
+    pipe {
+        print("a")
+    } | {
+        run("cat")
+    } | {
+        run("grep", "a")
+    }
+}

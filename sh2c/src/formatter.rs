@@ -130,12 +130,11 @@ fn format_stmt(stmt: &Stmt, depth: usize) -> String {
             )
         }
         StmtKind::Pipe(segments) => {
-            let parts: Vec<String> = segments.iter().map(|c| format_run_call(c)).collect();
-            parts.join(" | ")
-        }
-        StmtKind::PipeBlocks { segments } => {
             let parts: Vec<String> = segments.iter().map(|seg| {
-                format!("{{\n{}\n{}}}", format_block(seg, depth + 1, false), indent_str(depth))
+                match &seg.node {
+                    PipeSegment::Run(call) => format_run_call(call),
+                    PipeSegment::Block(stmts) => format!("{{\n{}\n{}}}", format_block(stmts, depth + 1, false), indent_str(depth)),
+                }
             }).collect();
             parts.join(" | ")
         }

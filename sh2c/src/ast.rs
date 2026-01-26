@@ -172,6 +172,12 @@ pub struct RunCall {
 
 
 #[derive(Debug, Clone, PartialEq)]
+pub enum PipeSegment {
+    Run(RunCall),
+    Block(Vec<Stmt>),
+}
+
+#[derive(Debug, Clone, PartialEq)]
 pub enum StmtKind {
     Let {
         name: String,
@@ -186,7 +192,7 @@ pub enum StmtKind {
         elifs: Vec<Elif>,
         else_body: Option<Vec<Stmt>>,
     },
-    Pipe(Vec<RunCall>),
+    Pipe(Vec<Spanned<PipeSegment>>), 
     Case {
         expr: Expr,
         arms: Vec<CaseArm>,
@@ -275,10 +281,6 @@ pub enum StmtKind {
         target: LValue,
         value: Expr,
     },
-    PipeBlocks {
-        segments: Vec<Vec<Stmt>>,
-    },
-
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -379,10 +381,13 @@ impl StmtKind {
                 for s in catch_body { s.strip_spans(); }
             }
             StmtKind::Pipe(segments) => {
-                for c in segments { c.strip_spans(); }
-            }
-            StmtKind::PipeBlocks { segments } => {
-                for seg in segments { for s in seg { s.strip_spans(); } }
+                for seg in segments {
+                    seg.span = Span::new(0, 0);
+                    match &mut seg.node {
+                        PipeSegment::Run(call) => call.strip_spans(),
+                        PipeSegment::Block(stmts) => for s in stmts { s.strip_spans(); },
+                    }
+                }
             }
             StmtKind::Return(Some(e)) => e.strip_spans(),
             StmtKind::Exit(Some(e)) => e.strip_spans(),

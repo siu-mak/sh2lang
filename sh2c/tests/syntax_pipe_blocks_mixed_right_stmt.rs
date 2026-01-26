@@ -8,28 +8,28 @@ fn parse_pipe_blocks_mixed_right_stmt() {
     let program = parse_fixture("pipe_blocks_mixed_right_stmt");
     let func = &program.functions[0];
 
-    // Check Stmt::PipeBlocks { segments }
+    // Check Stmt::Pipe { segments }
     if let Stmt {
-        node: StmtKind::PipeBlocks { segments },
+        node: StmtKind::Pipe(segments),
         ..
     } = &func.body[0]
     {
         assert_eq!(segments.len(), 2);
-        // Seg 0: { print("a") print("b") } (2 stmts)
-        assert_eq!(segments[0].len(), 2);
-        // Seg 1: run("grep", "b") (1 stmt)
-        assert_eq!(segments[1].len(), 1);
-        if let Stmt {
-            node: StmtKind::Run(..),
-            ..
-        } = &segments[1][0]
-        {
+        // Seg 0: { print("a") print("b") } (2 stmts) - Block
+        if let sh2c::ast::PipeSegment::Block(stmts) = &segments[0].node {
+             assert_eq!(stmts.len(), 2);
+        } else {
+            panic!("Expected Block for segment 0");
+        }
+
+        // Seg 1: run("grep", "b") - Run
+        if let sh2c::ast::PipeSegment::Run(_) = &segments[1].node {
             // OK
         } else {
-            panic!("Expected Run in segment 1");
+            panic!("Expected Run for segment 1");
         }
     } else {
-        panic!("Expected Stmt::PipeBlocks");
+        panic!("Expected Stmt::Pipe");
     }
 }
 

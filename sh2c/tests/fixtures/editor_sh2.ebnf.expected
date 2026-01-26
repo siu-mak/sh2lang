@@ -112,7 +112,10 @@ subshell_stmt = "subshell" , block ;
 group_stmt = "group" , block ;
 spawn_stmt = "spawn" , ( block | statement ) ;
 
-pipe_stmt = run_call , { "|" , run_call } ;
+pipe_stmt = "pipe" , pipe_segment , "|" , pipe_segment , { "|" , pipe_segment }
+          | run_call , "|" , pipe_segment , { "|" , pipe_segment } ;
+
+pipe_segment = run_call | block ;
 run_call = "run" , "(" , [ arg_list ] , ")" ;
 
 and_then_stmt = statement , "&&" , statement ;

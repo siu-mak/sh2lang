@@ -1,0 +1,6 @@
+func main() {
+    pipe {
+        print("line1")
+        print("line2")
+    } | run("grep", "2")
+}

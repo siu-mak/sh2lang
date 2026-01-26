@@ -20,7 +20,7 @@ main() {
     printf '%s\n' 'a'
     printf '%s\n' 'b'
   } | {
-    __sh2_loc="tests/fixtures/pipe_blocks_mixed_right_stmt.sh2:2:36"
+    __sh2_loc="tests/fixtures/pipe_blocks_mixed_right_stmt.sh2:2:3"
     'grep' 'b'; __sh2_status=$?
     __sh2_check "$__sh2_status" "${__sh2_loc:-}" "exit"
   } ); then __sh2_status=0; else __sh2_status=$?; fi; (exit $__sh2_status)
