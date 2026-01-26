@@ -1,27 +1,10 @@
-use sh2c::codegen;
+use sh2c::driver::{self, CompileOptions, DriverError, Mode};
 use sh2c::codegen::TargetShell;
-use sh2c::loader;
-use sh2c::lower;
 use std::process;
-use std::fmt;
-#[cfg(unix)]
-use std::os::unix::fs::PermissionsExt;
 
 struct Config {
     filename: String,
-    target: TargetShell,
-    include_diagnostics: bool,
-    mode: Mode,
-    out_path: Option<String>,
-    chmod_x: bool,
-}
-
-enum Mode {
-    Default,
-    Check,
-    EmitAst,
-    EmitIr,
-    EmitSh,
+    options: CompileOptions,
 }
 
 struct CliError {
@@ -30,27 +13,17 @@ struct CliError {
     show_usage: bool,
 }
 
-impl fmt::Display for CliError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.msg)
-    }
-}
-
 impl CliError {
-    fn compile(msg: impl Into<String>) -> Self {
-        Self { code: 2, msg: msg.into(), show_usage: false }
-    }
-    
-    fn io(msg: impl Into<String>) -> Self {
-        Self { code: 1, msg: msg.into(), show_usage: false }
-    }
-
     fn usage(msg: impl Into<String>) -> Self {
         Self { code: 1, msg: msg.into(), show_usage: true }
     }
-
+    
     fn usage_with_code(msg: impl Into<String>, code: i32) -> Self {
         Self { code, msg: msg.into(), show_usage: true }
+    }
+
+    fn from_driver(err: DriverError) -> Self {
+        Self { code: err.code, msg: err.msg, show_usage: false }
     }
 }
 
@@ -99,10 +72,10 @@ fn parse_args(args: Vec<String>) -> Result<Config, CliError> {
     }
 
     let mut filename: Option<String> = None;
-    let mut target = TargetShell::Bash;
-    let mut include_diagnostics = true;
-    let mut mode = Mode::Default;
-    let mut out_path: Option<String> = None;
+    let mut options = CompileOptions::default();
+    // Default CLI behavior: chmod_x=true is documented default in usage text.
+    // But library default is false. We should set it to true here for CLI parity.
+    options.chmod_x = true;
     
     let mut emit_ast = false;
     let mut emit_ir = false;
@@ -122,7 +95,7 @@ fn parse_args(args: Vec<String>) -> Result<Config, CliError> {
             process::exit(0);
         } else if arg == "--target" {
             if i + 1 < args.len() {
-                target = parse_target(&args[i + 1])?;
+                options.target = parse_target(&args[i + 1])?;
                 i += 2;
             } else {
                 return Err(CliError::usage("error: --target requires an argument"));
@@ -132,14 +105,14 @@ fn parse_args(args: Vec<String>) -> Result<Config, CliError> {
             if val.is_empty() {
                 return Err(CliError::usage("error: --target requires an argument"));
             }
-            target = parse_target(val)?;
+            options.target = parse_target(val)?;
             i += 1;
         } else if arg == "--no-diagnostics" {
-            include_diagnostics = false;
+            options.include_diagnostics = false;
             i += 1;
         } else if arg == "-o" || arg == "--out" {
             if i + 1 < args.len() {
-                out_path = Some(args[i + 1].clone());
+                options.out_path = Some(std::path::PathBuf::from(&args[i + 1]));
                 i += 2;
             } else {
                 return Err(CliError::usage(format!("error: {} requires an argument", arg)));
@@ -179,11 +152,11 @@ fn parse_args(args: Vec<String>) -> Result<Config, CliError> {
         }
     }
 
-    if check && out_path.is_some() {
+    if check && options.out_path.is_some() {
         return Err(CliError::usage_with_code("error: --check cannot be used with --out", 2));
     }
     
-    if chmod_x_flag.is_some() && out_path.is_none() {
+    if chmod_x_flag.is_some() && options.out_path.is_none() {
         return Err(CliError::usage("error: --no-chmod-x/--chmod-x require --out"));
     }
 
@@ -191,10 +164,14 @@ fn parse_args(args: Vec<String>) -> Result<Config, CliError> {
          return Err(CliError::usage("error: multiple action flags specified (choose only one of: --emit-ast, --emit-ir, --emit-sh, --check)"));
     }
     
-    if emit_ast { mode = Mode::EmitAst; }
-    else if emit_ir { mode = Mode::EmitIr; }
-    else if emit_sh { mode = Mode::EmitSh; }
-    else if check { mode = Mode::Check; }
+    if emit_ast { options.mode = Mode::EmitAst; }
+    else if emit_ir { options.mode = Mode::EmitIr; }
+    else if emit_sh { options.mode = Mode::EmitSh; }
+    else if check { options.mode = Mode::Check; }
+
+    if let Some(flag) = chmod_x_flag {
+        options.chmod_x = flag;
+    }
 
     let filename = match filename {
         Some(f) => f,
@@ -205,11 +182,7 @@ fn parse_args(args: Vec<String>) -> Result<Config, CliError> {
 
     Ok(Config {
         filename,
-        target,
-        include_diagnostics,
-        mode,
-        out_path,
-        chmod_x: chmod_x_flag.unwrap_or(true),
+        options,
     })
 }
 
@@ -223,70 +196,32 @@ fn parse_target(s: &str) -> Result<TargetShell, CliError> {
 
 fn compile(config: Config) -> Result<(), CliError> {
     let path = std::path::Path::new(&config.filename);
-    let diag_base_dir = path.parent()
-        .map(|p| std::fs::canonicalize(p).unwrap_or_else(|_| p.to_path_buf()));
-        
-    let mut ast = loader::load_program_with_imports(path)
-        .map_err(|d| CliError::compile(d.format(diag_base_dir.as_deref())))?;
-
-    if let Mode::EmitAst = config.mode {
-        ast.strip_spans();
-        println!("{:#?}", ast);
-        return Ok(());
-    }
-
-    let ir = lower::lower_with_options(
-        ast,
-        &lower::LowerOptions {
-            include_diagnostics: config.include_diagnostics,
-            diag_base_dir: diag_base_dir.clone(),
-        },
-    ).map_err(|e| CliError::compile(e.to_string()))?;
-
-    if let Mode::EmitIr = config.mode {
-        let mut ir_stripped = ir;
-        for f in &mut ir_stripped {
-             f.strip_spans();
-        }
-        println!("{:#?}", ir_stripped);
-        return Ok(());
-    }
-
-    if let Mode::Check = config.mode {
-        codegen::emit_with_options_checked(
-            &ir,
-            codegen::CodegenOptions {
-                target: config.target,
-                include_diagnostics: config.include_diagnostics,
-            },
-        ).map_err(|e| CliError::compile(e.to_string()))?;
-        println!("OK");
-        return Ok(());
-    }
-
-    let out = codegen::emit_with_options_checked(
-        &ir,
-        codegen::CodegenOptions {
-            target: config.target,
-            include_diagnostics: config.include_diagnostics,
-        },
-    ).map_err(|e| CliError::compile(e.to_string()))?;
     
-    if let Some(out_path) = config.out_path {
-        std::fs::write(&out_path, out).map_err(|e| CliError::io(format!("Failed to write to {}: {}", out_path, e)))?;
+    let mode = config.options.mode;
+    let has_out_path = config.options.out_path.is_some();
+    
+    let result = driver::compile_file(path, config.options)
+        .map_err(CliError::from_driver)?;
         
-        #[cfg(unix)]
-        {
-            if config.chmod_x {
-                if let Ok(metadata) = std::fs::metadata(&out_path) {
-                    let mut perms = metadata.permissions();
-                    perms.set_mode(perms.mode() | 0o111);
-                    let _ = std::fs::set_permissions(&out_path, perms);
-                }
-            }
+    // Driver handles writing to file if out_path is set.
+    // If not, it returns the content (or "OK" for check). 
+    // We should print it unless out_path was set (but compile_file returns string anyway).
+    // CLI logic:
+    // If Mode::Check: prints "OK" (Driver returns "OK").
+    // If Mode::EmitAst/Ir: Driver returns debug string.
+    // If Mode::EmitSh: Driver returns shell code.
+    // Driver writes to file if out_path is set.
+    // So checking has_out_path here is correct.
+    
+    if !has_out_path {
+        match mode {
+             Mode::Default | Mode::EmitSh => print!("{}", result),
+             Mode::Check | Mode::EmitAst | Mode::EmitIr => println!("{}", result),
         }
-    } else {
-        print!("{}", out);
+    } else if mode == Mode::Check {
+        // Edge case: check with out_path? CLI parser rejects check+out.
+        // So this branch is unreachable or fine.
+        println!("{}", result); 
     }
     
     Ok(())

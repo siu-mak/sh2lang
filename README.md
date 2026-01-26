@@ -202,11 +202,17 @@ sh2c --target bash -o hello.sh hello.sh2
 ./hello.sh
 ```
 
-### 2. One-liners with `sh2do`
+### 2. Snippets and Files with `sh2do`
 
-`sh2do` compiles and runs snippets instantly.
+`sh2do` compiles and runs snippets or files instantly.
 
 ```bash
+# Run a file
+sh2do myscript.sh2
+
+# File with flags and arguments (arguments passed after -- are forwarded to the script)
+sh2do myscript.sh2 --target posix -- arg1
+
 # Simple print
 sh2do 'print("Hello World")'
 

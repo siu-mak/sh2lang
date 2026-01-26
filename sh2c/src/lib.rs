@@ -12,3 +12,4 @@ pub mod target;
 pub mod sudo;
 pub mod formatter;
 pub mod lang_spec;
+pub mod driver;

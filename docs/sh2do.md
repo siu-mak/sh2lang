@@ -1,6 +1,6 @@
 # sh2do — sh2 Snippet Runner
 
-sh2do is a thin CLI wrapper around sh2c that compiles and executes sh2 snippets in one step. It wraps your snippet into `func main() { ... }`, invokes sh2c, and runs the generated shell script. sh2do does not change sh2 language semantics.
+sh2do is a thin CLI wrapper around sh2c that compiles and executes sh2 snippets or files in one step. It wraps snippets into `func main() { ... }` (if needed), invokes sh2c, and runs the generated shell script.
 
 ## Install
 
@@ -18,7 +18,15 @@ target/debug/sh2do --help
 
 ## Usage
 
-### Snippet as argument
+### Run a file
+
+```bash
+sh2do script.sh2
+```
+
+> **Note**: sh2do invokes the shell as `bash -- script`, so script paths starting with `-` (e.g., `-script.sh2`) are safely handled and not treated as shell options.
+
+### Run an inline snippet
 
 ```bash
 sh2do 'print("hello world")'
@@ -31,72 +39,95 @@ echo 'print("hello")' | sh2do -
 ```
 
 ### With flags and arguments
-
-```bash
-sh2do 'print(arg(1))' --target posix -- myarg
-```
+ 
+ Flags can be placed **before or after** the script argument, but must appear before `--`.
+ 
+ ```bash
+ sh2do script.sh2 --target posix -- arg1 arg2
+ sh2do --target posix script.sh2 -- arg1 arg2
+ sh2do 'print(arg(1))' --target posix -- myarg
+ ```
+ 
+ > **Note**: sh2do requires exactly one positional argument (the file path or snippet). Directories are rejected.
 
 ## Flags
 
-### `--emit-sh`
+### `-e, --emit`
+(File mode only) Compile, emit the generated shell script next to the source file (e.g. `script.sh` for `script.sh2`), and then execute it. It is **not** valid for inline snippets.
 
-Compile and emit the generated shell script to stdout without executing it.
+```bash
+sh2do script.sh2 --emit
+# Creates script.sh and runs it
+```
+
+### `-o <path>`
+Compile to the specified output path and execute it.
+
+```bash
+sh2do script.sh2 -o custom.sh
+```
+
+### `--emit-sh`
+Compile and emit the generated shell script to stdout **without** executing it. (Legacy alias: `--no-exec`)
 
 ```bash
 sh2do 'print("hi")' --emit-sh
 ```
 
-### `--no-exec`
-
-Alias of `--emit-sh`. Behaves identically.
-
 ### `--target <bash|posix>`
-
 Select the target shell dialect. Default is `bash`.
 
 ```bash
-sh2do 'print("test")' --target posix
+sh2do script.sh2 --target posix
 ```
+
+### `--shell <bash|sh>`
+Override the runtime shell used to execute the script.
+Default mapping:
+- `--target bash` -> `bash`
+- `--target posix` -> `sh`
 
 ### `-h, --help`
-
 Show help text and exit.
-
-```bash
-sh2do --help
-```
 
 ## Arguments Passthrough
 
-Everything after `--` is passed verbatim to the executed script. These arguments are accessible via `arg(n)` and `argc()` in your sh2 snippet.
+Everything after `--` is passed verbatim to the executed script (via the interpreter's arguments). These arguments are accessible via `arg(n)` and `argc()` in your sh2 script.
 
 ```bash
-sh2do 'print(arg(1))' -- hello
+sh2do script.sh2 -- hello
 # Output: hello
-
-sh2do 'print(argc())' -- a b c
-# Output: 3
 ```
 
-Arguments are ignored in `--emit-sh` / `--no-exec` mode (no execution occurs).
+Arguments are ignored in `--emit-sh` output mode (no execution).
 
 ## Exit Status
 
 ### Compile errors
-
-If sh2c fails to compile the snippet, sh2do exits with sh2c's exit code and forwards stderr unchanged.
+If sh2c fails to compile, sh2do exits with sh2c's exit code and forwards stderr unchanged.
 
 ### Runtime errors
-
 If the generated script executes and fails, sh2do exits with the script's exit code.
 
 ### Success
-
-Exit code 0 indicates successful compilation and execution (or successful emit-only mode).
+Exit code 0 indicates successful compilation and execution.
 
 ## Examples
 
-### Basic execution
+### Run a file
+
+```bash
+sh2do mytool.sh2
+```
+
+### Emit and run
+
+```bash
+sh2do mytool.sh2 --emit
+ls mytool.sh # exists
+```
+
+### Basic inline execution
 
 ```bash
 sh2do 'print("hello world")'
@@ -108,7 +139,7 @@ sh2do 'print("hello world")'
 sh2do 'print("Hello, " & arg(1))' -- Alice
 ```
 
-### Emit shell without execution
+### Emit shell without execution (stdout)
 
 ```bash
 sh2do 'print("test")' --emit-sh > script.sh
@@ -117,28 +148,9 @@ sh2do 'print("test")' --emit-sh > script.sh
 ### POSIX target
 
 ```bash
-sh2do 'print("portable")' --target posix
-```
-
-### Stdin mode with arguments
-
-```bash
-echo 'print(arg(1) & " " & arg(2))' | sh2do - -- foo bar
-```
-
-### Check generated shell
-
-```bash
-sh2do 'run("echo", "hi")' --emit-sh | head -20
+sh2do script.sh2 --target posix
 ```
 
 ## Non-Goals
 
-sh2do is intentionally minimal:
-
-- **No REPL**: sh2do is not an interactive shell
-- **No new syntax**: sh2do does not extend sh2 language
-- **No implicit helpers**: No automatic imports or magic variables
-- **No smart rewriting**: Snippets are wrapped as-is into `func main() { ... }`
-
-For full control over compilation, use `sh2c` directly.
+sh2do is intentionally minimal. For full control over compilation options (like IR emission or AST inspection), use `sh2c` directly.
