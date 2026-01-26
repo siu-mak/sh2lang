@@ -531,7 +531,7 @@ fn lower_stmt<'a>(
                  return Err(CompileError::new(sm.format_diagnostic(
                     file,
                     opts.diag_base_dir.as_deref(),
-                    "cwd(...) currently requires a string literal (e.g., with cwd(\"/abs/path\") { ... }).\nIf you need a computed path, use `cd(expr)` (scoped via `subshell { ... }` if needed) or `sh(\"cd ...\")`; expressions are not yet supported in cwd().",
+                    "cwd(...) requires a string literal path. Computed expressions are not allowed.\n\nhelp: if you need a computed cwd, use run(\"sh\", \"-c\", ...) (and cd inside the shell snippet).",
                     path.span,
                 )));
             }

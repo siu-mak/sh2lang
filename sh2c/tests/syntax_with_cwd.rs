@@ -2,25 +2,33 @@ mod common;
 
 #[test]
 fn test_cwd_non_literal_error() {
-    common::assert_codegen_panics(
-        "with_cwd_non_literal_is_error", 
-        "cwd(...) currently requires a string literal"
+    common::check_err_contains(
+        "with_cwd_non_literal_is_error",
+        "cwd(...) requires a string literal path. Computed expressions are not allowed."
     );
 }
 
 #[test]
 fn test_cwd_number_error() {
-    common::assert_codegen_panics(
+    common::check_err_contains(
         "with_cwd_non_string_literal_number_is_error",
-        "cwd(...) currently requires a string literal"
+        "cwd(...) requires a string literal path. Computed expressions are not allowed."
+    );
+}
+
+#[test]
+fn test_cwd_var_error() {
+    common::check_err_contains(
+        "with_cwd_var_is_error",
+        "cwd(...) requires a string literal path. Computed expressions are not allowed."
     );
 }
 
 #[test]
 fn test_cwd_bool_error() {
-    common::assert_codegen_panics(
+    common::check_err_contains(
         "with_cwd_non_string_literal_bool_is_error",
-        "cwd(...) currently requires a string literal"
+        "cwd(...) requires a string literal path. Computed expressions are not allowed."
     );
 }
 

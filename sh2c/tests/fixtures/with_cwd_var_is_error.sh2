@@ -1,0 +1,6 @@
+func main() {
+    let d = "/tmp"
+    with cwd(d) {
+        run("ls")
+    }
+}

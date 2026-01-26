@@ -77,14 +77,14 @@ impl<'a> Parser<'a> {
             // Ticket 10: Enforce whitespace around &
             // If the previous expression ends exactly where & starts, there is no whitespace.
             if left.span.end == amp_span.start { 
-                return self.error("The & operator requires whitespace", amp_span);
+                return self.error("The & operator requires whitespace: env.HOME & \"/x\"", amp_span);
             }
 
             let right = self.parse_sum()?;
             
             // Check whitespace after &
             if amp_span.end == right.span.start {
-                 return self.error("The & operator requires whitespace", amp_span);
+                 return self.error("The & operator requires whitespace: env.HOME & \"/x\"", amp_span);
             }
 
             let span = left.span.merge(right.span);

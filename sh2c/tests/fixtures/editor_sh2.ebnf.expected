@@ -83,7 +83,7 @@ pattern = string_literal | "glob" , "(" , string_literal , ")" | "_" ;
 
 with_stmt = "with" , with_modifier , block ;
 with_modifier = "env" , [ "{" , [ env_bindings ] , "}" ]
-              | "cwd" , "(" , string_literal , ")" (* restriction: must be literal *)
+              | "cwd" , "(" , expression , ")" (* semantic restriction: must be a string literal (enforced in lowering) *)
               | "log" , "(" , expression , [ "," , "append" , "=" , bool_literal ] , ")"
               | "redirect" , "{" , [ redirect_spec ] , "}"
               ;

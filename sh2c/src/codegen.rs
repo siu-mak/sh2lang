@@ -1874,13 +1874,17 @@ fn emit_cmd(
             out.push_str(&format!("{pad}(\n"));
             let path_str = emit_val(path, target)?;
             
-            // Ticket 9: Add runtime hint if path starts with "~" (e.g. "~/" or "~user")
-            let is_tilde_literal = is_tilde_literal_path(path);
+            // Ticket 9/11: Runtime hint for tilde literal path.
+            // ONLY emit if the path is a literal starting with '~'.
+            let is_tilde_literal = if let Val::Literal(s) = path {
+                 s.starts_with('~') 
+            } else { 
+                 false 
+            };
 
             if is_tilde_literal {
                 // Wrap cd in failure check with hint (use exit as this is a subshell)
-                // Use printf for safer output
-                out.push_str(&format!("{pad}  cd {} || {{ __sh2_err=$?; printf '%s\\n' \"hint: '~' is not expanded; use env.HOME & \\\"/path\\\" (or an absolute path).\" >&2; exit $__sh2_err; }}\n", path_str));
+                out.push_str(&format!("{pad}  cd {} || {{ __sh2_err=$?; printf '%s\\n' \"hint: '~' is not expanded; use env.HOME & \\\"/path\\\" or an absolute path.\" >&2; exit $__sh2_err; }}\n", path_str));
             } else {
                 out.push_str(&format!("{pad}  cd {}\n", path_str));
             }

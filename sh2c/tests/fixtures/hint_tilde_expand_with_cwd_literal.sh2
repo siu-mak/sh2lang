@@ -1,5 +1,5 @@
 func main() {
-    with cwd(env.HOME & "/tmp") {
+    with cwd("~/subdir") {
         print("should fail")
     }
 }

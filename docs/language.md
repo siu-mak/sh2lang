@@ -166,6 +166,24 @@ Stored booleans are represented as `"1"` (true) or `"0"` (false) internally.
 > print(bool_str(sum == 42))
 > ```
 
+- **Restriction**: The path MUST be a string literal at compile time (Model 2 restriction). Computed paths (e.g. variables, concatenation) are rejected with a compile error.
+   - To use a computed path, explicitly use the canonical safe pattern with `run("sh", "-c", ...)`.
+   
+   ```sh2
+   # ✅ Supported
+   with cwd("/tmp/build") { run("make") }
+   
+   # ❌ Rejected (compile time)
+   let d = "/tmp"
+   # with cwd(d) { ... } -> Error: cwd(...) requires a string literal path.
+   
+   # Workaround for computed paths (safe):
+   # Pattern: run("sh", "-c", script, arg0_name, arg1_path)
+   # We pass "sh2" as the script name ($0), and the path as the first argument ($1).
+   # Note: use "\$1" to prevent sh2 from interpolating $1 as a variable.
+   run("sh", "-c", "cd \"\$1\" && ls", "sh2", d)
+   ```
+
 
 ### 3.4 Lists (Bash-only)
 

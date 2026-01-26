@@ -1,0 +1,6 @@
+func main() {
+    let d = "safe pattern dir"
+    run("mkdir", "-p", d)
+    # Canonical safe pattern from docs (escaped dollar required in string literal)
+    run("sh", "-c", "cd \"\$1\" && basename \"$(pwd)\"", "sh2", d)
+}

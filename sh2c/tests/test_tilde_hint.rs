@@ -50,3 +50,17 @@ fn test_no_hint_for_expr() {
     // Ensure we do NOT see the runtime hint in the compile error
     assert!(!err.contains("hint: '~' is not expanded"), "Compile error should NOT contain runtime tilde expansion hint");
 }
+
+#[test]
+fn test_runtime_tilde_hint_cwd_literal() {
+    let fixture_path = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("tests/fixtures/hint_tilde_expand_with_cwd_literal.sh2");
+    
+    let bash_script = compile_path_to_shell(&fixture_path, TargetShell::Bash);
+    let (_stdout, stderr, exit_code, _temp_dir) = run_bash_script_in_tempdir(&bash_script);
+    
+    assert_ne!(exit_code, 0, "Script should fail due to missing directory");
+    
+    assert!(stderr.contains("hint: '~' is not expanded"), "stderr should contain hint");
+    assert!(stderr.contains("use env.HOME"), "stderr should contain canonical advice");
+}

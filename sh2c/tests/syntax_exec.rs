@@ -49,3 +49,11 @@ fn exec_exec_basic() {
 fn exec_exec_exit_status() {
     assert_exec_matches_fixture("exec_exit_status");
 }
+
+#[test]
+fn exec_sh_c_safe_pattern() {
+    // Validates the documentation's recommended workaround for computed CWD
+    assert_exec_matches_fixture("exec_sh_c_safe_pattern");
+}
+
+

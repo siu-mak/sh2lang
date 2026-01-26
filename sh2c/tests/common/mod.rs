@@ -1154,3 +1154,19 @@ pub fn read_file_in_dir(dir: &Path, filename: &str) -> Option<String> {
     let path = dir.join(filename);
     fs::read_to_string(path).ok()
 }
+pub fn check_err_contains(fixture_name_or_path: &str, expected: &str) {
+    let sh2_path = if fixture_name_or_path.ends_with(".sh2") {
+        fixture_name_or_path.to_string()
+    } else {
+        format!("tests/fixtures/{}.sh2", fixture_name_or_path)
+    };
+    let path = Path::new(&sh2_path);
+    
+    // We expect try_compile to return an Err string
+    match try_compile_path_to_shell(path, TargetShell::Bash) {
+        Ok(_) => panic!("Expected compilation error for {}, but it succeeded", fixture_name_or_path),
+        Err(e) => {
+            assert!(e.contains(expected), "Error message for {} should contain '{}', got:\n{}", fixture_name_or_path, expected, e);
+        }
+    }
+}
