@@ -635,47 +635,22 @@ impl<'a> Parser<'a> {
                         span: start_span.merge(self.previous_span()),
                     })
                 } else if name == "sudo" {
-                    self.expect(TokenKind::LParen)?;
-
-                    let mut args = Vec::new();
-                    let mut options = Vec::new();
-
-                    if !self.match_kind(TokenKind::RParen) {
-                        loop {
-                            // Check for named arg: IDENT = ...
-                            // Allow mixed positional/named options.
-                            let mut is_named = false;
-                            if let Some(TokenKind::Ident(_)) = self.peek_kind() {
-                                if self.tokens.get(self.pos + 1).map(|t| &t.kind) == Some(&TokenKind::Equals) {
-                                   is_named = true;
-                                }
-                            }
-
-                            if is_named {
-                                let name_token = if let Some(TokenKind::Ident(s)) = self.peek_kind() {
-                                    s.clone()
-                                } else {
-                                    unreachable!()
-                                };
-                                let name_span = self.advance().unwrap().span;
-                                self.expect(TokenKind::Equals)?;
-                                let value = self.parse_expr()?;
-
-                                options.push(RunOption {
-                                    name: name_token,
-                                    value,
-                                    span: name_span,
-                                });
-                            } else {
-                                args.push(self.parse_expr()?);
-                            }
-
-                            if !self.match_kind(TokenKind::Comma) {
-                                break;
-                            }
-                        }
-                        self.expect(TokenKind::RParen)?;
-                    }
+                     // Reuse parse logic. We need to construct StmtKind::Run from the result.
+                     // Note: parse_sudo_call consumes 'sudo' if present. 
+                     // But here 'sudo' (ident) was already consumed/peeked?
+                     // parse_stmt_atom: TokenKind::Ident(name) matched. 'name' is "sudo".
+                     // The token itself was *not* consumed? No, `match kind` used `peek_kind`.
+                     // `TokenKind::Ident(name) => { let name = name.clone(); self.advance(); ... }`
+                     // Line 593: `TokenKind::Ident(name) => { let name = name.clone(); self.advance();`
+                     // So 'sudo' ident IS consumed.
+                     // Helper `parse_sudo_call` expects 'sudo' to be present? 
+                     // My implementation of `parse_sudo_call` above: `if peek == Ident("sudo") { advance } else { error }`.
+                     // Since 'sudo' is ALREADY consumed here, I cannot call `parse_sudo_call`.
+                     // I should call `parse_call_args_and_options` directly.
+                     
+                    let call = self.parse_call_args_and_options()?;
+                    let args = call.args;
+                    let options = call.options;
 
                     // Validate options
                     let spec = match SudoSpec::from_options(&options) {
@@ -762,22 +737,12 @@ impl<'a> Parser<'a> {
         })
     }
 
-    fn parse_run_call(&mut self) -> ParsResult<RunCall> {
-        self.expect(TokenKind::Run)?;
+    fn parse_call_args_and_options(&mut self) -> ParsResult<RunCall> {
         self.expect(TokenKind::LParen)?;
         let mut args = Vec::new();
         let mut options = Vec::new();
 
         while !self.match_kind(TokenKind::RParen) {
-            // Check if named option: ident = val
-            // Speculative lookahead? Or just parse expr.
-            // But 'allow_fail = true' looks like assignment expr?
-            // sh2 doesn't have assignment expr.
-            // But we need to distinguish `run("cmd", arg)` from `run("cmd", opt=val)`.
-            // Options must be at the end? Or mixed?
-            // `sudo` allows mixed. `run` usually args then options?
-            // Let's support mixed for now if we can distinguish.
-            
             let is_option = if let Some(TokenKind::Ident(_)) = self.peek_kind() {
                 if let Some(TokenKind::Equals) = self.tokens.get(self.pos + 1).map(|t| &t.kind) {
                     true
@@ -807,6 +772,28 @@ impl<'a> Parser<'a> {
         Ok(RunCall { args, options })
     }
 
+    fn parse_run_call(&mut self) -> ParsResult<RunCall> {
+        self.expect(TokenKind::Run)?;
+        self.parse_call_args_and_options()
+    }
+
+    fn parse_sudo_call(&mut self) -> ParsResult<RunCall> {
+        // Assume 'sudo' is already consumed or peeked?
+        // Usually called after peeking Ident("sudo")
+        // But here we might want to consume it if it's not consumed.
+        // In parse_pipe_segment, we peek it.
+        if let Some(TokenKind::Ident(s)) = self.peek_kind() {
+            if s == "sudo" {
+                self.advance();
+            } else {
+                 return self.error("expected sudo", self.current_span());
+            }
+        } else {
+             return self.error("expected sudo", self.current_span());
+        }
+        self.parse_call_args_and_options()
+    }
+
     fn parse_pipe_segment(&mut self) -> ParsResult<Spanned<PipeSegment>> {
         if self.peek_kind() == Some(&TokenKind::LBrace) {
             let start = self.current_span();
@@ -818,8 +805,17 @@ impl<'a> Parser<'a> {
             let call = self.parse_run_call()?;
             let end = self.previous_span();
             Ok(Spanned::new(PipeSegment::Run(call), start.merge(end)))
+        } else if let Some(TokenKind::Ident(s)) = self.peek_kind() {
+            if s == "sudo" {
+                let start = self.current_span();
+                let call = self.parse_sudo_call()?;
+                let end = self.previous_span();
+                Ok(Spanned::new(PipeSegment::Sudo(call), start.merge(end)))
+            } else {
+                 self.error("Expected pipeline segment: run(...), sudo(...), or { ... }", self.current_span())
+            }
         } else {
-             self.error("Expected run(...) or { ... } segment", self.current_span())
+             self.error("Expected pipeline segment: run(...), sudo(...), or { ... }", self.current_span())
         }
     }
 

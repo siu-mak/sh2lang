@@ -15,13 +15,17 @@ set -o errtrace
 trap '__sh2_err_handler' ERR
 main() {
   local __sh2_loc=""
-  __sh2_loc="tests/fixtures/pipe_blocks_mixed_right_stmt.sh2:2:3"
+  __sh2_loc="tests/fixtures/pipe_sudo_basic.sh2:2:5"
+  if ( set -o pipefail; set +e; 'printf' 'hi
+' | 'sudo' '-n' '--' 'cat' ); then __sh2_status=0; else __sh2_status=$?; fi; (exit $__sh2_status)
+  __sh2_loc="tests/fixtures/pipe_sudo_basic.sh2:4:5"
+  if ( set -o pipefail; set +e; 'sudo' '-n' '--' 'echo' 'root' | 'cat' ); then __sh2_status=0; else __sh2_status=$?; fi; (exit $__sh2_status)
+  __sh2_loc="tests/fixtures/pipe_sudo_basic.sh2:6:5"
   if ( set -o pipefail; set +e; {
-    printf '%s\n' 'a'
-    printf '%s\n' 'b'
+    printf '%s\n' 'block'
   } | {
-    __sh2_loc="tests/fixtures/pipe_blocks_mixed_right_stmt.sh2:2:36"
-    'grep' 'b'; __sh2_status=$?
+    __sh2_loc="tests/fixtures/pipe_sudo_basic.sh2:8:9"
+    'sudo' '-n' '--' 'tee' '/dev/null'; __sh2_status=$?
     __sh2_check "$__sh2_status" "${__sh2_loc:-}" "exit"
   } ); then __sh2_status=0; else __sh2_status=$?; fi; (exit $__sh2_status)
 }

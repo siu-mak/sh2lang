@@ -268,7 +268,10 @@ if exists("a") || exists("b") {
 Pipelines connect **stages** with `|`.
 
 - They are broader than just `run(...) | run(...)`.
+- Stages can be `run(...)`, `sudo(...)`, or statement blocks `{ ... }`.
 - Implementations include pipeline stages that may be blocks / statements in pipe contexts.
+
+> **Important**: When using flags with `sudo(...)`, always use named options (e.g. `n=true` for `-n`) rather than positional strings. sh2 inserts `--` after options, so `sudo("-n", "cat")` would result in `sudo -- -n cat` (treating `-n` as the command), whereas `sudo("cat", n=true)` correctly yields `sudo -n -- cat`.
 
 ```sh2
 # Block as producer

@@ -1,0 +1,9 @@
+func main() {
+    pipe run("printf", "hi\n") | sudo("cat", n=true)
+
+    pipe sudo("echo", "root", n=true) | run("cat")
+
+    pipe {
+        print("block")
+    } | sudo("tee", "/dev/null", n=true)
+}

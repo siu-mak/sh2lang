@@ -174,6 +174,7 @@ pub struct RunCall {
 #[derive(Debug, Clone, PartialEq)]
 pub enum PipeSegment {
     Run(RunCall),
+    Sudo(RunCall),
     Block(Vec<Stmt>),
 }
 
@@ -385,6 +386,7 @@ impl StmtKind {
                     seg.span = Span::new(0, 0);
                     match &mut seg.node {
                         PipeSegment::Run(call) => call.strip_spans(),
+                        PipeSegment::Sudo(call) => call.strip_spans(),
                         PipeSegment::Block(stmts) => for s in stmts { s.strip_spans(); },
                     }
                 }

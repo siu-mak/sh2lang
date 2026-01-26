@@ -1020,6 +1020,7 @@ pub fn strip_spans_stmt(s: &mut sh2c::ast::Stmt) {
                 seg.span = sh2c::span::Span::new(0, 0);
                 match &mut seg.node {
                     sh2c::ast::PipeSegment::Run(call) => strip_spans_run_call(call),
+                    sh2c::ast::PipeSegment::Sudo(call) => strip_spans_run_call(call),
                     sh2c::ast::PipeSegment::Block(stmts) => for s in stmts { strip_spans_stmt(s); },
                 }
             }

@@ -133,6 +133,13 @@ fn format_stmt(stmt: &Stmt, depth: usize) -> String {
             let parts: Vec<String> = segments.iter().map(|seg| {
                 match &seg.node {
                     PipeSegment::Run(call) => format_run_call(call),
+                    PipeSegment::Sudo(call) => {
+                        let mut parts: Vec<String> = call.args.iter().map(format_expr).collect();
+                        for opt in &call.options {
+                            parts.push(format!("{} = {}", opt.name, format_expr(&opt.value)));
+                        }
+                        format!("sudo({})", parts.join(", "))
+                    },
                     PipeSegment::Block(stmts) => format!("{{\n{}\n{}}}", format_block(stmts, depth + 1, false), indent_str(depth)),
                 }
             }).collect();

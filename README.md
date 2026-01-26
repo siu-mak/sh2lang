@@ -345,12 +345,15 @@ Supported options: `user`, `n` (non-interactive), `k`, `prompt`, `E`, `env_keep`
 
 ### Pipelines are more than `run | run`
 
-Pipelines connect stages with `|`. The implementation supports **mixed stages** (not just `run(...)`), as validated by pipe-block mixed-stage tests.
+Pipelines connect stages with `|`. The implementation supports **mixed stages** (`run(...)`, `sudo(...)`, `{ ... }`), as validated by pipe-block mixed-stage tests.
 
 Common pattern:
 
 ```sh2
 run("printf", "hello\n") | run("tee", "out.txt")
+
+# Sudo in pipeline (use named options for flags)
+run("cat", "shadow.txt") | sudo("tee", "/dev/null", n=true)
 ```
 
 ### `print(...)` is not a pipeline stage

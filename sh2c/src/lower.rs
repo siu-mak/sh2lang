@@ -439,21 +439,25 @@ fn lower_stmt<'a>(
             Ok(ctx.intersection(&ctx_body))
         }
         ast::StmtKind::Pipe(segments) => {
-            // Optimization: if all segments are Run(...), use ir::Cmd::Pipe which maps heavily to optimized shell pipelines
-            // If any segment is a Block { ... }, we must use ir::Cmd::PipeBlocks (which shells out to subshells/groups)
+            // Optimization: if all segments are Run(...) or Sudo(...), use ir::Cmd::Pipe
             
-            let all_run = segments.iter().all(|s| matches!(s.node, ast::PipeSegment::Run(_)));
+            let all_cmds = segments.iter().all(|s| matches!(s.node, ast::PipeSegment::Run(_) | ast::PipeSegment::Sudo(_)));
 
-            if all_run {
-                // Pure run-pipeline optimization path
+            if all_cmds {
+                // Pure command pipeline optimization path
                 let mut lowered_segments = Vec::new();
                 for seg in segments {
-                    if let ast::PipeSegment::Run(run_call) = &seg.node {
-                         let (args, allow_fail) = lower_run_call_args(run_call, &mut ctx, sm, file, opts)?;
-                         lowered_segments.push((args, allow_fail));
-                    } else {
-                        unreachable!();
-                    }
+                     match &seg.node {
+                        ast::PipeSegment::Run(run_call) => {
+                             let (args, allow_fail) = lower_run_call_args(run_call, &mut ctx, sm, file, opts)?;
+                             lowered_segments.push((args, allow_fail));
+                        }
+                        ast::PipeSegment::Sudo(run_call) => {
+                             let (args, allow_fail) = lower_sudo_call_args(run_call, &mut ctx, sm, file, opts)?;
+                             lowered_segments.push((args, allow_fail));
+                        }
+                        _ => unreachable!(),
+                     }
                 }
                 out.push(ir::Cmd::Pipe(lowered_segments, loc));
             } else {
@@ -462,10 +466,6 @@ fn lower_stmt<'a>(
                 
                 for seg in segments {
                     let mut block_cmds = Vec::new(); 
-                    // In a pipeline, each segment runs in a subshell (conceptually or physically).
-                    // We must isolate the context for EACH segment to prevent side effects (like variable assignments) 
-                    // from leaking or persisting in the parent, mirroring existing PipeBlocks behavior.
-                    
                     let seg_loc = if opts.include_diagnostics {
                         Some(resolve_span(seg.span, sm, file, opts.diag_base_dir.as_deref()))
                     } else {
@@ -477,9 +477,18 @@ fn lower_stmt<'a>(
                              lower_block(stmts, &mut block_cmds, ctx.clone(), sm, file, opts)?;
                         }
                         ast::PipeSegment::Run(run_call) => {
-                            // Use cloned context for Run segments too
                             let mut seg_ctx = ctx.clone();
                             let (args, allow_fail) = lower_run_call_args(run_call, &mut seg_ctx, sm, file, opts)?;
+                            
+                            block_cmds.push(ir::Cmd::Exec {
+                                args,
+                                allow_fail,
+                                loc: seg_loc, 
+                            });
+                        }
+                        ast::PipeSegment::Sudo(run_call) => {
+                            let mut seg_ctx = ctx.clone();
+                            let (args, allow_fail) = lower_sudo_call_args(run_call, &mut seg_ctx, sm, file, opts)?;
                             
                             block_cmds.push(ir::Cmd::Exec {
                                 args,
@@ -1502,4 +1511,36 @@ fn lower_expr<'a>(e: ast::Expr, ctx: &mut LoweringContext<'a>, sm: &SourceMap, f
             Ok(ir::Val::Command(vec![shell_val, dash_c_val, cmd_val]))
         }
     }
+}
+fn lower_sudo_call_args<'a>(
+    run_call: &ast::RunCall,
+    ctx: &mut LoweringContext<'a>,
+    sm: &SourceMap,
+    file: &str,
+    opts: &'a LowerOptions,
+) -> Result<(Vec<ir::Val>, bool), CompileError> {
+    // Validate options via SudoSpec (validation only, duplicates parser check but safe)
+    // Note: parser already validated, but we need to re-derive the flags deterministicly.
+    // Parser constructed the AST as raw args/options.
+    
+    let spec = SudoSpec::from_options(&run_call.options)
+        .map_err(|(msg, span)| CompileError::new(sm.format_diagnostic(file, opts.diag_base_dir.as_deref(), &msg, span)))?;
+
+    let mut argv = Vec::new();
+    argv.push(ir::Val::Literal("sudo".to_string()));
+
+    // Deterministic flags
+    for flag in spec.to_flags_argv() {
+        argv.push(ir::Val::Literal(flag));
+    }
+
+    // Positional args
+    for arg in &run_call.args {
+        argv.push(lower_expr(arg.clone(), ctx, sm, file)?);
+    }
+    
+    // Extract allow_fail boolean
+    let allow_fail = spec.allow_fail.map(|(b, _)| b).unwrap_or(false);
+    
+    Ok((argv, allow_fail))
 }
