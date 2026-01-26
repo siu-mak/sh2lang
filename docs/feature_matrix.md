@@ -247,4 +247,5 @@ This document maps implemented features to their proving test files, ensuring do
 | `--emit-sh` / `--no-exec` | `sh2do_emit.rs` |
 | `--target` | `sh2do_emit.rs` |
 | `-- args` passthrough | `sh2do_args.rs` |
+| File mode execution | `sh2do_file_mode.rs` |
 | `-h/--help` | `sh2do_help.rs` |

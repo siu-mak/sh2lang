@@ -146,15 +146,16 @@ primary_expr = literal
              ;
 
 call_expr = identifier , "(" , [ arg_list ] , ")" ;
-capture_expr = "capture" , "(" , ( run_call | pipe_expr ) , ")" ;
-pipe_expr = run_call , { "|" , run_call } ;
+capture_expr = "capture" , "(" , capture_pipeline , [ "," , "allow_fail" , "=" , bool_literal ] , ")" ;
+capture_pipeline = capture_stage , { "|" , capture_stage } ;
+capture_stage = run_call | sudo_call ;
 list_expr = "[" , [ expression , { "," , expression } ] , "]" ;
 map_expr = "{" , [ map_entry , { "," , map_entry } ] , "}" ;
 map_entry = string_literal , ":" , expression ;
 index_expr = primary_expr , "[" , expression , "]" ;
 field_expr = primary_expr , "." , identifier ;
 
-builtin_expr = "arg" , "(" , number , ")"
+builtin_expr = "arg" , "(" , expression , ")"
              | "args"
              | "status" , "(" , ")"
              | "pid" , "(" , ")"
@@ -177,6 +178,13 @@ builtin_expr = "arg" , "(" , number , ")"
              | "len" , "(" , expression , ")"
              | "count" , "(" , expression , ")"
              | "join" , "(" , expression , "," , expression , ")"
+             | "split" , "(" , expression , "," , expression , ")"
+             | "lines" , "(" , expression , ")"
+             | "trim" , "(" , expression , ")"
+             | "replace" , "(" , expression , "," , expression , "," , expression , ")"
+             | "matches" , "(" , expression , "," , expression , ")"
+             | "contains" , "(" , expression , "," , expression , ")"
+             | "contains_line" , "(" , expression , "," , expression , ")"
              | "input" , "(" , expression , ")"
              | "confirm" , "(" , expression , [ "," , "default" , "=" , bool_literal ] , ")"
              | "bool_str" , "(" , expression , ")"

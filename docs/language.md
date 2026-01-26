@@ -385,6 +385,9 @@ Typical examples:
 ```sh2
 let who = capture(run("whoami"))
 let n = capture(run("printf", "a\n") | run("wc", "-l"))
+
+# With allowed failure (returns captured stdout even if command fails)
+let output = capture(run("ls", "missing"), allow_fail=true)
 ```
 
 ### 6.5 `try_run(...)` → `RunResult`
@@ -663,12 +666,28 @@ On `--target posix`, `with log` is not available.
 
 - string/list: `split`, `join`, `lines`, `trim`, `replace`
 - regex: `matches(text, regex)`
-- args: `parse_args()` and helpers
 - envfiles: `load_envfile`, `save_envfile`
 - JSON: `json_kv(...)`
-- process/system: `pid()`, `ppid()`, `uid()`, `pwd()`, `argc()`, `argv0()`, etc.
+- process/system: `pid()`, `ppid()`, `uid()`, `pwd()`, etc.
 
-### 10.4 Interactive Helpers
+### 10.4 Argument Access
+
+Scripts and snippets can access command-line arguments using:
+
+- `arg(n)`: Returns the *n*-th argument (1-based index).
+- `argc()`: Returns the total number of arguments.
+- `argv0()`: Returns the script name / entry point.
+- `args()`: Returns all arguments as a list.
+
+`arg(n)` supports dynamic expressions:
+```sh2
+let i = 1
+print(arg(i))
+```
+
+If `n` is out of bounds, `arg(n)` returns an empty string (it does not crash).
+
+### 10.5 Interactive Helpers
 
 #### `confirm(prompt, default=...)` → boolean
 
@@ -716,7 +735,7 @@ let name = input("Enter your name: ")
 print("Hello, " & name)
 ```
 
-### 10.5 String and List Utilities
+### 10.6 String and List Utilities
 
 #### `contains_line(text, needle)`
 
@@ -744,7 +763,7 @@ let text = "foo\nbar\n"
 if contains(lines(text), "bar") { ... }
 ```
 
-### 10.5 File I/O
+### 10.7 File I/O
 
 #### `read_file(path)` → string
 
