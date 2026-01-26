@@ -3,7 +3,6 @@ pub use posix_lint::{PosixLint, PosixLintKind, lint_script, render_lints};
 
 use crate::error::CompileError;
 use crate::ir::{Cmd, Function, LogLevel, RedirectOutputTarget, RedirectInputTarget, Val};
-use crate::span::{Span, SourceMap};
 pub use crate::target::TargetShell;
 
 #[derive(Clone, Debug, Copy)]
@@ -1096,16 +1095,6 @@ fn emit_arith_expr(v: &Val, target: TargetShell) -> Result<String, CompileError>
             _ => Err(CompileError::internal("count(...) supports only list literals, list variables, and args", target)),
         },
         _ => Err(CompileError::internal("Unsupported type in arithmetic expression", target)),
-    }
-}
-
-fn is_tilde_literal_path(val: &Val) -> bool {
-    // Ticket 9: Detect if path is a string literal starting with tilde (e.g. "~/" or "~user")
-    // Note: Val::Literal corresponds to string literals in source.
-    if let Val::Literal(s) = val {
-        s.starts_with("~")
-    } else {
-        false
     }
 }
 

@@ -1,6 +1,6 @@
 
 mod common;
-use common::{compile_to_bash, try_compile_to_shell, TargetShell};
+use common::{try_compile_to_shell, TargetShell};
 
 #[test]
 fn test_missing_whitespace_env_concat() {

@@ -1,4 +1,4 @@
-use crate::ast::{self, ArithOp, CompareOp, Expr, ExprKind, LValue, Pattern, Spanned, Stmt, StmtKind};
+use crate::ast::{self, Spanned};
 use crate::ir;
 use crate::span::{Span, SourceMap};
 use crate::error::CompileError;

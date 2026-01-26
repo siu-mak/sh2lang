@@ -575,7 +575,7 @@ impl<'a> Parser<'a> {
                     let cmd = self.parse_expr()?;
                     
                     // Parse options: shell=..., allow_fail=...
-                    let mut shell_expr = Expr {
+                    let mut _shell_expr = Expr {
                         node: ExprKind::Literal("sh".to_string()),
                         span: start_span,
                     };
@@ -597,7 +597,7 @@ impl<'a> Parser<'a> {
                                         self.error("shell specified more than once", opt_start)?;
                                     }
                                     seen_shell = true;
-                                    shell_expr = value;
+                                    _shell_expr = value;
                                 }
                                 "allow_fail" => {
                                     if seen_allow_fail {

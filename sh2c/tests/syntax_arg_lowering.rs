@@ -2,7 +2,6 @@ mod common;
 
 #[test]
 fn test_arg_zero_lowers_to_dynamic() {
-    use sh2c::ast;
     use sh2c::lexer;
     use sh2c::lower;
     use sh2c::parser;
@@ -54,7 +53,6 @@ fn test_arg_zero_lowers_to_dynamic() {
 
 #[test]
 fn test_arg_one_lowers_to_fast_path() {
-    use sh2c::ast;
     use sh2c::lexer;
     use sh2c::lower;
     use sh2c::parser;

@@ -144,7 +144,7 @@ fn test_nested_redirects() {
         .join("tests/fixtures/redirect_multi_nested.sh2");
     
     let bash_script = compile_path_to_shell(&fixture_path, TargetShell::Bash);
-    let (stdout, stderr, exit_code, temp_dir) = run_bash_script_in_tempdir(&bash_script);
+    let (stdout, __stderr, exit_code, temp_dir) = run_bash_script_in_tempdir(&bash_script);
     
     assert_eq!(exit_code, 0, "Script should exit successfully (no variable collision)");
     
@@ -175,7 +175,7 @@ fn test_heredoc_in_redirect() {
         .join("tests/fixtures/redirect_multi_heredoc.sh2");
     
     let bash_script = compile_path_to_shell(&fixture_path, TargetShell::Bash);
-    let (stdout, stderr, exit_code, temp_dir) = run_bash_script_in_tempdir(&bash_script);
+    let (stdout, __stderr, exit_code, temp_dir) = run_bash_script_in_tempdir(&bash_script);
     
     assert_eq!(exit_code, 0, "Script should exit successfully");
     
