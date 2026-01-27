@@ -1,0 +1,20 @@
+func main() {
+    let logf = "/tmp/redirect_inherit_basic.log"
+    # Basic redirect with inherit
+    with redirect { 
+        stdout: [file(logf, append=true), inherit_stdout()], 
+        stderr: [file(logf, append=true), inherit_stderr()] 
+    } { 
+        run("echo", "hello stdout")
+        run("sh", "-c", "echo hello stderr >&2")
+    }
+
+    # Failing command to test status propagation
+    with redirect { 
+        stdout: [inherit_stdout()], 
+        stderr: [inherit_stderr()] 
+    } { 
+        let res = try_run("sh", "-c", "exit 7")
+        print("status=" & res.status)
+    }
+}

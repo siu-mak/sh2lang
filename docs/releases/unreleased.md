@@ -24,3 +24,6 @@ Pipelines now accept `sudo(...)` stages:
 ### Capture
 - Fixed `capture(..., allow_fail=true)` to correctly return captured stdout and update `status()` without aborting the script on failure.
 - Clarified that `capture(..., allow_fail=true)` is only valid in `let` assignments.
+
+### Redirects
+- Fixed a Bash codegen bug where `redirect` blocks used with `inherit_stdout()` or `inherit_stderr()` would emit literal `\n` characters, causing syntax errors and `wait` failures.

@@ -2226,35 +2226,35 @@ fn emit_cmd(
                 
                 // 4. Capture Status & Cleanup (Wait for tee completion)
                 let cmd_status_var = format!("__sh2_cs_{}", uid);
-                out.push_str(&format!("{pad}  {}=$?\\n", cmd_status_var));
+                out.push_str(&format!("{pad}  {}=$?\n", cmd_status_var));
                 
                 // Wait for tee processes to complete and capture their statuses
                 let mut has_stdout_tee = false;
                 let mut has_stderr_tee = false;
                 
                 if let Some(_fifo) = &stdout_fifo_opt {
-                     out.push_str(&format!("{pad}  wait \"${}\"\\n", stdout_pid_opt.as_ref().unwrap())); 
+                     out.push_str(&format!("{pad}  wait \"${}\"\n", stdout_pid_opt.as_ref().unwrap())); 
                      let tee_status_var = format!("__sh2_ts_out_{}", uid);
-                     out.push_str(&format!("{pad}  {}=$?\\n", tee_status_var));
+                     out.push_str(&format!("{pad}  {}=$?\n", tee_status_var));
                      has_stdout_tee = true;
                 }
                 if let Some(_fifo) = &stderr_fifo_opt {
-                     out.push_str(&format!("{pad}  wait \"${}\"\\n", stderr_pid_opt.as_ref().unwrap()));
+                     out.push_str(&format!("{pad}  wait \"${}\"\n", stderr_pid_opt.as_ref().unwrap()));
                      let tee_status_var = format!("__sh2_ts_err_{}", uid);
-                     out.push_str(&format!("{pad}  {}=$?\\n", tee_status_var));
+                     out.push_str(&format!("{pad}  {}=$?\n", tee_status_var));
                      has_stderr_tee = true;
                 }
 
                 // Compute final status with deterministic precedence: cmd < stdout_tee < stderr_tee
                 let final_status_var = format!("__sh2_final_{}", uid);
-                out.push_str(&format!("{pad}  {}=${}\n", final_status_var, cmd_status_var));
+                out.push_str(&format!("{pad}  {}=${{{}:-0}}\n", final_status_var, cmd_status_var));
                 if has_stdout_tee {
                     let tee_status_var = format!("__sh2_ts_out_{}", uid);
-                    out.push_str(&format!("{pad}  if [ ${} -ne 0 ]; then {}=${}; fi\n", tee_status_var, final_status_var, tee_status_var));
+                    out.push_str(&format!("{pad}  if [ \"${{{}:-0}}\" -ne 0 ]; then {}=${}; fi\n", tee_status_var, final_status_var, tee_status_var));
                 }
                 if has_stderr_tee {
                     let tee_status_var = format!("__sh2_ts_err_{}", uid);
-                    out.push_str(&format!("{pad}  if [ ${} -ne 0 ]; then {}=${}; fi\n", tee_status_var, final_status_var, tee_status_var));
+                    out.push_str(&format!("{pad}  if [ \"${{{}:-0}}\" -ne 0 ]; then {}=${}; fi\n", tee_status_var, final_status_var, tee_status_var));
                 }
 
                 // Propagate to global status variable

@@ -107,7 +107,7 @@ This document maps implemented features to their proving test files, ensuring do
 |---------|-------------|--------------|--------|
 | `with env {...}` | scoped env | `syntax_with_env_colon_basic.rs` | both |
 | `with cwd(...)` | scoped cwd | `syntax_io.rs`, `syntax_with_cwd.rs` | both |
-| `with redirect {...}` | I/O redirect | `syntax_redirect_io.rs` | both |
+| `with redirect { ... }` | block/multi-stream redirect | `syntax_redirect_io.rs`, `syntax_redirect_inherit_bash.rs` | statement |
 | `with log(...)` | fan-out logging | `syntax_with_log.rs`, `syntax_logging.rs` | bash only |
 
 ---
