@@ -95,7 +95,7 @@ This document maps implemented features to their proving test files, ensuring do
 | `let x = expr` | variable binding | `syntax_arith_exec.rs` |
 | `set x = expr` | variable update | `syntax_set.rs`, `syntax_set_var_basic.rs` |
 | `set env.X = expr` | env update | `syntax_set_env_basic.rs`, `syntax_set_env_and_read.rs` |
-| `arg(expr)` | dynamic argument access | `syntax_arg_dynamic.rs` (fixture: `arg_dynamic_loop.sh2`) |
+| `arg(expr)` | dynamic argument access | `syntax_arg_dynamic.rs`, `syntax_arg_dynamic_index_bash.rs`, `syntax_arg_dynamic_index_posix.rs` |
 | `sh(cmd, ...)` | shell command helper | `syntax_sh.rs` (fixtures: `sh_basic.sh2`, `sh_allow_fail_capture.sh2`, `sh_allow_fail_stmt.sh2`, `sh_shell_option.sh2`) |
 | `confirm(prompt, default=...)` | yes/no prompt | `syntax_confirm.rs` (fixtures: `confirm_noninteractive_default_false.sh2`, `confirm_noninteractive_default_true.sh2`, `confirm_env_override_yes.sh2`, `confirm_env_override_no.sh2`) |
 

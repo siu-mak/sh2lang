@@ -680,7 +680,10 @@ On `--target posix`, `with log` is not available.
 Scripts and snippets can access command-line arguments using:
 
 - `argv()` or `args()`: Returns all arguments as a list.
-- `arg(n)`: Returns the *n*-th argument (1-based index).
+- `arg(n)`: Returns the *n*-th positional argument (1-based).
+  - If `n` is a literal number, it compiles to efficiency shell syntax like `$1`.
+  - If `n` is an expression (e.g. `arg(i + 1)`), it compiles to a dynamic lookup.
+  - The index expression **must** be an integer type (number, variable, or arithmetic). String literals or complex expressions like function calls are not allowed.
 - `argc()`: Returns the total number of arguments.
 - `argv0()`: Returns the script name / entry point.
 

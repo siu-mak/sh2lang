@@ -1,0 +1,8 @@
+func main() {
+    let i = 1
+    let j = 2
+    print("a1=" & arg(i))
+    print("a2=" & arg(j))
+    print("a3=" & arg(i + 2))
+    print("a4=" & arg(4))
+}

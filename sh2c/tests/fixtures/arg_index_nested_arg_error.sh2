@@ -1,0 +1,4 @@
+func main() {
+    let i = 1
+    print(arg(arg(i)))
+}

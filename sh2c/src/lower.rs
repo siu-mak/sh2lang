@@ -997,6 +997,42 @@ fn lower_sudo_command<'a>(
     Ok((argv, allow_fail_name_span))
 }
 
+fn validate_arg_index_expr(
+    expr: &ast::Expr,
+    sm: &SourceMap,
+    file: &str,
+    opts: &LowerOptions,
+) -> Result<(), CompileError> {
+    match &expr.node {
+        ast::ExprKind::Number(_) | ast::ExprKind::Var(_) | ast::ExprKind::Arith { .. } => Ok(()),
+        // Grouping/Parens are implicit in AST structure or handled by parser
+        
+        k => {
+            let kind_name = match k {
+                ast::ExprKind::Literal(_) => "StringLiteral",
+                ast::ExprKind::Call { .. } => "Call",
+                ast::ExprKind::Arg(_) => "Arg", // Nested arg
+                ast::ExprKind::List(_) => "List",
+                ast::ExprKind::MapLiteral(_) => "MapLiteral",
+                ast::ExprKind::Capture { .. } => "Capture",
+                ast::ExprKind::Command(_) => "Command",
+                ast::ExprKind::Compare { .. } | ast::ExprKind::And(..) | ast::ExprKind::Or(..) | ast::ExprKind::Not(..) => "BooleanExpression",
+                _ => "InvalidExpression", 
+            };
+            
+            Err(CompileError::new(sm.format_diagnostic(
+                file,
+                opts.diag_base_dir.as_deref(),
+                &format!(
+                    "arg(expr) index must be an integer expression (variable, number, or arithmetic), got {}",
+                    kind_name
+                ),
+                expr.span,
+            )))
+        }
+    }
+}
+
 
 fn lower_expr<'a>(e: ast::Expr, ctx: &mut LoweringContext<'a>, sm: &SourceMap, file: &str) -> Result<ir::Val, CompileError> {
     let opts = ctx.opts; // Get opts from context for diagnostic formatting
@@ -1116,6 +1152,8 @@ fn lower_expr<'a>(e: ast::Expr, ctx: &mut LoweringContext<'a>, sm: &SourceMap, f
         }
         ast::ExprKind::Len(expr) => Ok(ir::Val::Len(Box::new(lower_expr(*expr, ctx, sm, file)?))),
         ast::ExprKind::Arg(expr) => {
+            validate_arg_index_expr(&expr, sm, file, ctx.opts)?;
+
             let index_val = lower_expr(*expr, ctx, sm, file)?;
             
             // Optimize: if literal number >= 1, use Val::Arg(n) for direct $n expansion

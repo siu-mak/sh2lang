@@ -623,8 +623,9 @@ fn emit_val(v: &Val, target: TargetShell) -> Result<String, CompileError> {
         }
         Val::Arg(n) => Ok(format!("\"${}\"", n)),
         Val::ArgDynamic(index) => {
-            let idx_expr = emit_arith_expr(index, target)?;
-            Ok(format!("\"$( __sh2_arg_by_index {} \"$@\" )\"", idx_expr))
+            let idx_str = emit_arg_index_word(index, target)?;
+            // idx_str is already quoted (e.g. "$i" or "$((...))"), so we don't quote it here
+            Ok(format!("\"$( __sh2_arg_by_index {} \"$@\" )\"", idx_str))
         }
         Val::ParseArgs => Ok("\"${__sh2_parsed_args}\"".to_string()),
         Val::ArgsFlags(inner) => Ok(format!("\"$( __sh2_args_flags {} )\"", emit_val(inner, target)?)),
@@ -1046,8 +1047,10 @@ fn emit_arith_expr(v: &Val, target: TargetShell) -> Result<String, CompileError>
         Val::Var(s) => Ok(s.clone()),
         Val::Arg(n) => Ok(format!("${}", n)),
         Val::ArgDynamic(index) => {
-            let idx_expr = emit_arith_expr(index, target)?;
-            Ok(format!("$( __sh2_arg_by_index {} \"$@\" )", idx_expr))
+            let idx_str = emit_arg_index_word(index, target)?;
+            // idx_str is already quoted
+            // Purity: emit purely as command substitution, unquoted, for arithmetic compatibility
+            Ok(format!("$( __sh2_arg_by_index {} \"$@\" )", idx_str))
         }
         Val::Status => Ok("$__sh2_status".to_string()),
         Val::Pid => Ok("$!".to_string()),
@@ -1095,6 +1098,29 @@ fn emit_arith_expr(v: &Val, target: TargetShell) -> Result<String, CompileError>
             _ => Err(CompileError::internal("count(...) supports only list literals, list variables, and args", target)),
         },
         _ => Err(CompileError::internal("Unsupported type in arithmetic expression", target)),
+    }
+}
+
+
+
+fn emit_arg_index_word(v: &Val, target: TargetShell) -> Result<String, CompileError> {
+    // Both Bash and POSIX support "$i" and "$((...))"
+    match v {
+        Val::Var(name) => Ok(format!("\"${}\"", name)),
+        Val::Number(n) => Ok(format!("\"{}\"", n)),
+        Val::Literal(s) => {
+             // Strictness: lowering should prevent this.
+             Err(CompileError::internal(format!("String literal index should have been rejected by lowering: {:?}", s), target))
+        },
+        Val::ArgDynamic(_) => {
+             // Recursion guard: lowering should prevent nested arg(arg(...)).
+             Err(CompileError::internal("Nested dynamic argument index (recursion) should have been rejected by lowering", target))
+        },
+        _ => {
+            // Fallback: try arithmetic emission for other valid types (Arith, Argc, etc.)
+            let expr = emit_arith_expr(v, target)?;
+            Ok(format!("\"$(( {} ))\"", expr))
+        }
     }
 }
 
