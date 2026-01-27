@@ -164,6 +164,7 @@ builtin_expr = "arg" , "(" , expression , ")"
              | "pwd" , "(" , ")"
              | "self_pid" , "(" , ")"
              | "argv0" , "(" , ")"
+             | "argv" , "(" , ")"
              | "argc" , "(" , ")"
              | "env" , "(" , expression , ")"
              | "env" , "." , identifier

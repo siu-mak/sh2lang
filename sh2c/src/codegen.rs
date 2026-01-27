@@ -1295,13 +1295,16 @@ fn emit_cmd(
                     _ => return Err(CompileError::internal("Capture expects Command or CommandPipe", target)),
                 };
 
+                // Use a unique status variable for this capture to avoid conflicts
+                out.push_str(&format!("{}{}__cs=0\n", pad, name));
                 out.push_str(&format!(
-                    "{}( {} ) >\"${{{}__stdout_tmp}}\" 2>\"${{{}__stderr_tmp}}\"\n",
-                    pad, cmd_str, name, name
+                    "{}( {} ) >\"${{{}__stdout_tmp}}\" 2>\"${{{}__stderr_tmp}}\" || {}__cs=$?\n",
+                    pad, cmd_str, name, name, name
                 ));
                 
-                out.push_str(&format!("{}{}__status=$?\n", pad, name));
-                 // Use safe read_file helper or cat? cat is standard. read_file might have trap logic.
+                out.push_str(&format!("{}{}__status=\"${{{}__cs}}\"\n", pad, name, name));
+                out.push_str(&format!("{}__sh2_status=\"${{{}__cs}}\"\n", pad, name));
+                // Use safe read_file helper or cat? cat is standard. read_file might have trap logic.
                  // The original code used cat. 
                  // But wait, existing code used $(cat ...).
                  // Safe read file for bash handles ERR trap.
@@ -1315,7 +1318,7 @@ fn emit_cmd(
                 out.push_str(&format!("{}{}=\"${{{}__stdout}}\"\n", pad, name, name));
                 out.push_str(&format!("{}rm -f \"${{{}__stdout_tmp}}\" \"${{{}__stderr_tmp}}\"\n", pad, name, name));
                 
-                out.push_str(&format!("{}__sh2_status=0\n", pad)); // Always succeed
+                // Status captured above
 
 
             } else if let Val::Args = val {

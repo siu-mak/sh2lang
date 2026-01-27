@@ -1233,7 +1233,17 @@ fn lower_expr<'a>(e: ast::Expr, ctx: &mut LoweringContext<'a>, sm: &SourceMap, f
             Ok(ir::Val::Command(argv))
         }
         ast::ExprKind::Call { name, args } => {
-            if name == "matches" {
+            if name == "argv" {
+                if !args.is_empty() {
+                    return Err(CompileError::new(sm.format_diagnostic(
+                        file,
+                        opts.diag_base_dir.as_deref(),
+                        "argv() takes no arguments",
+                        e.span,
+                    )));
+                }
+                Ok(ir::Val::Args)
+            } else if name == "matches" {
                 if args.len() != 2 {
                     return Err(CompileError::new(sm.format_diagnostic(
                         file,
@@ -1445,7 +1455,7 @@ fn lower_expr<'a>(e: ast::Expr, ctx: &mut LoweringContext<'a>, sm: &SourceMap, f
         }
         ast::ExprKind::MapIndex { map, key } => Ok(ir::Val::MapIndex { map, key }),
         ast::ExprKind::Capture { expr, options } => {
-            let expr_span = expr.span;
+            let _expr_span = expr.span;
             let lowered_expr = lower_expr(*expr, ctx, sm, file)?;
             let mut allow_fail = false;
             let mut seen_allow_fail = false;
@@ -1474,8 +1484,8 @@ fn lower_expr<'a>(e: ast::Expr, ctx: &mut LoweringContext<'a>, sm: &SourceMap, f
                  return Err(CompileError::new(sm.format_diagnostic(
                      file,
                      opts.diag_base_dir.as_deref(),
-                     "capture(..., allow_fail=true) is only allowed in 'let' assignment (e.g. let res = capture(...))",
-                     expr_span, // Use safe span
+                     "capture(..., allow_fail=true) is only allowed in 'let' assignment to ensure exit status can be preserved",
+                     e.span,
                  )));
             }
 

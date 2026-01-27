@@ -388,7 +388,12 @@ let n = capture(run("printf", "a\n") | run("wc", "-l"))
 
 # With allowed failure (returns captured stdout even if command fails)
 let output = capture(run("ls", "missing"), allow_fail=true)
+if status() != 0 {
+    print("ls failed with status " & status())
+}
 ```
+
+> **Restriction**: `capture(..., allow_fail=true)` is only valid in `let` assignments (e.g. `let x = capture(...)`) to ensure the exit status is correctly preserved and observable via `status()`.
 
 ### 6.5 `try_run(...)` → `RunResult`
 
@@ -674,10 +679,10 @@ On `--target posix`, `with log` is not available.
 
 Scripts and snippets can access command-line arguments using:
 
+- `argv()` or `args()`: Returns all arguments as a list.
 - `arg(n)`: Returns the *n*-th argument (1-based index).
 - `argc()`: Returns the total number of arguments.
 - `argv0()`: Returns the script name / entry point.
-- `args()`: Returns all arguments as a list.
 
 `arg(n)` supports dynamic expressions:
 ```sh2

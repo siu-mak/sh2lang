@@ -11,7 +11,7 @@ fn test_sh2do_run_mv_implicit_cwd() {
     fs::create_dir(&src_dir).unwrap();
     fs::write(src_dir.join("file.txt"), "content").unwrap();
 
-    let mut cmd = Command::cargo_bin("sh2do").unwrap();
+    let mut cmd = Command::new(env!("CARGO_BIN_EXE_sh2do")); // wrapper
     cmd.current_dir(work_dir.path())
         .arg("run(\"mv\", \"src\", \"dst\")")
         .assert()
@@ -38,7 +38,7 @@ fn test_sh2do_run_with_cwd() {
         work_path
     );
 
-    let mut cmd = Command::cargo_bin("sh2do").unwrap();
+    let mut cmd = Command::new(env!("CARGO_BIN_EXE_sh2do")); // wrapper
     // We can run from anywhere, but let's run from a different temp dir to be sure
     let run_dir = tempfile::tempdir().unwrap();
     

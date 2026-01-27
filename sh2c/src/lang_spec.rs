@@ -45,6 +45,7 @@ pub const BUILTINS: &[&str] = &[
     "argc",
     "arg",
     "args",
+    "argv",
     "exists",
     "is_dir",
     "is_file",

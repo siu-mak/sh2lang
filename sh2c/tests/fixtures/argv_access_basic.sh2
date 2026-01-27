@@ -1,0 +1,10 @@
+func main() {
+    print(bool_str(argc() == 0))
+    # print(argv0()) skip variable name
+    print(arg(1))
+    print(bool_str(true)) 
+    # Just check compilation of argv() 
+    for a in argv() {
+        print(a)
+    }
+}

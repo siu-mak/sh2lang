@@ -1,0 +1,6 @@
+func main() {
+    let out = capture(run("sh", "-c", "printf hi; exit 7"), allow_fail=true)
+    print(out.stdout)
+    print(out.status)
+    print("Global status: " & status())
+}

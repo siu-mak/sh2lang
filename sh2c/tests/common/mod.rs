@@ -13,7 +13,7 @@ fn crate_root() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).to_path_buf()
 }
 
-fn repo_root() -> PathBuf {
+pub fn repo_root() -> PathBuf {
     let crate_dir = crate_root();
     crate_dir.parent()
         .unwrap_or_else(|| panic!("Failed to find repo root (parent of {})", crate_dir.display()))
