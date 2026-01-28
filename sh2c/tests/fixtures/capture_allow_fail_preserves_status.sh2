@@ -1,0 +1,13 @@
+func main() {
+    # Test allow_fail=true preserves exit code
+    let out = capture(run("sh", "-c", "printf 'X'; exit 7"), allow_fail=true)
+    let s = status()
+    print("out=" & out)
+    print("st=" & s)
+    
+    # Self-verify
+    if s != 7 {
+        print_err("FAIL: expected status 7, got " & s)
+        exit 1
+    }
+}

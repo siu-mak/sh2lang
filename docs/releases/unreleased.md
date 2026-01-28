@@ -23,9 +23,8 @@ Pipelines now accept `sudo(...)` stages:
 
 ### Capture
 - Fixed `capture(..., allow_fail=true)` to correctly return captured stdout and update `status()` without aborting the script on failure.
+- Fixed bash codegen so `capture(run(...), allow_fail=true)` preserves `status()` (non-zero exit codes no longer clobbered).
 - Clarified that `capture(..., allow_fail=true)` is only valid in `let` assignments.
 
-### Redirects
-- Fixed a bug where `inherit_stdout` or `inherit_stderr` inside a `redirect` block caused literal `\n` characters to be emitted in the generated Bash script.
 - Fixed Bash codegen for `arg(expr)` with dynamic indexes to properly quote arguments passed to `__sh2_arg_by_index` using a dedicated helper to ensure safe and deterministic forms.
 - Hardened `arg(expr)` validation: non-integer indices (e.g., strings, nested calls) now produce a compile-time error.
