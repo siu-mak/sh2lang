@@ -1,0 +1,12 @@
+func main() {
+  let cmd = arg(1)
+  if cmd == "core" {
+    let sub = arg(2)
+    if sub == "dirs" { print("dirs"); return }
+    if sub == "install" { print("install"); return }
+    if sub == "registry" { print("registry"); return }
+    print("unknown")
+    return
+  }
+  print("other")
+}
