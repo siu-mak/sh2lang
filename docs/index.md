@@ -1,6 +1,6 @@
 # sh2lang
 
-<img src="/images/logo/sh2logo_256.png" alt="sh2 logo" width="128" />
+<img src="images/logo/sh2logo_256.png" alt="sh2 logo" width="128" />
 
 This repository contains tools for **sh2**, a structured shell language designed to compile down to conventional shell scripts (bash/posix targets).
 
