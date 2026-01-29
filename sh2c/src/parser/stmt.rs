@@ -611,7 +611,7 @@ impl<'a> Parser<'a> {
                                     }
                                     
                                     // Add to options so lowering sees it
-                                    options.push(RunOption {
+                                    options.push(CallOption {
                                         name: opt_name,
                                         value,
                                         span: name_span,
@@ -684,7 +684,7 @@ impl<'a> Parser<'a> {
                     // Handle allow_fail: passing it to StmtKind::Run options
                     let mut run_options = Vec::new();
                     if let Some((allow, span)) = spec.allow_fail {
-                        run_options.push(RunOption {
+                        run_options.push(CallOption {
                             name: "allow_fail".to_string(),
                             value: Expr {
                                 node: ExprKind::Bool(allow),
@@ -704,6 +704,16 @@ impl<'a> Parser<'a> {
                     let mut args = Vec::new();
                     if !self.match_kind(TokenKind::RParen) {
                         loop {
+                            // Lookahead for named argument key=value
+                            if let Some(TokenKind::Ident(_)) = self.peek_kind() {
+                                if let Some(TokenKind::Equals) = self.tokens.get(self.pos + 1).map(|t| &t.kind) {
+                                    return self.error(
+                                        "Named arguments are only supported for builtins: run, sudo, sh, capture, confirm",
+                                        self.current_span()
+                                    );
+                                }
+                            }
+
                             args.push(self.parse_expr()?);
                             if !self.match_kind(TokenKind::Comma) {
                                 break;
@@ -737,7 +747,7 @@ impl<'a> Parser<'a> {
         })
     }
 
-    fn parse_call_args_and_options(&mut self) -> ParsResult<RunCall> {
+    pub(crate) fn parse_call_args_and_options(&mut self) -> ParsResult<RunCall> {
         self.expect(TokenKind::LParen)?;
         let mut args = Vec::new();
         let mut options = Vec::new();
@@ -758,7 +768,7 @@ impl<'a> Parser<'a> {
                 let name_span = self.advance().unwrap().span;
                 self.expect(TokenKind::Equals)?;
                 let value = self.parse_expr()?;
-                options.push(RunOption {
+                options.push(CallOption {
                     name,
                     value,
                     span: name_span,

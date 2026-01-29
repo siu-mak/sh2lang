@@ -53,7 +53,7 @@ fn test_capture_options_parsing() {
         func main() {
             let s = $(run("ls"), allow_fail=true)
         }
-    "#, "run options like allow_fail=... are not supported inside command substitution");
+    "#, "Named arguments are only supported for builtins: run, sudo, sh, capture, confirm");
 }
 
 #[test]
@@ -63,7 +63,7 @@ fn test_capture_allow_fail_non_bool() {
         func main() {
             let s = capture(run("ls"), allow_fail=123)
         }
-    "#, "allow_fail must be true/false literal");
+    "#, "allow_fail must be a boolean literal");
     
     // Test with variable (also invalid)
     assert_compile_fail(r#"
@@ -71,5 +71,5 @@ fn test_capture_allow_fail_non_bool() {
             let x = true
             let s = capture(run("ls"), allow_fail=x)
         }
-    "#, "allow_fail must be true/false literal");
+    "#, "allow_fail must be a boolean literal");
 }

@@ -1,0 +1,17 @@
+
+# Test: capture(run(..., allow_fail=true))
+# This validates that:
+# 1. Options on run() are accepted when nested in capture()
+# 2. allow_fail=true suppresses the abort on failure
+# 3. The exit code is preserved in the variable's .status field
+
+func main() {
+    let res = capture(run("sh", "-c", "exit 7", allow_fail=true))
+
+    if res.status != 7 {
+        print("Expected status 7, but got " + res.status)
+        exit(1)
+    }
+
+    print("Success: Captured status " + res.status)
+}

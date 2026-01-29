@@ -50,11 +50,11 @@ statement = let_stmt
           ;
 
 let_stmt = "let" , identifier , "=" , expression ;
-run_stmt = "run" , "(" , [ arg_list ] , ")" ;
+run_stmt = "run" , "(" , [ builtin_arg_list ] , ")" ;
 exec_stmt = "exec" , "(" , [ arg_list ] , ")" ;
 print_stmt = "print" , "(" , expression , ")" ;
 print_err_stmt = "print_err" , "(" , expression , ")" ;
-call_stmt = identifier , "(" , [ arg_list ] , ")" ;
+call_stmt = identifier , "(" , [ pos_arg_list ] , ")" ;
 set_stmt = "set" , lvalue , "=" , expression ;
 export_stmt = "export" , "(" , string_literal , [ "," , expression ] , ")" ;
 unset_stmt = "unset" , "(" , string_literal , ")" ;
@@ -116,8 +116,8 @@ pipe_stmt = "pipe" , pipe_segment , "|" , pipe_segment , { "|" , pipe_segment }
           | run_call , "|" , pipe_segment , { "|" , pipe_segment } ;
 
 pipe_segment = run_call | sudo_call | block ;
-run_call = "run" , "(" , [ arg_list ] , ")" ;
-sudo_call = "sudo" , "(" , [ arg_list ] , ")" ;
+run_call = "run" , "(" , [ builtin_arg_list ] , ")" ;
+sudo_call = "sudo" , "(" , [ builtin_arg_list ] , ")" ;
 
 and_then_stmt = statement , "&&" , statement ;
 or_else_stmt = statement , "||" , statement ;
@@ -145,10 +145,10 @@ primary_expr = literal
              | builtin_expr
              ;
 
-call_expr = identifier , "(" , [ arg_list ] , ")" ;
-capture_expr = "capture" , "(" , capture_pipeline , [ "," , "allow_fail" , "=" , bool_literal ] , ")" ;
-capture_pipeline = capture_stage , { "|" , capture_stage } ;
-capture_stage = run_call | sudo_call ;
+call_expr = identifier , "(" , [ pos_arg_list ] , ")" ;
+capture_expr = "capture" , "(" , [ builtin_arg_list | pipeline ] , ")" ;
+pipeline = capture_stage , { "|" , capture_stage } ;
+capture_stage = run_call | sudo_call | identifier ; (* identifier here handles capture(cmd) *)
 list_expr = "[" , [ expression , { "," , expression } ] , "]" ;
 map_expr = "{" , [ map_entry , { "," , map_entry } ] , "}" ;
 map_entry = string_literal , ":" , expression ;
@@ -194,7 +194,10 @@ builtin_expr = "arg" , "(" , expression , ")"
              | "sh" , "(" , expression , [ "," , arg_list ] , ")"
              ;
 
-arg_list = expression , { "," , expression } ;
+arg_list = expression , { "," , expression } ; (* Deprecated/Legacy: use pos_arg_list or builtin_arg_list *)
+pos_arg_list = expression , { "," , expression } ;
+builtin_arg_list = ( expression | named_arg ) , { "," , ( expression | named_arg ) } ;
+named_arg = identifier , "=" , expression ;
 lvalue = identifier | "env" , "." , identifier ;
 
 (* Note: sudo(...) and sh(...) accept mixed positional/named arguments.

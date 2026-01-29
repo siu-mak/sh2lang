@@ -380,6 +380,62 @@ impl<'a> Parser<'a> {
                 })
             }
             TokenKind::String(s) => self.parse_interpolated_string(s, span),
+            TokenKind::Sh => {
+                self.expect(TokenKind::LParen)?;
+                let cmd = self.parse_expr()?;
+                let mut options = Vec::new();
+                
+                while self.match_kind(TokenKind::Comma) {
+                    let opt_start = self.current_span();
+                    if let Some(TokenKind::Ident(opt_name)) = self.peek_kind() {
+                        let opt_name = opt_name.clone();
+                        let name_span = self.advance().unwrap().span;
+                        self.expect(TokenKind::Equals)?;
+                        let value = self.parse_expr()?;
+                        
+                        match opt_name.as_str() {
+                            "shell" => {
+                                options.push(CallOption {
+                                    name: opt_name,
+                                    value,
+                                    span: name_span,
+                                });
+                            }
+                            "allow_fail" => {
+                                return self.error(
+                                    "allow_fail is only valid on statement-form sh(...); use capture(sh(...), allow_fail=true) for expression capture",
+                                    opt_start,
+                                );
+                            }
+                            _ => {
+                                return self.error(
+                                    &format!("unknown sh() option '{}'; supported: shell", opt_name),
+                                    opt_start,
+                                );
+                            }
+                        }
+                    } else {
+                        return self.error("expected option name", self.current_span());
+                    }
+                }
+                
+                self.expect(TokenKind::RParen)?;
+                Ok(Expr {
+                    node: ExprKind::Sh { cmd: Box::new(cmd), options },
+                    span: span.merge(self.previous_span()),
+                })
+            }
+            TokenKind::Run => {
+                let call = self.parse_call_args_and_options()?;
+                // options are not allowed for run() when used directly as an expression (non-capture)
+                if let Some(opt) = call.options.first() {
+                     return self.error("run() options are only allowed inside capture(...); use capture(run(...), allow_fail=true)", opt.span);
+                }
+                Ok(Expr {
+                    node: ExprKind::Run(call),
+                    span: span.merge(self.previous_span()),
+                })
+            }
             TokenKind::Ident(s) => {
                 let s = s.clone();
                 let is_call = self.peek_kind() == Some(&TokenKind::LParen);
@@ -411,7 +467,7 @@ impl<'a> Parser<'a> {
                                     self.expect(TokenKind::Equals)?;
                                     let value = self.parse_expr()?;
 
-                                    options.push(RunOption {
+                                    options.push(CallOption {
                                         name,
                                         value,
                                         span: name_span,
@@ -457,67 +513,31 @@ impl<'a> Parser<'a> {
                         });
                     }
 
-                    // Special case for sh() builtin
-                    if s == "sh" {
-                        self.expect(TokenKind::LParen)?;
-                        let cmd = self.parse_expr()?;
-                        let mut options = Vec::new();
-                        
-                        while self.match_kind(TokenKind::Comma) {
-                            let opt_start = self.current_span();
-                            if let Some(TokenKind::Ident(opt_name)) = self.peek_kind() {
-                                let opt_name = opt_name.clone();
-                                let name_span = self.advance().unwrap().span;
-                                self.expect(TokenKind::Equals)?;
-                                let value = self.parse_expr()?;
-                                
-                                match opt_name.as_str() {
-                                    "shell" => {
-                                        options.push(RunOption {
-                                            name: opt_name,
-                                            value,
-                                            span: name_span,
-                                        });
-                                    }
-                                    "allow_fail" => {
+
+                    
+                    let mut args = Vec::new();
+                    if self.match_kind(TokenKind::LParen) {
+                        if !self.match_kind(TokenKind::RParen) {
+                            loop {
+                                // Lookahead for named argument key=value
+                                if let Some(TokenKind::Ident(_)) = self.peek_kind() {
+                                    if let Some(TokenKind::Equals) = self.tokens.get(self.pos + 1).map(|t| &t.kind) {
                                         return self.error(
-                                            "allow_fail is only valid on statement-form sh(...); use capture(sh(...), allow_fail=true) for expression capture",
-                                            opt_start,
-                                        );
-                                    }
-                                    _ => {
-                                        return self.error(
-                                            &format!("unknown sh() option '{}'; supported: shell", opt_name),
-                                            opt_start,
+                                            "Named arguments are only supported for builtins: run, sudo, sh, capture, confirm",
+                                            self.current_span()
                                         );
                                     }
                                 }
-                            } else {
-                                return self.error("expected option name", self.current_span());
+                                
+                                args.push(self.parse_expr()?);
+                                if !self.match_kind(TokenKind::Comma) {
+                                    break;
+                                }
                             }
+                            self.expect(TokenKind::RParen)?;
                         }
-                        
-                        self.expect(TokenKind::RParen)?;
-                        return Ok(Expr {
-                            node: ExprKind::Sh { cmd: Box::new(cmd), options },
-                            span: span.merge(self.previous_span()),
-                        });
                     }
-                    
-                    self.expect(TokenKind::LParen)?;
-                    let mut args = Vec::new();
-                    if !self.match_kind(TokenKind::RParen) {
-                        loop {
-                            args.push(self.parse_expr()?);
-                            if !self.match_kind(TokenKind::Comma) {
-                                break;
-                            }
-                        }
-                        if self.peek_kind() == Some(&TokenKind::Semi) {
-                             return self.error("Unexpected statement separator ';' inside expression. Use ';' only between statements.", self.current_span());
-                        }
-                        self.expect(TokenKind::RParen)?;
-                    }
+
                     let full_span = span.merge(self.previous_span());
 
                     // Arity validation
@@ -820,6 +840,7 @@ impl<'a> Parser<'a> {
                     span: span.merge(self.previous_span()),
                 })
             }
+
             TokenKind::True => Ok(Expr {
                 node: ExprKind::Bool(true),
                 span,
@@ -843,206 +864,221 @@ impl<'a> Parser<'a> {
 
     fn parse_command_substitution(&mut self, start_span: Span, is_capture: bool) -> ParsResult<Expr> {
         self.expect(TokenKind::LParen)?;
-        let mut segments: Vec<Vec<Expr>> = Vec::new();
-        
-        // Phase 1: Parse command/pipe segments
+        let mut segments = Vec::new();
+        let mut options = Vec::new();
+        let mut allow_fail_span: Option<Span> = None;
+
         loop {
-            let mut args: Vec<Expr> = Vec::new();
-            if self.match_kind(TokenKind::Run) {
-                self.expect(TokenKind::LParen)?;
-                loop {
-                    if self.peek_kind() == Some(&TokenKind::RParen) {
-                        self.advance(); // consume RParen
-                        break;
-                    }
-                    args.push(self.parse_expr()?);
-                    if !self.match_kind(TokenKind::Comma) {
-                        self.expect(TokenKind::RParen)?;
-                        break;
-                    }
+            let mut args = Vec::new();
+
+            loop {
+                // Check end of args list or pipe
+                let next_kind = self.peek_kind();
+                if next_kind == Some(&TokenKind::RParen) || next_kind == Some(&TokenKind::Pipe) {
+                    break;
                 }
-            } else if let Some(TokenKind::Ident(name)) = self.peek_kind() {
-                let name = name.clone();
-                let start_span = self.current_span();
 
-                if name == "sudo" {
-                    self.advance(); // consume 'sudo'
-                    self.expect(TokenKind::LParen)?;
-
-                    let mut sudo_args = Vec::new();
-                    let mut options = Vec::new();
-                    if !self.match_kind(TokenKind::RParen) {
-                        loop {
-                            let is_named = if let Some(TokenKind::Ident(_)) = self.peek_kind() {
-                                self.tokens.get(self.pos + 1).map(|t| &t.kind) == Some(&TokenKind::Equals)
-                            } else {
-                                false
-                            };
-
-                            if is_named {
-                                let name_token = if let Some(TokenKind::Ident(s)) = self.peek_kind() {
-                                    s.clone()
-                                } else {
-                                    unreachable!()
-                                };
-                                let name_span = self.advance().unwrap().span;
-                                self.expect(TokenKind::Equals)?;
-                                let value = self.parse_expr()?;
-
-                                options.push(RunOption {
-                                    name: name_token,
-                                    value,
-                                    span: name_span,
-                                });
-                            } else {
-                                sudo_args.push(self.parse_expr()?);
-                            }
-
-                            if !self.match_kind(TokenKind::Comma) {
-                                break;
-                            }
-                        }
-                        self.expect(TokenKind::RParen)?;
-                    }
-
-                    // Validate options using SudoSpec (just like StmtKind::Run logic)
-                    // Validate options using SudoSpec (just like StmtKind::Run logic)
-                    let _spec = match SudoSpec::from_options(&options) {
-                         Ok(s) => s,
-                         Err((msg, span)) => return self.error(&msg, span),
-                    };
-
-                    if sudo_args.is_empty() {
-                        return self.error(
-                            "sudo() requires at least one positional argument (the command)",
-                            start_span,
-                        );
-                    }
-
-                    args.push(Expr {
-                        node: ExprKind::Sudo {
-                            args: sudo_args,
-                            options,
-                        },
-                        span: start_span.merge(self.previous_span()),
-                    });
-
-                } else {
-                    let name_span = self.advance().unwrap().span;
+                if self.match_kind(TokenKind::Run) {
+                    // Path C: Special case $( run(...) ) - Flatten args & extract options
+                    let call = self.parse_call_args_and_options()?;
                     
-                    // Push command name as literal
-                    args.push(Expr {
-                        node: ExprKind::Literal(name),
-                        span: name_span,
-                    });
-
-                    // Optional function call syntax: ident(arg1, arg2)
-                    if self.match_kind(TokenKind::LParen) {
-                        loop {
-                            if self.match_kind(TokenKind::RParen) {
-                                break;
-                            }
-                            args.push(self.parse_expr()?);
-                            if !self.match_kind(TokenKind::Comma) {
-                                self.expect(TokenKind::RParen)?;
-                                break;
+                    if is_capture {
+                        // Strict validation and hoisting for capture(run(...))
+                        for opt in call.options.iter() {
+                            if opt.name == "allow_fail" {
+                                if let Some(_) = allow_fail_span {
+                                     return self.error("allow_fail specified more than once", opt.span);
+                                }
+                                allow_fail_span = Some(opt.span);
+                                if !matches!(opt.value.node, ExprKind::Bool(_)) {
+                                     return self.error("allow_fail must be a boolean literal", opt.value.span);
+                                }
+                            } else {
+                                return self.error(&format!("Unknown option '{}' for run()", opt.name), opt.span);
                             }
                         }
-                    }
-                    }
 
-            } else if let Some(TokenKind::String(s)) = self.peek_kind() {
-                // String shorthand $( "cmd", "arg1", ... )
-                let s = s.clone();
-                let s_span = self.advance().unwrap().span;
-                args.push(Expr {
-                    node: ExprKind::Literal(s),
-                    span: s_span,
-                });
-                
-                // Parse arguments
-                loop {
-                    if self.peek_kind() == Some(&TokenKind::RParen) {
-                        break;
-                    }
-                    if self.peek_kind() == Some(&TokenKind::Pipe) {
-                        break;
-                    }
-
-                    // Strict lookahead for capture options: Comma -> Ident -> Equals
-                    if is_capture && self.peek_kind() == Some(&TokenKind::Comma) {
-                         if let (Some(t1), Some(t2)) = (self.tokens.get(self.pos + 1), self.tokens.get(self.pos + 2)) {
-                             if let TokenKind::Ident(_) = t1.kind {
-                                 if t2.kind == TokenKind::Equals {
-                                     // Confirmed option start. Break args loop.
-                                     break;
-                                 }
-                             }
+                        // Hoist valid options (currently only allow_fail)
+                        options.extend(call.options);
+                    } else {
+                         // Reject ANY option in non-capture context
+                         if let Some(opt) = call.options.first() {
+                             return self.error("run() options are not allowed in command substitution $(...); use capture(run(...), allow_fail=true)", opt.span);
                          }
                     }
 
-                    if self.match_kind(TokenKind::Comma) {
-                        // Consumed comma between args
-                    }
+                    // Flatten args into current segment (command-word model)
+                    args.extend(call.args);
 
+                } else if self.match_kind(TokenKind::Sh) {
+                     let s_span = self.previous_span();
+                     args.push(Expr { node: ExprKind::Literal("sh".to_string()), span: s_span });
+                     
+                     // Check for sh(...) shorthand
+                     if self.peek_kind() == Some(&TokenKind::LParen) {
+                          self.expect(TokenKind::LParen)?;
+                          if !self.match_kind(TokenKind::RParen) {
+                              loop {
+                                   // Named args in shorthand
+                                   if let Some(TokenKind::Ident(_)) = self.peek_kind() {
+                                       if self.tokens.get(self.pos + 1).map(|t| &t.kind) == Some(&TokenKind::Equals) {
+                                            return self.error("Named arguments are only supported for builtins: run, sudo, sh, capture, confirm", self.current_span());
+                                       }
+                                   }
+                                   args.push(self.parse_expr()?);
+                                   if !self.match_kind(TokenKind::Comma) {
+                                       break;
+                                   }
+                              }
+                              self.expect(TokenKind::RParen)?;
+                          }
+                     }
+                } else if let Some(TokenKind::Ident(s)) = self.peek_kind() {
+                     if s == "sudo" {
+                         let s_span = self.advance().unwrap().span;
+                         // Preserve existing sudo behavior
+                         if self.peek_kind() == Some(&TokenKind::LParen) {
+                             let call = self.parse_call_args_and_options()?;
+                             
+                             // Validate options using SudoSpec logic
+                             // This ensures policy compliance and valid option combinations
+                             match SudoSpec::from_options(&call.options) {
+                                 Ok(spec) => {
+                                      if let Some((_, span)) = spec.allow_fail {
+                                           return self.error("allow_fail is only valid on statement-form sudo(...); use capture(sudo(...), allow_fail=true) to allow failure during capture", span);
+                                      }
+
+                                      if call.args.is_empty() {
+                                          return self.error("sudo() requires at least one positional argument (the command)", s_span);
+                                      }
+
+                                      // FLATTEN to avoid double-quoting in $(...)
+                                      // Replicate lowering logic: sudo + flags + -- + args
+                                      
+                                      args.push(Expr { node: ExprKind::Literal("sudo".to_string()), span: s_span });
+                                      
+                                      for flag in spec.to_flags_argv() {
+                                          args.push(Expr { 
+                                              node: ExprKind::Literal(flag), 
+                                              span: s_span 
+                                          });
+                                      }
+                                      
+                                      // Mandatory separator before command args (aligns with lower.rs)
+                                      args.push(Expr { 
+                                          node: ExprKind::Literal("--".to_string()), 
+                                          span: s_span 
+                                      });
+                                      
+                                      args.extend(call.args);
+                                 },
+                                 Err((msg, span)) => return self.error(&msg, span),
+                             }
+
+                         } else {
+                             // Just "sudo" word
+                             args.push(Expr { node: ExprKind::Literal("sudo".to_string()), span: s_span });
+                         }
+
+                     } else {
+                        // Check for named arg option (allow_fail=...) - Reject in generic calls
+                        let is_named = self.tokens.get(self.pos + 1).map(|t| &t.kind) == Some(&TokenKind::Equals);
+
+                        if is_named {
+                            let name = s.clone();
+                            let name_span = self.advance().unwrap().span; // consume ident
+                            self.expect(TokenKind::Equals)?; // consume =
+                            let value = self.parse_expr()?; // consume value
+                            
+                            if is_capture {
+                                // Outer capture option validation
+                                if name == "allow_fail" {
+                                    if let Some(_) = allow_fail_span {
+                                         return self.error("allow_fail specified more than once", name_span);
+                                    }
+                                    allow_fail_span = Some(name_span);
+                                    if !matches!(value.node, ExprKind::Bool(_)) {
+                                         return self.error("allow_fail must be a boolean literal", value.span);
+                                    }
+                                } else {
+                                    return self.error(&format!("Unknown option '{}' for capture(). Supported options: allow_fail", name), name_span);
+                                }
+
+                                options.push(CallOption { name, value, span: name_span });
+                                continue;
+                            } else {
+                                // Policy Enforcement: Generic calls cannot have named args
+                                return self.error("Named arguments are only supported for builtins: run, sudo, sh, capture, confirm", name_span);
+                            }
+                        }
+
+                        // Regular Ident: Treat as Literal Command Word
+                        let name = s.clone();
+                        let span = self.advance().unwrap().span;
+                        
+                        args.push(Expr {
+                            node: ExprKind::Literal(name),
+                            span,
+                        });
+                        
+                        // Generic call shorthand `$(func(arg))` -> flatten to `func arg`
+                        // Strict positional-only parsing to avoid named-arg leak
+                        if self.peek_kind() == Some(&TokenKind::LParen) {
+                            self.expect(TokenKind::LParen)?;
+                            if !self.match_kind(TokenKind::RParen) {
+                                loop {
+                                     // Check for named arg leakage in shorthand
+                                     if let Some(TokenKind::Ident(_)) = self.peek_kind() {
+                                         if self.tokens.get(self.pos + 1).map(|t| &t.kind) == Some(&TokenKind::Equals) {
+                                              return self.error("Named arguments are only supported for builtins: run, sudo, sh, capture, confirm", self.current_span());
+                                         }
+                                     }
+
+                                     args.push(self.parse_expr()?);
+
+                                     if !self.match_kind(TokenKind::Comma) {
+                                         break;
+                                     }
+                                }
+                                self.expect(TokenKind::RParen)?;
+                            }
+                        }
+                     }
+                } else if let Some(TokenKind::String(_s)) = self.peek_kind() {
+                     args.push(self.parse_expr()?);
+                } else if self.match_kind(TokenKind::Dollar) {
+                     self.pos -= 1; // Backtrack for parse_expr
+                     args.push(self.parse_expr()?);
+                } else {
+                    // Allow other literals (numbers, etc) via parse_expr
                     args.push(self.parse_expr()?);
                 }
-            } else {
-                self.error(
-                    "Expected run(...), function call, or string literal command name",
-                    self.current_span(),
-                )?;
+
+                if !self.match_kind(TokenKind::Comma) {
+                    break;
+                }
             }
+
+            if args.is_empty() {
+                 return self.error("Unexpected empty command", self.current_span());
+            }
+
             segments.push(args);
             if !self.match_kind(TokenKind::Pipe) {
                 break;
             }
         }
 
-        // Phase 2: Parse Options
-        let mut options = Vec::new();
-        
-        while self.peek_kind() == Some(&TokenKind::Comma) {
-            // Check if it is really an option start (Ident = ...)
-            // If not, it might be a dangling comma or invalid syntax which we handle by breaking
-            let is_opt = if let (Some(t1), Some(t2)) = (self.tokens.get(self.pos + 1), self.tokens.get(self.pos + 2)) {
-                 matches!(t1.kind, TokenKind::Ident(_)) && t2.kind == TokenKind::Equals
-            } else {
-                false
-            };
-
-            if is_opt {
-                if !is_capture {
-                     self.error("run options like allow_fail=... are not supported inside command substitution $(...); use capture(...) instead", self.current_span())?;
-                }
-                
-                self.advance(); // consume Comma
-                let name = if let Some(TokenKind::Ident(s)) = self.peek_kind() {
-                    s.clone()
-                } else {
-                    unreachable!()
-                };
-                let name_span = self.advance().unwrap().span;
-                
-                self.expect(TokenKind::Equals)?;
-                let val = self.parse_expr()?;
-                
-                options.push(RunOption {
-                    name,
-                    value: val,
-                    span: name_span, 
-                });
-            } else {
-                break; 
-            }
-        }
-
         self.expect(TokenKind::RParen)?;
         let full_span = start_span.merge(self.previous_span());
 
-        let cmd_node = if segments.len() == 1 {
+        // AST Compatibility Rule:
+        // Always return Command/CommandPipe.
+        // If capture options are present, wrap in Capture.
+        
+        let command_expr = if segments.len() == 1 {
             Expr {
-                node: ExprKind::Command(segments.pop().unwrap()), // Reuse inner vec
+                node: ExprKind::Command(segments.into_iter().next().unwrap()),
                 span: full_span,
             }
         } else {
@@ -1052,21 +1088,16 @@ impl<'a> Parser<'a> {
             }
         };
 
-        // AST Compatibility: Only wrap in Capture if we have distinct capture logic (options).
-        // If no options, return the raw Command/CommandPipe to match legacy/standard structure.
         if is_capture && !options.is_empty() {
-            Ok(Expr {
+             Ok(Expr {
                 node: ExprKind::Capture {
-                    expr: Box::new(cmd_node),
+                    expr: Box::new(command_expr),
                     options,
                 },
                 span: full_span,
             })
         } else {
-            Ok(Expr {
-                node: cmd_node.node,
-                span: full_span,
-            })
+            Ok(command_expr)
         }
     }
                     

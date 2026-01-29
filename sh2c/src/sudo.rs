@@ -1,4 +1,4 @@
-use crate::ast::{ExprKind, RunOption};
+use crate::ast::{ExprKind, CallOption};
 use crate::span::Span;
 
 #[derive(Debug)]
@@ -27,7 +27,7 @@ impl SudoSpec {
     }
 
     pub fn from_options(
-        options: &[RunOption],
+        options: &[CallOption],
     ) -> Result<Self, (String, Span)> {
         let mut spec = SudoSpec::new();
 

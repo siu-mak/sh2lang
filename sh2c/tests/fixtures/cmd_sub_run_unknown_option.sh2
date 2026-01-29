@@ -1,0 +1,3 @@
+func main() {
+    let s = $(run("sh", "-c", "echo ok", nope=true))
+}

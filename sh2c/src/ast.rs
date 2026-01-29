@@ -133,6 +133,7 @@ pub enum ExprKind {
         name: String,
         args: Vec<Expr>,
     },
+    Run(RunCall),
     MapLiteral(Vec<(String, Expr)>),
     MapIndex {
         map: String,
@@ -140,11 +141,11 @@ pub enum ExprKind {
     },
     Capture {
         expr: Box<Expr>,
-        options: Vec<RunOption>,
+        options: Vec<CallOption>,
     },
     Sh {
         cmd: Box<Expr>,
-        options: Vec<RunOption>,
+        options: Vec<CallOption>,
     },
     Confirm {
         prompt: Box<Expr>,
@@ -152,12 +153,12 @@ pub enum ExprKind {
     },
     Sudo {
         args: Vec<Expr>,
-        options: Vec<RunOption>,
+        options: Vec<CallOption>,
     },
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct RunOption {
+pub struct CallOption {
     pub name: String,
     pub value: Expr,
     pub span: Span,
@@ -166,7 +167,7 @@ pub struct RunOption {
 #[derive(Debug, Clone, PartialEq)]
 pub struct RunCall {
     pub args: Vec<Expr>,
-    pub options: Vec<RunOption>,
+    pub options: Vec<CallOption>,
 }
 
 

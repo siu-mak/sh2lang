@@ -28,7 +28,7 @@ import "lib/utils.sh2"
 
 ### 1.2 Functions and Parameters
 
-Functions are defined with **named parameters**:
+Functions are defined with **named parameters**, but arguments are passed **positionally**:
 
 ```sh2
 func greet(name, title) {
@@ -36,7 +36,15 @@ func greet(name, title) {
 }
 ```
 
-Parameters are bound positionally (first param receives the first argument, etc.).
+#### Argument Passing Policy
+
+- **User-Defined Functions**: User-defined functions only accept **positional arguments**. Attempting to use `name=value` in a general function call will result in a compile error.
+- **Builtins**: A specific set of builtins supports **named arguments** (options) for configuration. These include:
+  - `run(...)`, `sudo(...)`, `sh(...)`
+  - `capture(...)`
+  - `confirm(...)`
+
+Parameters are bound positionally for general functions (first param receives the first argument, etc.).
 
 The designated entry point is:
 
@@ -393,6 +401,8 @@ if status() != 0 {
 }
 ```
 
+> **Note**: `capture(run(..., allow_fail=true))` is also supported. The `allow_fail` option is "hoisted" from the inner `run` call to the capture behavior.
+
 > **Restriction**: `capture(..., allow_fail=true)` is only valid in `let` assignments (e.g. `let x = capture(...)`) to ensure the exit status is correctly preserved and observable via `status()`.
 
 ### 6.5 `try_run(...)` → `RunResult`
@@ -449,7 +459,8 @@ sudo(n=true, "ls", user="root") # ✅
 **Compile-time validation:**
 - Option values must be literals:
   - `user`, `prompt`: string literals
-  - `n`, `k`, `E`, `allow_fail`: boolean literals
+  - `n`, `k`, `E`: boolean literals
+  - `allow_fail`: boolean literal (statement-form only)
   - `env_keep`: list of string literals
 - Duplicate options are rejected
 - Unknown options are rejected
@@ -479,7 +490,7 @@ Error message: `"allow_fail is only valid on statement-form sudo(...); use captu
 
 `status()` returns the exit code of the most recent operation and is updated by:
 
-- `run(...)` (including `allow_fail=true`)
+- `run(...)` (including `allow_fail=true` inside `capture`)
 - `try_run(...)`
 - `sh("...")`
 - filesystem predicates like `exists(...)`, `is_file(...)`, etc.

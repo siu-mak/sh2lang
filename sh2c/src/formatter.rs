@@ -368,6 +368,7 @@ fn format_expr_prec(kind: &ExprKind, min_prec: u8) -> String {
              let parts: Vec<String> = args.iter().map(format_expr).collect();
              format!("{}({})", name, parts.join(", "))
         }
+        ExprKind::Run(call) => format_run_call(call),
         ExprKind::Command(args) => {
              // $(...) uses Command. Parser expects `capture(run(...))` or `capture(run(...) | ...)`
              let parts: Vec<String> = args.iter().map(format_expr).collect();

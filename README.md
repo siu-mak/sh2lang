@@ -326,6 +326,20 @@ run("grep", "x", "missing.txt", allow_fail=true)
 print("exit code: " & status())
 ```
 
+### `capture(...)` for command output
+
+Use `capture(...)` to get the stdout of a command as a string:
+
+```sh2
+let files = capture(run("ls", "-1"))
+if status() == 0 {
+  print("Files found: " & files)
+}
+
+# Nested allow_fail is also supported and equivalent to outer form
+let out = capture(run("grep", "pattern", "file", allow_fail=true))
+```
+
 ### `sudo(...)` for privileged commands
 
 Execute commands with `sudo` using structured options:

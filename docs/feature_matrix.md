@@ -12,6 +12,7 @@ This document maps implemented features to their proving test files, ensuring do
 | Named parameters | `func foo(a, b)` | `syntax_functions.rs`, `syntax_proc_params.rs` |
 | Statement separation | semicolons or newlines | `syntax_toplevel.rs`, `syntax_semicolon.rs` |
 | Comments | `# ...` | `syntax_toplevel.rs` |
+| Named arg policy | builtins-only | `syntax_named_arg_policy.rs` |
 | Heredocs | `<<EOF ... EOF` | `syntax_heredoc.rs` |
 
 ---
@@ -40,7 +41,7 @@ This document maps implemented features to their proving test files, ensuring do
 | `sh(expr)` | raw shell (any expr) | `syntax_sh_expr_probe.rs`, `syntax_sh_probe_semantics.rs` | probe semantics |
 | `sh { block }` | raw shell block | `syntax_sh_block_semantics.rs` | fail-fast |
 | `capture(...)` | stdout capture | `syntax_capture_pipe.rs`, `syntax_cmd_sub.rs`, `syntax_capture.rs` | |
-| `capture(..., allow_fail=true)` | non-aborting capture | `syntax_capture_allow_fail.rs`, `syntax_capture_allow_fail_status.rs` | `.status`, `.stdout`, `.stderr` |
+| `capture(..., allow_fail=true)` | non-aborting capture | `syntax_capture_allow_fail.rs`, `syntax_capture_allow_fail_status.rs`, `syntax_capture_nested_named_arg_allow_fail.rs` | `.status`, `.stdout`, `.stderr` |
 | `try_run(...)` | result object | `syntax_try_run.rs` | `.status`, `.stdout`, `.stderr` |
 | `sudo(cmd, ...)` | sudo wrapper | `syntax_sudo.rs` | statement & capture support |
 

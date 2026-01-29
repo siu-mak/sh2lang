@@ -1,0 +1,3 @@
+func main() {
+    let r = capture(run("sh", "-c", "echo ok", allow_fail=true, allow_fail=false))
+}

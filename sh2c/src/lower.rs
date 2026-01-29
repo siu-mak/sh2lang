@@ -12,6 +12,7 @@ struct LoweringContext<'a> {
     bool_vars: HashSet<String>,
     opts: &'a LowerOptions,
     in_let_rhs: bool,
+
 }
 
 impl<'a> LoweringContext<'a> {
@@ -285,7 +286,7 @@ fn lower_stmt<'a>(
                     if let ast::ExprKind::Bool(b) = opt.value.node {
                         allow_fail = b;
                     } else {
-                        return Err(CompileError::new(sm.format_diagnostic(file, opts.diag_base_dir.as_deref(), "allow_fail must be true/false literal", opt.value.span)));
+                        return Err(CompileError::new(sm.format_diagnostic(file, opts.diag_base_dir.as_deref(), "allow_fail must be a boolean literal", opt.value.span)));
                     }
                 } else {
                     return Err(CompileError::new(sm.format_diagnostic(file, opts.diag_base_dir.as_deref(), format!("unknown run option: {}", opt.name).as_str(), opt.span)));
@@ -959,7 +960,7 @@ fn lower_run_call_args<'a>(
 
 fn lower_sudo_command<'a>(
     args: Vec<ast::Expr>,
-    options: Vec<ast::RunOption>,
+    options: Vec<ast::CallOption>,
     ctx: &mut LoweringContext<'a>,
     sm: &SourceMap,
     file: &str,
@@ -979,6 +980,9 @@ fn lower_sudo_command<'a>(
     for flag in flags {
         argv.push(ir::Val::Literal(flag));
     }
+
+    // Mandatory separator before command args
+    argv.push(ir::Val::Literal("--".to_string()));
 
     // Add positional args (command + args), lowered
     for arg in args {
@@ -1270,6 +1274,33 @@ fn lower_expr<'a>(e: ast::Expr, ctx: &mut LoweringContext<'a>, sm: &SourceMap, f
             
             Ok(ir::Val::Command(argv))
         }
+        ast::ExprKind::Run(run_call) => {
+            // Validate options as safety net
+            for opt in &run_call.options {
+                if opt.name == "allow_fail" {
+                    return Err(CompileError::new(sm.format_diagnostic(
+                        file,
+                        opts.diag_base_dir.as_deref(),
+                        "Internal error: allow_fail should be hoisted to capture; please report this bug",
+                        opt.span,
+                    )));
+                } else {
+                     return Err(CompileError::new(sm.format_diagnostic(
+                        file,
+                        opts.diag_base_dir.as_deref(),
+                        &format!("unknown run() option '{}'", opt.name),
+                        opt.span,
+                    )));
+                }
+            }
+
+            let lowered_args = run_call.args
+                .into_iter()
+                .map(|a| lower_expr(a, ctx, sm, file))
+                .collect::<Result<Vec<_>, _>>()?;
+            Ok(ir::Val::Command(lowered_args))
+        }
+
         ast::ExprKind::Call { name, args } => {
             if name == "argv" {
                 if !args.is_empty() {
@@ -1281,6 +1312,7 @@ fn lower_expr<'a>(e: ast::Expr, ctx: &mut LoweringContext<'a>, sm: &SourceMap, f
                     )));
                 }
                 Ok(ir::Val::Args)
+
             } else if name == "matches" {
                 if args.len() != 2 {
                     return Err(CompileError::new(sm.format_diagnostic(
@@ -1481,6 +1513,8 @@ fn lower_expr<'a>(e: ast::Expr, ctx: &mut LoweringContext<'a>, sm: &SourceMap, f
                 })
             }
         }
+
+
         ast::ExprKind::MapLiteral(entries) => {
             let lowered_entries = entries
                 .into_iter()
@@ -1493,20 +1527,30 @@ fn lower_expr<'a>(e: ast::Expr, ctx: &mut LoweringContext<'a>, sm: &SourceMap, f
         }
         ast::ExprKind::MapIndex { map, key } => Ok(ir::Val::MapIndex { map, key }),
         ast::ExprKind::Capture { expr, options } => {
-            let _expr_span = expr.span;
+            let expr_span = expr.span; // Capture span before move
+            // Path C: Hoisting is handled by parser for nested run(...) inside $(...).
+            // However, we preserve the context check or explicit logic if needed.
+            // Since Parser flattens run() into Command w/ hoisted options,
+            // `expr` here will be Command, not Call.
+            // So we just process explicit capture options.
+
             let lowered_expr = lower_expr(*expr, ctx, sm, file)?;
+
             let mut allow_fail = false;
             let mut seen_allow_fail = false;
+            let mut allow_fail_span = None;
+
             for opt in options {
                 if opt.name == "allow_fail" {
                     if seen_allow_fail {
                         return Err(CompileError::new(sm.format_diagnostic(file, opts.diag_base_dir.as_deref(), "allow_fail specified more than once", opt.span)));
                     }
                     seen_allow_fail = true;
+                    allow_fail_span = Some(opt.span);
                     if let ast::ExprKind::Bool(b) = opt.value.node {
                         allow_fail = b;
                     } else {
-                        return Err(CompileError::new(sm.format_diagnostic(file, opts.diag_base_dir.as_deref(), "allow_fail must be true/false literal", opt.value.span)));
+                        return Err(CompileError::new(sm.format_diagnostic(file, opts.diag_base_dir.as_deref(), "allow_fail must be a boolean literal", opt.value.span)));
                     }
                 } else {
                     return Err(CompileError::new(sm.format_diagnostic(
@@ -1523,7 +1567,7 @@ fn lower_expr<'a>(e: ast::Expr, ctx: &mut LoweringContext<'a>, sm: &SourceMap, f
                      file,
                      opts.diag_base_dir.as_deref(),
                      "capture(..., allow_fail=true) is only allowed in 'let' assignment to ensure exit status can be preserved",
-                     e.span,
+                     allow_fail_span.unwrap_or(expr_span),
                  )));
             }
 
@@ -1532,6 +1576,7 @@ fn lower_expr<'a>(e: ast::Expr, ctx: &mut LoweringContext<'a>, sm: &SourceMap, f
                 allow_fail,
             })
         }
+
         ast::ExprKind::Sh { cmd, options } => {
             // Expression-form sh() only supports 'shell' option
             // (allow_fail is rejected at parse time with helpful message)

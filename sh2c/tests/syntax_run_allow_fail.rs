@@ -69,12 +69,12 @@ fn compile_panic_run_allow_fail_non_bool() {
     assert_codegen_panics_target(
         "run_allow_fail_non_bool",
         TargetShell::Bash,
-        "allow_fail must be true/false literal",
+        "allow_fail must be a boolean literal",
     );
     assert_codegen_panics_target(
         "run_allow_fail_non_bool",
         TargetShell::Posix,
-        "allow_fail must be true/false literal",
+        "allow_fail must be a boolean literal",
     );
 }
 
@@ -106,13 +106,3 @@ fn compile_panic_run_allow_fail_duplicate_first_false() {
     );
 }
 
-#[test]
-fn compile_panic_run_allow_fail_in_capture_rejected() {
-    let msg = "Expected RParen, got Equals";
-    assert_codegen_panics_target("run_allow_fail_in_capture_rejected", TargetShell::Bash, msg);
-    assert_codegen_panics_target(
-        "run_allow_fail_in_capture_rejected",
-        TargetShell::Posix,
-        msg,
-    );
-}
