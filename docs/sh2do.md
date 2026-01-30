@@ -1,6 +1,10 @@
+<a href="https://github.com/siu-mak/sh2lang">
+  <img src="images/logo/sh2logo_256.png" alt="sh2 logo" width="128" />
+</a>
+
 # sh2do — sh2 Snippet Runner
 
-sh2do is a thin CLI wrapper around sh2c that compiles and executes sh2 snippets or files in one step. It wraps snippets into `func main() { ... }` (if needed), invokes sh2c, and runs the generated shell script.
+[sh2do](https://github.com/siu-mak/sh2lang) is a thin CLI wrapper around sh2c that compiles and executes sh2 snippets or files in one step. It wraps snippets into `func main() { ... }` (if needed), invokes sh2c, and runs the generated shell script.
 
 ## Install
 

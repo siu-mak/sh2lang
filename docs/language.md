@@ -1,6 +1,10 @@
+<a href="https://github.com/siu-mak/sh2lang">
+  <img src="images/logo/sh2logo_256.png" alt="sh2 logo" width="128" />
+</a>
+
 # The sh2 Language Reference
 
-sh2 is a small, structured shell language designed to bring safety, clarity, and modern programming constructs to shell scripting. Scripts written in sh2 are compiled by **sh2c** into either **bash** (feature-rich) or **POSIX sh** (portable).
+[sh2](https://github.com/siu-mak/sh2lang) is a small, structured shell language designed to bring safety, clarity, and modern programming constructs to shell scripting. Scripts written in sh2 are compiled by **sh2c** into either **bash** (feature-rich) or **POSIX sh** (portable).
 
 > **Note**: **sh2do** is a wrapper tool that compiles and executes sh2 snippets in one step. It does not change sh2 language semantics.
 
@@ -117,18 +121,10 @@ print("Hello, " & name)
 print("Hello, $name")
 ```
 
-### 3.2 No Implicit Expansion
+### No Implicit Expansion
+sh2 is stricter than Bash: it performs **no implicit expansion** (no tilde expansion, no globbing, no splitting) in string literals or variables.
 
-Unlike implicit shells (Bash/Zsh), sh2 does **not** perform implicit word splitting, globbing/wildcard expansion, or tilde expansion on string literals or variable content.
-
-- `~` is treated as a literal character.
-- `*` is treated as a literal character.
-- Spaces in variables are preserved as-is.
-
-**Recommendation**:
 - Use `env.HOME` instead of `~`.
-- Use `sh("ls *.txt")` or similar if you need shell expansion.
-
 If you attempt to use `~/path` in `with cwd()` or similar, sh2 will fail at runtime and emit a helper hint advising you to use `env.HOME`.
 
 Multiline and raw strings are supported (where implemented by your compiler target):
