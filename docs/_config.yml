@@ -11,6 +11,8 @@ plugins:
   - jekyll-sitemap  
 url: "https://siu-mak.github.io"
 baseurl: "/sh2lang"  
+github_username: siu-mak
+repository: siu-mak/sh2lang
 defaults:
   - scope:
       path: "google796f0b1fd48dd05d.html"

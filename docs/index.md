@@ -1,9 +1,11 @@
 ---
 title: Home
 ---
-<img src="images/logo/sh2logo_256.png" alt="sh2 logo" width="128" />
+<a href="https://github.com/siu-mak/sh2lang">
+  <img src="images/logo/sh2logo_256.png" alt="sh2 logo" width="128" />
+</a>
 
-This repository contains tools for **sh2**, a structured shell language designed to compile down to conventional shell scripts (bash/posix targets).
+This repository contains tools for **[sh2](https://github.com/siu-mak/sh2lang)**, a structured shell language designed to compile down to conventional shell scripts (bash/posix targets).
 
 ## Repo contains
 
