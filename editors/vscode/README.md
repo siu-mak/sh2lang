@@ -70,7 +70,7 @@ Open a `.sh2` file. Syntax highlighting should activate automatically.
 
 - Comment toggling
 
-> **Note**: sh2 is strict about string literals and paths. It does **not** perform implicit tilde expansion (`~`) or globbing (`*`). Unbound variables in strings (e.g. `$FOO`) are treated as literals. See [No Implicit Expansion](../../docs/language.md#32-no-implicit-expansion) for details.
+> **Note**: sh2 is strict about string literals and paths. It does **not** perform implicit tilde expansion (`~`) or globbing (`*`). See [No Implicit Expansion](../../docs/language.md#32-no-implicit-expansion) for details.
 
 ## About sh2
 

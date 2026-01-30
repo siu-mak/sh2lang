@@ -458,13 +458,6 @@ fn format_expr_prec(kind: &ExprKind, min_prec: u8) -> String {
             }
             format!("sudo({})", parts.join(", "))
         }
-        ExprKind::StringInterpVar { name, braced } => {
-            if *braced {
-                format!("${{{}}}", name)
-            } else {
-                format!("${}", name)
-            }
-        }
         _ => panic!("Formatting unimplemented for ExprKind: {:?}", kind),
     }
 }

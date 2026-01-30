@@ -155,10 +155,6 @@ pub enum ExprKind {
         args: Vec<Expr>,
         options: Vec<CallOption>,
     },
-    StringInterpVar {
-        name: String,
-        braced: bool,
-    },
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -523,7 +519,6 @@ impl ExprKind {
                     o.value.strip_spans();
                 }
             }
-            ExprKind::StringInterpVar { .. } => {}
             _ => {}
         }
     }

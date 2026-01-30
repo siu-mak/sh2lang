@@ -1132,7 +1132,7 @@ impl<'a> Parser<'a> {
                     let ident = &raw[start..end];
                     if is_valid_ident(ident) {
                         parts.push(Expr {
-                            node: ExprKind::StringInterpVar { name: ident.to_string(), braced: true },
+                            node: ExprKind::Var(ident.to_string()),
                             span,
                         });
                         i = end + 1;
@@ -1158,7 +1158,7 @@ impl<'a> Parser<'a> {
                 if len > 0 {
                     let ident = &raw[start..start + len];
                     parts.push(Expr {
-                        node: ExprKind::StringInterpVar { name: ident.to_string(), braced: false },
+                        node: ExprKind::Var(ident.to_string()),
                         span,
                     });
                     i = start + len;
@@ -1214,7 +1214,7 @@ impl<'a> Parser<'a> {
                             });
                         }
                         parts.push(Expr {
-                            node: ExprKind::StringInterpVar { name: ident.to_string(), braced: true },
+                            node: ExprKind::Var(ident.to_string()),
                             span,
                         });
                         i = end + 1;

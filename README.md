@@ -284,7 +284,6 @@ let env = "dev"
 ### No Implicit Expansion
 sh2 is stricter than Bash: it performs **no implicit expansion** (no tilde expansion, no globbing, no splitting) in string literals or variables.
 - Use `env.HOME` instead of `~`.
-- **Unbound variables** in strings (e.g. `$FOO`) are treated as literals, not shell expansions.
 - Join paths with `&`.
 
 ```sh2

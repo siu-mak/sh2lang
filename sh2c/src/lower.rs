@@ -4,16 +4,12 @@ use crate::span::{Span, SourceMap};
 use crate::error::CompileError;
 use crate::sudo::SudoSpec;
 use std::collections::HashSet;
-use std::rc::Rc;
-use std::cell::RefCell;
 
 #[derive(Clone, Debug)]
 struct LoweringContext<'a> {
     run_results: HashSet<String>,
     /// Variables that hold boolean values (assigned from boolean expressions)
     bool_vars: HashSet<String>,
-    /// Function-scoped variable bindings (monotonically growing)
-    locals: Rc<RefCell<HashSet<String>>>,
     opts: &'a LowerOptions,
     in_let_rhs: bool,
 
@@ -24,7 +20,6 @@ impl<'a> LoweringContext<'a> {
         Self {
             run_results: HashSet::new(),
             bool_vars: HashSet::new(),
-            locals: Rc::new(RefCell::new(HashSet::new())),
             opts,
             in_let_rhs: false,
         }
@@ -57,15 +52,9 @@ impl<'a> LoweringContext<'a> {
             .intersection(&other.bool_vars)
             .cloned()
             .collect();
-        
-        // locals are shared via Rc/RefCell, so they are already consistent.
-        // We just clone the Rc.
-        let locals = self.locals.clone();
-
         Self {
             run_results,
             bool_vars,
-            locals,
             opts: self.opts,
             in_let_rhs: self.in_let_rhs,
         }
@@ -122,9 +111,6 @@ pub fn lower_with_options(p: ast::Program, opts: &LowerOptions) -> Result<Vec<ir
 fn lower_function(f: ast::Function, sm: &SourceMap, opts: &LowerOptions) -> Result<ir::Function, CompileError> {
     let mut body = Vec::new();
     let mut ctx = LoweringContext::new(opts);
-    for param in &f.params {
-        ctx.locals.borrow_mut().insert(param.clone());
-    }
 
     for stmt in f.body {
         ctx = lower_stmt(stmt, &mut body, ctx, sm, &f.file, opts)?;
@@ -255,7 +241,6 @@ fn lower_stmt<'a>(
                         loc,
                     ));
                     ctx.insert(&name);
-                    ctx.locals.borrow_mut().insert(name.clone());
                     return Ok(ctx);
                 }
             }
@@ -280,7 +265,6 @@ fn lower_stmt<'a>(
             if is_bool {
                 ctx.insert_bool_var(&name);
             }
-            ctx.locals.borrow_mut().insert(name.clone());
             Ok(ctx)
         }
 
@@ -441,7 +425,6 @@ fn lower_stmt<'a>(
             Ok(ctx.intersection(&ctx_body))
         }
         ast::StmtKind::For { var, items, body } => {
-            ctx.locals.borrow_mut().insert(var.clone());
             let lowered_items = items
                 .into_iter()
                 .map(|i| lower_expr(i, &mut ctx, sm, file))
@@ -930,9 +913,6 @@ fn lower_stmt<'a>(
             map,
             body,
         } => {
-            ctx.locals.borrow_mut().insert(key_var.clone());
-            ctx.locals.borrow_mut().insert(val_var.clone());
-
             let mut lower_body = Vec::new();
             let ctx_body = lower_block(&body, &mut lower_body, ctx.clone(), sm, file, opts)?;
             out.push(ir::Cmd::ForMap {
@@ -1085,9 +1065,6 @@ fn lower_expr<'a>(e: ast::Expr, ctx: &mut LoweringContext<'a>, sm: &SourceMap, f
                 }
             }
 
-            let l_span = left.span;
-            let r_span = right.span;
-            
             let op = match op {
                 ast::ArithOp::Add => ir::ArithOp::Add,
                 ast::ArithOp::Sub => ir::ArithOp::Sub,
@@ -1095,31 +1072,10 @@ fn lower_expr<'a>(e: ast::Expr, ctx: &mut LoweringContext<'a>, sm: &SourceMap, f
                 ast::ArithOp::Div => ir::ArithOp::Div,
                 ast::ArithOp::Mod => ir::ArithOp::Mod,
             };
-
-            let left_val = lower_expr(*left, ctx, sm, file)?;
-            let right_val = lower_expr(*right, ctx, sm, file)?;
-
-            if let ir::Val::Literal(s) = &left_val {
-                 return Err(CompileError::new(sm.format_diagnostic(
-                    file, 
-                    opts.diag_base_dir.as_deref(), 
-                    &format!("string literal '{}' not allowed in arithmetic context", s), 
-                    l_span
-                )));
-            }
-            if let ir::Val::Literal(s) = &right_val {
-                 return Err(CompileError::new(sm.format_diagnostic(
-                    file, 
-                    opts.diag_base_dir.as_deref(), 
-                    &format!("string literal '{}' not allowed in arithmetic context", s), 
-                    r_span
-                )));
-            }
-
             Ok(ir::Val::Arith {
-                left: Box::new(left_val),
+                left: Box::new(lower_expr(*left, ctx, sm, file)?),
                 op,
-                right: Box::new(right_val),
+                right: Box::new(lower_expr(*right, ctx, sm, file)?),
             })
         }
         ast::ExprKind::Compare { left, op, right } => {
@@ -1248,23 +1204,6 @@ fn lower_expr<'a>(e: ast::Expr, ctx: &mut LoweringContext<'a>, sm: &SourceMap, f
         ast::ExprKind::Count(inner) => Ok(ir::Val::Count(Box::new(lower_expr(*inner, ctx, sm, file)?))),
         ast::ExprKind::Bool(b) => Ok(ir::Val::Bool(b)),
         ast::ExprKind::Number(n) => Ok(ir::Val::Number(n)),
-        ast::ExprKind::StringInterpVar { name, braced } => {
-            // Check if variable is bound in local scope OR is a run_result
-            let is_bound = ctx.locals.borrow().contains(&name) || ctx.run_results.contains(&name);
-            
-            if is_bound {
-                Ok(ir::Val::Var(name.clone()))
-            } else {
-                // Unbound -> Literal
-                // Reconstruct exact source text
-                let s = if *braced {
-                    format!("${{{}}}", name)
-                } else {
-                    format!("${}", name)
-                };
-                Ok(ir::Val::Literal(s))
-            }
-        }
         ast::ExprKind::Command(args) => {
             let lowered_args = args
                 .into_iter()

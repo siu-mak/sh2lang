@@ -1042,10 +1042,7 @@ fn emit_cmdsub_pipe_raw(segments: &[Vec<Val>], target: TargetShell) -> Result<St
 
 fn emit_arith_expr(v: &Val, target: TargetShell) -> Result<String, CompileError> {
     match v {
-        Val::Literal(s) => {
-            // Should be caught by lowering, but as a fallback:
-            Err(CompileError::new(format!("String literal '{}' not allowed in arithmetic context", s)).with_target(target))
-        }
+        Val::Literal(s) => Ok(s.clone()),
         Val::Number(n) => Ok(n.to_string()),
         Val::Var(s) => Ok(s.clone()),
         Val::Arg(n) => Ok(format!("${}", n)),
