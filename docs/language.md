@@ -121,11 +121,13 @@ print("Hello, " & name)
 print("Hello, $name")
 ```
 
-### No Implicit Expansion
+### 3.2 No Implicit Expansion
+
 sh2 is stricter than Bash: it performs **no implicit expansion** (no tilde expansion, no globbing, no splitting) in string literals or variables.
 
-- Use `env.HOME` instead of `~`.
-If you attempt to use `~/path` in `with cwd()` or similar, sh2 will fail at runtime and emit a helper hint advising you to use `env.HOME`.
+- **String Interpolation**: `$var` and `${var}` inside strings only expand variables *bound in sh2* (e.g. via `let`, function params). **Unbound variables are treated as literals.** This protects against accidental expansion of Bash variables or format strings (e.g. `${Package}` in a valid `dpkg` query remains literal).
+- **Tilde**: `~` is treated as a literal character. Use `env.HOME` instead.
+- **Paths**: Join paths with `&`. `~/path` will fail at runtime; use `env.HOME & "/path"`.
 
 Multiline and raw strings are supported (where implemented by your compiler target):
 

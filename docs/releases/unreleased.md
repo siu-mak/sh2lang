@@ -1,5 +1,9 @@
 # Unreleased
 
+## Breaking Changes
+
+- **String Interpolation Safety**: Unbound variables in string interpolations (e.g. `$FOO`, `${BAR}`) now remain as string literals instead of expanding to empty strings or environment variables. This prevents accidental injection of Bash variables. To use an environment variable, explicitly use `env.FOO` (though inside strings `env.FOO` is not currently interpolated; use concatenation: `"Value: " & env.FOO`).
+
 ## Added
 
 ### Pipe Blocks
