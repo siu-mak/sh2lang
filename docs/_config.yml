@@ -2,3 +2,12 @@ title: sh2lang
 description: A structured shell language
 type: docs
 theme: minima
+header_pages:
+  - index.md
+  - language.md
+  - releases/index.md
+  - sh2do.md
+plugins:
+  - jekyll-sitemap  
+url: "https://siu-mak.github.io"
+baseurl: "/sh2lang"  
