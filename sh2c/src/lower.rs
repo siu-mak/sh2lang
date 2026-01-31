@@ -12,7 +12,6 @@ struct LoweringContext<'a> {
     bool_vars: HashSet<String>,
     opts: &'a LowerOptions,
     in_let_rhs: bool,
-
 }
 
 impl<'a> LoweringContext<'a> {
@@ -269,35 +268,60 @@ fn lower_stmt<'a>(
         }
 
         ast::StmtKind::Run(run_call) => {
-            let ir_args = run_call
-                .args
-                .into_iter()
-                .map(|a| lower_expr(a, &mut ctx, sm, file))
-                .collect::<Result<Vec<_>, _>>()?;
+            // Check for run("sh", "-c", cmd, ...) pattern for raw shell optimization
+            let is_sh_c = if run_call.args.len() >= 3 {
+                 if let ast::ExprKind::Literal(s1) = &run_call.args[0].node {
+                     if s1 == "sh" {
+                          if let ast::ExprKind::Literal(s2) = &run_call.args[1].node {
+                                s2 == "-c"
+                          } else { false }
+                     } else { false }
+                 } else { false }
+            } else { false };
 
-            let mut allow_fail = false;
-            let mut seen_allow_fail = false;
-            for opt in run_call.options {
-                if opt.name == "allow_fail" {
-                    if seen_allow_fail {
-                        return Err(CompileError::new(sm.format_diagnostic(file, opts.diag_base_dir.as_deref(), "allow_fail specified more than once", opt.span)));
-                    }
-                    seen_allow_fail = true;
-                    if let ast::ExprKind::Bool(b) = opt.value.node {
-                        allow_fail = b;
-                    } else {
-                        return Err(CompileError::new(sm.format_diagnostic(file, opts.diag_base_dir.as_deref(), "allow_fail must be a boolean literal", opt.value.span)));
-                    }
+            if is_sh_c {
+                 // Use standard option parsing to ensure duplicates/invalid options are handled consistently
+                 // We don't use the args from this lowering (we handle them specially below), but we get allow_fail
+                 let (_, allow_fail) = lower_run_call_args(&run_call, &mut ctx, sm, file, opts)?;
+                 
+                 let mut iter = run_call.args.into_iter();
+                 let shell = lower_expr(iter.next().unwrap(), &mut ctx, sm, file)?;
+                 let _flag = iter.next().unwrap(); // Skip -c
+                 let script = lower_expr(iter.next().unwrap(), &mut ctx, sm, file)?;
+                 let mut extra = Vec::new();
+                 for arg in iter {
+                     extra.push(lower_expr(arg, &mut ctx, sm, file)?);
+                 }
+                 
+                 let loc = if opts.include_diagnostics {
+                      Some(resolve_span(stmt.span, sm, file, opts.diag_base_dir.as_deref()))
+                 } else {
+                      None
+                 };
+
+                 out.push(ir::Cmd::RawShell {
+                     shell,
+                     cmd: script,
+                     args: extra,
+                     loc,
+                     allow_fail,
+                 });
+            } else {
+                // Normal run(...) lowering
+                let (ir_args, allow_fail) = lower_run_call_args(&run_call, &mut ctx, sm, file, opts)?;
+                
+                let loc = if opts.include_diagnostics {
+                     Some(resolve_span(stmt.span, sm, file, opts.diag_base_dir.as_deref()))
                 } else {
-                    return Err(CompileError::new(sm.format_diagnostic(file, opts.diag_base_dir.as_deref(), format!("unknown run option: {}", opt.name).as_str(), opt.span)));
-                }
-            }
+                     None
+                };
 
-            out.push(ir::Cmd::Exec {
-                args: ir_args,
-                allow_fail,
-                loc,
-            });
+                out.push(ir::Cmd::Exec {
+                    args: ir_args,
+                    allow_fail,
+                    loc,
+                });
+            }
             Ok(ctx)
         }
 
@@ -430,7 +454,8 @@ fn lower_stmt<'a>(
                 .map(|i| lower_expr(i, &mut ctx, sm, file))
                 .collect::<Result<Vec<_>, _>>()?;
             let mut lower_body = Vec::new();
-            let ctx_body = lower_block(&body, &mut lower_body, ctx.clone(), sm, file, opts)?;
+            let inner_ctx = ctx.clone();
+            let ctx_body = lower_block(&body, &mut lower_body, inner_ctx, sm, file, opts)?;
 
             out.push(ir::Cmd::For {
                 var,
@@ -600,9 +625,23 @@ fn lower_stmt<'a>(
             Ok(ctx)
         }
         ast::StmtKind::Sh(expr) => {
-            out.push(ir::Cmd::Raw(lower_expr(expr, &mut ctx, sm, file)?, loc));
+            // Lower sh(...) as a statement to Cmd::RawShell
+            let loc = if opts.include_diagnostics {
+                Some(resolve_span(stmt.span, sm, file, opts.diag_base_dir.as_deref()))
+            } else {
+                None
+            };
+
+            out.push(ir::Cmd::RawShell {
+                shell: ir::Val::Literal("sh".to_string()),
+                cmd: lower_expr(expr, &mut ctx, sm, file)?,
+                args: vec![],
+                loc,
+                allow_fail: false,
+            });
             Ok(ctx)
         }
+
         ast::StmtKind::ShBlock(lines) => {
             for s in lines {
                 out.push(ir::Cmd::RawLine { line: s, loc: loc.clone() });
@@ -914,7 +953,9 @@ fn lower_stmt<'a>(
             body,
         } => {
             let mut lower_body = Vec::new();
-            let ctx_body = lower_block(&body, &mut lower_body, ctx.clone(), sm, file, opts)?;
+            let inner_ctx = ctx.clone();
+            // Removed obsolete add_binding calls
+            let ctx_body = lower_block(&body, &mut lower_body, inner_ctx, sm, file, opts)?;
             out.push(ir::Cmd::ForMap {
                 key_var,
                 val_var,
@@ -1294,11 +1335,15 @@ fn lower_expr<'a>(e: ast::Expr, ctx: &mut LoweringContext<'a>, sm: &SourceMap, f
                 }
             }
 
+            // Compatibility: run() as an expression always lowers to Val::Command
+            // We do not optimize to RawShell here because RawShell is a Cmd (statement), not a Val.
+            // If the user wants raw shell execution without capture, they should use the statement form.
+            
             let lowered_args = run_call.args
                 .into_iter()
                 .map(|a| lower_expr(a, ctx, sm, file))
                 .collect::<Result<Vec<_>, _>>()?;
-            Ok(ir::Val::Command(lowered_args))
+             Ok(ir::Val::Command(lowered_args))
         }
 
         ast::ExprKind::Call { name, args } => {
@@ -1578,8 +1623,9 @@ fn lower_expr<'a>(e: ast::Expr, ctx: &mut LoweringContext<'a>, sm: &SourceMap, f
         }
 
         ast::ExprKind::Sh { cmd, options } => {
-            // Expression-form sh() only supports 'shell' option
-            // (allow_fail is rejected at parse time with helpful message)
+            // Expression-form sh() - used in $() or assignment
+            // Must return Val::Command to be executed via $(...)
+            
             let mut shell_expr = ast::Expr {
                 node: ast::ExprKind::Literal("sh".to_string()),
                 span: Span::new(0, 0),
@@ -1599,7 +1645,6 @@ fn lower_expr<'a>(e: ast::Expr, ctx: &mut LoweringContext<'a>, sm: &SourceMap, f
                     seen_shell = true;
                     shell_expr = opt.value;
                 } else {
-                    // This shouldn't happen if parser is correct, but handle gracefully
                     return Err(CompileError::new(sm.format_diagnostic(
                         file,
                         opts.diag_base_dir.as_deref(),
@@ -1609,12 +1654,15 @@ fn lower_expr<'a>(e: ast::Expr, ctx: &mut LoweringContext<'a>, sm: &SourceMap, f
                 }
             }
             
-            // Build argv: [shell, "-c", cmd]
+            // Build standard Command: [shell, "-c", cmd]
             let shell_val = lower_expr(shell_expr, ctx, sm, file)?;
-            let dash_c_val = ir::Val::Literal("-c".to_string());
             let cmd_val = lower_expr(*cmd, ctx, sm, file)?;
             
-            Ok(ir::Val::Command(vec![shell_val, dash_c_val, cmd_val]))
+            Ok(ir::Val::Command(vec![
+                shell_val,
+                ir::Val::Literal("-c".to_string()),
+                cmd_val
+            ]))
         }
     }
 }

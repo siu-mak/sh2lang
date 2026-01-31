@@ -283,6 +283,13 @@ fn visit_cmd(cmd: &Cmd, usage: &mut PreludeUsage, include_diagnostics: bool) {
             }
             visit_val(&Val::Call { name: name.clone(), args: args.clone() }, usage);
         }
+        Cmd::RawShell { shell, cmd, args, .. } => {
+             visit_val(shell, usage);
+             visit_val(cmd, usage);
+             for a in args {
+                 visit_val(a, usage);
+             }
+        }
     }
 }
 
@@ -1124,6 +1131,32 @@ fn emit_arg_index_word(v: &Val, target: TargetShell) -> Result<String, CompileEr
     }
 }
 
+fn emit_rawshell_string_assembly(
+    v: &Val,
+    out: &mut String,
+    pad: &str,
+    target: TargetShell,
+) -> Result<(), CompileError> {
+    match v {
+        Val::Concat(l, r) => {
+            emit_rawshell_string_assembly(l, out, pad, target)?;
+            emit_rawshell_string_assembly(r, out, pad, target)?;
+        }
+        _ => {
+            match target {
+                TargetShell::Bash => {
+                    out.push_str(&format!("{}__sh2_cmd+={}\n", pad, emit_val(v, target)?));
+                }
+                TargetShell::Posix => {
+                    // POSIX sh does not support +=
+                    out.push_str(&format!("{}__sh2_cmd=\"$__sh2_cmd\"{}\n", pad, emit_val(v, target)?));
+                }
+            }
+        }
+    }
+    Ok(())
+}
+
 fn emit_cmd(
     cmd: &Cmd,
     out: &mut String,
@@ -1423,6 +1456,58 @@ fn emit_cmd(
              let shell_args: Vec<String> = args.iter().map(|a| emit_word(a, target)).collect::<Result<Vec<_>, _>>()?;
              out.push_str(&shell_args.join(" "));
              out.push('\n');
+        }
+        Cmd::RawShell { shell, cmd, args, loc, allow_fail } => {
+             if let Some(l) = loc {
+                 // Update location tracking variable if available
+                 if !in_cond_ctx {
+                    out.push_str(&format!("{}__sh2_loc=\"{}\"\n", pad, l));
+                 }
+             }
+
+             out.push_str(&pad);
+             
+             // 1. Initialize __sh2_cmd
+             out.push_str("__sh2_cmd=''\n");
+             
+             // 2. Build the command string
+             emit_rawshell_string_assembly(cmd, out, &pad, target)?;
+             
+             // 3. Emit execution
+             let shell_cmd = emit_word(shell, target)?;
+             
+             // Initialize status to 0, then run command and capture failure status
+             out.push_str(&pad);
+             out.push_str("__sh2_status=0; ");
+             
+             // Construct execution line: "$shell" -c "$__sh2_cmd" "_" [args...]
+             // The "_" is the $0 placeholder for the child shell.
+             out.push_str(&format!("{} -c \"$__sh2_cmd\" \"_\"", shell_cmd));
+             
+             if args.is_empty() {
+                 // Optimization/Compat: if no explicit args, forward current arguments ($@)
+                 out.push_str(" \"$@\"");
+             } else {
+                 // Forward explicit arguments
+                 for arg in args {
+                     out.push(' ');
+                     out.push_str(&emit_word(arg, target)?);
+                 }
+             }
+
+             if *allow_fail {
+                  // suppress failures, ensure line success
+                  out.push_str(" || __sh2_status=$?; :\n");
+             } else {
+                  out.push_str(" || __sh2_status=$?\n");
+                  
+                  // 4. Check status using standard location variable
+                  if in_cond_ctx {
+                      out.push_str(&format!("{}__sh2_check \"$__sh2_status\" \"${{__sh2_loc:-}}\" \"return\"\n", pad));
+                  } else {
+                      out.push_str(&format!("{}__sh2_check \"$__sh2_status\" \"${{__sh2_loc:-}}\"\n", pad));
+                  }
+             }
         }
         Cmd::Print(val) => {
             out.push_str(&pad);

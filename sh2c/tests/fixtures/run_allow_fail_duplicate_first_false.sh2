@@ -1,1 +1,1 @@
-func main() { run("echo", allow_fail=false, "hi", allow_fail=true) }
+func main() { run("false", allow_fail=false, allow_fail=true) }

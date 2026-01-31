@@ -2,8 +2,10 @@
 __sh2_check() { s="$1"; loc="$2"; mode="$3"; if [ "$s" -ne 0 ]; then if [ -n "$loc" ]; then printf 'Error in %s\n' "$loc" >&2; fi; if [ "$mode" = "return" ]; then return "$s"; else exit "$s"; fi; fi; }
 main() {
   __sh2_loc="tests/fixtures/fs_predicates_basic.sh2:2:3"
-  'sh' '-c' 'rm -rf tfile tlink; echo hi > tfile; chmod 600 tfile; chmod +x tfile; ln -s tfile tlink'; __sh2_status=$?
-  __sh2_check "$__sh2_status" "${__sh2_loc:-}" "exit"
+  __sh2_cmd=''
+  __sh2_cmd="${__sh2_cmd}rm -rf tfile tlink; echo hi > tfile; chmod 600 tfile; chmod +x tfile; ln -s tfile tlink"
+  __sh2_status=0; 'sh' -c "$__sh2_cmd" "_" "$@" || __sh2_status=$?
+  __sh2_check "$__sh2_status" "${__sh2_loc:-}"
   if [ -L 'tlink' ] && [ -x 'tfile' ] && [ -r 'tfile' ] && [ -w 'tfile' ]; then
     printf '%s\n' 'ok'
   else

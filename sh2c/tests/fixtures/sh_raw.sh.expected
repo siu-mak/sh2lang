@@ -1,23 +1,12 @@
 #!/usr/bin/env bash
-__sh2_check() { local s="$1"; local loc="$2"; local mode="$3"; if (( s != 0 )); then if [[ -n "$loc" ]]; then printf 'Error in %s\n' "$loc" >&2; fi; if [[ "$mode" == "return" ]]; then return "$s"; else exit "$s"; fi; fi; }
-__sh2_err_handler() {
-  local s=$?
-  local loc="${__sh2_loc:-}"
-  if [[ "${BASH_COMMAND}" == *"(exit "* ]]; then return $s; fi
-  if [[ -z "$loc" ]]; then return $s; fi
-  if [[ "$loc" == "${__sh2_last_err_loc:-}" && "$s" == "${__sh2_last_err_status:-}" ]]; then return $s; fi
-  __sh2_last_err_loc="$loc"
-  __sh2_last_err_status="$s"
-  printf "Error in %s\n" "$loc" >&2
-  return $s
-}
-set -o errtrace
-trap '__sh2_err_handler' ERR
+__sh2_check() { local s="$1"; local loc="$2"; local mode="$3"; if (( s != 0 )); then if [[ "$mode" == "return" ]]; then return "$s"; else if [[ -n "$loc" ]]; then printf 'Error in %s\n' "$loc" >&2; fi; exit "$s"; fi; fi; }
 main() {
   local __sh2_loc=""
-  set -euo pipefail
-  __sh2_status=$?
-  __sh2_check "$__sh2_status" "${__sh2_loc:-}"
+  __sh2_loc="tests/fixtures/sh_raw.sh2:2:5"
+  __sh2_cmd=''
+  __sh2_cmd+='set -euo pipefail'
+  __sh2_status=0; 'sh' -c "$__sh2_cmd" "_" "$@" || __sh2_status=$?
+  __sh2_check "$__sh2_status" "${__sh2_loc:-}" "exit"
   __sh2_loc="tests/fixtures/sh_raw.sh2:3:5"
   'echo' 'hi'; __sh2_status=$?
   __sh2_check "$__sh2_status" "${__sh2_loc:-}" "exit"

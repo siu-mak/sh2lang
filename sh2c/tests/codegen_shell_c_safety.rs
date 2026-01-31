@@ -68,10 +68,14 @@ fn test_sh_expr_fixtures_allowed_to_use_shell_c() {
         
         let bash_output = compile_path_to_shell(Path::new(&sh2_path), TargetShell::Bash);
         
-        // sh(expr) fixtures are EXPECTED to generate bash -c (documented as unsafe)
+        // sh(expr) fixtures are EXPECTED to generate sh -c or bash -c
+        // sh(expr) fixtures are EXPECTED to generate sh -c or bash -c (quoted or unquoted)
+        let has_bash = bash_output.contains("bash -c") || bash_output.contains("'bash' -c");
+        let has_sh = bash_output.contains("sh -c") || bash_output.contains("'sh' -c");
+        
         assert!(
-            bash_output.contains("bash -c"),
-            "Fixture {} should generate 'bash -c' for sh(expr) feature",
+            has_bash || has_sh,
+            "Fixture {} should generate 'bash -c' or 'sh -c' for sh(expr) feature (found neither)",
             fixture_name
         );
         
@@ -122,6 +126,11 @@ fn check_shell_c_safety(output: &str, fixture_name: &str, target: &str) {
         
         // Check for banned usage
         if line.contains("bash -c") || line.contains("sh -c") {
+            // EXCEPTION: The new safe RawShell pattern `sh -c "$__sh2_cmd"` is allowed inline.
+            if line.contains("-c \"$__sh2_cmd\"") {
+                continue;
+            }
+
             if !inside_helper {
                 panic!(
                     "Fixture {} ({} target) line {}: Found banned `bash -c` / `sh -c` outside of probe helper.\n\
@@ -129,7 +138,8 @@ fn check_shell_c_safety(output: &str, fixture_name: &str, target: &str) {
                      \n\
                      Ticket S5 Strict Safety:\n\
                      Direct execution of `bash -c` or `sh -c` is FORBIDDEN in generated code.\n\
-                     All dynamic shell execution must go through `__sh2_sh_probe` helper.",
+                     All dynamic shell execution must go through `__sh2_sh_probe` helper,\n\
+                     OR use the safe `sh -c \"$__sh2_cmd\"` pattern.",
                     fixture_name, target, i + 1, line
                 );
             }

@@ -111,14 +111,18 @@ let x = "hello" # inline comment
 
 ### 3.1 Strings
 
-- Double-quoted strings support interpolation (`$name`, `${expr}`) depending on context.
-- Concatenation uses `&` (requires whitespace on both sides, e.g. `x & y`).
-
+- Double-quoted strings (`"..."`) are **strictly literal**. Variables like `$name` inside them are preserved as-is and are NOT expanded.
+- **Interpolated Strings**: Use `$"..."` to enable string interpolation. Inside `$"..."`, variables (`$name`, `${expr}`) are expanded by the shell.
+  - Unbound variables expand to an empty string (standard shell behavior).
+- **Raw Shell Safety**: When using `sh(...)`, the command string is passed literally to the child shell.
+  - Example: `sh("echo $HOME")` passes the string `$HOME` to the child shell, which then expands it.
+- **Arg Forwarding**: `sh("...")` statements automatically forward the current function's arguments as `$@` (and `$1`, etc.) to the child shell.
 
 ```sh2
 let name = "Alice"
 print("Hello, " & name)
-print("Hello, $name")
+print($"Hello, $name")    # Interpolates: Hello, Alice
+print("Hello, $name")     # Literal: Hello, $name
 ```
 
 ### No Implicit Expansion

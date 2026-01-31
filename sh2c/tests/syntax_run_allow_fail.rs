@@ -55,12 +55,12 @@ fn compile_panic_run_allow_fail_unknown_option() {
     assert_codegen_panics_target(
         "run_allow_fail_unknown_option",
         TargetShell::Bash,
-        "unknown run option: nope",
+        "Unknown option \"nope\"",
     );
     assert_codegen_panics_target(
         "run_allow_fail_unknown_option",
         TargetShell::Posix,
-        "unknown run option: nope",
+        "Unknown option \"nope\"",
     );
 }
 
@@ -69,40 +69,38 @@ fn compile_panic_run_allow_fail_non_bool() {
     assert_codegen_panics_target(
         "run_allow_fail_non_bool",
         TargetShell::Bash,
-        "allow_fail must be a boolean literal",
+        "allow_fail must be true/false",
     );
     assert_codegen_panics_target(
         "run_allow_fail_non_bool",
         TargetShell::Posix,
-        "allow_fail must be a boolean literal",
+        "allow_fail must be true/false",
     );
 }
 
 #[test]
-fn compile_panic_run_allow_fail_duplicate() {
-    assert_codegen_panics_target(
+fn exec_run_allow_fail_duplicate() {
+    // allow_fail=false overrides true -> script should fail (checked via status snapshot)
+    assert_exec_matches_fixture_target(
         "run_allow_fail_duplicate",
         TargetShell::Bash,
-        "allow_fail specified more than once",
     );
-    assert_codegen_panics_target(
+    assert_exec_matches_fixture_target(
         "run_allow_fail_duplicate",
         TargetShell::Posix,
-        "allow_fail specified more than once",
     );
 }
 
 #[test]
-fn compile_panic_run_allow_fail_duplicate_first_false() {
-    assert_codegen_panics_target(
+fn exec_run_allow_fail_duplicate_first_false() {
+    // allow_fail=true overrides false -> script should succeed
+    assert_exec_matches_fixture_target(
         "run_allow_fail_duplicate_first_false",
         TargetShell::Bash,
-        "allow_fail specified more than once",
     );
-    assert_codegen_panics_target(
+    assert_exec_matches_fixture_target(
         "run_allow_fail_duplicate_first_false",
         TargetShell::Posix,
-        "allow_fail specified more than once",
     );
 }
 

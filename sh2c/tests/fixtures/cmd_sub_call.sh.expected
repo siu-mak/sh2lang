@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
 __sh2_check() { local s="$1"; local loc="$2"; local mode="$3"; if (( s != 0 )); then if [[ "$mode" == "return" ]]; then return "$s"; else if [[ -n "$loc" ]]; then printf 'Error in %s\n' "$loc" >&2; fi; exit "$s"; fi; fi; }
-__sh2_sh_probe() { local cmd="$1"; if bash -c "$cmd"; then __sh2_status=0; else __sh2_status=$?; fi; return 0; }
 __sh2_err_handler() {
   local s=$?
   local loc="${__sh2_loc:-}"
@@ -17,7 +16,10 @@ trap '__sh2_err_handler' ERR
 show() {
   local __sh2_loc=""
   __sh2_loc="tests/fixtures/cmd_sub_call.sh2:2:3"
-  __sh2_sh_probe 'echo ok'
+  __sh2_cmd=''
+  __sh2_cmd+='echo ok'
+  __sh2_status=0; 'sh' -c "$__sh2_cmd" "_" "$@" || __sh2_status=$?
+  __sh2_check "$__sh2_status" "${__sh2_loc:-}"
 }
 
 main() {

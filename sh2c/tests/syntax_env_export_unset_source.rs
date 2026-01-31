@@ -104,7 +104,7 @@ fn parse_env_export_unset_source() {
     assert!(matches!(
         func.body[8],
         Stmt {
-            node: StmtKind::Sh(_),
+            node: StmtKind::Run(_),
             ..
         }
     ));

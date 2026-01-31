@@ -209,7 +209,7 @@ literal = string_literal | number | bool_literal ;
 string_literal = normal_string | raw_string | interpolated_string ;
 normal_string = '"' , { string_char } , '"' ;
 raw_string = 'r"' , { raw_string_char } , '"' ;
-interpolated_string = '$"' , { interp_char | "{" , expression , "}" } , '"' ;
+interpolated_string = '$"' , { interp_char | "{" , expression , "}" } , '"' ; (* Semantic note: $var expands DO NOT expand if var is unbound (unless raw shell context) *)
 bool_literal = "true" | "false" ;
 number = digit , { digit } ;
 

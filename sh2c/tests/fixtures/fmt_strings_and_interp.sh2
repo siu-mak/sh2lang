@@ -1,5 +1,5 @@
 func main() {
     print("s1")
     print(r"r1")
-    print($"i {v}")
+    print($"i ${v}")
 }

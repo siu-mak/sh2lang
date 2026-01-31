@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
 __sh2_check() { local s="$1"; local loc="$2"; local mode="$3"; if (( s != 0 )); then if [[ "$mode" == "return" ]]; then return "$s"; else if [[ -n "$loc" ]]; then printf 'Error in %s\n' "$loc" >&2; fi; exit "$s"; fi; fi; }
-__sh2_sh_probe() { local cmd="$1"; if bash -c "$cmd"; then __sh2_status=0; else __sh2_status=$?; fi; return 0; }
 __sh2_err_handler() {
   local s=$?
   local loc="${__sh2_loc:-}"
@@ -18,27 +17,36 @@ main() {
   local __sh2_loc=""
   export X='hello'
   __sh2_loc="tests/fixtures/env_export_unset_source.sh2:4:3"
-  'sh' '-c' 'echo $X'; __sh2_status=$?
-  __sh2_check "$__sh2_status" "${__sh2_loc:-}" "exit"
+  __sh2_cmd=''
+  __sh2_cmd+='echo $X'
+  __sh2_status=0; 'sh' -c "$__sh2_cmd" "_" "$@" || __sh2_status=$?
+  __sh2_check "$__sh2_status" "${__sh2_loc:-}"
   __sh2_loc="tests/fixtures/env_export_unset_source.sh2:7:3"
   y='yo'
   __sh2_status=$?
   __sh2_check "$__sh2_status" "${__sh2_loc:-}"
   export y
   __sh2_loc="tests/fixtures/env_export_unset_source.sh2:9:3"
-  'sh' '-c' 'echo $y'; __sh2_status=$?
-  __sh2_check "$__sh2_status" "${__sh2_loc:-}" "exit"
+  __sh2_cmd=''
+  __sh2_cmd+='echo $y'
+  __sh2_status=0; 'sh' -c "$__sh2_cmd" "_" "$@" || __sh2_status=$?
+  __sh2_check "$__sh2_status" "${__sh2_loc:-}"
   unset X
   __sh2_loc="tests/fixtures/env_export_unset_source.sh2:13:3"
-  'sh' '-c' 'test -z "$X" && echo unset_ok || echo unset_bad'; __sh2_status=$?
-  __sh2_check "$__sh2_status" "${__sh2_loc:-}" "exit"
+  __sh2_cmd=''
+  __sh2_cmd+='test -z "$X" && echo unset_ok || echo unset_bad'
+  __sh2_status=0; 'sh' -c "$__sh2_cmd" "_" "$@" || __sh2_status=$?
+  __sh2_check "$__sh2_status" "${__sh2_loc:-}"
   __sh2_loc="tests/fixtures/env_export_unset_source.sh2:16:3"
   f="$( 'mktemp' )"
   __sh2_status=$?
   __sh2_check "$__sh2_status" "${__sh2_loc:-}"
   __sh2_loc="tests/fixtures/env_export_unset_source.sh2:17:3"
-  __sh2_cmd='echo '\''echo sourced_ok'\'' > '"$f"
-  __sh2_sh_probe "$__sh2_cmd"
+  __sh2_cmd=''
+  __sh2_cmd+='echo '\''echo sourced_ok'\'' > '
+  __sh2_cmd+="$f"
+  __sh2_status=0; 'sh' -c "$__sh2_cmd" "_" "$@" || __sh2_status=$?
+  __sh2_check "$__sh2_status" "${__sh2_loc:-}"
   . "$f"
   __sh2_loc="tests/fixtures/env_export_unset_source.sh2:21:3"
   'rm' '-f' "$f"; __sh2_status=$?
