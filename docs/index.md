@@ -8,8 +8,8 @@ title: Home
 # Description: A structured shell language that compiles to bash/POSIX shell
 **[sh2lang](https://github.com/siu-mak/sh2lang)** is a structured shell language designed to compile down to conventional shell scripts (bash/posix targets).
 
-- **GitHub repo:** https://github.com/siu-mak/sh2lang  
-- **Docs site (this page):** https://siu-mak.github.io/sh2lang/
+- **GitHub repo:** [https://github.com/siu-mak/sh2lang](https://github.com/siu-mak/sh2lang)  
+- **Docs site (this page):** [https://siu-mak.github.io/sh2lang/](https://siu-mak.github.io/sh2lang/)
 
 ## Quick start
 
