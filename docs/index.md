@@ -5,13 +5,61 @@ title: Home
   <img src="images/logo/sh2logo_256.png" alt="sh2 logo" width="128" />
 </a>
 
-This repository contains tools for **[sh2](https://github.com/siu-mak/sh2lang)**, a structured shell language designed to compile down to conventional shell scripts (bash/posix targets).
+# Description: A structured shell language that compiles to bash/POSIX shell
+**[sh2lang](https://github.com/siu-mak/sh2lang)** is a structured shell language designed to compile down to conventional shell scripts (bash/posix targets).
 
-## Repo contains
+- **GitHub repo:** https://github.com/siu-mak/sh2lang  
+- **Docs site (this page):** https://siu-mak.github.io/sh2lang/
+
+## Quick start
+
+### Build from source
+
+```bash
+git clone https://github.com/siu-mak/sh2lang.git
+cd sh2lang
+cargo build --workspace
+```
+
+Run the compiler:
+
+```bash
+./target/debug/sh2c --help
+./target/debug/sh2do --help
+```
+
+### Install to PATH (recommended for regular use)
+
+Install both tools to `~/.cargo/bin`:
+
+```bash
+cargo install --path sh2c --locked
+cargo install --path sh2do --locked
+```
+
+Ensure `~/.cargo/bin` is on your PATH:
+
+```bash
+# Add to ~/.bashrc or ~/.zshrc:
+export PATH="$HOME/.cargo/bin:$PATH"
+```
+
+Then from any directory:
+
+```bash
+sh2c --help
+sh2do 'print("hello")'
+```
+
+---
+
+## What's in the repo?
 
 - **sh2c**: The compiler implementation (Rust)
 - **sh2do**: A snippet runner for quick one-liners and testing
-- **editors/vscode**: Syntax highlighting extension for VS Code ([Manual Install Guide](editors/vscode/README.md))
+- **editors/vscode**: Syntax highlighting extension for VS Code ([Manual Install Guide](https://github.com/siu-mak/sh2lang/blob/main/editors/vscode/README.md))
+
+➡️ **View everything on GitHub:** [https://github.com/siu-mak/sh2lang](https://github.com/siu-mak/sh2lang)
 
 ---
 
@@ -87,47 +135,7 @@ You still end up with a regular **bash/POSIX sh script** as output, but you writ
 
 ---
 
-## Install / Build
 
-### Build from source
-
-```bash
-git clone https://github.com/siu-mak/sh2lang.git
-cd sh2lang
-cargo build --workspace
-```
-
-Run the compiler:
-
-```bash
-./target/debug/sh2c --help
-./target/debug/sh2do --help
-```
-
-### Install to PATH (recommended for regular use)
-
-Install both tools to `~/.cargo/bin`:
-
-```bash
-cargo install --path sh2c --locked
-cargo install --path sh2do --locked
-```
-
-Ensure `~/.cargo/bin` is on your PATH:
-
-```bash
-# Add to ~/.bashrc or ~/.zshrc:
-export PATH="$HOME/.cargo/bin:$PATH"
-```
-
-Then from any directory:
-
-```bash
-sh2c --help
-sh2do 'print("hello")'
-```
-
----
 
 ## CLI Usage
 
@@ -461,19 +469,23 @@ sh2do 'print("hello world")'
 sh2do 'print(arg(1))' -- myarg
 ```
 
-See [`docs/sh2do.md`](docs/sh2do.md) for full documentation.
+See [`docs/sh2do.md`](https://github.com/siu-mak/sh2lang/blob/main/docs/sh2do.md) for full documentation.
 
 ---
+# Docs
+
+The GitHub repo is here:  
+**[https://github.com/siu-mak/sh2lang](https://github.com/siu-mak/sh2lang)**
 
 ## Further Documentation
 
-- [`docs/language.md`](docs/language.md) — full language reference (syntax + semantics)
-- [`docs/sh2do.md`](docs/sh2do.md) — sh2do CLI documentation
+- [`docs/language.md`](https://github.com/siu-mak/sh2lang/blob/main/docs/language.md) — full language reference (syntax + semantics)
+- [`docs/sh2do.md`](https://github.com/siu-mak/sh2lang/blob/main/docs/sh2do.md) — sh2do CLI documentation
 - `tests/` — fixtures and integration tests (acts as an executable spec)
 
 ## Versions
 
-- [v0.1.1](docs/releases/v0.1.1.md) — Improved tilde hint, strict expansion policy, and semicolon support.
+- [v0.1.0](https://github.com/siu-mak/sh2lang/blob/main/docs/releases/v0.1.0.md) — First public release of the sh2 structured shell language.
 
 
 

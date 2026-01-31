@@ -836,6 +836,17 @@ Supports the full implemented feature set, including lists/maps, `with log`, int
 Prioritizes portability. Bash-only features (lists/maps, `with log`, and potentially full `.stdout/.stderr` capture) are restricted.
 
 ---
+# Docs
+
+The GitHub repo is here:  
+**[https://github.com/siu-mak/sh2lang](https://github.com/siu-mak/sh2lang)**
+
+## Further Documentation
+
+- [`docs/language.md`](https://github.com/siu-mak/sh2lang/blob/main/docs/language.md) — full language reference (syntax + semantics)
+- [`docs/sh2do.md`](https://github.com/siu-mak/sh2lang/blob/main/docs/sh2do.md) — sh2do CLI documentation
+- `tests/` — fixtures and integration tests (acts as an executable spec)
+---
 
 ### Summary
 

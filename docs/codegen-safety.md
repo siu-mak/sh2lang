@@ -87,3 +87,15 @@ The test `tests/codegen_shell_c_safety.rs` enforces that any compiler-generated 
 - This is the ONLY exception to the positional-parameter requirement
 
 This test will fail if future changes introduce compiler-internal `-c` patterns that interpolate dynamic values into script strings.
+
+---
+# Docs
+
+The GitHub repo is here:  
+**[https://github.com/siu-mak/sh2lang](https://github.com/siu-mak/sh2lang)**
+
+## Further Documentation
+
+- [`docs/language.md`](https://github.com/siu-mak/sh2lang/blob/main/docs/language.md) — full language reference (syntax + semantics)
+- [`docs/sh2do.md`](https://github.com/siu-mak/sh2lang/blob/main/docs/sh2do.md) — sh2do CLI documentation
+- `tests/` — fixtures and integration tests (acts as an executable spec)

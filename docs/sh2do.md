@@ -158,3 +158,15 @@ sh2do script.sh2 --target posix
 ## Non-Goals
 
 sh2do is intentionally minimal. For full control over compilation options (like IR emission or AST inspection), use `sh2c` directly.
+
+---
+# Docs
+
+The GitHub repo is here:  
+**[https://github.com/siu-mak/sh2lang](https://github.com/siu-mak/sh2lang)**
+
+## Further Documentation
+
+- [`docs/language.md`](https://github.com/siu-mak/sh2lang/blob/main/docs/language.md) — full language reference (syntax + semantics)
+- [`docs/sh2do.md`](https://github.com/siu-mak/sh2lang/blob/main/docs/sh2do.md) — sh2do CLI documentation
+- `tests/` — fixtures and integration tests (acts as an executable spec)

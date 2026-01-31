@@ -73,3 +73,15 @@ When adding new keywords to the language:
 1. Update this file
 2. Update `editors/vscode/syntaxes/sh2.tmLanguage.json`
 3. Run `cargo test -p sh2c --test editor_vscode_regression`
+
+---
+# Docs
+
+The GitHub repo is here:  
+**[https://github.com/siu-mak/sh2lang](https://github.com/siu-mak/sh2lang)**
+
+## Further Documentation
+
+- [`docs/language.md`](https://github.com/siu-mak/sh2lang/blob/main/docs/language.md) — full language reference (syntax + semantics)
+- [`docs/sh2do.md`](https://github.com/siu-mak/sh2lang/blob/main/docs/sh2do.md) — sh2do CLI documentation
+- `tests/` — fixtures and integration tests (acts as an executable spec)
