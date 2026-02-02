@@ -2,7 +2,7 @@
 __sh2_check() { s="$1"; loc="$2"; mode="$3"; if [ "$s" -ne 0 ]; then if [ -n "$loc" ]; then printf 'Error in %s\n' "$loc" >&2; fi; if [ "$mode" = "return" ]; then return "$s"; else exit "$s"; fi; fi; }
 main() {
   __sh2_loc="tests/fixtures/case_glob_dollar_and_backslash.sh2:2:5"
-  x='cost $5\done'
+  x='cost '"$5"'\done'
   __sh2_status=$?
   __sh2_check "$__sh2_status" "${__sh2_loc:-}"
   case "$x" in

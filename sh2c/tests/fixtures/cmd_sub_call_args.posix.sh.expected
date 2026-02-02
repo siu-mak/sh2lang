@@ -1,22 +1,8 @@
 #!/bin/sh
 __sh2_check() { s="$1"; loc="$2"; mode="$3"; if [ "$s" -ne 0 ]; then if [ -n "$loc" ]; then printf 'Error in %s\n' "$loc" >&2; fi; if [ "$mode" = "return" ]; then return "$s"; else exit "$s"; fi; fi; }
-__sh2_err_handler() {
-  s=$?
-  loc="${__sh2_loc:-}"
-  if [ -z "$loc" ]; then return "$s"; fi
-  if [ "$loc" = "${__sh2_last_err_loc:-}" ] && [ "$s" = "${__sh2_last_err_status:-}" ]; then return "$s"; fi
-  __sh2_last_err_loc="$loc"
-  __sh2_last_err_status="$s"
-  printf "Error in %s\n" "$loc" >&2
-  return "$s"
-}
-if [ -n "${BASH_VERSION:-}" ]; then set -o errtrace; fi
-trap '__sh2_err_handler' ERR
 show() {
-  __sh2_loc="tests/fixtures/cmd_sub_call_args.sh2:2:3"
-  __sh2_cmd=''
-  __sh2_cmd="${__sh2_cmd}echo \$@"
-  __sh2_status=0; 'sh' -c "$__sh2_cmd" "_" "$@" || __sh2_status=$?
+  echo $@
+  __sh2_status=$?
   __sh2_check "$__sh2_status" "${__sh2_loc:-}"
 }
 

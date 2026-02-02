@@ -1,20 +1,20 @@
 func main() {
   # export with explicit value
   export("X", "hello")
-  run("sh", "-c", "echo $X")
+  run("sh", "-c", "echo \\$X")
 
   # export without value (exports existing shell var)
   let y = "yo"
   export("y")
-  run("sh", "-c", "echo $y")
+  run("sh", "-c", "echo \\$y")
 
   # unset
   unset("X")
-  run("sh", "-c", "test -z \"$X\" && echo unset_ok || echo unset_bad")
+  run("sh", "-c", "test -z \"\\$X\" && echo unset_ok || echo unset_bad")
 
   # source a file (dot command)
   let f = capture("mktemp")
-  run("sh", "-c", $"echo 'echo sourced_ok' > ${f}")
+  sh("echo 'echo sourced_ok' > $f")
   source(f)
 
   # cleanup

@@ -379,10 +379,7 @@ impl<'a> Parser<'a> {
                     span: full_span,
                 })
             }
-            TokenKind::String(s) => Ok(Expr {
-                node: ExprKind::Literal(s.clone()),
-                span,
-            }),
+            TokenKind::String(s) => self.parse_interpolated_string(s, span),
             TokenKind::Sh => {
                 self.expect(TokenKind::LParen)?;
                 let cmd = self.parse_expr()?;
@@ -427,16 +424,6 @@ impl<'a> Parser<'a> {
                     node: ExprKind::Sh { cmd: Box::new(cmd), options },
                     span: span.merge(self.previous_span()),
                 })
-            }
-            TokenKind::Dollar => {
-                if let Some(TokenKind::String(s)) = self.peek_kind() {
-                    let s = s.clone();
-                    let str_span = self.advance().unwrap().span;
-                    let full_span = span.merge(str_span);
-                    self.parse_interpolated_string(&s, full_span)
-                } else {
-                    self.parse_command_substitution(span, false)
-                }
             }
             TokenKind::Run => {
                 let call = self.parse_call_args_and_options()?;
@@ -592,6 +579,16 @@ impl<'a> Parser<'a> {
                         node: ExprKind::Var(s),
                         span,
                     })
+                }
+            }
+            TokenKind::Dollar => {
+                if let Some(TokenKind::String(s)) = self.peek_kind() {
+                    let s = s.clone();
+                    let str_span = self.advance().unwrap().span;
+                    let full_span = span.merge(str_span);
+                    self.parse_brace_interpolated_string(&s, full_span)
+                } else {
+                    self.parse_command_substitution(span, false)
                 }
             }
             TokenKind::LBracket => {
@@ -1105,6 +1102,13 @@ impl<'a> Parser<'a> {
     }
                     
     fn parse_interpolated_string(&mut self, raw: &str, span: Span) -> ParsResult<Expr> {
+        // Implementation from old parser.rs, but constructing Exprs with relative spans would be hard
+        // because we don't track byte offsets inside string literal content easily without recalculating.
+        // For now, attach the WHOLE string span to every part or try to sub-span?
+        // Computing sub-spans requires knowing the quote size (" or """) and handling escapes.
+        // For simplicity: assign the whole string's span to all generated fragments for now.
+        // It's "incremental" improvement.
+
         let mut parts: Vec<Expr> = Vec::new();
         let mut i = 0;
         let mut buf = String::new();
@@ -1161,6 +1165,64 @@ impl<'a> Parser<'a> {
                     continue;
                 }
             }
+            let ch = raw[i..].chars().next().unwrap();
+            buf.push(ch);
+            i += ch.len_utf8();
+        }
+
+        if !buf.is_empty() {
+            parts.push(Expr {
+                node: ExprKind::Literal(buf),
+                span,
+            });
+        }
+        if parts.is_empty() {
+            return Ok(Expr {
+                node: ExprKind::Literal(String::new()),
+                span,
+            });
+        }
+
+        let mut expr = parts[0].clone();
+        for p in parts.into_iter().skip(1) {
+            expr = Expr {
+                node: ExprKind::Concat(Box::new(expr), Box::new(p)),
+                span,
+            };
+        }
+        Ok(expr)
+    }
+
+    fn parse_brace_interpolated_string(&mut self, raw: &str, span: Span) -> ParsResult<Expr> {
+        let mut parts: Vec<Expr> = Vec::new();
+        let mut i = 0;
+        let mut buf = String::new();
+
+        while i < raw.len() {
+            if raw[i..].starts_with('{') {
+                // Potential start of interpolation
+                let start = i + 1;
+                // find closing '}'
+                if let Some(end_rel) = raw[start..].find('}') {
+                    let end = start + end_rel;
+                    let ident = &raw[start..end];
+                    if is_valid_ident(ident) {
+                        if !buf.is_empty() {
+                            parts.push(Expr {
+                                node: ExprKind::Literal(std::mem::take(&mut buf)),
+                                span,
+                            });
+                        }
+                        parts.push(Expr {
+                            node: ExprKind::Var(ident.to_string()),
+                            span,
+                        });
+                        i = end + 1;
+                        continue;
+                    }
+                }
+            }
+            
             let ch = raw[i..].chars().next().unwrap();
             buf.push(ch);
             i += ch.len_utf8();

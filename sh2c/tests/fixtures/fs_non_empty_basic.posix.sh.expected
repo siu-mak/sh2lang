@@ -2,10 +2,8 @@
 __sh2_check() { s="$1"; loc="$2"; mode="$3"; if [ "$s" -ne 0 ]; then if [ -n "$loc" ]; then printf 'Error in %s\n' "$loc" >&2; fi; if [ "$mode" = "return" ]; then return "$s"; else exit "$s"; fi; fi; }
 main() {
   __sh2_loc="tests/fixtures/fs_non_empty_basic.sh2:2:5"
-  __sh2_cmd=''
-  __sh2_cmd="${__sh2_cmd}rm -f empty nonempty; : > empty; echo hi > nonempty"
-  __sh2_status=0; 'sh' -c "$__sh2_cmd" "_" "$@" || __sh2_status=$?
-  __sh2_check "$__sh2_status" "${__sh2_loc:-}"
+  'sh' '-c' 'rm -f empty nonempty; : > empty; echo hi > nonempty'; __sh2_status=$?
+  __sh2_check "$__sh2_status" "${__sh2_loc:-}" "exit"
   if [ -s 'nonempty' ]; then
     printf '%s\n' 'nonempty_ok'
   else

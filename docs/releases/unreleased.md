@@ -32,9 +32,3 @@ Pipelines now accept `sudo(...)` stages:
 
 - Fixed Bash codegen for `arg(expr)` with dynamic indexes to properly quote arguments passed to `__sh2_arg_by_index` using a dedicated helper to ensure safe and deterministic forms.
 - Hardened `arg(expr)` validation: non-integer indices (e.g., strings, nested calls) now produce a compile-time error.
-
-### Security / Safety
-- **No Implicit Expansion in Strings**: Interpolation inside strings (`"$var"`) now respects scope.
-    - Bound variables (let, param, loop) interpolate as expected.
-    - **Unbound variables** used in strings are treated as **literals** and safe-quoted (e.g. `"$FOO"` emits `'...$FOO...'` to prevent parent shell expansion).
-    - **Exception**: In raw shell contexts (`sh(...)` or `run("sh", "-c", ...)`), unbound variables in the command string are passed as-is to allow the child shell to handle them.

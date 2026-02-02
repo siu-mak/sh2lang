@@ -2,9 +2,7 @@
 __sh2_check() { s="$1"; loc="$2"; mode="$3"; if [ "$s" -ne 0 ]; then if [ -n "$loc" ]; then printf 'Error in %s\n' "$loc" >&2; fi; if [ "$mode" = "return" ]; then return "$s"; else exit "$s"; fi; fi; }
 main() {
   __sh2_loc="tests/fixtures/bool_str_as_arg.sh2:2:3"
-  __sh2_cmd=''
-  __sh2_cmd="${__sh2_cmd}rm -f empty; : > empty"
-  __sh2_status=0; 'sh' -c "$__sh2_cmd" "_" "$@" || __sh2_status=$?
+  'sh' '-c' 'rm -f empty; : > empty'; __sh2_status=$?
   __sh2_check "$__sh2_status" "${__sh2_loc:-}" "exit"
   __sh2_loc="tests/fixtures/bool_str_as_arg.sh2:3:3"
   'printf' '%s\n' "$( if [ -s 'empty' ]; then printf "%s" "true"; else printf "%s" "false"; fi )"; __sh2_status=$?

@@ -1,3 +1,0 @@
-func main() {
-    run("sh", "-c", "echo \"$1 $2\"", "explicit1", "explicit2")
-}

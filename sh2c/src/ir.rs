@@ -201,13 +201,6 @@ pub enum Cmd {
         name: String,
         args: Vec<Val>,
     },
-    RawShell {
-        shell: Val,
-        cmd: Val,
-        args: Vec<Val>,
-        loc: Option<String>,
-        allow_fail: bool,
-    },
     Subshell {
         body: Vec<Cmd>,
     },
@@ -334,7 +327,6 @@ impl Cmd {
             Cmd::Log { .. } => {},
             Cmd::Cd(_) => {},
             Cmd::Raw(..) => {},
-            Cmd::RawShell { loc, .. } => *loc = None,
             Cmd::RawLine { loc, .. } => *loc = None,
             Cmd::Call { .. } => {},
             Cmd::Wait(_) => {},

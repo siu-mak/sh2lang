@@ -1,5 +1,5 @@
 <a href="https://github.com/siu-mak/sh2lang">
-  <img src="../../images/logo/sh2logo_256.png" alt="sh2 logo" width="128" />
+  <img src="../images/logo/sh2logo_256.png" alt="sh2 logo" width="128" />
 </a>
 
 # What’s the diff between sh2 and bash?

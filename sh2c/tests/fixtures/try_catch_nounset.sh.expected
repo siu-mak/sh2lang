@@ -22,9 +22,7 @@ main() {
   local __sh2_err=$(trap -p ERR || true); trap - ERR
   if {
     {
-      __sh2_cmd=''
-      __sh2_cmd+='exit 77'
-      __sh2_status=0; 'sh' -c "$__sh2_cmd" "_" "$@" || __sh2_status=$?
+      'sh' '-c' 'exit 77'; __sh2_status=$?
       __sh2_check "$__sh2_status" "${__sh2_loc:-}" "return"
     }
   }; then

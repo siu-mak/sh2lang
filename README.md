@@ -285,17 +285,6 @@ let env = "dev"
 sh2 is stricter than Bash: it performs **no implicit expansion** (no tilde expansion, no globbing, no splitting) in string literals or variables.
 - Use `env.HOME` instead of `~`.
 - Join paths with `&`.
-- **Literal by Default**: Normal strings (`"..."`) are completely literal. `$var` inside them is NOT expanded.
-- **Explicit Interpolation**: Use `$"..."` for string interpolation:
-  ```sh2
-  let name = "friend"
-  print("Hello $name")   # prints: Hello $name
-  print($"Hello $name")  # prints: Hello friend
-  ```
-- **Raw Shell Safety**: `sh("...")` arguments are literals, so `$FOO` is passed exactly as `$FOO` to the child shell (which then expands it).
-- Use `env.HOME` instead of `~`.
-- Join paths with `&`.
-- **Arg Forwarding**: `sh("...")` statements receive the current function's arguments as `$@`.
 
 ```sh2
 # Correct

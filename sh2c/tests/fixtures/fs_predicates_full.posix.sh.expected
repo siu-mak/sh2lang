@@ -13,10 +13,8 @@ main() {
     'touch' 'f_full'; __sh2_status=$?
     __sh2_check "$__sh2_status" "${__sh2_loc:-}" "exit"
     __sh2_loc="tests/fixtures/fs_predicates_full.sh2:6:9"
-    __sh2_cmd=''
-    __sh2_cmd="${__sh2_cmd}echo x > f_full"
-    __sh2_status=0; 'sh' -c "$__sh2_cmd" "_" "$@" || __sh2_status=$?
-    __sh2_check "$__sh2_status" "${__sh2_loc:-}"
+    'sh' '-c' 'echo x > f_full'; __sh2_status=$?
+    __sh2_check "$__sh2_status" "${__sh2_loc:-}" "exit"
     __sh2_loc="tests/fixtures/fs_predicates_full.sh2:7:9"
     'ln' '-s' 'f_empty' 'link'; __sh2_status=$?
     __sh2_check "$__sh2_status" "${__sh2_loc:-}" "exit"
