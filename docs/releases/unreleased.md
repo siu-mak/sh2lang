@@ -34,7 +34,7 @@ Pipelines now accept `sudo(...)` stages:
 - Hardened `arg(expr)` validation: non-integer indices (e.g., strings, nested calls) now produce a compile-time error.
 
 ### Security & Correctness
-- **P0 Fix**: String literals (`"..."`) are now **strict literals**. They do **not** support implicit variable interpolation or Bash parameter expansion.
+- **P0 Fix (Breaking Change / Correctness Fix)**: String literals (`"..."`) are now **strict literals**. They do **not** support implicit variable interpolation or Bash parameter expansion.
   - `"$foo"` and `${bar}` in string literals are preserved as literal text (e.g. `print("$foo")` prints `$foo`).
   - To use variables, use **concatenation** (`"Hello " & name`) or **explicit interpolation** (`$"Hello {name}"`).
   - This change ensures that strings like `"$5"` or `"*"` are strictly safe and never trigger unintended Bash behavior.

@@ -110,21 +110,38 @@ let x = "hello" # inline comment
 ## 3. Data Types and Literals
 
 ### 3.1 Strings
-### 3.1 Strings
-Double-quoted strings (`"..."`) are **strict literals**. They do **not** support implicit variable interpolation or Bash parameter expansion. `$` and `${...}` are treated as literal text.
 
-- **Strictness**: `"$foo"` prints literal `$foo`. No expansion occurs.
-- **Concatenation**: To combine strings and variables, use the `&` operator: `"Hello " & name`.
-- **Explicit Interpolation**: Use `$"..."` syntax (if supported) for interpolation: `$"Hello {name}"`.
+Strings in sh2 are **strict literals**. They do not support implicit variable interpolation or globbing. Explicit syntax is required for dynamic content.
 
+| Syntax | Example | Behavior |
+| :--- | :--- | :--- |
+| **Strict Literal** | `"hello $name"` | No expansion. Prints literal `$name`. Includes `${foo}`. |
+| **Escaped Literal** | `"line\nbreak"` | Supports C-style escapes (`\n`, `\t`, `\\`, `\"`). |
+| **Concatenation** | `"hello " & name` | Combines literal and variable value. |
+| **Explicit Interp** | `$"hello {name}"` | Expands `{name}`. `$` remains literal text. |
+| **Raw Shell** | `sh("echo $FOO")` | `sh` command executes string in shell (expands `$FOO`). |
+
+#### Strict Literals
+Standard double-quoted strings (`"..."`) treat `$` and `${...}` as normal characters.
 ```sh2
-let name = "Alice"
-print("Hello, " & name)    # Concatenation: "Hello, Alice"
-print("Cost: $10")         # Literal: "Cost: $10"
-print("Use $HOME")         # Literal: "Use $HOME"
+let name = "world"
+print("Hello $name")  // Output: Hello $name
 ```
 
-> **Note**: This strictness prevents unintended Bash expansion. A string like `"$5"` is safe and literal. To use env vars, access them via `env.VAR` or `run("sh", ...)` context.
+#### Explicit Interpolation
+Use the `$` prefix (`$"..."`) to interpolate variables using `{valid_ident}` syntax.
+Note that the `$` character itself inside `$"..."` is still a literal.
+```sh2
+let user = "admin"
+print($"User: {user}")     // Output: User: admin
+print($"Cost: ${price}")   // Output: Cost: $100 (if price is 100)
+```
+
+#### Concatenation
+Use the `&` operator to join strings and variables.
+```sh2
+print("Hello " & name & "!")
+```
 
 Multilines and raw strings (`r"..."`) are also supported. Raw strings treat backslashes as literals.
 
