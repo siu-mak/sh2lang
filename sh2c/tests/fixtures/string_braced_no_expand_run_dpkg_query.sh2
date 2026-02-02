@@ -1,0 +1,4 @@
+func main() {
+    run("dpkg-query","-W","-f","${Package}\n","bash", allow_fail=true)
+    print("status=" & status())
+}

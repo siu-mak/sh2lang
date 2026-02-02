@@ -14,7 +14,7 @@ func main() {
 
   # source a file (dot command)
   let f = capture("mktemp")
-  sh("echo 'echo sourced_ok' > $f")
+  sh("echo 'echo sourced_ok' > " & f)
   source(f)
 
   # cleanup

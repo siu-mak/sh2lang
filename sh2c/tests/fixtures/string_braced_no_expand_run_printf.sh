@@ -15,18 +15,9 @@ set -o errtrace
 trap '__sh2_err_handler' ERR
 main() {
   local __sh2_loc=""
-  __sh2_loc="tests/fixtures/case_glob_dollar_and_backslash.sh2:2:5"
-  x='cost $5\done'
-  __sh2_status=$?
-  __sh2_check "$__sh2_status" "${__sh2_loc:-}"
-  case "$x" in
-    'cost $'*'\done')
-      printf '%s\n' 'hit_safe'
-    ;;
-    *)
-      printf '%s\n' 'miss'
-    ;;
-  esac
+  __sh2_loc="string_braced_no_expand_run_printf.sh2:2:5"
+  'printf' '%s' '${Package}'; __sh2_status=$?
+  __sh2_check "$__sh2_status" "${__sh2_loc:-}" "exit"
 }
 __sh2_status=0
 main "$@"

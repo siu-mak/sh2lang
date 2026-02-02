@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 __sh2_check() { local s="$1"; local loc="$2"; local mode="$3"; if (( s != 0 )); then if [[ "$mode" == "return" ]]; then return "$s"; else if [[ -n "$loc" ]]; then printf 'Error in %s\n' "$loc" >&2; fi; exit "$s"; fi; fi; }
 main() {
-  printf '%s\n' 'cost $5'
+  printf '%s\n' 'a'\''b'
 }
 __sh2_status=0
 main "$@"

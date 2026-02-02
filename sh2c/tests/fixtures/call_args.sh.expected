@@ -17,8 +17,7 @@ trap '__sh2_err_handler' ERR
 show() {
   local __sh2_loc=""
   __sh2_loc="tests/fixtures/call_args.sh2:2:3"
-  __sh2_cmd='echo ''$@'
-  __sh2_sh_probe "$__sh2_cmd"
+  __sh2_sh_probe 'echo $@'
 }
 
 main() {

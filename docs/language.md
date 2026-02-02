@@ -110,24 +110,23 @@ let x = "hello" # inline comment
 ## 3. Data Types and Literals
 
 ### 3.1 Strings
+### 3.1 Strings
+Double-quoted strings (`"..."`) are **strict literals**. They do **not** support implicit variable interpolation or Bash parameter expansion. `$` and `${...}` are treated as literal text.
 
-- Double-quoted strings support interpolation (`$name`, `${expr}`) depending on context.
-- Concatenation uses `&` (requires whitespace on both sides, e.g. `x & y`).
-
+- **Strictness**: `"$foo"` prints literal `$foo`. No expansion occurs.
+- **Concatenation**: To combine strings and variables, use the `&` operator: `"Hello " & name`.
+- **Explicit Interpolation**: Use `$"..."` syntax (if supported) for interpolation: `$"Hello {name}"`.
 
 ```sh2
 let name = "Alice"
-print("Hello, " & name)
-print("Hello, $name")
+print("Hello, " & name)    # Concatenation: "Hello, Alice"
+print("Cost: $10")         # Literal: "Cost: $10"
+print("Use $HOME")         # Literal: "Use $HOME"
 ```
 
-### No Implicit Expansion
-sh2 is stricter than Bash: it performs **no implicit expansion** (no tilde expansion, no globbing, no splitting) in string literals or variables.
+> **Note**: This strictness prevents unintended Bash expansion. A string like `"$5"` is safe and literal. To use env vars, access them via `env.VAR` or `run("sh", ...)` context.
 
-- Use `env.HOME` instead of `~`.
-If you attempt to use `~/path` in `with cwd()` or similar, sh2 will fail at runtime and emit a helper hint advising you to use `env.HOME`.
-
-Multiline and raw strings are supported (where implemented by your compiler target):
+Multilines and raw strings (`r"..."`) are also supported. Raw strings treat backslashes as literals.
 
 ```sh2
 let cooked = """

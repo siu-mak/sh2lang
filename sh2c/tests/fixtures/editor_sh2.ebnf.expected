@@ -207,8 +207,13 @@ lvalue = identifier | "env" , "." , identifier ;
 (* Literals *)
 literal = string_literal | number | bool_literal ;
 string_literal = normal_string | raw_string | interpolated_string ;
+
+(* Normal strings are strict literals *)
 normal_string = '"' , { string_char } , '"' ;
+
 raw_string = 'r"' , { raw_string_char } , '"' ;
+
+(* Interpolated strings support full expression interpolation *)
 interpolated_string = '$"' , { interp_char | "{" , expression , "}" } , '"' ;
 bool_literal = "true" | "false" ;
 number = digit , { digit } ;

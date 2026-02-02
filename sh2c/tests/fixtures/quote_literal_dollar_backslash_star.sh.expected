@@ -17,7 +17,7 @@ main() {
   local __sh2_loc=""
   __sh2_loc="tests/fixtures/quote_literal_dollar_backslash_star.sh2:2:3"
   'printf' '%s
-' 'a ''$ \ * b'; __sh2_status=$?
+' 'a $ \ * b'; __sh2_status=$?
   __sh2_check "$__sh2_status" "${__sh2_loc:-}" "exit"
 }
 __sh2_status=0

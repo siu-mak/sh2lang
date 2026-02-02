@@ -1102,95 +1102,54 @@ impl<'a> Parser<'a> {
     }
                     
     fn parse_interpolated_string(&mut self, raw: &str, span: Span) -> ParsResult<Expr> {
-        // Implementation from old parser.rs, but constructing Exprs with relative spans would be hard
-        // because we don't track byte offsets inside string literal content easily without recalculating.
-        // For now, attach the WHOLE string span to every part or try to sub-span?
-        // Computing sub-spans requires knowing the quote size (" or """) and handling escapes.
-        // For simplicity: assign the whole string's span to all generated fragments for now.
-        // It's "incremental" improvement.
-
-        let mut parts: Vec<Expr> = Vec::new();
-        let mut i = 0;
+        // P0 Fix: Treat all strings as literals (no implicit expansion of $ or ${}).
+        // We simply return the raw content as a single Literal expr.
+        // We retain \$ -> $ unescaping for backward compatibility if desired, 
+        // OR we treat \$ as literal \$ if strictness implies raw?
+        // Plan says: "Preserve \$ unescaping (or treat as literal $)".
+        // If I want print("\$FOO") to be literal, then \$ must be $.
+        // BUT if "..." is STRICT literal, then $FOO is literal $FOO.
+        // So escaping is NOT needed for $FOO.
+        // But escaping might be needed for " (quote).
+        // The lexer handles " escaping inside string token.
+        // Here we receive raw string content (already stripped of surrounding quotes?).
+        // No, `raw` here is content.
+        // Lexer provides raw string content?
+        // Wait, `parse_interpolated_string` is called by `parse_atom` on `TokenKind::String(raw)`.
+        // The `raw` string from lexer usually handles escapes?
+        // Let's assume `raw` is the literal content characters.
+        // If so, we just wrap it.
+        // However, existing code had a loop for `\$` unescaping.
+        // "We retain \$ -> $ unescaping for backward compatibility".
+        
+        // Actually, if strict literal `"$FOO"` means literal `$FOO`.
+        // Then `"\$FOO"` means literal `\$FOO`?
+        // Or does `\` escape `$`?
+        // In bash `'...'`, `\` is literal.
+        // In sh2 `strict literal`, maybe `\` escapes? 
+        // I will stick to "Treat all strings as literals".
+        // But to support `"` inside string, lexer handled `\"`.
+        // Does lexer handle `\$`? Probably not.
+        // I will implementation simple pass-through OR basic unescape if needed.
+        // Previous correct implementation (before I reverted it):
+        
         let mut buf = String::new();
-
+        let mut i = 0;
         while i < raw.len() {
-            if raw[i..].starts_with("\\$") {
-                buf.push('$');
-                i += 2;
-                continue;
-            }
-            if raw[i..].starts_with("${") {
-                if !buf.is_empty() {
-                    parts.push(Expr {
-                        node: ExprKind::Literal(std::mem::take(&mut buf)),
-                        span,
-                    });
-                }
-                let start = i + 2;
-                if let Some(end_rel) = raw[start..].find('}') {
-                    let end = start + end_rel;
-                    let ident = &raw[start..end];
-                    if is_valid_ident(ident) {
-                        parts.push(Expr {
-                            node: ExprKind::Var(ident.to_string()),
-                            span,
-                        });
-                        i = end + 1;
-                        continue;
-                    }
-                }
-                buf.push('$');
-                i += 1;
-                continue;
-            }
-            if raw[i..].starts_with('$') {
-                if !buf.is_empty() {
-                    parts.push(Expr {
-                        node: ExprKind::Literal(std::mem::take(&mut buf)),
-                        span,
-                    });
-                }
-                let start = i + 1;
-                // find end of ident
-                let len = raw[start..]
-                    .find(|c: char| !c.is_alphanumeric() && c != '_')
-                    .unwrap_or(raw.len() - start);
-                if len > 0 {
-                    let ident = &raw[start..start + len];
-                    parts.push(Expr {
-                        node: ExprKind::Var(ident.to_string()),
-                        span,
-                    });
-                    i = start + len;
-                    continue;
-                }
-            }
-            let ch = raw[i..].chars().next().unwrap();
-            buf.push(ch);
-            i += ch.len_utf8();
+             if raw[i..].starts_with("\\$") {
+                 buf.push('$');
+                 i += 2;
+                 continue;
+             }
+             let ch = raw[i..].chars().next().unwrap();
+             buf.push(ch);
+             i += ch.len_utf8();
         }
-
-        if !buf.is_empty() {
-            parts.push(Expr {
-                node: ExprKind::Literal(buf),
-                span,
-            });
-        }
-        if parts.is_empty() {
-            return Ok(Expr {
-                node: ExprKind::Literal(String::new()),
-                span,
-            });
-        }
-
-        let mut expr = parts[0].clone();
-        for p in parts.into_iter().skip(1) {
-            expr = Expr {
-                node: ExprKind::Concat(Box::new(expr), Box::new(p)),
-                span,
-            };
-        }
-        Ok(expr)
+        
+        Ok(Expr {
+            node: ExprKind::Literal(buf),
+            span,
+        })
     }
 
     fn parse_brace_interpolated_string(&mut self, raw: &str, span: Span) -> ParsResult<Expr> {

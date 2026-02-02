@@ -20,7 +20,7 @@ func main() {
 
   # 4) stdin <- file
   let infile = capture("mktemp")
-  sh("echo hello > $infile")
+  sh("echo hello > " & infile)
   with redirect { stdin: file(infile) } {
     run("cat")
   }
