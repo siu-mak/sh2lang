@@ -1,0 +1,7 @@
+func main() {
+    if contains(split("a,b,c", ","), "b") {
+        print("true")
+    } else {
+        print("false")
+    }
+}

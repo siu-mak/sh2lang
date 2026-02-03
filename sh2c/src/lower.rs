@@ -10,9 +10,11 @@ struct LoweringContext<'a> {
     run_results: HashSet<String>,
     /// Variables that hold boolean values (assigned from boolean expressions)
     bool_vars: HashSet<String>,
+    /// Variables that are known to hold list values (e.g. from list literals)
+    list_vars: HashSet<String>,
     opts: &'a LowerOptions,
     in_let_rhs: bool,
-
+    tmp_counter: usize,
 }
 
 impl<'a> LoweringContext<'a> {
@@ -20,8 +22,10 @@ impl<'a> LoweringContext<'a> {
         Self {
             run_results: HashSet::new(),
             bool_vars: HashSet::new(),
+            list_vars: HashSet::new(),
             opts,
             in_let_rhs: false,
+            tmp_counter: 0,
         }
     }
 
@@ -41,6 +45,16 @@ impl<'a> LoweringContext<'a> {
         self.bool_vars.contains(name)
     }
 
+    fn insert_list_var(&mut self, name: &str) {
+        self.list_vars.insert(name.to_string());
+    }
+
+    fn is_list_var(&self, name: &str) -> bool {
+        self.list_vars.contains(name)
+    }
+
+
+
     fn intersection(&self, other: &Self) -> Self {
         let run_results = self
             .run_results
@@ -52,11 +66,18 @@ impl<'a> LoweringContext<'a> {
             .intersection(&other.bool_vars)
             .cloned()
             .collect();
+        let list_vars = self
+            .list_vars
+            .intersection(&other.list_vars)
+            .cloned()
+            .collect();
         Self {
             run_results,
             bool_vars,
+            list_vars,
             opts: self.opts,
             in_let_rhs: self.in_let_rhs,
+            tmp_counter: std::cmp::max(self.tmp_counter, other.tmp_counter),
         }
     }
 }
@@ -185,7 +206,6 @@ fn is_bool_expr(e: &ast::Expr) -> bool {
                     | "is_writable"
                     | "is_non_empty"
                     | "matches"
-                    | "contains"
                     | "contains_line"
                     | "confirm"
             )
@@ -233,7 +253,7 @@ fn lower_stmt<'a>(
                     let lowered_args = args
                         .clone()
                         .into_iter()
-                        .map(|a| lower_expr(a, &mut ctx, sm, file))
+                        .map(|a| lower_expr(a, out, &mut ctx, sm, file))
                         .collect::<Result<Vec<_>, _>>()?;
                     out.push(ir::Cmd::Assign(
                         name.clone(),
@@ -248,10 +268,11 @@ fn lower_stmt<'a>(
             let is_bool = is_bool_expr(&value);
             
             ctx.in_let_rhs = true;
-            let val_ir = lower_expr(value, &mut ctx, sm, file)?;
+            let val_ir = lower_expr(value, out, &mut ctx, sm, file)?;
             ctx.in_let_rhs = false;
             
             let is_capture_result = matches!(&val_ir, ir::Val::Capture { allow_fail: true, .. });
+            let is_list = matches!(&val_ir, ir::Val::List(_) | ir::Val::Split { .. } | ir::Val::Lines(_));
 
             out.push(ir::Cmd::Assign(
                 name.clone(),
@@ -261,6 +282,9 @@ fn lower_stmt<'a>(
             ctx.remove(&name);
             if is_capture_result {
                 ctx.insert(&name);
+            }
+            if is_list {
+                ctx.insert_list_var(&name);
             }
             if is_bool {
                 ctx.insert_bool_var(&name);
@@ -272,7 +296,7 @@ fn lower_stmt<'a>(
             let ir_args = run_call
                 .args
                 .into_iter()
-                .map(|a| lower_expr(a, &mut ctx, sm, file))
+                .map(|a| lower_expr(a, out, &mut ctx, sm, file))
                 .collect::<Result<Vec<_>, _>>()?;
 
             let mut allow_fail = false;
@@ -312,12 +336,14 @@ fn lower_stmt<'a>(
                     )));
                 }
             }
-            out.push(ir::Cmd::Print(lower_expr(e.clone(), &mut ctx, sm, file)?));
+            let val = lower_expr(e.clone(), out, &mut ctx, sm, file)?;
+            out.push(ir::Cmd::Print(val));
             Ok(ctx)
         }
 
         ast::StmtKind::PrintErr(e) => {
-            out.push(ir::Cmd::PrintErr(lower_expr(e.clone(), &mut ctx, sm, file)?));
+            let val = lower_expr(e.clone(), out, &mut ctx, sm, file)?;
+            out.push(ir::Cmd::PrintErr(val));
             Ok(ctx)
         }
         ast::StmtKind::If {
@@ -326,7 +352,7 @@ fn lower_stmt<'a>(
             elifs,
             else_body,
         } => {
-            let cond_val = lower_expr(cond, &mut ctx, sm, file)?;
+            let cond_val = lower_expr(cond, out, &mut ctx, sm, file)?;
 
             let mut t_cmds = Vec::new();
             let ctx_then = lower_block(&then_body, &mut t_cmds, ctx.clone(), sm, file, opts)?;
@@ -336,7 +362,7 @@ fn lower_stmt<'a>(
 
             for elif in elifs {
                 let mut body_cmds = Vec::new();
-                let elif_cond = lower_expr(elif.cond.clone(), &mut ctx, sm, file)?; // Evaluate cond in original context
+                let elif_cond = lower_expr(elif.cond.clone(), out, &mut ctx, sm, file)?; // Evaluate cond in original context
                 let ctx_elif = lower_block(&elif.body, &mut body_cmds, ctx.clone(), sm, file, opts)?;
                 lowered_elifs.push((elif_cond, body_cmds));
                 ctx_elifs.push(ctx_elif);
@@ -364,7 +390,7 @@ fn lower_stmt<'a>(
             Ok(final_ctx)
         }
         ast::StmtKind::Case { expr, arms } => {
-            let expr_val = lower_expr(expr, &mut ctx, sm, file)?;
+            let expr_val = lower_expr(expr, out, &mut ctx, sm, file)?;
             let mut lower_arms = Vec::new();
             let mut arm_ctxs = Vec::new();
             let mut has_wildcard = false;
@@ -415,7 +441,7 @@ fn lower_stmt<'a>(
             Ok(final_ctx)
         }
         ast::StmtKind::While { cond, body } => {
-            let cond_val = lower_expr(cond, &mut ctx, sm, file)?;
+            let cond_val = lower_expr(cond, out, &mut ctx, sm, file)?;
             let mut lower_body = Vec::new();
             let ctx_body = lower_block(&body, &mut lower_body, ctx.clone(), sm, file, opts)?;
             out.push(ir::Cmd::While {
@@ -427,7 +453,7 @@ fn lower_stmt<'a>(
         ast::StmtKind::For { var, items, body } => {
             let lowered_items = items
                 .into_iter()
-                .map(|i| lower_expr(i, &mut ctx, sm, file))
+                .map(|i| lower_expr(i, out, &mut ctx, sm, file))
                 .collect::<Result<Vec<_>, _>>()?;
             let mut lower_body = Vec::new();
             let ctx_body = lower_block(&body, &mut lower_body, ctx.clone(), sm, file, opts)?;
@@ -450,11 +476,11 @@ fn lower_stmt<'a>(
                 for seg in segments {
                      match &seg.node {
                         ast::PipeSegment::Run(run_call) => {
-                             let (args, allow_fail) = lower_run_call_args(run_call, &mut ctx, sm, file, opts)?;
+                             let (args, allow_fail) = lower_run_call_args(run_call, out, &mut ctx, sm, file, opts)?;
                              lowered_segments.push((args, allow_fail));
                         }
                         ast::PipeSegment::Sudo(run_call) => {
-                             let (args, allow_fail) = lower_sudo_call_args(run_call, &mut ctx, sm, file, opts)?;
+                             let (args, allow_fail) = lower_sudo_call_args(run_call, out, &mut ctx, sm, file, opts)?;
                              lowered_segments.push((args, allow_fail));
                         }
                         _ => unreachable!(),
@@ -479,7 +505,7 @@ fn lower_stmt<'a>(
                         }
                         ast::PipeSegment::Run(run_call) => {
                             let mut seg_ctx = ctx.clone();
-                            let (args, allow_fail) = lower_run_call_args(run_call, &mut seg_ctx, sm, file, opts)?;
+                            let (args, allow_fail) = lower_run_call_args(run_call, out, &mut seg_ctx, sm, file, opts)?;
                             
                             block_cmds.push(ir::Cmd::Exec {
                                 args,
@@ -489,7 +515,7 @@ fn lower_stmt<'a>(
                         }
                         ast::PipeSegment::Sudo(run_call) => {
                             let mut seg_ctx = ctx.clone();
-                            let (args, allow_fail) = lower_sudo_call_args(run_call, &mut seg_ctx, sm, file, opts)?;
+                            let (args, allow_fail) = lower_sudo_call_args(run_call, out, &mut seg_ctx, sm, file, opts)?;
                             
                             block_cmds.push(ir::Cmd::Exec {
                                 args,
@@ -513,22 +539,20 @@ fn lower_stmt<'a>(
             Ok(ctx)
         }
         ast::StmtKind::Return(e) => {
-            out.push(ir::Cmd::Return(
-                e.map(|x| lower_expr(x, &mut ctx, sm, file)).transpose()?,
-            ));
+            let val = e.map(|x| lower_expr(x, out, &mut ctx, sm, file)).transpose()?;
+            out.push(ir::Cmd::Return(val));
             Ok(ctx)
         }
         ast::StmtKind::Exit(e) => {
-            out.push(ir::Cmd::Exit(
-                e.map(|x| lower_expr(x, &mut ctx, sm, file)).transpose()?,
-            ));
+            let val = e.map(|x| lower_expr(x, out, &mut ctx, sm, file)).transpose()?;
+            out.push(ir::Cmd::Exit(val));
             Ok(ctx)
         }
         ast::StmtKind::WithEnv { bindings, body } => {
             let lowered_bindings = bindings
                 .into_iter()
                 .map(|(k, v)| {
-                     let v = lower_expr(v, &mut ctx, sm, file)?;
+                     let v = lower_expr(v, out, &mut ctx, sm, file)?;
                      Ok((k, v))
                 })
                 .collect::<Result<Vec<_>, _>>()?;
@@ -575,7 +599,7 @@ fn lower_stmt<'a>(
                     path.span,
                 )));
             }
-            let lowered_path = lower_expr(path, &mut ctx, sm, file)?;
+            let lowered_path = lower_expr(path, out, &mut ctx, sm, file)?;
             let mut lower_body = Vec::new();
             let ctx_body = lower_block(&body, &mut lower_body, ctx.clone(), sm, file, opts)?;
             out.push(ir::Cmd::WithCwd {
@@ -585,7 +609,7 @@ fn lower_stmt<'a>(
             Ok(ctx_body)
         }
         ast::StmtKind::WithLog { path, append, body } => {
-            let lowered_path = lower_expr(path, &mut ctx, sm, file)?;
+            let lowered_path = lower_expr(path, out, &mut ctx, sm, file)?;
             let mut lower_body = Vec::new();
             let ctx_body = lower_block(&body, &mut lower_body, ctx.clone(), sm, file, opts)?;
             out.push(ir::Cmd::WithLog {
@@ -596,11 +620,13 @@ fn lower_stmt<'a>(
             Ok(ctx_body)
         }
         ast::StmtKind::Cd { path } => {
-            out.push(ir::Cmd::Cd(lower_expr(path, &mut ctx, sm, file)?));
+            let path_val = lower_expr(path, out, &mut ctx, sm, file)?;
+            out.push(ir::Cmd::Cd(path_val));
             Ok(ctx)
         }
         ast::StmtKind::Sh(expr) => {
-            out.push(ir::Cmd::Raw(lower_expr(expr, &mut ctx, sm, file)?, loc));
+            let raw_val = lower_expr(expr, out, &mut ctx, sm, file)?;
+            out.push(ir::Cmd::Raw(raw_val, loc));
             Ok(ctx)
         }
         ast::StmtKind::ShBlock(lines) => {
@@ -620,8 +646,8 @@ fn lower_stmt<'a>(
                     )));
                 }
                 let mut iter = args.into_iter();
-                let path = lower_expr(iter.next().unwrap(), &mut ctx, sm, file)?;
-                let env = lower_expr(iter.next().unwrap(), &mut ctx, sm, file)?;
+                let path = lower_expr(iter.next().unwrap(), out, &mut ctx, sm, file)?;
+                let env = lower_expr(iter.next().unwrap(), out, &mut ctx, sm, file)?;
                 out.push(ir::Cmd::SaveEnvfile { path, env });
             } else if name == "load_envfile" {
                 return Err(CompileError::new(sm.format_diagnostic(file, opts.diag_base_dir.as_deref(), "load_envfile() returns a value; use it in an expression (e.g., let m = load_envfile(\"env.meta\"))", stmt.span)));
@@ -640,7 +666,7 @@ fn lower_stmt<'a>(
                 if let ast::ExprKind::List(elems) = &arg.node {
                     let mut valid_cmds = Vec::new();
                     for e in elems {
-                        valid_cmds.push(lower_expr(e.clone(), &mut ctx, sm, file)?);
+                        valid_cmds.push(lower_expr(e.clone(), out, &mut ctx, sm, file)?);
                     }
                     out.push(ir::Cmd::Require(valid_cmds));
                 } else {
@@ -656,8 +682,8 @@ fn lower_stmt<'a>(
                     )));
                 }
                 let mut iter = args.into_iter();
-                let path = lower_expr(iter.next().unwrap(), &mut ctx, sm, file)?;
-                let content = lower_expr(iter.next().unwrap(), &mut ctx, sm, file)?;
+                let path = lower_expr(iter.next().unwrap(), out, &mut ctx, sm, file)?;
+                let content = lower_expr(iter.next().unwrap(), out, &mut ctx, sm, file)?;
                 out.push(ir::Cmd::WriteFile {
                     path,
                     content,
@@ -673,8 +699,8 @@ fn lower_stmt<'a>(
                     )));
                 }
                 let mut iter = args.into_iter();
-                let path = lower_expr(iter.next().unwrap(), &mut ctx, sm, file)?;
-                let content = lower_expr(iter.next().unwrap(), &mut ctx, sm, file)?;
+                let path = lower_expr(iter.next().unwrap(), out, &mut ctx, sm, file)?;
+                let content = lower_expr(iter.next().unwrap(), out, &mut ctx, sm, file)?;
                 let append = if iter.len() > 0 {
                     let arg = iter.next().unwrap();
                     if let ast::ExprKind::Bool(b) = arg.node {
@@ -729,7 +755,7 @@ fn lower_stmt<'a>(
                 }
 
                 let mut iter = args.into_iter();
-                let msg = lower_expr(iter.next().unwrap(), &mut ctx, sm, file)?;
+                let msg = lower_expr(iter.next().unwrap(), out, &mut ctx, sm, file)?;
                 let timestamp = if iter.len() > 0 {
                     let arg = iter.next().unwrap();
                     if let ast::ExprKind::Bool(b) = arg.node {
@@ -755,7 +781,7 @@ fn lower_stmt<'a>(
                 // Generic call (Command)
                 let mut cmd_args = vec![ir::Val::Literal(name)];
                 for a in args {
-                    cmd_args.push(lower_expr(a, &mut ctx, sm, file)?);
+                    cmd_args.push(lower_expr(a, out, &mut ctx, sm, file)?);
                 }
                 out.push(ir::Cmd::Exec {
                     args: cmd_args,
@@ -786,10 +812,10 @@ fn lower_stmt<'a>(
             let mut lowered_body = Vec::new();
             let ctx_body = lower_block(&body, &mut lowered_body, ctx.clone(), sm, file, opts)?;
 
-            let lower_output_target = |t: ast::RedirectOutputTarget, c: &mut LoweringContext| -> Result<ir::RedirectOutputTarget, CompileError> {
+            let lower_output_target = |t: ast::RedirectOutputTarget, out: &mut Vec<ir::Cmd>, c: &mut LoweringContext| -> Result<ir::RedirectOutputTarget, CompileError> {
                  Ok(match t {
                     ast::RedirectOutputTarget::File { path, append } => ir::RedirectOutputTarget::File {
-                        path: lower_expr(path, c, sm, file)?,
+                        path: lower_expr(path, out, c, sm, file)?,
                         append,
                     },
                     ast::RedirectOutputTarget::ToStdout => ir::RedirectOutputTarget::ToStdout,
@@ -799,23 +825,27 @@ fn lower_stmt<'a>(
                 })
             };
 
-            let lower_input_target = |t: ast::RedirectInputTarget, c: &mut LoweringContext| -> Result<ir::RedirectInputTarget, CompileError> {
+            let lower_input_target = |t: ast::RedirectInputTarget, out: &mut Vec<ir::Cmd>, c: &mut LoweringContext| -> Result<ir::RedirectInputTarget, CompileError> {
                  Ok(match t {
                     ast::RedirectInputTarget::File { path } => ir::RedirectInputTarget::File {
-                        path: lower_expr(path, c, sm, file)?,
+                        path: lower_expr(path, out, c, sm, file)?,
                     },
                     ast::RedirectInputTarget::HereDoc { content } => ir::RedirectInputTarget::HereDoc { content },
                 })
             };
 
-            let lower_output_vec = |targets: Vec<Spanned<ast::RedirectOutputTarget>>, c: &mut LoweringContext| -> Result<Vec<ir::RedirectOutputTarget>, CompileError> {
-                targets.into_iter().map(|spanned| lower_output_target(spanned.node, c)).collect()
+            let lower_output_vec = |targets: Vec<Spanned<ast::RedirectOutputTarget>>, out: &mut Vec<ir::Cmd>, c: &mut LoweringContext| -> Result<Vec<ir::RedirectOutputTarget>, CompileError> {
+                targets.into_iter().map(|spanned| lower_output_target(spanned.node, out, c)).collect()
             };
 
+            let stdout_val = stdout.map(|targets| lower_output_vec(targets, out, &mut ctx)).transpose()?;
+            let stderr_val = stderr.map(|targets| lower_output_vec(targets, out, &mut ctx)).transpose()?;
+            let stdin_val = stdin.map(|t| lower_input_target(t, out, &mut ctx)).transpose()?;
+            
             out.push(ir::Cmd::WithRedirect {
-                stdout: stdout.map(|targets| lower_output_vec(targets, &mut ctx)).transpose()?,
-                stderr: stderr.map(|targets| lower_output_vec(targets, &mut ctx)).transpose()?,
-                stdin: stdin.map(|t| lower_input_target(t, &mut ctx)).transpose()?,
+                stdout: stdout_val,
+                stderr: stderr_val,
+                stdin: stdin_val,
                 body: lowered_body,
             });
             Ok(ctx_body)
@@ -834,9 +864,8 @@ fn lower_stmt<'a>(
             Ok(ctx)
         }
         ast::StmtKind::Wait(expr) => {
-            out.push(ir::Cmd::Wait(
-                expr.map(|e| lower_expr(e, &mut ctx, sm, file)).transpose()?,
-            ));
+            let wait_val = expr.map(|e| lower_expr(e, out, &mut ctx, sm, file)).transpose()?;
+            out.push(ir::Cmd::Wait(wait_val));
             Ok(ctx)
         }
         ast::StmtKind::TryCatch {
@@ -856,9 +885,10 @@ fn lower_stmt<'a>(
             Ok(ctx_try.intersection(&ctx_catch))
         }
         ast::StmtKind::Export { name, value } => {
+            let export_val = value.map(|v| lower_expr(v, out, &mut ctx, sm, file)).transpose()?;
             out.push(ir::Cmd::Export {
                 name,
-                value: value.map(|v| lower_expr(v, &mut ctx, sm, file)).transpose()?,
+                value: export_val,
             });
             Ok(ctx)
         }
@@ -867,24 +897,36 @@ fn lower_stmt<'a>(
             Ok(ctx)
         }
         ast::StmtKind::Source { path } => {
-            out.push(ir::Cmd::Source(lower_expr(path, &mut ctx, sm, file)?));
+            let source_val = lower_expr(path, out, &mut ctx, sm, file)?;
+            out.push(ir::Cmd::Source(source_val));
             Ok(ctx)
         }
         ast::StmtKind::Exec(args) => {
-            out.push(ir::Cmd::ExecReplace(
-                args.into_iter()
-                    .map(|a| lower_expr(a, &mut ctx, sm, file))
-                    .collect::<Result<Vec<_>, _>>()?,
-                loc,
-            ));
+            let exec_args = args.into_iter()
+                .map(|a| lower_expr(a, out, &mut ctx, sm, file))
+                .collect::<Result<Vec<_>, _>>()?;
+            out.push(ir::Cmd::ExecReplace(exec_args, loc));
             Ok(ctx)
         }
         ast::StmtKind::Set { target, value } => {
             match target {
                 ast::LValue::Var(name) => {
+                    let val = lower_expr(value, out, &mut ctx, sm, file)?;
+                    
+                    // List Inference
+                    let is_list = match &val {
+                        ir::Val::List(_) | ir::Val::Split { .. } | ir::Val::Lines(_) => true,
+                        ir::Val::Var(n) => ctx.is_list_var(n),
+                        _ => false,
+                    };
+                    
+                    if is_list {
+                        ctx.insert_list_var(&name);
+                    }
+
                     out.push(ir::Cmd::Assign(
-                        name,
-                        lower_expr(value, &mut ctx, sm, file)?,
+                        name.clone(),
+                        val,
                         loc,
                     ));
                 }
@@ -893,7 +935,7 @@ fn lower_stmt<'a>(
                         return Err(CompileError::new(sm.format_diagnostic(file, opts.diag_base_dir.as_deref(), "set env.<NAME> requires a scalar string/number; lists/args are not supported", stmt.span)));
                     }
 
-                    let val = lower_expr(value, &mut ctx, sm, file)?;
+                    let val = lower_expr(value, out, &mut ctx, sm, file)?;
 
                     if matches!(&val, ir::Val::List(_) | ir::Val::Args) {
                         return Err(CompileError::new(sm.format_diagnostic(file, opts.diag_base_dir.as_deref(), "set env.<NAME> requires a scalar string/number; lists/args are not supported", stmt.span)));
@@ -929,6 +971,7 @@ fn lower_stmt<'a>(
 
 fn lower_run_call_args<'a>(
     run_call: &ast::RunCall,
+    out: &mut Vec<ir::Cmd>,
     ctx: &mut LoweringContext<'a>,
     sm: &SourceMap,
     file: &str,
@@ -937,7 +980,7 @@ fn lower_run_call_args<'a>(
     let lowered_args = run_call
         .args
         .iter()
-        .map(|a| lower_expr(a.clone(), ctx, sm, file))
+        .map(|a| lower_expr(a.clone(), out, ctx, sm, file))
         .collect::<Result<Vec<_>, _>>()?;
 
     let mut allow_fail = false;
@@ -961,6 +1004,7 @@ fn lower_run_call_args<'a>(
 fn lower_sudo_command<'a>(
     args: Vec<ast::Expr>,
     options: Vec<ast::CallOption>,
+    out: &mut Vec<ir::Cmd>,
     ctx: &mut LoweringContext<'a>,
     sm: &SourceMap,
     file: &str,
@@ -986,7 +1030,7 @@ fn lower_sudo_command<'a>(
 
     // Add positional args (command + args), lowered
     for arg in args {
-        argv.push(lower_expr(arg, ctx, sm, file)?);
+        argv.push(lower_expr(arg, out, ctx, sm, file)?);
     }
     
     // Extract allow_fail check from spec (it handles the boolean logic)
@@ -1038,7 +1082,7 @@ fn validate_arg_index_expr(
 }
 
 
-fn lower_expr<'a>(e: ast::Expr, ctx: &mut LoweringContext<'a>, sm: &SourceMap, file: &str) -> Result<ir::Val, CompileError> {
+fn lower_expr<'a>(e: ast::Expr, out: &mut Vec<ir::Cmd>, ctx: &mut LoweringContext<'a>, sm: &SourceMap, file: &str) -> Result<ir::Val, CompileError> {
     let opts = ctx.opts; // Get opts from context for diagnostic formatting
     match e.node {
         ast::ExprKind::Literal(s) => Ok(ir::Val::Literal(s)),
@@ -1050,8 +1094,8 @@ fn lower_expr<'a>(e: ast::Expr, ctx: &mut LoweringContext<'a>, sm: &SourceMap, f
             }
         }
         ast::ExprKind::Concat(l, r) => Ok(ir::Val::Concat(
-            Box::new(lower_expr(*l, ctx, sm, file)?),
-            Box::new(lower_expr(*r, ctx, sm, file)?),
+            Box::new(lower_expr(*l, out, ctx, sm, file)?),
+            Box::new(lower_expr(*r, out, ctx, sm, file)?),
         )),
         ast::ExprKind::Arith { left, op, right } => {
             if matches!(op, ast::ArithOp::Add) {
@@ -1059,8 +1103,8 @@ fn lower_expr<'a>(e: ast::Expr, ctx: &mut LoweringContext<'a>, sm: &SourceMap, f
                 let r_is_lit = matches!(right.node, ast::ExprKind::Literal(_));
                 if l_is_lit || r_is_lit {
                     return Ok(ir::Val::Concat(
-                        Box::new(lower_expr(*left, ctx, sm, file)?),
-                        Box::new(lower_expr(*right, ctx, sm, file)?),
+                        Box::new(lower_expr(*left, out, ctx, sm, file)?),
+                        Box::new(lower_expr(*right, out, ctx, sm, file)?),
                     ));
                 }
             }
@@ -1073,9 +1117,9 @@ fn lower_expr<'a>(e: ast::Expr, ctx: &mut LoweringContext<'a>, sm: &SourceMap, f
                 ast::ArithOp::Mod => ir::ArithOp::Mod,
             };
             Ok(ir::Val::Arith {
-                left: Box::new(lower_expr(*left, ctx, sm, file)?),
+                left: Box::new(lower_expr(*left, out, ctx, sm, file)?),
                 op,
-                right: Box::new(lower_expr(*right, ctx, sm, file)?),
+                right: Box::new(lower_expr(*right, out, ctx, sm, file)?),
             })
         }
         ast::ExprKind::Compare { left, op, right } => {
@@ -1095,7 +1139,7 @@ fn lower_expr<'a>(e: ast::Expr, ctx: &mut LoweringContext<'a>, sm: &SourceMap, f
                      (r_bool.unwrap(), *left)
                 };
 
-                let pred_val = lower_expr(pred_expr, ctx, sm, file)?;
+                let pred_val = lower_expr(pred_expr, out, ctx, sm, file)?;
                 
                 // Logic table:
                 // Eq:   true == pred -> pred
@@ -1120,45 +1164,45 @@ fn lower_expr<'a>(e: ast::Expr, ctx: &mut LoweringContext<'a>, sm: &SourceMap, f
                     ast::CompareOp::Ge => ir::CompareOp::Ge,
                 };
                 Ok(ir::Val::Compare {
-                    left: Box::new(lower_expr(*left, ctx, sm, file)?),
+                    left: Box::new(lower_expr(*left, out, ctx, sm, file)?),
                     op,
-                    right: Box::new(lower_expr(*right, ctx, sm, file)?),
+                    right: Box::new(lower_expr(*right, out, ctx, sm, file)?),
                 })
             }
         }
         ast::ExprKind::And(left, right) => Ok(ir::Val::And(
-            Box::new(lower_expr(*left, ctx, sm, file)?),
-            Box::new(lower_expr(*right, ctx, sm, file)?),
+            Box::new(lower_expr(*left, out, ctx, sm, file)?),
+            Box::new(lower_expr(*right, out, ctx, sm, file)?),
         )),
         ast::ExprKind::Or(left, right) => Ok(ir::Val::Or(
-            Box::new(lower_expr(*left, ctx, sm, file)?),
-            Box::new(lower_expr(*right, ctx, sm, file)?),
+            Box::new(lower_expr(*left, out, ctx, sm, file)?),
+            Box::new(lower_expr(*right, out, ctx, sm, file)?),
         )),
-        ast::ExprKind::Not(expr) => Ok(ir::Val::Not(Box::new(lower_expr(*expr, ctx, sm, file)?))),
-        ast::ExprKind::Exists(path) => Ok(ir::Val::Exists(Box::new(lower_expr(*path, ctx, sm, file)?))),
-        ast::ExprKind::IsDir(path) => Ok(ir::Val::IsDir(Box::new(lower_expr(*path, ctx, sm, file)?))),
-        ast::ExprKind::IsFile(path) => Ok(ir::Val::IsFile(Box::new(lower_expr(*path, ctx, sm, file)?))),
+        ast::ExprKind::Not(expr) => Ok(ir::Val::Not(Box::new(lower_expr(*expr, out, ctx, sm, file)?))),
+        ast::ExprKind::Exists(path) => Ok(ir::Val::Exists(Box::new(lower_expr(*path, out, ctx, sm, file)?))),
+        ast::ExprKind::IsDir(path) => Ok(ir::Val::IsDir(Box::new(lower_expr(*path, out, ctx, sm, file)?))),
+        ast::ExprKind::IsFile(path) => Ok(ir::Val::IsFile(Box::new(lower_expr(*path, out, ctx, sm, file)?))),
         ast::ExprKind::IsSymlink(path) => {
-            Ok(ir::Val::IsSymlink(Box::new(lower_expr(*path, ctx, sm, file)?)))
+            Ok(ir::Val::IsSymlink(Box::new(lower_expr(*path, out, ctx, sm, file)?)))
         }
-        ast::ExprKind::IsExec(path) => Ok(ir::Val::IsExec(Box::new(lower_expr(*path, ctx, sm, file)?))),
+        ast::ExprKind::IsExec(path) => Ok(ir::Val::IsExec(Box::new(lower_expr(*path, out, ctx, sm, file)?))),
         ast::ExprKind::IsReadable(path) => {
-            Ok(ir::Val::IsReadable(Box::new(lower_expr(*path, ctx, sm, file)?)))
+            Ok(ir::Val::IsReadable(Box::new(lower_expr(*path, out, ctx, sm, file)?)))
         }
         ast::ExprKind::IsWritable(path) => {
-            Ok(ir::Val::IsWritable(Box::new(lower_expr(*path, ctx, sm, file)?)))
+            Ok(ir::Val::IsWritable(Box::new(lower_expr(*path, out, ctx, sm, file)?)))
         }
         ast::ExprKind::IsNonEmpty(path) => {
-            Ok(ir::Val::IsNonEmpty(Box::new(lower_expr(*path, ctx, sm, file)?)))
+            Ok(ir::Val::IsNonEmpty(Box::new(lower_expr(*path, out, ctx, sm, file)?)))
         }
         ast::ExprKind::BoolStr(inner) => {
-            Ok(ir::Val::BoolStr(Box::new(lower_expr(*inner, ctx, sm, file)?)))
+            Ok(ir::Val::BoolStr(Box::new(lower_expr(*inner, out, ctx, sm, file)?)))
         }
-        ast::ExprKind::Len(expr) => Ok(ir::Val::Len(Box::new(lower_expr(*expr, ctx, sm, file)?))),
+        ast::ExprKind::Len(expr) => Ok(ir::Val::Len(Box::new(lower_expr(*expr, out, ctx, sm, file)?))),
         ast::ExprKind::Arg(expr) => {
             validate_arg_index_expr(&expr, sm, file, ctx.opts)?;
 
-            let index_val = lower_expr(*expr, ctx, sm, file)?;
+            let index_val = lower_expr(*expr, out, ctx, sm, file)?;
             
             // Optimize: if literal number >= 1, use Val::Arg(n) for direct $n expansion
             if let ir::Val::Number(n) = &index_val {
@@ -1174,11 +1218,11 @@ fn lower_expr<'a>(e: ast::Expr, ctx: &mut LoweringContext<'a>, sm: &SourceMap, f
             }
         }
         ast::ExprKind::Index { list, index } => Ok(ir::Val::Index {
-            list: Box::new(lower_expr(*list, ctx, sm, file)?),
-            index: Box::new(lower_expr(*index, ctx, sm, file)?),
+            list: Box::new(lower_expr(*list, out, ctx, sm, file)?),
+            index: Box::new(lower_expr(*index, out, ctx, sm, file)?),
         }),
         ast::ExprKind::Field { base, name } => {
-            let b = lower_expr(*base, ctx, sm, file)?;
+            let b = lower_expr(*base, out, ctx, sm, file)?;
 
             match name.as_str() {
                 "flags" => Ok(ir::Val::ArgsFlags(Box::new(b))),
@@ -1198,16 +1242,16 @@ fn lower_expr<'a>(e: ast::Expr, ctx: &mut LoweringContext<'a>, sm: &SourceMap, f
             }
         }
         ast::ExprKind::Join { list, sep } => Ok(ir::Val::Join {
-            list: Box::new(lower_expr(*list, ctx, sm, file)?),
-            sep: Box::new(lower_expr(*sep, ctx, sm, file)?),
+            list: Box::new(lower_expr(*list, out, ctx, sm, file)?),
+            sep: Box::new(lower_expr(*sep, out, ctx, sm, file)?),
         }),
-        ast::ExprKind::Count(inner) => Ok(ir::Val::Count(Box::new(lower_expr(*inner, ctx, sm, file)?))),
+        ast::ExprKind::Count(inner) => Ok(ir::Val::Count(Box::new(lower_expr(*inner, out, ctx, sm, file)?))),
         ast::ExprKind::Bool(b) => Ok(ir::Val::Bool(b)),
         ast::ExprKind::Number(n) => Ok(ir::Val::Number(n)),
         ast::ExprKind::Command(args) => {
             let lowered_args = args
                 .into_iter()
-                .map(|a| lower_expr(a, ctx, sm, file))
+                .map(|a| lower_expr(a, out, ctx, sm, file))
                 .collect::<Result<Vec<_>, _>>()?;
             Ok(ir::Val::Command(lowered_args))
         }
@@ -1216,7 +1260,7 @@ fn lower_expr<'a>(e: ast::Expr, ctx: &mut LoweringContext<'a>, sm: &SourceMap, f
                 .into_iter()
                 .map(|seg| {
                     seg.into_iter()
-                        .map(|a| lower_expr(a, ctx, sm, file))
+                        .map(|a| lower_expr(a, out, ctx, sm, file))
                         .collect::<Result<Vec<_>, _>>()
                 })
                 .collect::<Result<Vec<_>, _>>()?;
@@ -1225,14 +1269,14 @@ fn lower_expr<'a>(e: ast::Expr, ctx: &mut LoweringContext<'a>, sm: &SourceMap, f
         ast::ExprKind::List(exprs) => {
             let lowered_exprs = exprs
                 .into_iter()
-                .map(|e| lower_expr(e, ctx, sm, file))
+                .map(|e| lower_expr(e, out, ctx, sm, file))
                 .collect::<Result<Vec<_>, _>>()?;
             Ok(ir::Val::List(lowered_exprs))
         }
         ast::ExprKind::Args => Ok(ir::Val::Args),
         ast::ExprKind::Status => Ok(ir::Val::Status),
         ast::ExprKind::Pid => Ok(ir::Val::Pid),
-        ast::ExprKind::Env(inner) => Ok(ir::Val::Env(Box::new(lower_expr(*inner, ctx, sm, file)?))),
+        ast::ExprKind::Env(inner) => Ok(ir::Val::Env(Box::new(lower_expr(*inner, out, ctx, sm, file)?))),
         ast::ExprKind::Uid => Ok(ir::Val::Uid),
         ast::ExprKind::Ppid => Ok(ir::Val::Ppid),
         ast::ExprKind::Pwd => Ok(ir::Val::Pwd),
@@ -1240,9 +1284,9 @@ fn lower_expr<'a>(e: ast::Expr, ctx: &mut LoweringContext<'a>, sm: &SourceMap, f
         ast::ExprKind::Argv0 => Ok(ir::Val::Argv0),
         ast::ExprKind::Argc => Ok(ir::Val::Argc),
         ast::ExprKind::EnvDot(name) => Ok(ir::Val::EnvDot(name)),
-        ast::ExprKind::Input(e) => Ok(ir::Val::Input(Box::new(lower_expr(*e, ctx, sm, file)?))),
+        ast::ExprKind::Input(e) => Ok(ir::Val::Input(Box::new(lower_expr(*e, out, ctx, sm, file)?))),
         ast::ExprKind::Confirm { prompt, default } => {
-            let prompt_val = lower_expr(*prompt, ctx, sm, file)?;
+            let prompt_val = lower_expr(*prompt, out, ctx, sm, file)?;
             let default_bool = match default {
                 None => false,
                 Some(d) => {
@@ -1261,7 +1305,7 @@ fn lower_expr<'a>(e: ast::Expr, ctx: &mut LoweringContext<'a>, sm: &SourceMap, f
             Ok(ir::Val::Confirm { prompt: Box::new(prompt_val), default: default_bool })
         }
         ast::ExprKind::Sudo { args, options } => {
-            let (argv, allow_fail_span) = lower_sudo_command(args, options, ctx, sm, file)?;
+            let (argv, allow_fail_span) = lower_sudo_command(args, options, out, ctx, sm, file)?;
             
             if let Some(span) = allow_fail_span {
                  return Err(CompileError::new(sm.format_diagnostic(
@@ -1296,7 +1340,7 @@ fn lower_expr<'a>(e: ast::Expr, ctx: &mut LoweringContext<'a>, sm: &SourceMap, f
 
             let lowered_args = run_call.args
                 .into_iter()
-                .map(|a| lower_expr(a, ctx, sm, file))
+                .map(|a| lower_expr(a, out, ctx, sm, file))
                 .collect::<Result<Vec<_>, _>>()?;
             Ok(ir::Val::Command(lowered_args))
         }
@@ -1323,8 +1367,8 @@ fn lower_expr<'a>(e: ast::Expr, ctx: &mut LoweringContext<'a>, sm: &SourceMap, f
                     )));
                 }
                 let mut iter = args.into_iter();
-                let text = Box::new(lower_expr(iter.next().unwrap(), ctx, sm, file)?);
-                let regex = Box::new(lower_expr(iter.next().unwrap(), ctx, sm, file)?);
+                let text = Box::new(lower_expr(iter.next().unwrap(), out, ctx, sm, file)?);
+                let regex = Box::new(lower_expr(iter.next().unwrap(), out, ctx, sm, file)?);
                 Ok(ir::Val::Matches(text, regex))
             } else if name == "contains" {
                 if args.len() != 2 {
@@ -1336,22 +1380,62 @@ fn lower_expr<'a>(e: ast::Expr, ctx: &mut LoweringContext<'a>, sm: &SourceMap, f
                     )));
                 }
                 let mut iter = args.into_iter();
-                let list = Box::new(lower_expr(iter.next().unwrap(), ctx, sm, file)?);
-                let needle = Box::new(lower_expr(iter.next().unwrap(), ctx, sm, file)?);
-                Ok(ir::Val::Contains { list, needle })
+                let list = Box::new(lower_expr(iter.next().unwrap(), out, ctx, sm, file)?);
+                let needle = Box::new(lower_expr(iter.next().unwrap(), out, ctx, sm, file)?);
+                
+                // Static Dispatch:
+                // 1. Check if haystack is definitely a list (Literal, Split, Lines, or known list var).
+                let is_list = match &*list {
+                    ir::Val::List(_) | ir::Val::Split { .. } | ir::Val::Lines(_) => true,
+                    ir::Val::Var(n) => ctx.is_list_var(n),
+                    _ => false,
+                };
+
+                // 2. Validate needle is a scalar (string/bool/num), not a list/map.
+                if matches!(&*needle, ir::Val::List(_) | ir::Val::Args) {
+                     return Err(CompileError::new(sm.format_diagnostic(
+                        file,
+                        opts.diag_base_dir.as_deref(),
+                        "contains() needle must be a scalar value (string), found list",
+                        e.span,
+                    )));
+                }
+
+                if is_list {
+                    // Materialize list (Path B change)
+                    let list_val = if let ir::Val::Var(_) = *list {
+                         list
+                    } else {
+                        // Generate unique temp name
+                        ctx.tmp_counter += 1;
+                        let tmp_name = format!("__sh2_tmp_list_{}", ctx.tmp_counter);
+                        ctx.insert_list_var(&tmp_name);
+                        
+                        out.push(ir::Cmd::Assign(
+                            tmp_name.clone(),
+                            *list,
+                            None
+                        ));
+                        
+                        Box::new(ir::Val::Var(tmp_name))
+                    };
+                    Ok(ir::Val::ContainsList { list: list_val, needle })
+                } else {
+                    Ok(ir::Val::ContainsSubstring { haystack: list, needle })
+                }
             } else if name == "contains_line" {
                 if args.len() != 2 {
                      return Err(CompileError::new(sm.format_diagnostic(
                         file,
                         opts.diag_base_dir.as_deref(),
-                        "contains_line() requires exactly 2 arguments (text, needle)",
+                        "contains_line() requires exactly 2 arguments (file, needle)",
                         e.span,
                     )));
                 }
                 let mut iter = args.into_iter();
-                let text = Box::new(lower_expr(iter.next().unwrap(), ctx, sm, file)?);
-                let needle = Box::new(lower_expr(iter.next().unwrap(), ctx, sm, file)?);
-                Ok(ir::Val::ContainsLine { text, needle })
+                let file_val = Box::new(lower_expr(iter.next().unwrap(), out, ctx, sm, file)?);
+                let needle = Box::new(lower_expr(iter.next().unwrap(), out, ctx, sm, file)?);
+                Ok(ir::Val::ContainsLine { file: file_val, needle })
             } else if name == "starts_with" {
                 if args.len() != 2 {
                      return Err(CompileError::new(sm.format_diagnostic(
@@ -1362,8 +1446,8 @@ fn lower_expr<'a>(e: ast::Expr, ctx: &mut LoweringContext<'a>, sm: &SourceMap, f
                     )));
                 }
                 let mut iter = args.into_iter();
-                let text = Box::new(lower_expr(iter.next().unwrap(), ctx, sm, file)?);
-                let prefix = Box::new(lower_expr(iter.next().unwrap(), ctx, sm, file)?);
+                let text = Box::new(lower_expr(iter.next().unwrap(), out, ctx, sm, file)?);
+                let prefix = Box::new(lower_expr(iter.next().unwrap(), out, ctx, sm, file)?);
                 Ok(ir::Val::StartsWith { text, prefix })
             } else if name == "parse_args" {
                 if !args.is_empty() {
@@ -1379,7 +1463,7 @@ fn lower_expr<'a>(e: ast::Expr, ctx: &mut LoweringContext<'a>, sm: &SourceMap, f
                         e.span,
                     )));
                 }
-                let path = lower_expr(args.into_iter().next().unwrap(), ctx, sm, file)?;
+                let path = lower_expr(args.into_iter().next().unwrap(), out, ctx, sm, file)?;
                 Ok(ir::Val::LoadEnvfile(Box::new(path)))
             } else if name == "json_kv" {
                 if args.len() != 1 {
@@ -1390,7 +1474,7 @@ fn lower_expr<'a>(e: ast::Expr, ctx: &mut LoweringContext<'a>, sm: &SourceMap, f
                         e.span,
                     )));
                 }
-                let blob = lower_expr(args.into_iter().next().unwrap(), ctx, sm, file)?;
+                let blob = lower_expr(args.into_iter().next().unwrap(), out, ctx, sm, file)?;
                 Ok(ir::Val::JsonKv(Box::new(blob)))
             } else if name == "which" {
                 if args.len() != 1 {
@@ -1401,7 +1485,7 @@ fn lower_expr<'a>(e: ast::Expr, ctx: &mut LoweringContext<'a>, sm: &SourceMap, f
                         e.span,
                     )));
                 }
-                let arg = lower_expr(args.into_iter().next().unwrap(), ctx, sm, file)?;
+                let arg = lower_expr(args.into_iter().next().unwrap(), out, ctx, sm, file)?;
                 Ok(ir::Val::Which(Box::new(arg)))
             } else if name == "try_run" {
                 return Err(CompileError::new(sm.format_diagnostic(
@@ -1426,7 +1510,7 @@ fn lower_expr<'a>(e: ast::Expr, ctx: &mut LoweringContext<'a>, sm: &SourceMap, f
                         e.span,
                     )));
                 }
-                let arg = lower_expr(args.into_iter().next().unwrap(), ctx, sm, file)?;
+                let arg = lower_expr(args.into_iter().next().unwrap(), out, ctx, sm, file)?;
                 Ok(ir::Val::ReadFile(Box::new(arg)))
             } else if name == "write_file" {
                 return Err(CompileError::new(sm.format_diagnostic(
@@ -1465,7 +1549,7 @@ fn lower_expr<'a>(e: ast::Expr, ctx: &mut LoweringContext<'a>, sm: &SourceMap, f
                 }
                 let lowered_args = args
                     .into_iter()
-                    .map(|a| lower_expr(a, ctx, sm, file))
+                    .map(|a| lower_expr(a, out, ctx, sm, file))
                     .collect::<Result<Vec<_>, _>>()?;
                 Ok(ir::Val::PathJoin(lowered_args))
             } else if name == "lines" {
@@ -1477,7 +1561,7 @@ fn lower_expr<'a>(e: ast::Expr, ctx: &mut LoweringContext<'a>, sm: &SourceMap, f
                         e.span,
                     )));
                 }
-                let arg = lower_expr(args.into_iter().next().unwrap(), ctx, sm, file)?;
+                let arg = lower_expr(args.into_iter().next().unwrap(), out, ctx, sm, file)?;
                 Ok(ir::Val::Lines(Box::new(arg)))
             } else if name == "split" {
                 if args.len() != 2 {
@@ -1489,8 +1573,8 @@ fn lower_expr<'a>(e: ast::Expr, ctx: &mut LoweringContext<'a>, sm: &SourceMap, f
                     )));
                 }
                 let mut iter = args.into_iter();
-                let s = lower_expr(iter.next().unwrap(), ctx, sm, file)?;
-                let delim = lower_expr(iter.next().unwrap(), ctx, sm, file)?;
+                let s = lower_expr(iter.next().unwrap(), out, ctx, sm, file)?;
+                let delim = lower_expr(iter.next().unwrap(), out, ctx, sm, file)?;
                 Ok(ir::Val::Split {
                     s: Box::new(s),
                     delim: Box::new(delim),
@@ -1505,7 +1589,7 @@ fn lower_expr<'a>(e: ast::Expr, ctx: &mut LoweringContext<'a>, sm: &SourceMap, f
             } else {
                 let lowered_args = args
                     .into_iter()
-                    .map(|a| lower_expr(a, ctx, sm, file))
+                    .map(|a| lower_expr(a, out, ctx, sm, file))
                     .collect::<Result<Vec<_>, _>>()?;
                 Ok(ir::Val::Call {
                     name,
@@ -1519,7 +1603,7 @@ fn lower_expr<'a>(e: ast::Expr, ctx: &mut LoweringContext<'a>, sm: &SourceMap, f
             let lowered_entries = entries
                 .into_iter()
                 .map(|(k, v)| {
-                     let v = lower_expr(v, ctx, sm, file)?;
+                     let v = lower_expr(v, out, ctx, sm, file)?;
                      Ok((k, v))
                 })
                 .collect::<Result<Vec<_>, _>>()?;
@@ -1534,7 +1618,7 @@ fn lower_expr<'a>(e: ast::Expr, ctx: &mut LoweringContext<'a>, sm: &SourceMap, f
             // `expr` here will be Command, not Call.
             // So we just process explicit capture options.
 
-            let lowered_expr = lower_expr(*expr, ctx, sm, file)?;
+            let lowered_expr = lower_expr(*expr, out, ctx, sm, file)?;
 
             let mut allow_fail = false;
             let mut seen_allow_fail = false;
@@ -1610,9 +1694,9 @@ fn lower_expr<'a>(e: ast::Expr, ctx: &mut LoweringContext<'a>, sm: &SourceMap, f
             }
             
             // Build argv: [shell, "-c", cmd]
-            let shell_val = lower_expr(shell_expr, ctx, sm, file)?;
+            let shell_val = lower_expr(shell_expr, out, ctx, sm, file)?;
             let dash_c_val = ir::Val::Literal("-c".to_string());
-            let cmd_val = lower_expr(*cmd, ctx, sm, file)?;
+            let cmd_val = lower_expr(*cmd, out, ctx, sm, file)?;
             
             Ok(ir::Val::Command(vec![shell_val, dash_c_val, cmd_val]))
         }
@@ -1620,6 +1704,7 @@ fn lower_expr<'a>(e: ast::Expr, ctx: &mut LoweringContext<'a>, sm: &SourceMap, f
 }
 fn lower_sudo_call_args<'a>(
     run_call: &ast::RunCall,
+    out: &mut Vec<ir::Cmd>,
     ctx: &mut LoweringContext<'a>,
     sm: &SourceMap,
     file: &str,
@@ -1642,7 +1727,7 @@ fn lower_sudo_call_args<'a>(
 
     // Positional args
     for arg in &run_call.args {
-        argv.push(lower_expr(arg.clone(), ctx, sm, file)?);
+        argv.push(lower_expr(arg.clone(), out, ctx, sm, file)?);
     }
     
     // Extract allow_fail boolean

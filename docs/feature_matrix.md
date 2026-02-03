@@ -147,7 +147,7 @@ This document maps implemented features to their proving test files, ensuring do
 | `lines(str)` | `syntax_lines.rs` |
 | `trim(str)` | `syntax_string_utils.rs` |
 | `replace(str, old, new)` | `syntax_string_utils.rs` |
-| `contains_line(text, needle)` | `syntax_contains_line.rs` |
+| `contains_line(file, needle)` | `contains_line.rs` |
 | `contains(list, value)` | `syntax_contains.rs` |
 | `matches(text, regex)` | `syntax_matches.rs` |
 | `starts_with(text, prefix)` | `syntax_starts_with.rs` |

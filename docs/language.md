@@ -174,17 +174,14 @@ if ok {
 }
 ```
 
-Stored booleans are represented as `"1"` (true) or `"0"` (false) internally.
+Stored booleans are represented as `"true"` or `"false"` internally.
 
-> **Limitation**: Boolean variables can only be used in conditions (`if`, `while`). Using them in string contexts (e.g., `print(ok)` or `"x=" & ok`) produces a compile error. If you need string output, use `bool_str()`:
->
-> ```sh2
-> # ❌ Not supported:
-> print(ok)
->
-> # ✅ Use bool_str():
-> print(bool_str(sum == 42))
-> ```
+Booleans can be used in string contexts (concatenation, `print`) and will automatically convert to their string representation:
+
+```sh2
+let ok = true
+print("Status: " & ok)  # Output: Status: true
+```
 
 - **Restriction**: The path MUST be a string literal at compile time (Model 2 restriction). Computed paths (e.g. variables, concatenation) are rejected with a compile error.
    - To use a computed path, explicitly use the canonical safe pattern with `run("sh", "-c", ...)`.
@@ -776,31 +773,67 @@ Boolean predicate that evaluates to `true` if `text` starts with `prefix`.
 if starts_with("foobar", "foo") { ... }
 ```
 
-#### `contains_line(text, needle)`
+#### `contains_line(file, needle)`
 
-Boolean predicate that evaluates to `true` if `text` contains a line exactly equal to `needle`.
+Boolean predicate that evaluates to `true` if the file at `file` contains a line exactly equal to `needle`.
 
-- **Exact match**: strict string equality (no regex/glob).
+- **Exact-line match**: Uses `grep -Fqx` for literal, full-line comparison (no regex/glob/substring).
+- **File contents**: Reads and searches the file at the path specified by `file` (not the string value itself).
 - **Portable**: Works on both Bash and POSIX targets.
-- **Trailing newline**: A trailing `\n` does not imply an extra empty line.
-  - `contains_line("a\n", "")` is `false`.
-  - `contains_line("a\n\n", "")` is `true`.
+- **Use case**: Ideal for checking registry trust, configuration files, or any line-oriented data.
 
 ```sh2
-if contains_line(run("ls").stdout, "Makefile") { ... }
+# Check if a registry is trusted
+if contains_line("/etc/docker/daemon.json", "registry.example.com") {
+    print("Registry already trusted")
+} else {
+    append_file("/etc/docker/daemon.json", "registry.example.com")
+}
+
+# Check command output
+let tmpfile = "/tmp/ls_output.txt"
+run("ls", stdout=tmpfile)
+if contains_line(tmpfile, "Makefile") { ... }
 ```
 
-#### `contains(list, value)` (Bash-only)
+#### `contains(haystack, needle)`
 
-Evaluates to `true` if `list` (array or expression evaluating to list) contains exactly `value`. Performs strict string equality check (no globbing).
+Type-directed inclusion check. Behavior depends on the static type of `haystack`:
+
+| Haystack Type | Behavior | Target Support |
+|---|---|---|
+| **List** | Checks if `needle` is an element of the list. | **Bash Only** |
+| **String** | Checks if `needle` is a substring of `haystack`. | Portable |
+
+**List detection rules**:
+- List literals: `["a", "b"]`
+- List expressions: `split(...)`, `lines(...)`
+- **Tracked Variables**: Variables assigned a list value (`let x = [...]`) are tracked as lists. All other variables (e.g. `let x = "s"`) are treated as strings.
 
 ```sh2
+# String Substring:
+if contains("host:5000", ":") { ... }
+
+# List Membership (Bash-only):
 let items = ["a", "b"]
 if contains(items, "b") { ... }
 
-let text = "foo\nbar\n"
+# List Expression (Bash-only):
 if contains(lines(text), "bar") { ... }
 ```
+
+**Detailed Semantics Table**:
+
+| Haystack Form              | Compile-time Class | Lowering Result / IR                | Runtime Mechanism          | Target |
+|---------------------------|-------------------|-------------------------------------|----------------------------|--------|
+| String literal            | String            | Val::ContainsSubstring              | printf '%s' … \| grep -Fq | Bash+Posix |
+| Scalar var (untracked)    | String            | Val::ContainsSubstring              | printf '%s' … \| grep -Fq | Bash+Posix |
+| Tracked scalar var        | String            | Val::ContainsSubstring              | printf '%s' … \| grep -Fq | Bash+Posix |
+| List literal              | List              | materialize tmp → Val::ContainsList | __sh2_contains             | Bash-only |
+| List var (tracked)        | List              | Val::ContainsList                   | __sh2_contains             | Bash-only |
+| List expr (split/lines)   | List              | materialize tmp → Val::ContainsList | __sh2_contains             | Bash-only |
+| Unknown var (not tracked) | String (default)  | Val::ContainsSubstring              | printf '%s' … \| grep -Fq | Bash+Posix |
+
 
 ### 10.7 File I/O
 

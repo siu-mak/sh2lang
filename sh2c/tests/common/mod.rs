@@ -469,6 +469,58 @@ pub fn compile_and_run_err(fixture_name: &str, target: TargetShell) -> (String, 
     (stdout, stderr)
 }
 
+pub fn run_test_in_targets(name: &str, src: &str, expected_stdout: &str) {
+    let targets = [
+        (TargetShell::Bash, "bash"),
+        (TargetShell::Posix, "sh"),
+    ];
+
+    for (target, shell_bin) in targets {
+        // Compile
+        // Note: compile_to_shell panics on error, which is fine for tests expected to pass
+        let shell_script = compile_to_shell(src, target);
+
+        // Execute
+        // We use run_shell_script which handles temp dir creation
+        let (stdout, stderr, status) = run_shell_script(&shell_script, shell_bin, &[], &[], None, None);
+
+        if status != 0 {
+            panic!(
+                "Execution failed for {} ({:?})\nStatus: {}\nStdout: {}\nStderr: {}\nScript:\n{}",
+                name, target, status, stdout, stderr, shell_script
+            );
+        }
+
+        assert_eq!(
+            stdout.trim(),
+            expected_stdout.trim(),
+            "Output mismatch for {} ({:?})",
+            name, target
+        );
+    }
+}
+
+pub fn run_test_bash_only(name: &str, src: &str, expected_stdout: &str) {
+    let target = TargetShell::Bash;
+    let shell_bin = "bash";
+    
+    let shell_script = compile_to_shell(src, target);
+    let (stdout, stderr, status) = run_shell_script(&shell_script, shell_bin, &[], &[], None, None);
+
+    if status != 0 {
+        panic!(
+            "Execution failed for {} (Bash)\nStatus: {}\nStdout: {}\nStderr: {}\nScript:\n{}",
+            name, status, stdout, stderr, shell_script
+        );
+    }
+
+    assert_eq!(
+        stdout.trim(),
+        expected_stdout.trim(),
+        "Output mismatch for {} (Bash)",
+        name
+    );
+}
 
 pub fn assert_exec_matches_fixture_target(
     fixture_name: &str,

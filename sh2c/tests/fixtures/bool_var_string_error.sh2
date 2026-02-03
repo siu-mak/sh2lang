@@ -1,4 +1,0 @@
-func main() {
-    let ok = (1 == 1)
-    print(ok)
-}

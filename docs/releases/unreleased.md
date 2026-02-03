@@ -38,3 +38,17 @@ Pipelines now accept `sudo(...)` stages:
   - `"$foo"` and `${bar}` in string literals are preserved as literal text (e.g. `print("$foo")` prints `$foo`).
   - To use variables, use **concatenation** (`"Hello " & name`) or **explicit interpolation** (`$"Hello {name}"`).
   - This change ensures that strings like `"$5"` or `"*"` are strictly safe and never trigger unintended Bash behavior.
+
+- **contains() Type Safety Fix**: `contains(haystack, needle)` now uses robust **static type dispatch** instead of brittle runtime probing.
+    - **List Membership**: Triggered for list literals, list expressions (e.g. `split`), and tracked list variables (Bash-only).
+    - **Substring Search**: Default behavior for strings and untracked variables (Portable).
+    - **Improvements**: Removed `declare -p` probing that caused false negatives. Added support for `contains(split(...), ...)` via temporary variable materialization.
+
+- **contains_line() Bug Fix (P0)**: `contains_line(file, needle)` now correctly reads **file contents** with exact-line matching semantics.
+    - **Previous behavior**: Incorrectly performed substring search on the filename/path string instead of file contents.
+    - **New behavior**: Uses `grep -Fqx -- <needle> <file>` for exact-line matching within the file.
+    - **Use case**: Ideal for registry trust checks, configuration validation, or any line-oriented file operations.
+
+- **Boolean Encoding Standardization**: Boolean variables are now consistently stored as `"true"` and `"false"` strings (previously "1"/"0").
+    - **Effect**: Implicit print/string conversion for booleans is now supported (e.g. `print(true)` outputs `true`).
+    - **Back-compat**: Generated conditions still use standard shell logic (`[ "$v" = "true" ]`). Users relying on internal "1"/"0" representation (undocumented) will be affected.

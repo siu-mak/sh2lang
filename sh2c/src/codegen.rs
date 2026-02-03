@@ -431,17 +431,21 @@ fn visit_val(val: &Val, usage: &mut PreludeUsage) {
         Val::Uid => {
             usage.uid = true;
         }
-        Val::Contains { list, needle } => {
+        Val::ContainsList { list, needle } => {
             usage.contains = true;
             visit_val(list, usage);
+            visit_val(needle, usage);
+        }
+        Val::ContainsSubstring { haystack, needle } => {
+            visit_val(haystack, usage);
             visit_val(needle, usage);
         }
         Val::ArgDynamic(index) => {
             usage.arg_dynamic = true;
             visit_val(index, usage);
         }
-        Val::ContainsLine { text, needle } => {
-            visit_val(text, usage);
+        Val::ContainsLine { file, needle } => {
+            visit_val(file, usage);
             visit_val(needle, usage);
         }
         _ => {}
@@ -549,8 +553,9 @@ fn is_boolean_val(v: &Val) -> bool {
             | Val::IsWritable(_)
             | Val::IsNonEmpty(_)
             | Val::Matches(_, _)
-            | Val::Contains { .. }
             | Val::StartsWith { .. }
+            | Val::ContainsList { .. }
+            | Val::ContainsSubstring { .. }
             | Val::ContainsLine { .. }
             | Val::Confirm { .. }
     )
@@ -572,7 +577,7 @@ impl CodegenContext {
 
 fn emit_val(v: &Val, target: TargetShell) -> Result<String, CompileError> {
     match v {
-        Val::Contains { .. } => {
+        Val::ContainsList { .. } | Val::ContainsSubstring { .. } => {
              let cond = emit_cond(v, target)?;
              Ok(format!("\"$( if {}; then printf true; else printf false; fi )\"", cond))
         }
@@ -731,9 +736,8 @@ fn emit_val(v: &Val, target: TargetShell) -> Result<String, CompileError> {
             Val::Args => Ok("\"$#\"".to_string()),
             _ => Err(CompileError::internal("count(...) supports only list literals, list variables, and args", target)),
         },
-        Val::Bool(_) => Err(CompileError::new(
-            "Cannot emit boolean value as string/word; booleans are only valid in conditions",
-        ).with_target(target)),
+        Val::Bool(true) => Ok("true".to_string()),
+        Val::Bool(false) => Ok("false".to_string()),
         Val::Number(n) => Ok(format!("\"{}\"", n)),
         Val::Status => Ok("\"$__sh2_status\"".to_string()),
         Val::Pid => Ok("\"$!\"".to_string()),
@@ -841,9 +845,7 @@ fn emit_val(v: &Val, target: TargetShell) -> Result<String, CompileError> {
         | Val::Split { .. }
         | Val::ContainsLine { .. }
         | Val::Confirm { .. } => Err(CompileError::new("Cannot emit boolean/list value as string").with_target(target)),
-        Val::BoolVar(_) => Err(CompileError::new(
-            "bool is not a string; bool→string conversion is not supported yet"
-        ).with_target(target)),
+        Val::BoolVar(name) => Ok(format!("\"${}\"", name)),
     }
 }
 
@@ -946,52 +948,45 @@ fn emit_cond(v: &Val, target: TargetShell) -> Result<String, CompileError> {
             let d = if *default { "1" } else { "0" };
             Ok(format!("[ \"$( __sh2_confirm {} {} \"$@\" )\" = \"1\" ]", p, d))
         }
-        Val::Contains { list, needle } => {
+        Val::ContainsList { list, needle } => {
             if target == TargetShell::Posix {
-                 return Err(CompileError::unsupported("contains() is bash-only", target));
+                 return Err(CompileError::unsupported("contains(list, item) is Bash-only. contains(string, substring) is supported.", target));
             }
              match **list {
                  Val::Var(ref name) => {
                      let n = emit_val(needle, target)?;
                      Ok(format!("__sh2_contains \"{}\" {}", name, n))
                  }
-                 _ => {
-                      let n = emit_val(needle, target)?;
-                      let setup = match **list {
-                           Val::Lines(ref inner) => {
-                               format!("__sh2_lines {} __sh2_tmp_arr", emit_val(inner, target)?)
-                           }
-                           Val::List(ref elems) => {
-                               let mut s = String::from("__sh2_tmp_arr=(");
-                               for e in elems {
-                                   s.push_str(&emit_word(e, target)?);
-                                   s.push(' ');
-                               }
-                               s.push(')');
-                               s
-                           }
-                           Val::Split { ref s, ref delim } => {
-                               format!("__sh2_split __sh2_tmp_arr {} {}", emit_val(s, target)?, emit_val(delim, target)?)
-                           }
-                           _ => {
-                               format!("__sh2_tmp_arr=({})", emit_val(list, target)?)
-                           }
-                      };
-                      
-                      Ok(format!("( {}; __sh2_contains __sh2_tmp_arr {} )", setup, n))
-                 }
+                    _ => {
+                        // This path should be unreachable because lower_expr guarantees 
+                        // that list expressions are materialized into temporary variables (Val::Var)
+                        // before reaching codegen. If we see a non-Var list here, it's a compiler bug.
+                        return Err(CompileError::internal(
+                             "contains(list, item): expected list to be materialized to Val::Var by lowering", 
+                             target
+                        ));
+                    }
+
              }
+        }
+        Val::ContainsSubstring { haystack, needle } => {
+            // Substring check: printf '%s' "$haystack" | grep -Fq -- "$needle"
+            Ok(format!("( printf '%s' {} | grep -Fq -- {} )",
+                emit_val(haystack, target)?,
+                emit_val(needle, target)?
+            ))
         }
         Val::Bool(true) => Ok("true".to_string()),
         Val::Bool(false) => Ok("false".to_string()),
         Val::List(_) | Val::Args => {
             Err(CompileError::internal("args/list is not a valid condition; use count(...) > 0", target))
         }
-        Val::ContainsLine { text, needle } => {
-            // ( printf '%s' <text> | grep -Fxq -- <needle> )
-            Ok(format!("( printf '%s' {} | grep -Fxq -- {} )",
-                emit_val(text, target)?,
-                emit_val(needle, target)?
+        Val::ContainsLine { file, needle } => {
+            // Exact-line match: grep -Fqx -- <needle> <file>
+            // Reads the file and searches for an exact line match with <needle>
+            Ok(format!("( grep -Fqx -- {} {} )",
+                emit_val(needle, target)?,
+                emit_val(file, target)?
             ))
         }
         Val::Matches(text, regex) => {
@@ -1009,8 +1004,8 @@ fn emit_cond(v: &Val, target: TargetShell) -> Result<String, CompileError> {
             ))
         }
         Val::BoolVar(name) => {
-            // Boolean variable: check if equals "1"
-            Ok(format!("[ \"${}\" = \"1\" ]", name))
+            // Boolean variable: check if equals "true"
+            Ok(format!("[ \"${}\" = \"true\" ]", name))
         }
         // "Truthiness" fallback for scalar values: check if non-empty string.
         v => Ok(format!("[ -n {} ]", emit_val(v, target)?)),
@@ -1286,15 +1281,15 @@ fn emit_cmd(
                     name = name
                 ));
             } else if is_boolean_val(val) {
-                // Boolean assignment: emit as "1"/"0" string
-                // Format: var="$( if <cond>; then printf 1; else printf 0; fi )"
-                // The condition result is captured as 1/0, not via $?.
+                // Boolean assignment: emit as "true"/"false" string
+                // Format: var="$( if <cond>; then printf true; else printf false; fi )"
+                // The condition result is captured as true/false, not via $?.
                 // Boolean assignment always "succeeds" (status=0) since it's just
                 // evaluating a condition and storing the result.
                 out.push_str(name);
                 out.push_str("=\"$( if ");
                 out.push_str(&emit_cond(val, target)?);
-                out.push_str("; then printf 1; else printf 0; fi )\"");
+                out.push_str("; then printf true; else printf false; fi )\"");
                 out.push('\n');
                 // Boolean assignment always succeeds - the condition result is stored
                 // as 1/0, not reflected in exit status.
@@ -3027,7 +3022,7 @@ __sh2_split() {
 
     if usage.contains {
         if target == TargetShell::Bash {
-            s.push_str(r#"__sh2_contains() { local -n __arr=$1; local __val=$2; for __e in "${__arr[@]}"; do if [[ "$__e" == "$__val" ]]; then return 0; fi; done; return 1; }
+            s.push_str(r#"__sh2_contains() { local -n __arr="$1"; local __val="$2"; for __e in "${__arr[@]}"; do [[ "$__e" == "$__val" ]] && return 0; done; return 1; }
 "#);
         }
     }

@@ -84,12 +84,17 @@ pub enum Val {
     Home,
     PathJoin(Vec<Val>),
     Lines(Box<Val>),
-    Contains {
+
+    ContainsList {
         list: Box<Val>,
         needle: Box<Val>,
     },
+    ContainsSubstring {
+        haystack: Box<Val>,
+        needle: Box<Val>,
+    },
     ContainsLine {
-        text: Box<Val>,
+        file: Box<Val>,
         needle: Box<Val>,
     },
     StartsWith { text: Box<Val>, prefix: Box<Val> },
