@@ -118,8 +118,6 @@ sh2 makes it explicit that you’re capturing output from a command:
 let out = $(run("dpkg-query","-W","-f","${Package}\n","bash"))
 ```
 
-**Important footnote (based on your earlier bug report):** when sh2 lowers string literals into bash, `$` / `${...}` inside those literals must not accidentally expand in the generated bash. That’s an implementation pitfall in a compiler-to-bash approach, and it’s exactly why sh2 needs a “no implicit expansion” rule enforced in codegen.
-
 ---
 
 ## 5) Control flow: braces and blocks vs bash keywords and syntax traps
