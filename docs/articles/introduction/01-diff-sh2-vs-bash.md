@@ -6,7 +6,8 @@ description: "A practical comparison of sh2 vs bash: quoting, args, structure, a
   <img src="../../images/logo/sh2logo_256.png" alt="sh2 logo" width="128" />
 </a>
 
-# What’s the difference between sh2 and bash?
+
+# What's the difference between sh2 and bash?
 
 If you’ve ever written a bash script that “worked on your machine” and then exploded in CI, on a different distro, or inside a container, you already know the core problem:
 

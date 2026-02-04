@@ -56,6 +56,13 @@ Pipelines now accept `sudo(...)` stages:
     - **POSIX Portability**: Uses `-e` flag (POSIX-compliant) instead of `--` for robust handling of needles starting with `-`.
     - **Use case**: Ideal for registry trust checks, configuration validation, or any line-oriented file operations.
 
+- **contains() String Substring POSIX Fix (P1)**: Fixed `contains(string, string)` to work correctly in POSIX targets and with needles starting with `-`.
+    - **Bug**: Previously used non-POSIX `grep -Fq --` which failed on POSIX sh and misinterpreted needles like `"-b"` as flags.
+    - **Fix**: Changed to POSIX-compliant `grep -Fq -e` matching `contains_line()` implementation.
+    - **Impact**: `contains("a-b-c", "-b")` now works correctly in both Bash and POSIX targets.
+    - **Special characters**: All special chars (`$`, `[`, `]`, `*`, `\`) continue to be treated literally (fixed-string search).
+
+
 - **Boolean Encoding Standardization**: Boolean variables are now consistently stored as `"true"` and `"false"` strings (previously "1"/"0").
     - **Effect**: Implicit print/string conversion for booleans is now supported (e.g. `print(true)` outputs `true`).
     - **Back-compat**: Generated conditions still use standard shell logic (`[ "$v" = "true" ]`). Users relying on internal "1"/"0" representation (undocumented) will be affected.

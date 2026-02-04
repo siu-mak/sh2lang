@@ -103,3 +103,69 @@ fn test_contains_value_assignment() {
     run_test_in_targets("value_assign", code, "x=true\ny=false");
 }
 
+#[test]
+fn test_contains_string_special_chars() {
+    // Test special characters that could cause shell interpretation issues
+    let code = r#"
+        func main() {
+            // Dollar sign
+            if contains("a$b", "$") {
+                print("found dollar")
+            }
+            
+            // Brackets (glob chars)
+            if contains("a[b]c", "[b]") {
+                print("found brackets")
+            }
+            
+            // Asterisk
+            if contains("a*b*c", "*b*") {
+                print("found asterisk")
+            }
+        }
+    "#;
+    run_test_in_targets(
+        "contains_special",
+        code,
+        "found dollar\nfound brackets\nfound asterisk"
+    );
+}
+
+#[test]
+fn test_contains_string_needle_with_dash() {
+    // Critical test: needles starting with - must work (POSIX -e flag fix)
+    // Without -e flag, grep would interpret -b as a flag
+    let code = r#"
+        func main() {
+            if contains("a-b-c", "-b") {
+                print("found dash b")
+            }
+            
+            if contains("test --flag", "--flag") {
+                print("found double dash")
+            }
+            
+            if contains("-start", "-s") {
+                print("found dash start")
+            }
+        }
+    "#;
+    run_test_in_targets(
+        "contains_dash_needle",
+        code,
+        "found dash b\nfound double dash\nfound dash start"
+    );
+}
+
+#[test]
+fn test_contains_string_backslash() {
+    // Backslash handling
+    let code = r#"
+        func main() {
+            if contains("a\\b", "\\") {
+                print("found backslash")
+            }
+        }
+    "#;
+    run_test_in_targets("contains_backslash", code, "found backslash");
+}

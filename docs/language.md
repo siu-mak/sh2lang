@@ -845,15 +845,23 @@ if contains(lines(text), "bar") { ... }
 
 **Detailed Semantics Table**:
 
-| Haystack Form              | Compile-time Class | Lowering Result / IR                | Runtime Mechanism          | Target |
-|---------------------------|-------------------|-------------------------------------|----------------------------|--------|
-| String literal            | String            | Val::ContainsSubstring              | printf '%s' … \| grep -Fq | Bash+Posix |
-| Scalar var (untracked)    | String            | Val::ContainsSubstring              | printf '%s' … \| grep -Fq | Bash+Posix |
-| Tracked scalar var        | String            | Val::ContainsSubstring              | printf '%s' … \| grep -Fq | Bash+Posix |
-| List literal              | List              | materialize tmp → Val::ContainsList | __sh2_contains             | Bash-only |
-| List var (tracked)        | List              | Val::ContainsList                   | __sh2_contains             | Bash-only |
-| List expr (split/lines)   | List              | materialize tmp → Val::ContainsList | __sh2_contains             | Bash-only |
-| Unknown var (not tracked) | String (default)  | Val::ContainsSubstring              | printf '%s' … \| grep -Fq | Bash+Posix |
+| Haystack Form              | Compile-time Class | Lowering Result / IR                | Runtime Mechanism            | Target |
+|----------------------------|-------------------|-------------------------------------|------------------------------|--------|
+| String literal             | String            | Val::ContainsSubstring              | printf '%s' … \| grep -Fq -e | Bash+Posix |
+| Scalar var (untracked)     | String            | Val::ContainsSubstring              | printf '%s' … \| grep -Fq -e | Bash+Posix |
+| Tracked scalar var         | String            | Val::ContainsSubstring              | printf '%s' … \| grep -Fq -e | Bash+Posix |
+| List literal               | List              | materialize tmp → Val::ContainsList | __sh2_contains               | Bash-only |
+| List var (tracked)         | List              | Val::ContainsList                    | __sh2_contains               | Bash-only |
+| List expr (split/lines)    | List              | materialize tmp → Val::ContainsList | __sh2_contains               | Bash-only |
+| Unknown var (not tracked)  | String (default)  | Val::ContainsSubstring              | printf '%s' … \| grep -Fq -e | Bash+Posix |
+
+**String Substring Details**:
+- Fixed-string search (no regex): `-F` flag
+- Quiet mode (exit code only): `-q` flag  
+- POSIX-compliant pattern specification: `-e` flag (handles needles starting with `-`)
+- Portable: works on both Bash and POSIX sh targets
+- Special characters safe: `$`, `[`, `]`, `*`, `\`, etc. are treated literally
+
 
 
 ### 10.7 File I/O

@@ -970,8 +970,9 @@ fn emit_cond(v: &Val, target: TargetShell) -> Result<String, CompileError> {
              }
         }
         Val::ContainsSubstring { haystack, needle } => {
-            // Substring check: printf '%s' "$haystack" | grep -Fq -- "$needle"
-            Ok(format!("( printf '%s' {} | grep -Fq -- {} )",
+            // Substring check: printf '%s' "$haystack" | grep -Fq -e "$needle"
+            // -F: fixed string (no regex), -q: quiet, -e: explicit pattern (POSIX-compliant)
+            Ok(format!("( printf '%s' {} | grep -Fq -e {} )",
                 emit_val(haystack, target)?,
                 emit_val(needle, target)?
             ))
