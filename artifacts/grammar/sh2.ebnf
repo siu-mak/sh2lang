@@ -213,7 +213,9 @@ normal_string = '"' , { string_char } , '"' ;
 
 raw_string = 'r"' , { raw_string_char } , '"' ;
 
-(* Interpolated strings support full expression interpolation *)
+(* Interpolated strings support expression interpolation.
+   Use \{ and \} to produce literal braces.
+   Note: String literals inside holes are not yet supported due to lexer limitations. *)
 interpolated_string = '$"' , { interp_char | "{" , expression , "}" } , '"' ;
 bool_literal = "true" | "false" ;
 number = digit , { digit } ;
@@ -224,4 +226,4 @@ letter = "a" | "b" | (* ... *) | "z" | "A" | (* ... *) | "Z" ;
 digit = "0" | "1" | (* ... *) | "9" ;
 string_char = ? any character except '"' and unescaped newline ? ;
 raw_string_char = ? any character except '"' ? ;
-interp_char = ? any character except '"', '{', and unescaped newline ? ;
+interp_char = ? any character except '"', unescaped '{', and unescaped newline; '\{' and '\}' produce literal braces ? ;

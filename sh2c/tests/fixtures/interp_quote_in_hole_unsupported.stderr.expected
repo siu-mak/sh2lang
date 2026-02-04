@@ -1,0 +1,4 @@
+interp_quote_in_hole_unsupported.sh2:2:16: String literals inside interpolation holes are not supported yet (lexer limitation).
+help: workaround: assign to a variable first (e.g., let v = "value"; print($"X: {v}"))
+    print($"X: { "}" }")
+               ^

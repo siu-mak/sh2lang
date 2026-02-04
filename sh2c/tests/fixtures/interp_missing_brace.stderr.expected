@@ -1,0 +1,3 @@
+interp_missing_brace.sh2:2:16: Unterminated interpolation hole; missing '}'
+    print($"X: {name")
+               ^

@@ -1,6 +1,6 @@
 func main() {
   let name = "world"
-  print($"literal: \\{name\\}")
+  print($"literal: \{name\}")
   print($"dollar: \\$")
   print($"interp: {name}")
 }

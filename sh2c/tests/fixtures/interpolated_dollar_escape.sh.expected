@@ -19,7 +19,7 @@ main() {
   name='world'
   __sh2_status=$?
   __sh2_check "$__sh2_status" "${__sh2_loc:-}"
-  printf '%s\n' 'literal: \{name\}'
+  printf '%s\n' 'literal: {name}'
   printf '%s\n' 'dollar: \$'
   printf '%s\n' 'interp: '"$name"
 }

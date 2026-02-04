@@ -129,13 +129,34 @@ print("Hello $name")  // Output: Hello $name
 ```
 
 #### Explicit Interpolation
-Use the `$` prefix (`$"..."`) to interpolate variables using `{valid_ident}` syntax.
-Note that the `$` character itself inside `$"..."` is still a literal.
+Use the `$` prefix (`$"..."`) to interpolate variables and **expressions** using `{...}` syntax.
+Note that the `$` character itself inside `$"..."` is still a literal. To include a literal `{` or `}` inside the string, escape it as `\{` or `\}`.
+
 ```sh2
 let user = "admin"
 print($"User: {user}")     // Output: User: admin
 print($"Cost: ${price}")   // Output: Cost: $100 (if price is 100)
+
+// Expressions are supported:
+print($"Sum: {1 + 2}")     // Output: Sum: 3
+print($"Cwd: {pwd()}")     // Output: Cwd: /current/path
+print($"Field: {obj.key}") // Output: Field: value
+
+// Literal braces:
+print($"Set: \{a, b\}")    // Output: Set: {a, b}
 ```
+
+> **Current Limitation**: String literals (quoted text) inside interpolation holes are not yet supported due to lexer tokenization constraints. To work around this, build strings outside the interpolation and use variables:
+> 
+> ```sh2
+> // NOT SUPPORTED: print($"Result: { "value" }")
+> 
+> // WORKAROUND:
+> let val = "value"
+> print($"Result: {val}")
+> ```
+> 
+> This limitation will be addressed in a future release with lexer redesign.
 
 #### Concatenation
 Use the `&` operator to join strings and variables.
@@ -777,9 +798,9 @@ if starts_with("foobar", "foo") { ... }
 
 Boolean predicate that evaluates to `true` if the file at `file` contains a line exactly equal to `needle`.
 
-- **Exact-line match**: Uses `grep -Fqx` for literal, full-line comparison (no regex/glob/substring).
+- **Exact-line match**: Uses `grep -Fqx -e` for literal, full-line comparison (no regex/glob/substring).
 - **File contents**: Reads and searches the file at the path specified by `file` (not the string value itself).
-- **Portable**: Works on both Bash and POSIX targets.
+- **Portable**: Works on both Bash and POSIX targets. Uses `-e` flag for POSIX compatibility and safe handling of needles starting with `-`.
 - **Use case**: Ideal for checking registry trust, configuration files, or any line-oriented data.
 
 ```sh2

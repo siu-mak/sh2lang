@@ -2,6 +2,13 @@
 
 ## Added
 
+### Expression Interpolation
+- **Expression Interpolation (Limited)**: `$"..."` string literals now support evaluating expressions inside `{...}` holes.
+  - Supported: `$"Sum: {1 + 2}"`, `$"Cwd: {pwd()}"`, `$"User: {name}"`.
+  - **Limitation**: String literals inside holes are not yet supported (e.g., `$"X: { "value" }"` will not compile) due to lexer tokenization constraints. Use variables as a workaround: `let v = "value"; print($"X: {v}")`.
+  - Escape literal braces with `\{` and `\}` (e.g., `$"Set: \{a, b\}"` outputs `Set: {a, b}`).
+  - A future release will address this limitation with lexer redesign to support full expression interpolation.
+
 ### Pipe Blocks
 Support for arbitrary statement blocks in pipelines:
 - `pipe { ... } | { ... }`
@@ -44,9 +51,9 @@ Pipelines now accept `sudo(...)` stages:
     - **Substring Search**: Default behavior for strings and untracked variables (Portable).
     - **Improvements**: Removed `declare -p` probing that caused false negatives. Added support for `contains(split(...), ...)` via temporary variable materialization.
 
-- **contains_line() Bug Fix (P0)**: `contains_line(file, needle)` now correctly reads **file contents** with exact-line matching semantics.
-    - **Previous behavior**: Incorrectly performed substring search on the filename/path string instead of file contents.
-    - **New behavior**: Uses `grep -Fqx -- <needle> <file>` for exact-line matching within the file.
+- **contains_line() Implementation (P0)**: `contains_line(file, needle)` now correctly reads **file contents** with exact-line matching semantics.
+    - **Behavior**: Uses `grep -Fqx -e <needle> <file>` for exact-line matching within the file.
+    - **POSIX Portability**: Uses `-e` flag (POSIX-compliant) instead of `--` for robust handling of needles starting with `-`.
     - **Use case**: Ideal for registry trust checks, configuration validation, or any line-oriented file operations.
 
 - **Boolean Encoding Standardization**: Boolean variables are now consistently stored as `"true"` and `"false"` strings (previously "1"/"0").

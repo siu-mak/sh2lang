@@ -982,9 +982,10 @@ fn emit_cond(v: &Val, target: TargetShell) -> Result<String, CompileError> {
             Err(CompileError::internal("args/list is not a valid condition; use count(...) > 0", target))
         }
         Val::ContainsLine { file, needle } => {
-            // Exact-line match: grep -Fqx -- <needle> <file>
-            // Reads the file and searches for an exact line match with <needle>
-            Ok(format!("( grep -Fqx -- {} {} )",
+            // Exact-line match: grep -Fqx -e <needle> <file>
+            // -F: fixed string, -q: quiet, -x: exact line
+            // -e: explicit pattern (POSIX-compliant, handles needles starting with -)
+            Ok(format!("( grep -Fqx -e {} {} )",
                 emit_val(needle, target)?,
                 emit_val(file, target)?
             ))

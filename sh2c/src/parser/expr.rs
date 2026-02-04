@@ -1,7 +1,7 @@
 use super::common::{ParsResult, Parser};
 use crate::ast::*;
 use crate::lexer::TokenKind;
-use crate::span::Span;
+use crate::span::{Diagnostic, Span};
 use crate::sudo::SudoSpec;
 
 impl<'a> Parser<'a> {
@@ -586,7 +586,31 @@ impl<'a> Parser<'a> {
                     let s = s.clone();
                     let str_span = self.advance().unwrap().span;
                     let full_span = span.merge(str_span);
-                    self.parse_brace_interpolated_string(&s, full_span)
+                    
+                    // Attempt to parse brace interpolated string, and translate known failure modes
+                    match self.parse_brace_interpolated_string(&s, full_span) {
+                        Ok(expr) => Ok(expr),
+                        Err(diagnostic) => {
+                            // Detect the known limitation: quotes inside holes cause lexer truncation.
+                            // The lexer terminates the string token early at the first `"` inside a hole.
+                            //
+                            // Use robust source-based detection to distinguish truncation from real errors.
+                            let is_lexer_truncation = diagnostic.msg.contains("Unterminated interpolation hole")
+                                && self.interpolated_string_looks_truncated(span, str_span);
+                            
+                            if is_lexer_truncation {
+                                // Emit improved diagnostic for lexer limitation
+                                let primary = "String literals inside interpolation holes are not supported yet (lexer limitation).";
+                                let help = "help: workaround: assign to a variable first (e.g., let v = \"value\"; print($\"X: {v}\"))";
+                                let combined_msg = format!("{}\n{}", primary, help);
+                                
+                                Err(self.make_error(&combined_msg, diagnostic.span))
+                            } else {
+                                // Real missing `}` or other error - keep original diagnostic
+                                Err(diagnostic)
+                            }
+                        }
+                    }
                 } else {
                     self.parse_command_substitution(span, false)
                 }
@@ -1152,52 +1176,313 @@ impl<'a> Parser<'a> {
         })
     }
 
-    fn parse_brace_interpolated_string(&mut self, raw: &str, span: Span) -> ParsResult<Expr> {
-        let mut parts: Vec<Expr> = Vec::new();
-        let mut i = 0;
-        let mut buf = String::new();
+    /// Detect if an interpolated string token was truncated by the lexer.
+    ///
+    /// The lexer terminates string tokens at the first unescaped `"`, even if
+    /// that quote appears inside an interpolation hole `{...}`. This helper
+    /// scans the raw source to find where the interpolated string *should* end
+    /// (the true closing quote) and compares it to where the lexer thinks it ends.
+    ///
+    /// Returns `true` if the lexer truncated the string early (quote-in-hole case).
+    fn interpolated_string_looks_truncated(&self, dollar_span: Span, str_span: Span) -> bool {
+        let src = self.sm.src();
+        let full_span = dollar_span.merge(str_span);
+        
+        // Verify this is $"..."
+        if full_span.start >= src.len() || src.as_bytes()[full_span.start] != b'$' {
+            return false;
+        }
+        
+        // Find the opening quote after $
+        let mut pos = full_span.start + 1;
+        if pos >= src.len() || src.as_bytes()[pos] != b'"' {
+            return false;
+        }
+        
+        // The lexer believes the string ends at str_span.end - 1 (the closing quote)
+        let assumed_close_quote_abs = str_span.end.saturating_sub(1);
+        
+        // Scan forward to find the true closing quote, tracking brace depth
+        pos += 1; // Start after opening quote
+        let mut brace_depth: i32 = 0;
+        let mut escaped = false;
+        
+        let bytes = src.as_bytes();
+        while pos < bytes.len() {
+            let ch = bytes[pos];
+            
+            if escaped {
+                escaped = false;
+                pos += 1;
+                continue;
+            }
+            
+            match ch {
+                b'\\' => {
+                    escaped = true;
+                }
+                b'{' => {
+                    brace_depth += 1;
+                }
+                b'}' => {
+                    brace_depth = brace_depth.saturating_sub(1);
+                }
+                b'"' if brace_depth == 0 => {
+                    // Found the true closing quote
+                    let true_close_quote_abs = pos;
+                    // If true close is after the assumed close, lexer truncated
+                    return true_close_quote_abs > assumed_close_quote_abs;
+                }
+                _ => {}
+            }
+            
+            pos += 1;
+        }
+        
+        // EOF reached without finding closing quote - not truncation, just unterminated
+        false
+    }
 
-        while i < raw.len() {
-            if raw[i..].starts_with('{') {
-                // Potential start of interpolation
-                let start = i + 1;
-                // find closing '}'
-                if let Some(end_rel) = raw[start..].find('}') {
-                    let end = start + end_rel;
-                    let ident = &raw[start..end];
-                    if is_valid_ident(ident) {
-                        if !buf.is_empty() {
-                            parts.push(Expr {
-                                node: ExprKind::Literal(std::mem::take(&mut buf)),
-                                span,
-                            });
-                        }
-                        parts.push(Expr {
-                            node: ExprKind::Var(ident.to_string()),
-                            span,
-                        });
-                        i = end + 1;
-                        continue;
+    fn parse_brace_interpolated_string(&mut self, _unused_decoded: &str, span: Span) -> ParsResult<Expr> {
+        // Expected span: $"..." where span.start is '$' and span.end is after closing '"'
+        // Use raw source for precise offsets and to bypass Lexer's escape decoding
+        let raw_src = self.sm.src().get(span.start..span.end).ok_or_else(|| {
+            self.make_error("Failed to retrieve source for interpolated string", span)
+        })?;
+
+        if raw_src.len() < 3 {
+             return self.error("Interpolated string span too short (expected $\"...\")", span);
+        }
+        
+        // Find the start of the string (opening quote)
+        // full_span includes the leading '$'
+        let quote_start_idx = match raw_src.find('"') {
+            Some(i) => i,
+            None => return self.error("Interpolated string missing opening quote", span),
+        };
+        
+        // inner content starts after the quote and ends before the closing quote
+        // The last char of raw_src MUST be the closing quote
+        if !raw_src.ends_with('"') {
+             return self.error("Interpolated string missing closing quote", span);
+        }
+        
+        let inner_start_offset = span.start + quote_start_idx + 1;
+        let inner_src = &raw_src[quote_start_idx+1..raw_src.len()-1];
+        
+
+        
+        let mut parts: Vec<Expr> = Vec::new();
+        let mut buf = String::new();
+        let mut chars = inner_src.char_indices().peekable();
+        
+        // Track the start position of the current literal chunk (relative to inner_src)
+        let mut lit_start_rel = 0;
+        
+        while let Some((i, c)) = chars.next() {
+            if c == '\\' {
+                if let Some((_, next)) = chars.peek() {
+                    let next_char = *next;
+
+                    // Explicit escape rule: \{ and \} become literal { and }
+                    if next_char == '{' || next_char == '}' {
+                        buf.push(next_char);
+                        chars.next(); // Consume the peeked character
+                        continue; // Loop will advance to next char
                     }
+                    // Standard escapes
+                    match next_char {
+                        'n' => { buf.push('\n'); chars.next(); continue; }
+                        't' => { buf.push('\t'); chars.next(); continue; }
+                        'r' => { buf.push('\r'); chars.next(); continue; }
+                        '\\' => { buf.push('\\'); chars.next(); continue; }
+                        '"' => { buf.push('"'); chars.next(); continue; }
+                        '$' => { buf.push('$'); chars.next(); continue; }
+                         _ => {
+                             // Unknown escape: preserve both backslash and next char
+                             buf.push('\\');
+                             buf.push(next_char);
+                             chars.next();
+                             continue;
+                         }
+                    }
+                } else {
+                    // Trailing backslash
+                    buf.push('\\');
+                    continue;
                 }
             }
             
-            let ch = raw[i..].chars().next().unwrap();
-            buf.push(ch);
-            i += ch.len_utf8();
+            if c == '{' {
+
+                // Determine absolute start pos of the hole's content (after '{')
+                // i is offset in inner_src.
+                let hole_content_start_abs = inner_start_offset + i + 1;
+                
+                // Flush buffer
+                if !buf.is_empty() {
+                    parts.push(Expr {
+                        node: ExprKind::Literal(std::mem::take(&mut buf)),
+                        span: Span::new(inner_start_offset + lit_start_rel, inner_start_offset + i),
+                    });
+                }
+
+                // robust scan for matching '}'
+                // We must respect nested strings inside the hole to avoid stopping at '}' inside a string
+                // We do NOT support nested braces `{ { } }` per instructions (unless part of expr?)
+                // User said "Sub-lexer... full consumption".
+                // If we slice until `}`, `parse_expr` handles the content. 
+                // BUT if `}` is inside a string in the expr, we must skip it.
+                // So we need a "balanced scan" respecting quotes.
+                
+                let mut nesting = 1; // We are inside first {
+                let mut content_end_rel = i + 1; // relative to inner_src start
+                let mut found_end = false;
+                
+                // Temp iterator for lookahead scanning
+                let mut scanner = inner_src[i+1..].char_indices().peekable();
+                
+                while let Some((j, sc)) = scanner.next() {
+                     // j is relative to the slice starting after '{'
+                     
+                     // Handle backslash escapes first - in raw source, \" is an escaped quote
+                     if sc == '\\' {
+                         scanner.next(); // Skip the escaped character
+                         continue;
+                     }
+                     
+                     // Now handle quoted strings (only unescaped quotes start strings)
+                     if sc == '"' {
+                         // Skip string content until closing quote
+                         while let Some((_, qc)) = scanner.next() {
+                             if qc == '\\' { 
+                                 scanner.next(); // Skip escaped char inside string
+                                 continue; 
+                             }
+                             if qc == '"' { break; }
+                         }
+                         continue;
+                     }
+                     
+                     if sc == '{' {
+                         nesting += 1;
+                     }
+                     if sc == '}' {
+                         nesting -= 1;
+                         if nesting == 0 {
+                             content_end_rel = i + 1 + j;
+                             found_end = true;
+                             break;
+                         }
+                     }
+                }
+                
+                if !found_end {
+                     return self.error("Unterminated interpolation hole; missing '}'", Span::new(inner_start_offset + i, inner_start_offset + i + 1));
+                }
+                
+                // Extract content
+                let content_chars = &inner_src[i+1..content_end_rel]; // Chars inside { }
+                
+                // Unescape content: \" -> ", \\ -> \
+                // We must process this because the extracted content is still "inside" the string literal form
+                // so valid expr code like "foo" appears as \"foo\"
+                let mut content = String::with_capacity(content_chars.len());
+                let mut esc_iter = content_chars.chars();
+                while let Some(ch) = esc_iter.next() {
+                    if ch == '\\' {
+                        if let Some(next) = esc_iter.next() {
+                            if next == '"' {
+                                content.push('"');
+                            } else if next == '\\' {
+                                content.push('\\');
+                            } else {
+                                // Other escapes inside hole?
+                                // If user wrote $" { \n } ", raw is \n. 
+                                // sh2 expression parser handles \n as char.
+                                // If user wrote $" { \x } " (where x is not " or \).
+                                // Valid sh2 code? 
+                                // \x is just \x.
+                                content.push('\\');
+                                content.push(next);
+                            }
+                        } else {
+                            // Trailing backslash
+                            content.push('\\');
+                        }
+                    } else {
+                        content.push(ch);
+                    }
+                }
+                
+                // Parse expression from content
+                let sub_sm = crate::span::SourceMap::new(content.clone());
+                let tokens = crate::lexer::lex(&sub_sm, "interpolation").map_err(|d| {
+                     let mut d = d;
+                     d.msg = format!("Lexer error inside interpolation: {}", d.msg);
+                     // Remap span: base + local_span
+                     let local_start = d.span.start;
+                     let local_end = d.span.end;
+                     d.span = Span::new(hole_content_start_abs + local_start, hole_content_start_abs + local_end);
+                     d
+                })?;
+                
+                let mut sub_parser = Parser::new(&tokens, &sub_sm, "interpolation");
+                let expr = sub_parser.parse_expr().map_err(|mut d| {
+                    d.msg = format!("Parse error inside interpolation: {}", d.msg);
+                     let local_start = d.span.start;
+                     let local_end = d.span.end;
+                     d.span = Span::new(hole_content_start_abs + local_start, hole_content_start_abs + local_end);
+                    d
+                })?;
+                
+                if sub_parser.peek().is_some() {
+                     // Report "Extra tokens" at the location of the next token
+                     let next_tok = sub_parser.peek().unwrap();
+                     let local_start = next_tok.span.start;
+                     // local_end = next_tok.span.end? Or just point to start?
+                     let err_pos = hole_content_start_abs + local_start;
+                     return self.error("Extra tokens after expression in interpolation hole", Span::new(err_pos, err_pos + 1));
+                }
+
+                parts.push(expr);
+                
+                // Update lit_start_rel to point to the character after the closing '}'
+                lit_start_rel = content_end_rel + 1;
+                
+                // Advance main loop
+                // "chars" iterator needs to skip validly.
+                // We manually advanced `scanner`, but `chars` iterator is independent and behind.
+                // We calculate how many chars we consumed.
+                // We consumed `content_end_rel - i` chars (including the closing }).
+                // But `chars` next() yields byte indices.
+                // Safest way: Fast-forward `chars`
+                while let Some((idx, _)) = chars.peek() {
+                    if *idx <= content_end_rel { 
+                        chars.next(); 
+                    } else {
+                        break;
+                    }
+                }
+                // Need to ensure we consumed the closing '}' too.
+                // content_end_rel is index of '}'.
+                // Loop above stops when peeked index > content_end_rel
+                // So we correctly consumed '}'.
+                continue;
+            }
+            
+            buf.push(c);
         }
 
         if !buf.is_empty() {
-            parts.push(Expr {
-                node: ExprKind::Literal(buf),
-                span,
-            });
+             parts.push(Expr {
+                 node: ExprKind::Literal(buf),
+                 span: Span::new(inner_start_offset + lit_start_rel, inner_start_offset + inner_src.len()),
+             });
         }
+        
         if parts.is_empty() {
-            return Ok(Expr {
-                node: ExprKind::Literal(String::new()),
-                span,
-            });
+            return Ok(Expr { node: ExprKind::Literal(String::new()), span });
         }
 
         let mut expr = parts[0].clone();
@@ -1209,21 +1494,15 @@ impl<'a> Parser<'a> {
         }
         Ok(expr)
     }
-}
 
-fn is_valid_ident(s: &str) -> bool {
-    let mut chars = s.chars();
-    if let Some(first) = chars.next() {
-        if !first.is_ascii_alphabetic() && first != '_' {
-            return false;
+    fn make_error(&self, msg: &str, span: Span) -> Diagnostic {
+         Diagnostic {
+            msg: msg.to_string(),
+            span,
+            sm: Some(self.sm.clone()),
+            file: Some(self.file.to_string()),
         }
-        for c in chars {
-            if !c.is_ascii_alphanumeric() && c != '_' {
-                return false;
-            }
-        }
-        true
-    } else {
-        false
     }
 }
+
+

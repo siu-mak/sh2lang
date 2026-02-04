@@ -1,0 +1,21 @@
+func main() {
+    let name = "Alice"
+    // Use an expression that produces an interpolated result
+    // The parts "Hello " and "!" should be single-quoted in the shell output.
+    // The expression should be executed.
+    print($"Hello {name}!")
+
+    // Arithmetic expression safe from shell interpretation
+    print($"Sum: {1 + 1}")
+
+    // Braces escaping (Option A: \{ produces literal {)
+    print($"Braces: \{ and \}")
+    
+    // Literal backslash
+    print($"Backslash: \\")
+    
+    // Safety check: Literal $ inside interpolated string should NOT be expanded
+    // even if it looks like a variable.
+    print($"Cost: $100")
+    print($"Variable lookalike: $USER")
+}

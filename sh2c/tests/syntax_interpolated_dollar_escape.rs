@@ -16,7 +16,7 @@ fn parse_interpolated_dollar_escape() {
         ..
     } = &func.body[1]
     {
-        assert_eq!(s, "literal: \\{name\\}");
+        assert_eq!(s, "literal: {name}");
     } else {
         panic!("Expected literal for first print, got {:?}", func.body[1]);
     }
