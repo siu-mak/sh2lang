@@ -333,7 +333,7 @@ with redirect { stdout: [file("ci-build.log"), inherit_stdout()], stderr: to_std
     run("make", "build")
     run("make", "test")
 }
-// CI sees output in real-time, and logs are saved as artifacts
+// CI sees output in real-time; logs are saved as artifacts
 ```
 
 ### Short-form with log() helper
