@@ -67,6 +67,68 @@ true false
 
 ---
 
+## Builtins / Command Expressions
+
+```
+capture sudo status try_run glob
+env cwd redirect log file
+to_stdout to_stderr inherit_stdout inherit_stderr
+pipe
+```
+
+---
+
+## I/O Statements
+
+```
+print print_err
+```
+
+---
+
+## Filesystem Predicates
+
+```
+exists is_dir is_file is_symlink is_exec
+is_readable is_writable is_non_empty
+```
+
+---
+
+## String / List Helpers
+
+```
+split join lines trim replace
+matches contains contains_line starts_with
+```
+
+---
+
+## File I/O
+
+```
+read_file write_file append_file
+```
+
+---
+
+## Argument Access
+
+```
+argv args arg argc argv0 input
+```
+
+---
+
+## Environment / Process Helpers
+
+```
+export unset load_envfile save_envfile json_kv
+pid ppid uid pwd
+```
+
+---
+
 ## Maintenance
 
 When adding new keywords to the language:

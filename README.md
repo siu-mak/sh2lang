@@ -470,6 +470,7 @@ See [`docs/sh2do.md`](docs/sh2do.md) for full documentation.
 
 ## Versions
 
+- [v0.1.1](docs/releases/v0.1.1.md) — Adds `sudo(...)`, `confirm(...)`, `$"..."` interpolation, semicolons.
 - [v0.1.0](docs/releases/v0.1.0.md) — First public release of the sh2 structured shell language.
 
 

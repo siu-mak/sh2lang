@@ -1,7 +1,8 @@
 [workspace]
 members = [
     "sh2c",
-    "sh2do"
+    "sh2do",
+    "sh2lang-pkg",
 ]
 
 resolver = "3"

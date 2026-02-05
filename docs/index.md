@@ -477,6 +477,17 @@ See [`docs/sh2do.md`](https://github.com/siu-mak/sh2lang/blob/main/docs/sh2do.md
 The GitHub repo is here:  
 **[https://github.com/siu-mak/sh2lang](https://github.com/siu-mak/sh2lang)**
 
+## Tutorials
+
+- [Getting Started with sh2](tutorials/01-getting-started.md) — Hands-on guide to writing, compiling, and running your first sh2 scripts
+- [Building a Real Tool](tutorials/02-building-a-real-tool.md) — Turn a snippet into a reviewable .sh2 tool with sudo, confirm, and logging
+- [Error Handling](tutorials/03-error-handling-and-status.md) — Fail-fast, allow_fail, status(), and writing predictable scripts
+- [Files and Directories](tutorials/04-files-and-directories.md) — Safe loops, find, cwd, and redirects without quoting bugs
+- [Pipelines and Text](tutorials/05-pipelines-and-text.md) — Structured pipelines, capturing output, and when Bash wins
+- [CI and Automation](tutorials/06-ci-and-automation.md) — Non-interactive safety, logs, and predictable exits
+- [Refactor a Bash Script](tutorials/07-refactor-a-bash-script.md) — Step-by-step migration from Bash to sh2
+- [Packaging and Distribution](tutorials/08-packaging-and-distribution.md) — Compile targets, reviewable output, and shipping tools
+
 ## Further Documentation
 
 - [`docs/language.md`](https://github.com/siu-mak/sh2lang/blob/main/docs/language.md) — full language reference (syntax + semantics)
@@ -485,6 +496,7 @@ The GitHub repo is here:
 
 ## Versions
 
+- [v0.1.1](https://github.com/siu-mak/sh2lang/blob/main/docs/releases/v0.1.1.md) — Adds `sudo(...)`, `confirm(...)`, semicolon separators.
 - [v0.1.0](https://github.com/siu-mak/sh2lang/blob/main/docs/releases/v0.1.0.md) — First public release of the sh2 structured shell language.
 
 

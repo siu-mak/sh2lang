@@ -105,7 +105,7 @@ The win is readability and fewer “wait, was that quoted?” moments.
 Command substitution is built-in and very flexible:
 
 ```bash
-out="$(dpkg-query -W -f '${Package}\n' bash)"
+out="$(whoami)"
 ```
 
 …but bash will happily expand things you didn’t mean to expand if quoting isn’t right.
@@ -115,7 +115,7 @@ out="$(dpkg-query -W -f '${Package}\n' bash)"
 sh2 makes it explicit that you’re capturing output from a command:
 
 ```sh2
-let out = $(run("dpkg-query","-W","-f","${Package}\n","bash"))
+let user = capture(run("whoami"))
 ```
 
 ---
@@ -269,4 +269,5 @@ The GitHub repo is here:
 
 ## Versions
 
+- [v0.1.1](https://github.com/siu-mak/sh2lang/blob/main/docs/releases/v0.1.1.md) — Adds `sudo(...)`, `confirm(...)`, semicolon separators.
 - [v0.1.0](https://github.com/siu-mak/sh2lang/blob/main/docs/releases/v0.1.0.md) — First public release of the sh2 structured shell language.

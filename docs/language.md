@@ -146,7 +146,7 @@ print($"Field: {obj.key}") // Output: Field: value
 print($"Set: \{a, b\}")    // Output: Set: {a, b}
 ```
 
-> **Current Limitation**: String literals (quoted text) inside interpolation holes are not yet supported due to lexer tokenization constraints. To work around this, build strings outside the interpolation and use variables:
+> **Known Limitation**: String literals (quoted text) inside interpolation holes are not supported due to lexer tokenization constraints. To work around this, build strings outside the interpolation and use variables:
 > 
 > ```sh2
 > // NOT SUPPORTED: print($"Result: { "value" }")
@@ -635,7 +635,7 @@ with cwd("/tmp") {
 }
 ```
 
-> **Note**: `cwd(...)` currently requires a string literal argument (e.g., `"/path"`). Computed paths are not yet supported. If you need a dynamic working directory, use `cd(expr)` (scoped via `subshell { ... }` if needed) or `sh("cd ...")`.
+> **Note**: `cwd(...)` requires a string literal argument (e.g., `"/path"`). Computed paths are not supported. If you need a dynamic working directory, use `cd(expr)` (scoped via `subshell { ... }` if needed) or `sh("cd ...")`.
 
 ### 9.3 `with redirect { ... } { ... }`
 

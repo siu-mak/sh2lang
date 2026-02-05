@@ -1,0 +1,21 @@
+[package]
+name = "sh2lang"
+version = "0.1.1"
+edition = "2021"
+description = "sh2lang tools (sh2c + sh2do)"
+license = "Apache"
+repository = "https://github.com/siu-mak/sh2lang"
+
+# No code needed; this crate is just for packaging.
+
+[package.metadata.deb]
+maintainer = "Siu Mak <me@siu-mak.com>"
+section = "utils"
+priority = "optional"
+assets = [
+  ["target/release/sh2c",  "usr/bin/", "755"],
+  ["target/release/sh2do", "usr/bin/", "755"],
+  ["../README.md",            "usr/share/doc/sh2lang/README", "644"],
+  ["../LICENSE*",             "usr/share/doc/sh2lang/", "644"],
+]
+depends = "$auto"
