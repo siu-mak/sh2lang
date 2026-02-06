@@ -81,8 +81,8 @@ jobs:
           cp -r out/apt-repo/* out/site/
 
           # Publish the public key alongside the repo so users can curl it
-          if [ -f public/gpg.key ]; then
-            cp -f public/gpg.key out/site/gpg.key
+          if [ -f public/sh2lang.asc ]; then
+            cp -f public/sh2lang.asc out/site/sh2lang.asc
           fi
 
           echo "Repo files:"
