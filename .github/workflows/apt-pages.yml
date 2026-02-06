@@ -33,25 +33,11 @@ jobs:
       - name: Import GPG key
         env:
           APT_GPG_PRIVATE_KEY: ${{ secrets.APT_GPG_PRIVATE_KEY }}
-          APT_GPG_PASSPHRASE: ${{ secrets.APT_GPG_PASSPHRASE }}
         run: |
           set -euo pipefail
-
-          export GNUPGHOME="$RUNNER_TEMP/gnupg"
-          mkdir -p "$GNUPGHOME"
-          chmod 700 "$GNUPGHOME"
-
-          # Configure gpg-agent for non-interactive passphrase entry
-          echo "allow-loopback-pinentry" > "$GNUPGHOME/gpg-agent.conf"
-          echo "pinentry-mode loopback" > "$GNUPGHOME/gpg.conf"
-
-          # Import key
+          mkdir -p ~/.gnupg
+          chmod 700 ~/.gnupg
           echo "$APT_GPG_PRIVATE_KEY" | gpg --batch --import
-
-          # Put passphrase in a protected file (avoid printing it)
-          printf "%s" "$APT_GPG_PASSPHRASE" > "$RUNNER_TEMP/gpg-pass"
-          chmod 600 "$RUNNER_TEMP/gpg-pass"
-
           gpg --list-secret-keys --keyid-format=long
 
       - name: Build .deb package (sh2lang)
@@ -67,7 +53,6 @@ jobs:
           CODENAME: jammy
         run: |
           set -euo pipefail
-          export GNUPGHOME="$RUNNER_TEMP/gnupg"
 
           # apt-repo/ must exist in your repo with conf/distributions + conf/options
           test -f apt-repo/conf/distributions
@@ -86,7 +71,7 @@ jobs:
 
           for deb in "${debs[@]}"; do
             echo "Including $deb"
-            reprepro -b out/apt-repo --gnupghome "$GNUPGHOME" includedeb "$CODENAME" "$deb"
+            reprepro -b out/apt-repo includedeb "$CODENAME" "$deb"
           done
 
           # Prepare Pages site content
