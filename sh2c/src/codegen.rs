@@ -131,6 +131,13 @@ fn visit_cmd(cmd: &Cmd, usage: &mut PreludeUsage, include_diagnostics: bool) {
                 }
             }
         }
+        Cmd::PipeEachLine { producer, body, .. } => {
+            usage.tmpfile = true;
+            visit_cmd(producer, usage, include_diagnostics);
+            for c in body {
+                visit_cmd(c, usage, include_diagnostics);
+            }
+        }
         Cmd::Case { expr, arms } => {
             visit_val(expr, usage);
             for (_, body) in arms {
@@ -2657,6 +2664,44 @@ fn emit_cmd(
             out.push_str("unset ");
             out.push_str(name);
             out.push('\n');
+        }
+        Cmd::PipeEachLine { producer, var, body } => {
+            if opts.target != TargetShell::Bash {
+                 return Err(CompileError::new(
+                     "each_line is only supported in Bash"
+                 ));
+            }
+            
+            let id = ctx.next_id();
+            let status_file_var = format!("__sh2_pipe_status_{}", id);
+            
+            // Create temp file for status (no `local` - works at top-level and in functions)
+            out.push_str(&format!("{}{}=$(__sh2_tmpfile)\n", pad, status_file_var));
+            
+            // Start loop with process substitution
+            out.push_str(&format!("{}while IFS= read -r {} || [[ -n \"${}\" ]]; do\n", pad, var, var));
+            
+            for stmt in body {
+                emit_cmd(stmt, out, indent + 2, opts, in_cond_ctx, ctx)?;
+            }
+            
+            out.push_str(&format!("{}done < <(\n", pad));
+            
+            // Producer runs here - emit_cmd sets __sh2_status for the producer
+            out.push_str(&format!("{}unset __sh2_status\n", pad));
+            emit_cmd(producer, out, indent + 2, opts, false, ctx)?;
+            // Capture producer status (if emit_cmd didn't set __sh2_status, use $?)
+            out.push_str(&format!("{}__sh2_status=${{__sh2_status:-$?}}\n", pad));
+            
+            // Write status to temp file
+            out.push_str(&format!("{}  printf '%s' \"$__sh2_status\" > \"${}\"\n", pad, status_file_var));
+            out.push_str(&format!("{})\n", pad)); // Close process substitution
+            
+            // Retrieve and cleanup status
+            out.push_str(&format!("{}__sh2_status=$(<\"${}\")\n", pad, status_file_var));
+            out.push_str(&format!("{}rm -f \"${}\"\n", pad, status_file_var));
+            // Propagate status to $? so set -e (if active) works
+            out.push_str(&format!("{}(exit $__sh2_status)\n", pad));
         }
         Cmd::Source(path) => {
             out.push_str(&pad);

@@ -119,9 +119,10 @@ spawn_stmt = "spawn" , ( block | statement ) ;
 pipe_stmt = "pipe" , pipe_segment , "|" , pipe_segment , { "|" , pipe_segment }
           | run_call , "|" , pipe_segment , { "|" , pipe_segment } ;
 
-pipe_segment = run_call | sudo_call | block ;
+pipe_segment = run_call | sudo_call | block | each_line_block ;
 run_call = "run" , "(" , [ builtin_arg_list ] , ")" ;
 sudo_call = "sudo" , "(" , [ builtin_arg_list ] , ")" ;
+each_line_block = "each_line" , identifier , block ;
 
 and_then_stmt = statement , "&&" , statement ;
 or_else_stmt = statement , "||" , statement ;

@@ -385,11 +385,35 @@ run("ls") | {
 pipe run("echo", "data") | { run("cat") }
 ```
 
-> Note: `print(...)` is a **statement**, not a pipeline stage. To “print and pipe”, use `run("printf", ...)` OR use a `pipe { ... }` block where `print` writes to stdout of the block.
+> **Note**: `print(...)` is a statement, not a pipeline stage. You usually want `run("echo", ...)` or `run("printf", ...)` if you need to feed data into a pipe.
 
----
 
 ## 6. Command Execution
+
+### 6.0 `each_line` pipeline consumer (Bash-only)
+
+> **Constraint**: `each_line` must be the **last segment** of a pipeline.
+
+> **Note**: The loop variable (e.g. `line`) is only valid within the loop body. It is not considered initialized after the loop unless it was explicitly declared before the loop (e.g. `let line = ...`).
+
+Use `each_line` to iterate over the output of a pipeline line-by-line. This is safer and more robust than `| while read` in Bash because:
+1. It runs in the main shell process (via process substitution), so variables modified inside the loop persist.
+2. It correctly propagates the exit status of the upstream pipeline command. Upon completion, `status()` reflects the exit code of the upstream pipeline (preserving non-zero codes even if `allow_fail` was used).
+
+```sh2
+let count = 0
+run("ls", "-1") | each_line file {
+  print("File: " & file)
+  count = count + 1
+}
+print($"Total files: {count}")
+
+# Upstream failure is propagated:
+run("false") | each_line l { ... }
+# status() is non-zero here
+```
+
+> **Note**: `each_line` handles empty lines correctly and avoids the common Bash pitfall where missing final newlines are ignored.
 
 ### 6.1 `run(...)` (expression)
 

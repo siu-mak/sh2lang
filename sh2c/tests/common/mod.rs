@@ -1096,6 +1096,7 @@ pub fn strip_spans_stmt(s: &mut sh2c::ast::Stmt) {
                     sh2c::ast::PipeSegment::Run(call) => strip_spans_run_call(call),
                     sh2c::ast::PipeSegment::Sudo(call) => strip_spans_run_call(call),
                     sh2c::ast::PipeSegment::Block(stmts) => for s in stmts { strip_spans_stmt(s); },
+                    sh2c::ast::PipeSegment::EachLine(_, body) => for s in body { strip_spans_stmt(s); },
                 }
             }
         }

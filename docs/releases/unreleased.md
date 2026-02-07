@@ -4,6 +4,7 @@
 - **Range syntax for `for` loops**: Added inclusive range syntax `start..end` for iteration (e.g., `for i in 1..10 { ... }`). Supports both parenthesized `(1..10)` and spaced `1 .. 10` forms. Runtime dependency: requires `seq` command (part of coreutils).
 - **Path Lookup**: Added `which(name)` builtin to resolve executables in `$PATH` without external dependencies. Returns the path or `""` if not found. **Exit status**: returns 0 when found, 1 when not found (allows `if which("cmd") { ... }`). **Non-aborting**: `which()` returning 1 does not abort the script. Paths may be relative if `$PATH` contains relative entries.
 - **Glob Expansion**: Added `glob(pattern)` builtin (Bash-only) to safely expand filesystem glob patterns. Returns a sorted list of matched paths; empty list if no matches. Uses `compgen -G` internally (no eval). Requires Bash 4.3+.
+- **Structured Pipeline Iteration**: Added `| each_line <var> { ... }` pipeline consumer. Executes loop in the main process (preserving variable updates) and correctly propagates upstream exit status. Replaces fragile `| while read` patterns. Bash-only (uses process substitution).
 
 
 ## Diagnostics

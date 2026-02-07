@@ -434,6 +434,25 @@ fn check_stmt(stmt: &ast::Stmt, ctx: &mut BinderContext) -> Result<(), CompileEr
                     ast::PipeSegment::Block(stmts) => {
                         check_block(stmts, ctx)?;
                     }
+                    ast::PipeSegment::EachLine(var, body) => {
+                        if ctx.all_declared.contains(var) {
+                             return Err(CompileError::new(ctx.format_error(
+                                 &format!("variable '{}' already declared in this scope", var),
+                                 seg.span,
+                             )));
+                        }
+                        ctx.all_declared.insert(var.clone());
+                        let before = ctx.clone_definitely();
+                        
+                        ctx.definitely_declared.insert(var.clone());
+                        
+                        check_block(body, ctx)?;
+                        
+                        // Body might not run (empty input), so we must restore the state
+                        // to exactly what it was before (loop var is removed unless it was there before).
+                        // This is safer than merge (intersection) as it handles "zero iterations" precisely.
+                        ctx.definitely_declared = before;
+                    }
                 }
             }
         }

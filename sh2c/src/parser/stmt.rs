@@ -831,6 +831,17 @@ impl<'a> Parser<'a> {
             let call = self.parse_run_call()?;
             let end = self.previous_span();
             Ok(Spanned::new(PipeSegment::Run(call), start.merge(end)))
+        } else if self.match_kind(TokenKind::EachLine) {
+            let start = self.previous_span();
+            let ident = if let Some(TokenKind::Ident(s)) = self.peek_kind() {
+                s.clone()
+            } else {
+                return self.error("Expected identifier after each_line", self.current_span());
+            };
+            self.advance();
+            let body = self.parse_brace_stmt_block()?;
+            let end = self.previous_span();
+            Ok(Spanned::new(PipeSegment::EachLine(ident, body), start.merge(end)))
         } else if let Some(TokenKind::Ident(s)) = self.peek_kind() {
             if s == "sudo" {
                 let start = self.current_span();
@@ -838,10 +849,10 @@ impl<'a> Parser<'a> {
                 let end = self.previous_span();
                 Ok(Spanned::new(PipeSegment::Sudo(call), start.merge(end)))
             } else {
-                 self.error("Expected pipeline segment: run(...), sudo(...), or { ... }", self.current_span())
+                 self.error("Expected pipeline segment: run(...), sudo(...), each_line ..., or { ... }", self.current_span())
             }
         } else {
-             self.error("Expected pipeline segment: run(...), sudo(...), or { ... }", self.current_span())
+             self.error("Expected pipeline segment: run(...), sudo(...), each_line ..., or { ... }", self.current_span())
         }
     }
 

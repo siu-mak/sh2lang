@@ -177,6 +177,7 @@ pub enum PipeSegment {
     Run(RunCall),
     Sudo(RunCall),
     Block(Vec<Stmt>),
+    EachLine(String, Vec<Stmt>),
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -407,6 +408,7 @@ impl StmtKind {
                         PipeSegment::Run(call) => call.strip_spans(),
                         PipeSegment::Sudo(call) => call.strip_spans(),
                         PipeSegment::Block(stmts) => for s in stmts { s.strip_spans(); },
+                        PipeSegment::EachLine(_, body) => for s in body { s.strip_spans(); },
                     }
                 }
             }

@@ -484,69 +484,140 @@ fn lower_stmt<'a>(
             Ok(ctx.intersection(&ctx_body))
         }
         ast::StmtKind::Pipe(segments) => {
-            // Optimization: if all segments are Run(...) or Sudo(...), use ir::Cmd::Pipe
+            // Check if the pipeline ends with an `each_line` segment
+            let last_idx = segments.len() - 1;
+            let mut each_line_seg = None;
             
-            let all_cmds = segments.iter().all(|s| matches!(s.node, ast::PipeSegment::Run(_) | ast::PipeSegment::Sudo(_)));
-
-            if all_cmds {
-                // Pure command pipeline optimization path
-                let mut lowered_segments = Vec::new();
-                for seg in segments {
-                     match &seg.node {
-                        ast::PipeSegment::Run(run_call) => {
-                             let (args, allow_fail) = lower_run_call_args(run_call, out, &mut ctx, sm, file, opts)?;
-                             lowered_segments.push((args, allow_fail));
-                        }
-                        ast::PipeSegment::Sudo(run_call) => {
-                             let (args, allow_fail) = lower_sudo_call_args(run_call, out, &mut ctx, sm, file, opts)?;
-                             lowered_segments.push((args, allow_fail));
-                        }
-                        _ => unreachable!(),
-                     }
-                }
-                out.push(ir::Cmd::Pipe(lowered_segments, loc));
-            } else {
-                // Mixed or Block pipeline path -> ir::Cmd::PipeBlocks
-                let mut lower_segments = Vec::new();
-                
-                for seg in segments {
-                    let mut block_cmds = Vec::new(); 
-                    let seg_loc = if opts.include_diagnostics {
-                        Some(resolve_span(seg.span, sm, file, opts.diag_base_dir.as_deref()))
-                    } else {
-                        None
-                    };
-
-                    match &seg.node {
-                        ast::PipeSegment::Block(stmts) => {
-                             lower_block(stmts, &mut block_cmds, ctx.clone(), sm, file, opts)?;
-                        }
-                        ast::PipeSegment::Run(run_call) => {
-                            let mut seg_ctx = ctx.clone();
-                            let (args, allow_fail) = lower_run_call_args(run_call, out, &mut seg_ctx, sm, file, opts)?;
-                            
-                            block_cmds.push(ir::Cmd::Exec {
-                                args,
-                                allow_fail,
-                                loc: seg_loc, 
-                            });
-                        }
-                        ast::PipeSegment::Sudo(run_call) => {
-                            let mut seg_ctx = ctx.clone();
-                            let (args, allow_fail) = lower_sudo_call_args(run_call, out, &mut seg_ctx, sm, file, opts)?;
-                            
-                            block_cmds.push(ir::Cmd::Exec {
-                                args,
-                                allow_fail,
-                                loc: seg_loc, 
-                            });
-                        }
+            for (i, seg) in segments.iter().enumerate() {
+                if let ast::PipeSegment::EachLine(var, body) = &seg.node {
+                    if i != last_idx {
+                        let msg = "each_line must be the last segment of a pipeline";
+                        let loc = resolve_span(seg.span, sm, file, opts.diag_base_dir.as_deref());
+                        return Err(CompileError::new(msg).with_location(loc));
                     }
-                    lower_segments.push(block_cmds);
+                    each_line_seg = Some((var, body));
                 }
-                out.push(ir::Cmd::PipeBlocks(lower_segments, loc));
             }
-            Ok(ctx)
+
+            if let Some((var, body)) = each_line_seg {
+                // Determine producer segments (all but the last)
+                let producer_segments = &segments[0..last_idx];
+                if producer_segments.is_empty() {
+                     let loc = resolve_span(segments[last_idx].span, sm, file, opts.diag_base_dir.as_deref());
+                     return Err(CompileError::new("each_line requires a producer").with_location(loc));
+                }
+                
+                // Lower the producer pipeline into a single Cmd
+                // We synthesize a StmtKind::Pipe for the producer part and recursively lower it
+                let mut producer_out = Vec::new();
+                let producer_stmt = ast::Stmt {
+                    node: ast::StmtKind::Pipe(producer_segments.to_vec()),
+                    span: segments[0].span.merge(segments[last_idx-1].span),
+                };
+                
+                // Note: producer runs in a subshell (pipeline), so we ignore its context changes
+                lower_stmt(producer_stmt, &mut producer_out, ctx.clone(), sm, file, opts)?;
+                
+                let producer_cmd = if producer_out.len() == 1 {
+                    producer_out.pop().unwrap()
+                } else {
+                    ir::Cmd::Group { body: producer_out }
+                };
+
+                // Lower the each_line body
+                // The body runs in the current context (process substitution), so changes persist
+                let mut body_cmds = Vec::new();
+                
+                // Track loop variable if we were doing strict var checking, but for now just register it locally
+                // Note: `lower_block` consumes ctx and returns a new one.
+                // We want the changes in body to propagate.
+                // However, sh2 rules for `for` loops (and similar) usually mean the loop var is visible?
+                // `each_line` var is scoped to the loop? 
+                // In Bash `while read x; do ... done`, x remains set after loop.
+                // If we want sh2 to be cleaner, maybe we scope it? 
+                // But sh2 `for` loops leak loop vars too (classic shell behavior).
+                // Let's stick to Bash behavior: variables set in body persist. Loop var persists.
+                
+                // We should add `var` to context so `try_run` checks know it exists?
+                // But `ctx` tracks *defined* variables.
+                // Yes, declare it defined.
+                ctx.insert(var);
+                
+                let ctx_after_body = lower_block(body, &mut body_cmds, ctx, sm, file, opts)?;
+                
+                out.push(ir::Cmd::PipeEachLine {
+                    producer: Box::new(producer_cmd),
+                    var: var.clone(),
+                    body: body_cmds,
+                });
+                
+                Ok(ctx_after_body)
+            } else {
+                // Optimization: if all segments are Run(...) or Sudo(...), use ir::Cmd::Pipe
+                
+                let all_cmds = segments.iter().all(|s| matches!(s.node, ast::PipeSegment::Run(_) | ast::PipeSegment::Sudo(_)));
+    
+                if all_cmds {
+                    // Pure command pipeline optimization path
+                    let mut lowered_segments = Vec::new();
+                    for seg in segments {
+                         match &seg.node {
+                            ast::PipeSegment::Run(run_call) => {
+                                 let (args, allow_fail) = lower_run_call_args(run_call, out, &mut ctx, sm, file, opts)?;
+                                 lowered_segments.push((args, allow_fail));
+                            }
+                            ast::PipeSegment::Sudo(run_call) => {
+                                 let (args, allow_fail) = lower_sudo_call_args(run_call, out, &mut ctx, sm, file, opts)?;
+                                 lowered_segments.push((args, allow_fail));
+                            }
+                            _ => unreachable!(),
+                         }
+                    }
+                    out.push(ir::Cmd::Pipe(lowered_segments, loc));
+                } else {
+                    // Mixed or Block pipeline path -> ir::Cmd::PipeBlocks
+                    let mut lower_segments = Vec::new();
+                    
+                    for seg in segments {
+                        let mut block_cmds = Vec::new(); 
+                        let seg_loc = if opts.include_diagnostics {
+                            Some(resolve_span(seg.span, sm, file, opts.diag_base_dir.as_deref()))
+                        } else {
+                            None
+                        };
+    
+                        match &seg.node {
+                            ast::PipeSegment::Block(stmts) => {
+                                 lower_block(stmts, &mut block_cmds, ctx.clone(), sm, file, opts)?;
+                            }
+                            ast::PipeSegment::Run(run_call) => {
+                                let mut seg_ctx = ctx.clone();
+                                let (args, allow_fail) = lower_run_call_args(run_call, out, &mut seg_ctx, sm, file, opts)?;
+                                
+                                block_cmds.push(ir::Cmd::Exec {
+                                    args,
+                                    allow_fail,
+                                    loc: seg_loc, 
+                                });
+                            }
+                            ast::PipeSegment::Sudo(run_call) => {
+                                let mut seg_ctx = ctx.clone();
+                                let (args, allow_fail) = lower_sudo_call_args(run_call, out, &mut seg_ctx, sm, file, opts)?;
+                                
+                                block_cmds.push(ir::Cmd::Exec {
+                                    args,
+                                    allow_fail,
+                                    loc: seg_loc, 
+                                });
+                            }
+                            ast::PipeSegment::EachLine(..) => unreachable!("EachLine handled above"),
+                        }
+                        lower_segments.push(block_cmds);
+                    }
+                    out.push(ir::Cmd::PipeBlocks(lower_segments, loc));
+                }
+                Ok(ctx)
+            }
         }
         ast::StmtKind::Break => {
             out.push(ir::Cmd::Break);

@@ -161,6 +161,11 @@ pub enum Cmd {
     },
     Pipe(Vec<(Vec<Val>, bool)>, Option<String>),
     PipeBlocks(Vec<Vec<Cmd>>, Option<String>),
+    PipeEachLine {
+        producer: Box<Cmd>,
+        var: String,
+        body: Vec<Cmd>,
+    },
     Case {
         expr: Val,
         arms: Vec<(Vec<Pattern>, Vec<Cmd>)>,
@@ -296,6 +301,10 @@ impl Cmd {
                 for block in blocks {
                     for cmd in block { cmd.strip_spans(); }
                 }
+            }
+            Cmd::PipeEachLine { producer, body, .. } => {
+                producer.strip_spans();
+                for cmd in body { cmd.strip_spans(); }
             }
             Cmd::ExecReplace(_, loc) => *loc = None,
             

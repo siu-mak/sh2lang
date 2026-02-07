@@ -148,6 +148,7 @@ fn format_stmt(stmt: &Stmt, depth: usize) -> String {
                         format!("sudo({})", parts.join(", "))
                     },
                     PipeSegment::Block(stmts) => format!("{{\n{}\n{}}}", format_block(stmts, depth + 1, false), indent_str(depth)),
+                    PipeSegment::EachLine(var, stmts) => format!("each_line {} {{\n{}\n{}}}", var, format_block(stmts, depth + 1, false), indent_str(depth)),
                 }
             }).collect();
             parts.join(" | ")

@@ -458,6 +458,7 @@ pub fn lex(sm: &SourceMap, file: &str) -> Result<Vec<Token>, Diagnostic> {
                     "import" => TokenKind::Import,
                     "input" => TokenKind::Input,
                     "confirm" => TokenKind::Confirm,
+                    "each_line" => TokenKind::EachLine,
                     _ => TokenKind::Ident(ident),
                 };
                 tokens.push(Token {
@@ -582,6 +583,7 @@ pub enum TokenKind {
     Import,
     Input,
     Confirm,
+    EachLine,
     Semi,
 }
 

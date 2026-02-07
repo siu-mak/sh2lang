@@ -90,6 +90,18 @@ with cwd("/tmp") {
 # after the block: cwd/env/redirect are back to normal
 ```
 
+### Example: safe pipeline iteration (`each_line`)
+
+Iterate over lines without losing variable updates or exit codes (Bash-only):
+
+```sh2
+let n = 0
+run("ls") | each_line f {
+  n = n + 1
+}
+print($"Count: {n}")  # n is updated (unlike | while read in subshell)
+```
+
 ### Bottom line
 
 You still end up with a regular **bash/POSIX sh script** as output, but you write the source in a way that’s easier to review, harder to accidentally break, and more predictable to run.
