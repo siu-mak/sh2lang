@@ -1,0 +1,16 @@
+
+func main() {
+    # This should return 1 but NOT abort the script
+    let p = which("definitely_not_a_real_command_xyz_123")
+    
+    # Check that we are still running
+    print("still_running=true")
+    
+    # Check values
+    let is_empty = (p == "")
+    let s = status()
+    let is_err = (s != 0)
+    
+    print("p_empty=" & bool_str(is_empty))
+    print("status_is_non_zero=" & bool_str(is_err))
+}

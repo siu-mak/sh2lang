@@ -1,0 +1,47 @@
+func main() {
+    # Create temp dir for test
+    let tmp = trim(capture(run("mktemp", "-d"), allow_fail=true))
+    if status() != 0 {
+        print_err("Failed to create tmp dir")
+        exit(1)
+    }
+    
+    # Create an executable in the temp dir
+    let bin = path_join(tmp, "mycmd")
+    write_file(bin, "#!/bin/sh\necho mycmd-ok\n")
+    run("chmod", "+x", bin)
+    
+    # Save original PATH
+    let orig_path = env.PATH
+    
+    # Test 1: PATH with empty segment in middle (should treat as .)
+    # PATH="/nope::/also-nope" means: /nope, then ., then /also-nope
+    cd(tmp)
+    export("PATH", "/nope::/also-nope")
+    let p1 = which("mycmd")
+    let s1 = status()
+    let ok1 = (p1 != "") and (s1 == 0)
+    print("mid_empty=" & bool_str(ok1))
+    
+    # Test 2: Leading empty segment
+    # PATH=":/usr/bin" means . comes first
+    export("PATH", ":/usr/bin")
+    let p2 = which("mycmd")
+    let s2 = status()
+    let ok2 = (p2 != "") and (s2 == 0)
+    print("lead_empty=" & bool_str(ok2))
+    
+    # Test 3: Trailing empty segment
+    # PATH="/nope:" means /nope, then .
+    export("PATH", "/nope:")
+    let p3 = which("mycmd")
+    let s3 = status()
+    let ok3 = (p3 != "") and (s3 == 0)
+    print("trail_empty=" & bool_str(ok3))
+    
+    # Restore PATH and cleanup
+    export("PATH", orig_path)
+    run("rm", "-rf", tmp, allow_fail=true)
+    
+    print("all_tests_done=true")
+}

@@ -1364,6 +1364,15 @@ fn emit_cmd(
                 } else {
                     out.push_str(&format!("{}__sh2_check \"$__sh2_status\" \"${{__sh2_loc:-}}\"\n", pad));
                 }
+            } else if matches!(val, Val::Which(_)) {
+                // which() is allow-fail by design: not-found is normal control flow
+                // Capture status but do NOT call __sh2_check
+                out.push_str(name);
+                out.push('=');
+                out.push_str(&emit_val(val, target)?);
+                out.push('\n');
+                out.push_str(&format!("{}__sh2_status=$?\n", pad));
+                // No __sh2_check: which() returning 1 (not found) is intentional
             } else {
                 out.push_str(name);
                 out.push('=');
@@ -3016,9 +3025,54 @@ __sh2_split() {
     }
     if usage.which {
         s.push_str(
-            r#"__sh2_which() { command -v -- "$1" 2>/dev/null || true; }
+            r#"__sh2_which() {
+  __sh2_cmd="$1"
+  case "$__sh2_cmd" in
+    */*)
+      if [ -x "$__sh2_cmd" ] && [ ! -d "$__sh2_cmd" ]; then printf '%s' "$__sh2_cmd"; return 0; fi
+      return 1
+      ;;
+  esac
+  # Save IFS and globbing state
+  __sh2_old_ifs="$IFS"
+  case "$-" in *f*) __sh2_had_noglob=1;; *) __sh2_had_noglob=0;; esac
+  IFS=:
+  set -f
+  # POSIX-safe PATH scan preserving empty segments
+  __sh2_p="${PATH:-.}"
+  __sh2_found=""
+  while :; do
+    case "$__sh2_p" in
+      *:*)
+        __sh2_d="${__sh2_p%%:*}"
+        __sh2_p="${__sh2_p#*:}"
+        ;;
+      *)
+        __sh2_d="$__sh2_p"
+        __sh2_p=""
+        ;;
+    esac
+    [ -z "$__sh2_d" ] && __sh2_d="."
+    __sh2_t="$__sh2_d/$__sh2_cmd"
+    if [ -x "$__sh2_t" ] && [ ! -d "$__sh2_t" ]; then
+      __sh2_found="$__sh2_t"
+      break
+    fi
+    [ -z "$__sh2_p" ] && break
+  done
+  # Restore IFS and globbing state
+  IFS="$__sh2_old_ifs"
+  if [ "$__sh2_had_noglob" = 1 ]; then set -f; else set +f; fi
+  if [ -n "$__sh2_found" ]; then
+    printf '%s' "$__sh2_found"
+    return 0
+  fi
+  return 1
+}
+
 "#,
         );
+
     }
     if usage.require {
         s.push_str(r#"__sh2_require() { for c in "$@"; do if ! command -v -- "$c" >/dev/null 2>&1; then printf '%s\n' "missing required command: $c" >&2; exit 127; fi; done; }

@@ -983,6 +983,50 @@ append_file("log.txt", "entry\n")
 - **Error behavior**: Same as `write_file`.
 - **Portable**: Works on both Bash and POSIX targets.
 
+### 10.8 Path Lookup
+
+#### `which(name)` → string
+
+Searches the system's `$PATH` for an executable and returns its path (or an empty string if not found).
+
+**Return value:**
+- Returns the first matching executable path from `$PATH` if found
+- Returns an empty string `""` if not found
+- The returned path may be relative if `$PATH` contains relative entries
+
+**Exit status:**
+- Returns exit code `0` when the command is found
+- Returns exit code `1` when the command is not found
+- This allows branching on the result: `if which("git") { ... }`
+
+**Usage patterns:**
+
+```sh2
+# Pattern 1: Branch on exit status (recommended)
+if which("docker") {
+    print("Docker is available")
+}
+
+# Pattern 2: Check the returned path
+let docker_path = which("docker")
+if docker_path != "" {
+    print("Docker found at: " & docker_path)
+}
+
+# Pattern 3: Use the path directly
+let sh_path = which("sh")
+run(sh_path, "-c", "echo hello")
+```
+
+**Implementation details:**
+- If `name` contains a slash (e.g. `"/bin/sh"` or `"./script"`), it checks that path directly
+- Otherwise, it searches directories in `$PATH`, preserving empty segments (which mean `.`)
+- Returns the first match that is an executable file (or symlink to one)
+- **Non-aborting**: `which()` returning 1 (not found) does not abort the script—it is a query builtin
+- Portable: Works on both Bash and POSIX targets without external `which` dependency
+
+
+
 ---
 
 ## 11. Targets and Portability

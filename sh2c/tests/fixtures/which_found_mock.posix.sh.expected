@@ -1,6 +1,50 @@
 #!/bin/sh
 __sh2_check() { __sh2_s="$1"; __sh2_l="$2"; __sh2_m="$3"; if [ "$__sh2_s" -ne 0 ]; then if [ "$__sh2_m" = "return" ]; then return "$__sh2_s"; fi; if [ -n "$__sh2_l" ]; then printf 'Error in %s\n' "$__sh2_l" >&2; fi; exit "$__sh2_s"; fi; }
-__sh2_which() { command -v -- "$1" 2>/dev/null || true; }
+__sh2_which() {
+  __sh2_cmd="$1"
+  case "$__sh2_cmd" in
+    */*)
+      if [ -x "$__sh2_cmd" ] && [ ! -d "$__sh2_cmd" ]; then printf '%s' "$__sh2_cmd"; return 0; fi
+      return 1
+      ;;
+  esac
+  # Save IFS and globbing state
+  __sh2_old_ifs="$IFS"
+  case "$-" in *f*) __sh2_had_noglob=1;; *) __sh2_had_noglob=0;; esac
+  IFS=:
+  set -f
+  # POSIX-safe PATH scan preserving empty segments
+  __sh2_p="${PATH:-.}"
+  __sh2_found=""
+  while :; do
+    case "$__sh2_p" in
+      *:*)
+        __sh2_d="${__sh2_p%%:*}"
+        __sh2_p="${__sh2_p#*:}"
+        ;;
+      *)
+        __sh2_d="$__sh2_p"
+        __sh2_p=""
+        ;;
+    esac
+    [ -z "$__sh2_d" ] && __sh2_d="."
+    __sh2_t="$__sh2_d/$__sh2_cmd"
+    if [ -x "$__sh2_t" ] && [ ! -d "$__sh2_t" ]; then
+      __sh2_found="$__sh2_t"
+      break
+    fi
+    [ -z "$__sh2_p" ] && break
+  done
+  # Restore IFS and globbing state
+  IFS="$__sh2_old_ifs"
+  if [ "$__sh2_had_noglob" = 1 ]; then set -f; else set +f; fi
+  if [ -n "$__sh2_found" ]; then
+    printf '%s' "$__sh2_found"
+    return 0
+  fi
+  return 1
+}
+
 main() {
   printf '%s\n' "$( __sh2_which 'mockcmd' )"
 }

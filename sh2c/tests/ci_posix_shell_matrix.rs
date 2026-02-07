@@ -98,3 +98,27 @@ fn ci_strict_posix_runs_under_dash() {
         panic!("Strict POSIX test failed (dash missing?): {}", msg);
     }
 }
+
+#[test]
+fn ci_which_basic() {
+    let _lock = ENV_LOCK.lock().unwrap();
+    assert_exec_matches_fixture_target("which_basic", TargetShell::Posix);
+}
+
+#[test]
+fn ci_which_symlink() {
+    let _lock = ENV_LOCK.lock().unwrap();
+    assert_exec_matches_fixture_target("which_symlink_ok", TargetShell::Posix);
+}
+
+#[test]
+fn ci_which_status() {
+    let _lock = ENV_LOCK.lock().unwrap();
+    assert_exec_matches_fixture_target("which_status_no_abort", TargetShell::Posix);
+}
+
+#[test]
+fn ci_which_path() {
+    let _lock = ENV_LOCK.lock().unwrap();
+    assert_exec_matches_fixture_target("which_path_empty_segments", TargetShell::Posix);
+}

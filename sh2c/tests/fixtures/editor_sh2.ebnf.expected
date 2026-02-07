@@ -196,6 +196,7 @@ builtin_expr = "arg" , "(" , expression , ")"
              | "bool_str" , "(" , expression , ")"
              | sudo_call
              | "sh" , "(" , expression , [ "," , arg_list ] , ")"
+             | "which" , "(" , expression , ")"
              ;
 
 arg_list = expression , { "," , expression } ; (* Deprecated/Legacy: use pos_arg_list or builtin_arg_list *)

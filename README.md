@@ -22,6 +22,14 @@ sh2 exists to keep the “I can run anything” power of shell, while making the
 - **Make side-effects local** (change env/cwd/redirects in a block, then automatically go back)
 - **Make commands safe by default** (`run("cmd", "arg1", "arg2")` instead of stringly shell code)
 
+Check for tools easily without fragile `command -v` constructs:
+
+```sh2
+if which("docker") != "" {
+  run("docker", "ps")
+}
+```
+
 ### Example: quoting and spaces (classic shell pain)
 
 Bash (easy to get wrong with spaces/word-splitting):

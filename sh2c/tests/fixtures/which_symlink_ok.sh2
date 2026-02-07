@@ -1,0 +1,32 @@
+
+func main() {
+    # Create temp dir using standard tools safely
+    let tmp_dir = trim(capture(run("mktemp", "-d"), allow_fail=true))
+    if status() != 0 {
+        print_err("Failed to create tmp dir")
+        exit(1)
+    }
+    
+    # Create executable script
+    let bin = path_join(tmp_dir, "my_tool")
+    write_file(bin, "#!/bin/sh\necho hi")
+    run("chmod", "+x", bin)
+
+    # Create symlink
+    let link = path_join(tmp_dir, "my_link")
+    run("ln", "-s", bin, link)
+
+    # Test path lookup with slash (validates strict executable check [ -x ] && [ ! -d ])
+    let found = which(link)
+    if found == link {
+        print("Found symlink correctly")
+    } else {
+        print("Failed to find symlink: " & link)
+        # Cleanup before exit
+        run("rm", "-rf", tmp_dir)
+        exit(1)
+    }
+
+    # Clean up
+    run("rm", "-rf", tmp_dir)
+}

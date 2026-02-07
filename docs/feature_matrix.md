@@ -184,6 +184,9 @@ This document maps implemented features to their proving test files, ensuring do
 | Feature | Description | Test File(s) |
 |---------|-------------|--------------|
 | `home()`, `path_join()` | path helpers | `syntax_path_helpers.rs` |
+| `which()` | path lookup | `ci_posix_shell_matrix` (fixtures: `which_basic.sh2`, `which_symlink_ok.sh2`, `which_status_no_abort.sh2`, `which_path_empty_segments.sh2`), `syntax_which_basic.rs`, `syntax_which_symlink.rs`, `syntax_which_status.rs`, `syntax_which_path.rs` |
+
+
 
 ---
 

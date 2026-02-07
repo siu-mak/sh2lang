@@ -1,0 +1,22 @@
+
+func main() {
+    # Test which() builtin
+    # We test for 'sh' which should exist in PATH on almost any system
+    let sh_path = which("sh")
+    let found_sh = (sh_path != "")
+    print("found sh: " & bool_str(found_sh))
+
+    # Test for non-existent command
+    let bad_path = which("non_existent_command_xyz_123")
+    let found_bad = (bad_path != "")
+    print("found bad: " & bool_str(found_bad))
+
+    # Test for absolute path (we use sh_path from above if found, or /bin/sh fallback)
+    if found_sh {
+        let abs_lookup = which(sh_path)
+        let found_abs = (abs_lookup == sh_path)
+        print("found absolute: " & bool_str(found_abs))
+    } else {
+        print("SKIP absolute test (sh not found)")
+    }
+}

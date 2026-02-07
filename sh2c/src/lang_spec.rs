@@ -94,6 +94,7 @@ pub const BUILTINS: &[&str] = &[
     "read_file",
     "write_file",
     "append_file",
+    "which",
 ];
 
 pub const OPERATORS: &[&str] = &[
