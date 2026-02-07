@@ -3134,8 +3134,5 @@ __sh2_split() {
 }
 
 fn is_prelude_helper(name: &str) -> bool {
-    matches!(
-        name,
-        "trim" | "before" | "after" | "replace" | "split" | "coalesce"
-    )
+    crate::builtins::PRELUDE_HELPERS.contains(&name)
 }

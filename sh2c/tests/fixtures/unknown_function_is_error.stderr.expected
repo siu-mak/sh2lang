@@ -1,0 +1,3 @@
+compile error: unknown_function_is_error.sh2:1:23: unknown function `nope` (use run("nope", ...) for external commands, or define func nope(...) { ... })
+func main() { let x = nope("arg") }
+                      ^~~~~~~~~~~

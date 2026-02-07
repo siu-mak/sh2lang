@@ -49,3 +49,8 @@ fn diag_span_bad_option_loc() {
 fn diag_span_multiline_expr() {
     assert_diag_output("diag_span_multiline_expr.sh2");
 }
+
+#[test]
+fn unknown_function_is_error() {
+    assert_diag_output("unknown_function_is_error.sh2");
+}

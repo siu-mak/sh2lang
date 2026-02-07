@@ -1,4 +1,5 @@
 use crate::ast::{self, Spanned};
+use crate::builtins;
 use crate::ir;
 use crate::span::{Span, SourceMap};
 use crate::error::CompileError;
@@ -12,17 +13,20 @@ struct LoweringContext<'a> {
     bool_vars: HashSet<String>,
     /// Variables that are known to hold list values (e.g. from list literals)
     list_vars: HashSet<String>,
+    /// User-defined function names for call validation
+    user_funcs: &'a HashSet<String>,
     opts: &'a LowerOptions,
     in_let_rhs: bool,
     tmp_counter: usize,
 }
 
 impl<'a> LoweringContext<'a> {
-    fn new(opts: &'a LowerOptions) -> Self {
+    fn new(opts: &'a LowerOptions, user_funcs: &'a HashSet<String>) -> Self {
         Self {
             run_results: HashSet::new(),
             bool_vars: HashSet::new(),
             list_vars: HashSet::new(),
+            user_funcs,
             opts,
             in_let_rhs: false,
             tmp_counter: 0,
@@ -75,6 +79,7 @@ impl<'a> LoweringContext<'a> {
             run_results,
             bool_vars,
             list_vars,
+            user_funcs: self.user_funcs,
             opts: self.opts,
             in_let_rhs: self.in_let_rhs,
             tmp_counter: std::cmp::max(self.tmp_counter, other.tmp_counter),
@@ -107,6 +112,8 @@ pub fn lower(p: ast::Program) -> Result<Vec<ir::Function>, CompileError> {
 pub fn lower_with_options(p: ast::Program, opts: &LowerOptions) -> Result<Vec<ir::Function>, CompileError> {
     let has_main = p.functions.iter().any(|f| f.name == "main");
 
+    // Collect user-defined function names for call validation
+    let user_funcs: HashSet<String> = p.functions.iter().map(|f| f.name.clone()).collect();
 
     let entry_file = &p.entry_file;
     let maps = &p.source_maps;
@@ -122,16 +129,16 @@ pub fn lower_with_options(p: ast::Program, opts: &LowerOptions) -> Result<Vec<ir
     }
     for f in p.functions {
         let sm = maps.get(&f.file).expect("Missing source map");
-        ir_funcs.push(lower_function(f, sm, opts)?);
+        ir_funcs.push(lower_function(f, sm, opts, &user_funcs)?);
     }
 
     Ok(ir_funcs)
 }
 
 /// Lower a single function
-fn lower_function(f: ast::Function, sm: &SourceMap, opts: &LowerOptions) -> Result<ir::Function, CompileError> {
+fn lower_function(f: ast::Function, sm: &SourceMap, opts: &LowerOptions, user_funcs: &HashSet<String>) -> Result<ir::Function, CompileError> {
     let mut body = Vec::new();
-    let mut ctx = LoweringContext::new(opts);
+    let mut ctx = LoweringContext::new(opts, user_funcs);
 
     for stmt in f.body {
         ctx = lower_stmt(stmt, &mut body, ctx, sm, &f.file, opts)?;
@@ -1598,6 +1605,33 @@ fn lower_expr<'a>(e: ast::Expr, out: &mut Vec<ir::Cmd>, ctx: &mut LoweringContex
                     e.span,
                 )));
             } else {
+                // Validate: must be user-defined or a prelude helper
+                // SAFETY: EXPR_BUILTINS should have been handled earlier in this match chain.
+                // If one reaches here, it's an internal compiler bug.
+                if builtins::is_expr_builtin(&name) {
+                    return Err(CompileError::new(sm.format_diagnostic(
+                        file,
+                        opts.diag_base_dir.as_deref(),
+                        &format!(
+                            "internal error: builtin `{}` not lowered correctly \
+                             (please report this bug)",
+                            name
+                        ),
+                        e.span,
+                    )));
+                }
+                if !ctx.user_funcs.contains(&name) && !builtins::is_prelude_helper(&name) {
+                    return Err(CompileError::new(sm.format_diagnostic(
+                        file,
+                        opts.diag_base_dir.as_deref(),
+                        &format!(
+                            "unknown function `{}` (use run(\"{}\", ...) for external commands, \
+                             or define func {}(...) {{ ... }})",
+                            name, name, name
+                        ),
+                        e.span,
+                    )));
+                }
                 let lowered_args = args
                     .into_iter()
                     .map(|a| lower_expr(a, out, ctx, sm, file))

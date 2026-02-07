@@ -1,0 +1,11 @@
+// Test that expression builtins compile correctly (not caught by fallback)
+func main() {
+    // lines() is an EXPR_BUILTIN that lowers to ir::Val::Lines
+    for line in lines("a\nb\nc") {
+        print(line)
+    }
+    // split() is an EXPR_BUILTIN that lowers to ir::Val::Split
+    for part in split("x:y:z", ":") {
+        print(part)
+    }
+}

@@ -1,0 +1,1 @@
+func main() { let t = trim("  hi  "); print(t) }

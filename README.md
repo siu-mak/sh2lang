@@ -270,6 +270,8 @@ func greet(name, title) {
 }
 ```
 
+> **Note**: Function calls are validated at compile time. Call undefined functions and you'll get an error with hints. Use `run("cmd", ...)` for external commands.
+
 ### Statement Separation
 
 Statements inside `{ ... }` can be separated by newlines or semicolons (`;`). Semicolons are optional and mainly useful for one-liners.

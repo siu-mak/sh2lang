@@ -1,4 +1,8 @@
 
+func echo(a, b, c) {
+    return a & " " & b & " " & c
+}
+
 func main() {
     print(echo("1", "2", "3"))
 }

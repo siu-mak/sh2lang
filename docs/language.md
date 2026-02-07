@@ -52,6 +52,8 @@ func greet(name, title) {
 
 Parameters are bound positionally for general functions (first param receives the first argument, etc.).
 
+> **Compile-time validation**: Function calls in expression context are validated at compile time. Calling an undefined function (not user-defined or a builtin) produces a compile error with hints. To invoke external commands, use `run("cmd", ...)`.
+
 The designated entry point is:
 
 ```sh2

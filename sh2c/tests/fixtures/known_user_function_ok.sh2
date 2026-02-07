@@ -1,0 +1,2 @@
+func BASE() { return "/base" }
+func main() { let p = BASE(); print(p) }

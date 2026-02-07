@@ -1,4 +1,5 @@
 pub mod ast;
+pub mod builtins;
 pub mod codegen;
 pub mod diag_path;
 pub mod error;

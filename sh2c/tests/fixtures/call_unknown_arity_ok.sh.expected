@@ -1,5 +1,13 @@
 #!/usr/bin/env bash
 __sh2_check() { local s="$1"; local loc="$2"; local mode="$3"; if (( s != 0 )); then if [[ "$mode" == "return" ]]; then return "$s"; else if [[ -n "$loc" ]]; then printf 'Error in %s\n' "$loc" >&2; fi; exit "$s"; fi; fi; }
+echo() {
+  local a="${1}"
+  local b="${2}"
+  local c="${3}"
+  printf '%s' "$a"' '"$b"' '"$c"
+  return 0
+}
+
 main() {
   printf '%s\n' "$( echo '1' '2' '3' )"
 }
