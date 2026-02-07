@@ -373,9 +373,23 @@ exec("bash")
 Executes a shell snippet by passing it to the target shell in a child process.
 
 **Execution model:**
-- **Child shell process**: Runs via `bash -c "$cmd"` (Bash target) or `sh -c "$cmd"` (POSIX target)
-- **No persistence**: Changes to working directory (`cd`), non-exported variables, or other local shell state do **not** affect subsequent statements
-- **Inherits environment**: Exported environment variables are inherited by the child shell
+- **Isolated Child Process**: Runs in a fresh shell process (e.g., `bash -c "$cmd"`).
+- **No Argument Inheritance**: The child shell does **not** inherit positional parameters (`$1`, `$@`, `$*`) from the parent script because arguments are not forwarded (the compiler does not pass `-- "$@"`).
+- **Inherits environment**: Exported environment variables are inherited.
+- **No persistence**: Local state changes (`cd`, `local var`) do not affect the parent script.
+
+**Gotcha: Positionals are empty**
+Because `sh(...)` starts a new shell without forwarding arguments, `$@` is empty inside it.
+
+```sh2
+# If script is run as: ./myscript.sh arg1 arg2
+
+# sh2 sees them:
+print(argc())          # Output: 2
+
+# sh(...) sees nothing:
+sh(r""" echo "Inside: $@" """)  # Output: Inside:
+```
 
 **Probe semantics (non-fail-fast):**
 - Updates `status()` with the command's exit code
@@ -388,6 +402,32 @@ sh("echo hello")
 let cmd = "echo dynamic"
 sh(cmd)
 sh("echo " & cmd)
+```
+
+**Passing arguments safely:**
+Since `$@` isn't forwarded, you must pass values explicitly.
+
+**Option A: Use sh2 arguments (Recommended)**
+Use `arg(n)` or `argv()` in your sh2 code instead of trying to access `$1` inside `sh(...)`.
+
+```sh2
+# Safe and clear
+print("Processing " & arg(1))
+```
+
+**Option B: Avoid concatenation**
+Do not concatenate untrusted input into `sh(...)`. It is difficult to quote correctly and easy to introduce injection vulnerabilities.
+
+Instead, usage `run(...)` which passes arguments safely:
+
+```sh2
+let file = arg(1)
+
+# Unsafe (injection risk):
+# sh("ls -l " & file)
+
+# Safe:
+run("ls", "-l", file)
 ```
 
 **Probe pattern** (explicit status check):

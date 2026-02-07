@@ -295,7 +295,7 @@ dependencies = [
 
 [[package]]
 name = "sh2c"
-version = "0.1.1"
+version = "0.1.2-dev"
 dependencies = [
  "assert_cmd",
  "lazy_static",
@@ -306,7 +306,7 @@ dependencies = [
 
 [[package]]
 name = "sh2do"
-version = "0.1.1"
+version = "0.1.2-dev"
 dependencies = [
  "assert_cmd",
  "predicates",
@@ -316,7 +316,7 @@ dependencies = [
 
 [[package]]
 name = "sh2lang"
-version = "0.1.1"
+version = "0.1.2-dev"
 
 [[package]]
 name = "syn"

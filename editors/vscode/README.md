@@ -3,6 +3,7 @@
 <img src="images/sh2logo_256.png" alt="sh2 logo" width="128" />
 
 Syntax highlighting for the **sh2** structured shell language.
+> **Versioning Note**: Versions ending in `-dev` (e.g. `0.1.2-dev`) are for local development and testing. For VS Code Marketplace publishing, a standard semantic version (X.Y.Z) is required.
 
 ## Manual installation (no Marketplace)
 
