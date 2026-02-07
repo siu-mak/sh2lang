@@ -2,8 +2,6 @@
 title: "Tutorials"
 ---
 
-> **Note**: This is the canonical list of tutorials; articles and other pages should link here instead of duplicating lists.
-
 # Tutorials
 
 Welcome to the sh2 learning path! These hands-on guides will take you from writing your first script to building robust, verifiable CLI tools.
