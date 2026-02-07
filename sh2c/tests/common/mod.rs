@@ -1056,9 +1056,21 @@ pub fn strip_spans_stmt(s: &mut sh2c::ast::Stmt) {
             strip_spans_expr(cond);
             for s in body { strip_spans_stmt(s); }
         }
-        sh2c::ast::StmtKind::For { items, body, .. } => {
-            for e in items { strip_spans_expr(e); }
-            for s in body { strip_spans_stmt(s); }
+        sh2c::ast::StmtKind::For { iterable, body, .. } => {
+            match iterable {
+                sh2c::ast::ForIterable::List(items) => {
+                     for i in items {
+                         strip_spans_expr(i);
+                     }
+                }
+                sh2c::ast::ForIterable::Range(start, end) => {
+                    strip_spans_expr(start);
+                    strip_spans_expr(end);
+                }
+            }
+            for s in body {
+                strip_spans_stmt(s);
+            }
         }
         sh2c::ast::StmtKind::ForMap { body, .. } => {
             for s in body { strip_spans_stmt(s); }

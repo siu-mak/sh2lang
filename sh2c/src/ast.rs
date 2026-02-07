@@ -180,6 +180,12 @@ pub enum PipeSegment {
 }
 
 #[derive(Debug, Clone, PartialEq)]
+pub enum ForIterable {
+    List(Vec<Expr>),
+    Range(Box<Expr>, Box<Expr>),
+}
+
+#[derive(Debug, Clone, PartialEq)]
 pub enum StmtKind {
     Let {
         name: String,
@@ -205,7 +211,7 @@ pub enum StmtKind {
     },
     For {
         var: String,
-        items: Vec<Expr>,
+        iterable: ForIterable,
         body: Vec<Stmt>,
     },
     ForMap {
@@ -371,9 +377,21 @@ impl StmtKind {
                 cond.strip_spans();
                 for s in body { s.strip_spans(); }
             }
-            StmtKind::For { items, body, .. } => {
-                for e in items { e.strip_spans(); }
-                for s in body { s.strip_spans(); }
+            StmtKind::For { iterable, body, .. } => {
+                match iterable {
+                    ForIterable::List(items) => {
+                         for i in items {
+                             i.strip_spans();
+                         }
+                    }
+                    ForIterable::Range(start, end) => {
+                        start.strip_spans();
+                        end.strip_spans();
+                    }
+                }
+                for s in body {
+                    s.strip_spans();
+                }
             }
             StmtKind::ForMap { body, .. } => {
                 for s in body { s.strip_spans(); }

@@ -113,10 +113,17 @@ fn format_stmt(stmt: &Stmt, depth: usize) -> String {
         StmtKind::While { cond, body } => {
             format!("while {} {{\n{}\n{}}}", format_expr(cond), format_block(body, depth + 1, false), indent_str(depth))
         }
-        StmtKind::For { var, items, body } => {
-            let items_str: Vec<String> = items.iter().map(format_expr).collect();
-            let items_joined = if items.len() == 1 { items_str[0].clone() } else { format!("({})", items_str.join(", ")) };
-            format!("for {} in {} {{\n{}\n{}}}", var, items_joined, format_block(body, depth + 1, false), indent_str(depth))
+        StmtKind::For { var, iterable, body } => {
+            let items_str = match iterable {
+                ForIterable::List(items) => {
+                    let parts: Vec<String> = items.iter().map(format_expr).collect();
+                    if parts.len() == 1 { parts[0].clone() } else { format!("({})", parts.join(", ")) }
+                },
+                ForIterable::Range(start, end) => {
+                    format!("{}..{}", format_expr(start), format_expr(end))
+                }
+            };
+            format!("for {} in {} {{\n{}\n{}}}", var, items_str, format_block(body, depth + 1, false), indent_str(depth))
         }
         StmtKind::ForMap { key_var, val_var, map, body } => {
             format!("for ({}, {}) in {} {{\n{}\n{}}}", key_var, val_var, map, format_block(body, depth + 1, false), indent_str(depth))

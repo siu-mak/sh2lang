@@ -134,6 +134,12 @@ pub enum CompareOp {
     Ge,
 }
 
+#[derive(Debug, Clone, PartialEq)]
+pub enum ForIterable {
+    List(Vec<Val>),
+    Range(Val, Val),
+}
+
 #[derive(Debug)]
 pub enum Cmd {
     Assign(String, Val, Option<String>),
@@ -158,7 +164,7 @@ pub enum Cmd {
     },
     For {
         var: String,
-        items: Vec<Val>,
+        iterable: ForIterable,
         body: Vec<Cmd>,
     },
     ForMap {

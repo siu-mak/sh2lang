@@ -131,7 +131,21 @@ pub fn lex(sm: &SourceMap, file: &str) -> Result<Vec<Token>, Diagnostic> {
                     tokens.push(Token { kind: TokenKind::Amp, span: Span::new(start, lexer.pos) });
                 }
             }
-            '.' => { lexer.next(); tokens.push(Token { kind: TokenKind::Dot, span: Span::new(start, lexer.pos) }); }
+            '.' => {
+                lexer.next();
+                if let Some('.') = lexer.peek() {
+                     lexer.next();
+                     tokens.push(Token {
+                         kind: TokenKind::DotDot,
+                         span: Span::new(start, lexer.pos),
+                     });
+                } else {
+                     tokens.push(Token {
+                         kind: TokenKind::Dot,
+                         span: Span::new(start, lexer.pos),
+                     });
+                }
+            }
             '|' => {
                 lexer.next();
                 if lexer.peek() == Some(&'|') {
@@ -321,12 +335,12 @@ pub fn lex(sm: &SourceMap, file: &str) -> Result<Vec<Token>, Diagnostic> {
                                    break;
                                }
                                // Allow escaping quote? Python raw string keeps backslash.
-                               // r"\"" -> string is "\""
+                               // r\"\\\"\" -> string is "\\""
                                if ch == '\\' {
                                    lexer.next();
-                                   if lexer.peek() == Some(&'"') {
+                                   if lexer.peek() == Some(&'\"') {
                                        s.push('\\');
-                                       s.push('"');
+                                       s.push('\"');
                                        lexer.next();
                                        continue;
                                    }
@@ -561,6 +575,7 @@ pub enum TokenKind {
     RBracket,
     Comma,
     Dot,
+    DotDot,
     Set,
     PipeKw,
     Log,

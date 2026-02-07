@@ -270,24 +270,40 @@ impl<'a> Parser<'a> {
                     self.advance();
                     self.expect(TokenKind::In)?;
 
-                    let items = if self.match_kind(TokenKind::LParen) {
+                    let iterable = if self.match_kind(TokenKind::LParen) {
                         let mut items = Vec::new();
                         if !self.match_kind(TokenKind::RParen) {
-                            loop {
-                                items.push(self.parse_expr()?);
-                                if !self.match_kind(TokenKind::Comma) {
-                                    break;
+                            let first_expr = self.parse_expr()?;
+                            
+                            if self.match_kind(TokenKind::DotDot) {
+                                // This is a parenthesized range: (start..end)
+                                let end_expr = self.parse_expr()?;
+                                self.expect(TokenKind::RParen)?;
+                                ForIterable::Range(Box::new(first_expr), Box::new(end_expr))
+                            } else {
+                                // This is a list: continue parsing comma-separated items
+                                items.push(first_expr);
+                                while self.match_kind(TokenKind::Comma) {
+                                    items.push(self.parse_expr()?);
                                 }
+                                self.expect(TokenKind::RParen)?;
+                                ForIterable::List(items)
                             }
-                            self.expect(TokenKind::RParen)?;
+                        } else {
+                            ForIterable::List(items)
                         }
-                        items
                     } else {
-                        vec![self.parse_expr()?]
+                        let start = self.parse_expr()?;
+                        if self.match_kind(TokenKind::DotDot) {
+                            let end = self.parse_expr()?;
+                            ForIterable::Range(Box::new(start), Box::new(end))
+                        } else {
+                            ForIterable::List(vec![start])
+                        }
                     };
 
                     let body = self.parse_brace_stmt_block()?;
-                    StmtKind::For { var, items, body }
+                    StmtKind::For { var, iterable, body }
                 }
             }
             TokenKind::Break => {

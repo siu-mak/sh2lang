@@ -20,6 +20,7 @@ const EXCLUDED_SYNTAX_TESTS: &[(&str, &str)] = &[
     ("syntax_bool_var.rs", "implementation detail: boolean variable assignment internals"),
     ("syntax_bool_compare_literals.rs", "implementation detail: bool comparison internals"),
     ("syntax_capture_nested_named_arg_allow_fail.rs", "Internal hardening"),
+    ("syntax_range_tests.rs", "Documented in language.md"),
     ("syntax_run_option_leakage.rs", "Internal hardening"),
     ("syntax_sh_expr.rs", "Supporting fixture verification"),
     ("syntax_bool_str_as_arg.rs", "implementation detail: bool_str() argument handling"),

@@ -72,7 +72,8 @@ elif_clause = "elif" , expression , block ;
 else_clause = "else" , block ;
 
 while_stmt = "while" , expression , block ;
-for_stmt = "for" , identifier , "in" , expression , block ;
+for_stmt = "for" , identifier , "in" , for_iterable , block ;
+for_iterable = expression | expression , ".." , expression | "(" , expression , ".." , expression , ")" ;
 for_map_stmt = "for" , "(" , identifier , "," , identifier , ")" , "in" , identifier , block ;
 
 try_catch_stmt = "try" , block , "catch" , block ;

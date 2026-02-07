@@ -450,17 +450,28 @@ fn lower_stmt<'a>(
             });
             Ok(ctx.intersection(&ctx_body))
         }
-        ast::StmtKind::For { var, items, body } => {
-            let lowered_items = items
-                .into_iter()
-                .map(|i| lower_expr(i, out, &mut ctx, sm, file))
-                .collect::<Result<Vec<_>, _>>()?;
+        ast::StmtKind::For { var, iterable, body } => {
+            let ir_iterable = match iterable {
+                ast::ForIterable::List(items) => {
+                     let lowered_items = items
+                        .into_iter()
+                        .map(|i| lower_expr(i, out, &mut ctx, sm, file))
+                        .collect::<Result<Vec<_>, _>>()?;
+                     ir::ForIterable::List(lowered_items)
+                },
+                ast::ForIterable::Range(start, end) => {
+                    let start_val = lower_expr(*start, out, &mut ctx, sm, file)?;
+                    let end_val = lower_expr(*end, out, &mut ctx, sm, file)?;
+                    ir::ForIterable::Range(start_val, end_val)
+                }
+            };
+            
             let mut lower_body = Vec::new();
             let ctx_body = lower_block(&body, &mut lower_body, ctx.clone(), sm, file, opts)?;
 
             out.push(ir::Cmd::For {
                 var,
-                items: lowered_items,
+                iterable: ir_iterable,
                 body: lower_body,
             });
             Ok(ctx.intersection(&ctx_body))

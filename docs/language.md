@@ -225,6 +225,42 @@ print("Status: " & ok)  # Output: Status: true
    ```
 
 
+### For Loops
+
+Iterate over a list of items:
+
+```sh2
+for x in (1, 2, 3) {
+    print(x)
+}
+```
+
+Or a range of numbers (inclusive):
+
+```sh2
+for x in 1..10 {
+    print(x)
+}
+
+for i in 1..argc() {
+    print(arg(i))
+}
+
+# Parentheses are also supported:
+for x in (1..10) {
+    print(x)
+}
+
+# Spacing around operator is allowed:
+for x in 1 .. 10 {
+    print(x)
+}
+```
+
+> **Note:** Range loops use the external `seq` command at runtime. Ensure `seq` is available in your environment (part of coreutils). The range is inclusive: `1..3` produces `1 2 3`.
+
+### While Loops (Bash-only)
+
 ### 3.4 Lists (Bash-only)
 
 ```sh2

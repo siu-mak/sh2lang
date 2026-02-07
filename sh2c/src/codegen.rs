@@ -138,9 +138,17 @@ fn visit_cmd(cmd: &Cmd, usage: &mut PreludeUsage, include_diagnostics: bool) {
                 }
             }
         }
-        Cmd::For { items, body, .. } => {
-            for i in items {
-                visit_val(i, usage);
+        Cmd::For { iterable, body, .. } => {
+            match iterable {
+                crate::ir::ForIterable::List(items) => {
+                     for i in items {
+                         visit_val(i, usage);
+                     }
+                }
+                crate::ir::ForIterable::Range(start, end) => {
+                    visit_val(start, usage);
+                    visit_val(end, usage);
+                }
             }
             for c in body {
                 visit_cmd(c, usage, include_diagnostics);
@@ -1664,97 +1672,126 @@ fn emit_cmd(
             }
         }
 
-        Cmd::For { var, items, body } => {
-            // Check if we need POSIX list iteration (file-based)
-            let is_posix_list_mode = target == TargetShell::Posix && items.iter().any(|i|
-                matches!(i, Val::Split { .. } | Val::Lines(_)) ||
-                (if let Val::Var(n) = i { ctx.known_lists.contains(n) } else { false })
-            );
+        Cmd::For { var, iterable, body } => {
+            match iterable {
+                crate::ir::ForIterable::List(items) => {
+                    // Check if we need POSIX list iteration (file-based)
+                    let is_posix_list_mode = target == TargetShell::Posix && items.iter().any(|i|
+                        matches!(i, Val::Split { .. } | Val::Lines(_)) ||
+                        (if let Val::Var(n) = i { ctx.known_lists.contains(n) } else { false })
+                    );
 
-            if is_posix_list_mode {
-                 // POSIX List Iteration: Generate stream to temp file, then while-read it to preserve body semantics
-                 out.push_str(&pad);
-                 out.push_str(&format!("__sh2_for_tmp_{}=$(__sh2_tmpfile)\n", var));
-                 out.push_str(&pad);
-                 out.push_str("{\n");
-                 for item in items {
-                     match item {
-                         Val::Split { s, delim } => {
-                             out.push_str(&format!("{}  __sh2_split {} {}\n", pad, emit_val(s, target)?, emit_val(delim, target)?));
-                         }
-                         Val::Lines(_inner) => {
-                             return Err(CompileError::unsupported("lines() iteration not supported in POSIX", target));
-                         }
-                         Val::Var(n) if ctx.known_lists.contains(n) => {
-                             out.push_str(&format!("{}  cat \"${}\"\n", pad, n));
-                         }
-                         _ => {
-                             // Treat other items (literals, unknown string vars) as single lines
-                             out.push_str(&format!("{}  echo {}\n", pad, emit_word(item, target)?));
-                         }
-                     }
-                 }
-                 out.push_str(&format!("{}}} > \"$__sh2_for_tmp_{}\"\n", pad, var));
+                    if is_posix_list_mode {
+                        // POSIX List Iteration: Generate stream to temp file, then while-read it to preserve body semantics
+                        out.push_str(&pad);
+                        out.push_str(&format!("__sh2_for_tmp_{}=$(__sh2_tmpfile)\n", var));
+                        out.push_str(&pad);
+                        out.push_str("{\n");
+                        for item in items {
+                            match item {
+                                Val::Split { s, delim } => {
+                                    out.push_str(&format!("{}  __sh2_split {} {}\n", pad, emit_val(s, target)?, emit_val(delim, target)?));
+                                }
+                                Val::Lines(inner) => {
+                                    if let Val::ReadFile(path) = &**inner {
+                                        out.push_str(&format!("{}  cat {}\n", pad, emit_val(path, target)?));
+                                    } else {
+                                        return Err(CompileError::unsupported("lines() iteration not supported in POSIX", target));
+                                    }
+                                }
+                                Val::Var(n) if ctx.known_lists.contains(n) => {
+                                    out.push_str(&format!("{}  cat \"${}\"\n", pad, n));
+                                }
+                                _ => {
+                                    // Treat other items (literals, unknown string vars) as single lines
+                                    out.push_str(&format!("{}  printf '%s\\n' {}\n", pad, emit_val(item, target)?));
+                                }
+                            }
+                        }
+                        out.push_str(&pad);
+                        out.push_str(&format!("}} > \"$__sh2_for_tmp_{}\"\n", var));
+                        
+                        out.push_str(&pad);
+                        out.push_str(&format!("while IFS= read -r {} || [ -n \"${}\" ]; do\n", var, var));
+                    } else {
+                        // Pre-process any Lines() / Split items for Bash (Arrays)
+                        for (idx, item) in items.iter().enumerate() {
+                            if let Val::Lines(inner) = item {
+                                if target == TargetShell::Posix {
+                                    return Err(CompileError::unsupported("lines() iteration not supported in POSIX", target));
+                                }
+                                out.push_str(&pad);
+                                out.push_str(&format!("__sh2_lines {} __sh2_for_lines_{}\n", emit_val(inner, target)?, idx));
+                            }
+                            if let Val::Split { s, delim } = item {
+                                if target == TargetShell::Bash {
+                                    out.push_str(&pad);
+                                    out.push_str(&format!("__sh2_split __sh2_for_split_{} {} {}\n", idx, emit_val(s, target)?, emit_val(delim, target)?));
+                                }
+                            }
+                        }
 
-                 out.push_str(&format!("{}while IFS= read -r {} || [ -n \"${}\" ]; do\n", pad, var, var));
-                 for c in body {
-                     emit_cmd(c, out, indent + 2, opts, in_cond_ctx, ctx)?;
-                 }
-                 out.push_str(&format!("{}done < \"$__sh2_for_tmp_{}\"\n", pad, var));
-                 out.push_str(&format!("{}rm -f \"$__sh2_for_tmp_{}\"\n", pad, var)); // Early cleanup
-                 return Ok(());
-            }
+                        // Standard for loop
+                        out.push_str(&pad);
+                        out.push_str(&format!("for {} in", var));
+                        for (idx, item) in items.iter().enumerate() {
+                            match item {
+                                Val::Lines(_) => {
+                                    out.push_str(&format!(" \"${{__sh2_for_lines_{}[@]}}\"", idx));
+                                }
+                                Val::Split { .. } => {
+                                    // Bash array pre-calc handled above
+                                    out.push_str(&format!(" \"${{__sh2_for_split_{}[@]}}\"", idx));
+                                }
+                                Val::List(elems) => {
+                                    for elem in elems {
+                                        out.push(' ');
+                                        out.push_str(&emit_word(elem, target)?);
+                                    }
+                                }
+                                Val::Var(name) => {
+                                    if target == TargetShell::Posix {
+                                        return Err(CompileError::unsupported("Iterating over array variable not supported in POSIX", target));
+                                    }
+                                    out.push_str(&format!(" \"${{{}[@]}}\"", name));
+                                }
+                                _ => {
+                                    out.push(' ');
+                                    out.push_str(&emit_word(item, target)?);
+                                }
+                            }
+                        }
+                        out.push_str("; do\n");
+                    }
 
-            // Pre-process any Lines() / Split items for Bash (Arrays)
-            for (idx, item) in items.iter().enumerate() {
-                if let Val::Lines(inner) = item {
-                    if target == TargetShell::Posix {
-                        return Err(CompileError::unsupported("lines() iteration not supported in POSIX", target));
+                    for c in body {
+                        emit_cmd(c, out, indent + 2, opts, in_cond_ctx, ctx)?;
+                    }
+
+                    if is_posix_list_mode {
+                        out.push_str(&pad);
+                        out.push_str("done < \"$__sh2_for_tmp_");
+                        out.push_str(var);
+                        out.push_str("\"\n");
+                        out.push_str(&pad);
+                        out.push_str(&format!("rm -f \"$__sh2_for_tmp_{}\"\n", var));
+                    } else {
+                        out.push_str(&pad);
+                        out.push_str("done\n");
+                    }
+                }
+                crate::ir::ForIterable::Range(start, end) => {
+                    out.push_str(&pad);
+                    // Use seq for ranges
+                    out.push_str(&format!("for {} in $(seq {} {}); do\n", var, emit_val(start, target)?, emit_val(end, target)?));
+                    
+                    for c in body {
+                        emit_cmd(c, out, indent + 2, opts, in_cond_ctx, ctx)?;
                     }
                     out.push_str(&pad);
-                    out.push_str(&format!("__sh2_lines {} __sh2_for_lines_{}\n", emit_val(inner, target)?, idx));
-                }
-                if let Val::Split { s, delim } = item {
-                    if target == TargetShell::Bash {
-                        out.push_str(&pad);
-                        out.push_str(&format!("__sh2_split __sh2_for_split_{} {} {}\n", idx, emit_val(s, target)?, emit_val(delim, target)?));
-                    }
+                    out.push_str("done\n");
                 }
             }
-
-            out.push_str(&format!("{}for {} in", pad, var));
-            for (idx, item) in items.iter().enumerate() {
-                match item {
-                    Val::Lines(_) => {
-                         out.push_str(&format!(" \"${{__sh2_for_lines_{}[@]}}\"", idx));
-                    }
-                    Val::Split { .. } => {
-                        // Bash array pre-calc handled above
-                        out.push_str(&format!(" \"${{__sh2_for_split_{}[@]}}\"", idx));
-                    }
-                    Val::List(elems) => {
-                        for elem in elems {
-                            out.push(' ');
-                            out.push_str(&emit_word(elem, target)?);
-                        }
-                    }
-                    Val::Var(name) => {
-                        if target == TargetShell::Posix {
-                             return Err(CompileError::unsupported("Iterating over array variable not supported in POSIX", target));
-                        }
-                        out.push_str(&format!(" \"${{{}[@]}}\"", name));
-                    }
-                    _ => {
-                        out.push(' ');
-                        out.push_str(&emit_word(item, target)?);
-                    }
-                }
-            }
-            out.push_str("; do\n");
-            for c in body {
-                emit_cmd(c, out, indent + 2, opts, in_cond_ctx, ctx)?;
-            }
-            out.push_str(&format!("{}done\n", pad));
         }
         Cmd::ForMap {
             key_var,
