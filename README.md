@@ -84,7 +84,32 @@ You still end up with a regular **bash/POSIX sh script** as output, but you writ
 
 ---
 
-## Install / Build
+## Installation (APT – Ubuntu 22.04 / jammy)
+
+For **Ubuntu 22.04 (jammy)**, the recommended way to install sh2lang is via the official APT repository.
+
+```bash
+# Import the sh2lang APT signing key
+curl -fsSL https://siu-mak.github.io/sh2lang/sh2lang.asc \
+  | sudo tee /usr/share/keyrings/sh2lang-archive-keyring.asc >/dev/null
+
+# Add the APT repository
+echo "deb [signed-by=/usr/share/keyrings/sh2lang-archive-keyring.asc] https://siu-mak.github.io/sh2lang/ jammy main" \
+  | sudo tee /etc/apt/sources.list.d/sh2lang.list
+
+# Install
+sudo apt-get update
+sudo apt-get install sh2lang
+```
+
+Verify the installation:
+
+```bash
+sh2c --version
+sh2do --help
+```
+
+## Alternative: build from source
 
 ### Build from source
 
@@ -123,6 +148,12 @@ Then from any directory:
 sh2c --help
 sh2do 'print("hello")'
 ```
+
+> **Note (for building from source):**
+> If you plan to build sh2lang from source instead of using the APT package,
+> you need a recent Rust toolchain and standard build tools.
+>
+> See **[Getting Started](docs/tutorials/01-getting-started.md#prerequisites)** for details.
 
 ---
 
@@ -462,11 +493,14 @@ See [`docs/sh2do.md`](docs/sh2do.md) for full documentation.
 
 ---
 
-## Further Documentation
+## Documentation
 
-- [`docs/language.md`](docs/language.md) — full language reference (syntax + semantics)
-- [`docs/sh2do.md`](docs/sh2do.md) — sh2do CLI documentation
-- `tests/` — fixtures and integration tests (acts as an executable spec)
+- **[Documentation Home](docs/index.md)** — Start here!
+- **[Tutorials](docs/tutorials/index.md)** — Step-by-step guides.
+- **[Articles](docs/articles/index.md)** — Deep dives and explanations.
+- **[Reference](docs/language.md)** — Language syntax and semantics.
+- **[CLI Reference](docs/sh2do.md)** — sh2do tool usage.
+- `tests/` — fixtures and integration tests (executable spec).
 
 ## Versions
 

@@ -6,6 +6,8 @@
 
 [sh2do](https://github.com/siu-mak/sh2lang) is a thin CLI wrapper around sh2c that compiles and executes sh2 snippets or files in one step. It wraps snippets into `func main() { ... }` (if needed), invokes sh2c, and runs the generated shell script.
 
+> **New to sh2?** Start with the **[Tutorials](tutorials/index.md)**, specifically **[Getting Started](tutorials/01-getting-started.md)**.
+
 ## Install
 
 From the workspace root:
@@ -170,3 +172,11 @@ The GitHub repo is here:
 - [`docs/language.md`](https://github.com/siu-mak/sh2lang/blob/main/docs/language.md) — full language reference (syntax + semantics)
 - [`docs/sh2do.md`](https://github.com/siu-mak/sh2lang/blob/main/docs/sh2do.md) — sh2do CLI documentation
 - `tests/` — fixtures and integration tests (acts as an executable spec)
+
+---
+
+## Common Next Reads
+
+*   **[Error Handling](articles/features/15-error-handling.md)**: Patterns for robust scripts.
+*   **[No Implicit Expansion](articles/features/13-no-implicit-expansion.md)**: Why strings are strict literals.
+*   **[sudo Builtin](articles/features/11-sudo-builtin.md)**: Safe privilege escalation.

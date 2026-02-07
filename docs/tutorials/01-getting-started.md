@@ -40,44 +40,43 @@ Think of it as "safer shell glue":
 
 ---
 
-## 2. Install / Build from Source
+## 2. Installation (Build from source)
 
-### Clone and build
+The primary way to install sh2lang is to build from source. This works on Linux, macOS, and Windows (via WSL), and ensures you have the latest version.
+
+### Prerequisites
+
+You need a Rust toolchain. If you don't have one:
+
+```bash
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+```
+
+### Build and Install
 
 ```bash
 git clone https://github.com/siu-mak/sh2lang.git
 cd sh2lang
-cargo build --workspace
+cargo build --workspace --release
 ```
 
-### Verify the build
+Verify the build:
 
 ```bash
-./target/debug/sh2c --help
-./target/debug/sh2do --help
+./target/release/sh2c --help
+./target/release/sh2do --help
 ```
 
-You should see help text for both tools.
-
-### Install to PATH (optional)
-
-For regular use, install to `~/.cargo/bin`:
+Optionally install to PATH:
 
 ```bash
 cargo install --path sh2c --locked
 cargo install --path sh2do --locked
 ```
 
-Ensure `~/.cargo/bin` is on your PATH:
+> **Ubuntu 22.04 (jammy) users:** You can also install via APT. See [Installation](../../README.md#installation-apt--ubuntu-2204--jammy) in the README.
 
-```bash
-# Add to ~/.bashrc or ~/.zshrc:
-export PATH="$HOME/.cargo/bin:$PATH"
-```
-
-Now you can run `sh2c` and `sh2do` from anywhere.
-
----
+----
 
 ## 3. Your First sh2 Script
 

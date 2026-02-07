@@ -8,6 +8,8 @@
 
 > **Note**: **sh2do** is a wrapper tool that compiles and executes sh2 snippets in one step. It does not change sh2 language semantics.
 
+> **How to read this**: This is a technical reference. If you are new to sh2, start with the **[Tutorials](tutorials/index.md)**, specifically **[Getting Started](tutorials/01-getting-started.md)**.
+
 ---
 
 ## 1. Program Structure
@@ -929,3 +931,13 @@ The GitHub repo is here:
 ### Summary
 
 sh2 provides a structured, test-validated shell language with explicit control flow, safer command execution, predictable error handling, and dual-target compilation to bash or POSIX sh.
+
+---
+
+## Next Steps
+
+To go deeper, check out these articles:
+
+*   **[No Implicit Expansion](articles/features/13-no-implicit-expansion.md)**: Why string behavior is different (and safer).
+*   **[Error Handling](articles/features/15-error-handling.md)**: Patterns for robust scripts.
+*   **[sh2do CLI](sh2do.md)**: Using the snippet runner.
