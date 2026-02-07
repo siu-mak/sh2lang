@@ -1,0 +1,4 @@
+func main() {
+  let xs = glob("*.conf")
+  print(join(xs, ","))
+}

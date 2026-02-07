@@ -55,6 +55,10 @@ Bash often ends up with scattered `|| exit 1`, `$?`, or half-working `set -e` pa
 sh2 defaults to “fail fast”, but you can explicitly allow failure and then check the exit code:
 
 ```sh2
+# Safe globbing (Bash only)
+for f in glob("*.log") {
+  run("rm", f)
+}
 run("grep", "x", "missing.txt", allow_fail=true)
 print("exit code was " & status())
 
@@ -334,6 +338,25 @@ with cwd(env.HOME & "/repos") { ... }
 # Incorrect (treated as literal tilde)
 with cwd("~/repos") { ... }
 ```
+
+### Safe Glob Expansion (Bash-only)
+
+Use `glob(pattern)` for safe file pattern matching:
+
+```sh2
+# Delete all log files safely
+for f in glob("*.log") {
+  run("rm", f)
+}
+
+# Check for matches
+let configs = glob("*.conf")
+if count(configs) == 0 {
+  print("no config files found")
+}
+```
+
+`glob()` returns a sorted list (`LC_ALL=C` stable); empty pattern = empty list (no error). **Bash 4.3+ required.**
 
 ### Variables
 

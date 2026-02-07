@@ -1,0 +1,19 @@
+func main() {
+  # Create temp directory using mktemp -d
+  let d = trim(capture(run("mktemp", "-d")))
+  
+  # Create test files
+  run("touch", d & "/a.conf")
+  run("touch", d & "/b.conf")
+  
+  cd(d)
+  
+  # Direct iteration
+  for f in glob("*.conf") {
+    print(f)
+  }
+  
+  # Cleanup
+  cd("/")
+  run("rm", "-rf", d)
+}

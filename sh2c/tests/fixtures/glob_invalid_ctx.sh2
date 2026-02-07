@@ -1,0 +1,4 @@
+func main() {
+  # This should fail - glob() must be in let or for context
+  print(glob("*.txt"))
+}

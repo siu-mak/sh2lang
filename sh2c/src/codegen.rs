@@ -61,6 +61,7 @@ pub struct PreludeUsage {
     pub arg_dynamic: bool,
     pub sh_probe: bool,
     pub confirm: bool,
+    pub glob: bool,
 }
 
 fn scan_usage(funcs: &[Function], include_diagnostics: bool) -> PreludeUsage {
@@ -347,6 +348,10 @@ fn visit_val(val: &Val, usage: &mut PreludeUsage) {
         }
         Val::Lines(inner) => {
             usage.lines = true;
+            visit_val(inner, usage);
+        }
+        Val::Glob(inner) => {
+            usage.glob = true;
             visit_val(inner, usage);
         }
         Val::Split { s, delim } => {
@@ -820,6 +825,10 @@ fn emit_val(v: &Val, target: TargetShell) -> Result<String, CompileError> {
             "lines() is only valid in 'for' loops or 'let' assignment",
             target,
         )),
+        Val::Glob(_) => Err(CompileError::unsupported(
+            "glob() must be bound to 'let' or used in 'for' loop",
+            target,
+        )),
         Val::JsonKv(blob) => {
             Ok(format!("\"$( __sh2_json_kv {} )\"", emit_word(blob, target)?))
         }
@@ -1156,6 +1165,17 @@ fn emit_cmd(
                 out.push_str(&format!("{}__sh2_status=$?\n", pad));
 
                 out.push_str(&format!("{}__sh2_check \"$__sh2_status\" \"${{__sh2_loc:-}}\"\n", pad));
+                return Ok(());
+            }
+            if let Val::Glob(inner) = val {
+                if target == TargetShell::Posix {
+                    return Err(CompileError::unsupported("glob() requires bash target", target));
+                }
+                out.push_str(&pad);
+                out.push_str(&format!("__sh2_glob {} {}\n", name, emit_val(inner, target)?));
+                out.push_str(&format!("{}__sh2_status=$?\n", pad));
+                out.push_str(&format!("{}__sh2_check \"$__sh2_status\" \"${{__sh2_loc:-}}\"\n", pad));
+                ctx.known_lists.insert(name.to_string());
                 return Ok(());
             }
             if let Val::Split { s, delim } = val {
@@ -1686,7 +1706,7 @@ fn emit_cmd(
                 crate::ir::ForIterable::List(items) => {
                     // Check if we need POSIX list iteration (file-based)
                     let is_posix_list_mode = target == TargetShell::Posix && items.iter().any(|i|
-                        matches!(i, Val::Split { .. } | Val::Lines(_)) ||
+                        matches!(i, Val::Split { .. } | Val::Lines(_) | Val::Glob(_)) ||
                         (if let Val::Var(n) = i { ctx.known_lists.contains(n) } else { false })
                     );
 
@@ -1707,6 +1727,9 @@ fn emit_cmd(
                                     } else {
                                         return Err(CompileError::unsupported("lines() iteration not supported in POSIX", target));
                                     }
+                                }
+                                Val::Glob(_) => {
+                                    return Err(CompileError::unsupported("glob() requires bash target", target));
                                 }
                                 Val::Var(n) if ctx.known_lists.contains(n) => {
                                     out.push_str(&format!("{}  cat \"${}\"\n", pad, n));
@@ -1751,6 +1774,13 @@ fn emit_cmd(
                                     out.push_str(&format!("__sh2_split __sh2_for_split_{} {} {}\n", idx, emit_val(s, target)?, emit_val(delim, target)?));
                                 }
                             }
+                            if let Val::Glob(inner) = item {
+                                if target == TargetShell::Posix {
+                                    return Err(CompileError::unsupported("glob() requires bash target", target));
+                                }
+                                out.push_str(&pad);
+                                out.push_str(&format!("__sh2_glob __sh2_for_glob_{} {}\n", idx, emit_val(inner, target)?));
+                            }
                         }
 
                         // Standard for loop
@@ -1771,6 +1801,10 @@ fn emit_cmd(
                                     Val::Split { .. } => {
                                         // Bash array pre-calc handled above
                                         out.push_str(&format!(" \"${{__sh2_for_split_{}[@]}}\"", idx));
+                                    }
+                                    Val::Glob(_) => {
+                                        // Bash array pre-calc handled above
+                                        out.push_str(&format!(" \"${{__sh2_for_glob_{}[@]}}\"", idx));
                                     }
                                     Val::List(elems) => {
                                         for elem in elems {
@@ -3100,6 +3134,39 @@ __sh2_split() {
             }
             TargetShell::Posix => {
                 // Not supported in POSIX sh
+            }
+        }
+    }
+
+    if usage.glob {
+        match target {
+            TargetShell::Bash => {
+                // Use compgen -G for safe glob expansion (no eval of pattern)
+                // Requires bash 4.3+ for local -n (nameref)
+                // Note: compgen -G does not support -- separator
+                s.push_str(r#"if [[ -z "${BASH_VERSINFO:-}" || ${BASH_VERSINFO[0]} -lt 4 || ( ${BASH_VERSINFO[0]} -eq 4 && ${BASH_VERSINFO[1]} -lt 3 ) ]]; then
+  echo "sh2: glob() requires Bash 4.3+" >&2
+  exit 2
+fi
+__sh2_glob() {
+  local __out_var="$1" __pat="$2"
+  if [[ -z "$__pat" ]]; then
+    local -n __ref="$__out_var"
+    __ref=()
+    return 0
+  fi
+  local -a __tmp=() __sorted=()
+  mapfile -t __tmp < <(compgen -G "$__pat" || true)
+  if ((${#__tmp[@]})); then
+    mapfile -t __sorted < <(printf '%s\n' "${__tmp[@]}" | LC_ALL=C sort)
+  fi
+  local -n __ref="$__out_var"
+  __ref=("${__sorted[@]}")
+}
+"#);
+            }
+            TargetShell::Posix => {
+                // Not supported in POSIX sh - compile error handled elsewhere
             }
         }
     }

@@ -475,6 +475,7 @@ SH2_YES=1 ./restart-across-hosts.sh nginx hosts.txt
 
 | Aspect | Bash | sh2 |
 |--------|------|-----|
+| **Globbing** | Unsafe `*` expansion | `glob("*.txt")` + `for` loop (Bash) |
 | **Confirmation** | `read -p` + case statement | `confirm(..., default=false)` |
 | **CI behavior** | Hangs waiting for input | Returns false (safe default) |
 | **Logging** | `\| tee -a "$LOG"` on every line | `with redirect { ... }` once |

@@ -146,6 +146,7 @@ This document maps implemented features to their proving test files, ensuring do
 | `split(str, sep)` | `syntax_split.rs` |
 | `join(list, sep)` | `syntax_list_args_utils.rs` |
 | `lines(str)` | `syntax_lines.rs` |
+| `glob(pattern)` | `syntax_glob.rs` |
 | `trim(str)` | `syntax_string_utils.rs` |
 | `replace(str, old, new)` | `syntax_string_utils.rs` |
 | `contains_line(file, needle)` | `contains_line.rs` |

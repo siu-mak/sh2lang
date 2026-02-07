@@ -959,6 +959,41 @@ if contains(lines(text), "bar") { ... }
 - Portable: works on both Bash and POSIX sh targets
 - Special characters safe: `$`, `[`, `]`, `*`, `\`, etc. are treated literally
 
+#### `glob(pattern)` → list (Bash-only)
+
+Returns a list of filesystem paths matching the glob pattern. Must be used in `let` assignment or `for` loop context.
+
+```sh2
+# Basic usage
+let files = glob("*.conf")
+for f in files {
+  print(f)
+}
+
+# Direct iteration
+for f in glob("*.log") {
+  run("rm", f)
+}
+
+# Check for matches
+let xs = glob("*.nope")
+if count(xs) == 0 {
+  print("no matches")
+}
+```
+
+**Behavior**:
+- Returns paths sorted lexicographically for determinism (uses `LC_ALL=C` sort stability)
+- Empty matches or empty pattern `""` return an empty list (no error, unlike raw shell)
+- Pattern is treated as a filesystem glob, not shell-evaluated
+- Uses `compgen -G` internally (safe, no `eval`)
+
+**Target support**: 
+- Bash: ✓ (requires Bash 4.3+ for `local -n` nameref)
+- POSIX: ✗ (compile-time error: "glob() requires bash target")
+
+**Filename limitations**: Not NUL-safe. Paths containing newlines may behave unexpectedly (consistent with `lines()` and shell conventions).
+
 
 
 ### 10.7 File I/O

@@ -1,0 +1,18 @@
+func main() {
+  # Create temp directory using mktemp -d
+  let d = trim(capture(run("mktemp", "-d")))
+  
+  # Change to the temp directory
+  cd(d)
+  
+  let xs = glob("*.nope")
+  if count(xs) == 0 {
+    print("empty")
+  } else {
+    print("found: " & join(xs, ","))
+  }
+  
+  # Cleanup (change back first)
+  cd("/")
+  run("rm", "-rf", d)
+}

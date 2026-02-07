@@ -1597,6 +1597,17 @@ fn lower_expr<'a>(e: ast::Expr, out: &mut Vec<ir::Cmd>, ctx: &mut LoweringContex
                     s: Box::new(s),
                     delim: Box::new(delim),
                 })
+            } else if name == "glob" {
+                if args.len() != 1 {
+                    return Err(CompileError::new(sm.format_diagnostic(
+                        file,
+                        opts.diag_base_dir.as_deref(),
+                        "glob() requires exactly 1 argument (pattern)",
+                        e.span,
+                    )));
+                }
+                let arg = lower_expr(args.into_iter().next().unwrap(), out, ctx, sm, file)?;
+                Ok(ir::Val::Glob(Box::new(arg)))
             } else if name == "save_envfile" {
                 return Err(CompileError::new(sm.format_diagnostic(
                     file,

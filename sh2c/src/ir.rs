@@ -84,6 +84,8 @@ pub enum Val {
     Home,
     PathJoin(Vec<Val>),
     Lines(Box<Val>),
+    /// Glob pattern expansion (bash-only). Returns list of matched paths.
+    Glob(Box<Val>),
 
     ContainsList {
         list: Box<Val>,

@@ -103,6 +103,25 @@ func main() {
 }
 ```
 
+### Safe flat iteration with `glob()` (Bash only)
+
+For simple file matching in the current directory (flat, non-recursive), use `glob()`:
+
+```sh2
+func main() {
+    # glob() returns a sorted list of matches
+    for f in glob("*.txt") {
+        print("Found text file: " & f)
+    }
+    
+    # Check if empty (no matches = empty list)
+    let logs = glob("*.log")
+    if count(logs) == 0 {
+        print("No logs found")
+    }
+}
+```
+
 ### Capturing file lists with `find`
 
 For programmatic use, `find` with `capture` and `lines`:

@@ -1,0 +1,10 @@
+func main() {
+  # Empty pattern should return empty list (no error)
+  let xs = glob("")
+  
+  if count(xs) == 0 {
+    print("empty")
+  } else {
+    print(join(xs, ","))
+  }
+}

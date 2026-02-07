@@ -185,6 +185,7 @@ builtin_expr = "arg" , "(" , expression , ")"
              | "join" , "(" , expression , "," , expression , ")"
              | "split" , "(" , expression , "," , expression , ")"
              | "lines" , "(" , expression , ")"
+             | "glob" , "(" , expression , ")"  (* bash-only; returns sorted list of matched paths *)
              | "trim" , "(" , expression , ")"
              | "replace" , "(" , expression , "," , expression , "," , expression , ")"
              | "matches" , "(" , expression , "," , expression , ")"
