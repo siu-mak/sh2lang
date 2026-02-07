@@ -669,9 +669,10 @@ pub fn assert_exec_matches_fixture_target(
         assert_eq!(
             stdout_normalized.trim(),
             expected.trim(),
-            "Stdout mismatch for {}.\nStderr:\n{}",
+            "Stdout mismatch for {}.\nStderr:\n{}\nScript:\n{}",
             fixture_name,
-            stderr_normalized
+            stderr_normalized,
+            shell_script // Debug: print script content too
         );
     }
 

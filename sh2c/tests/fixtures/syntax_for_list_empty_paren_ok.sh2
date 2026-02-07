@@ -1,0 +1,6 @@
+func main() {
+    for x in () {
+        print("Should not print")
+        exit(1)
+    }
+}

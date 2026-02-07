@@ -55,7 +55,10 @@ fn compile_split_basic_posix() {
 fn exec_split_empty_fields_posix() {
     let src = std::fs::read_to_string("tests/fixtures/split_empty_fields_posix.sh2").unwrap();
     let sh_code = common::compile_to_shell(&src, common::TargetShell::Posix);
-    let (stdout, _, _) = common::run_shell_script(&sh_code, "sh", &[], &[], None, None);
+    let (stdout, stderr, _) = common::run_shell_script(&sh_code, "sh", &[], &[], None, None);
     let expected = std::fs::read_to_string("tests/fixtures/split_empty_fields_posix.stdout").unwrap();
+    if stdout != expected {
+        eprintln!("STDOUT MISMATCH:\nActual:\n{}\nExpected:\n{}\nSTDERR:\n{}\nSCRIPT:\n{}", stdout, expected, stderr, sh_code);
+    }
     assert_eq!(stdout, expected);
 }

@@ -1711,8 +1711,21 @@ fn emit_cmd(
                         out.push_str(&pad);
                         out.push_str(&format!("}} > \"$__sh2_for_tmp_{}\"\n", var));
                         
+
+
                         out.push_str(&pad);
                         out.push_str(&format!("while IFS= read -r {} || [ -n \"${}\" ]; do\n", var, var));
+
+                        for c in body {
+                            emit_cmd(c, out, indent + 2, opts, in_cond_ctx, ctx)?;
+                        }
+                        
+                        out.push_str(&pad);
+                        out.push_str("done < \"$__sh2_for_tmp_");
+                        out.push_str(var);
+                        out.push_str("\"\n");
+                        out.push_str(&pad);
+                        out.push_str(&format!("rm -f \"$__sh2_for_tmp_{}\"\n", var));
                     } else {
                         // Pre-process any Lines() / Split items for Bash (Arrays)
                         for (idx, item) in items.iter().enumerate() {
@@ -1732,52 +1745,51 @@ fn emit_cmd(
                         }
 
                         // Standard for loop
-                        out.push_str(&pad);
-                        out.push_str(&format!("for {} in", var));
-                        for (idx, item) in items.iter().enumerate() {
-                            match item {
-                                Val::Lines(_) => {
-                                    out.push_str(&format!(" \"${{__sh2_for_lines_{}[@]}}\"", idx));
-                                }
-                                Val::Split { .. } => {
-                                    // Bash array pre-calc handled above
-                                    out.push_str(&format!(" \"${{__sh2_for_split_{}[@]}}\"", idx));
-                                }
-                                Val::List(elems) => {
-                                    for elem in elems {
+                        if items.is_empty() {
+                            // Empty list iteration: for x in () { ... }
+                            // This results in zero iterations. We can optimize this away entirely,
+                            // or emit a no-op to ensure valid shell syntax if it's the only stmt.
+                            out.push_str(&pad);
+                            out.push_str(":\n");
+                        } else {
+                            out.push_str(&pad);
+                            out.push_str(&format!("for {} in", var));
+                            for (idx, item) in items.iter().enumerate() {
+                                match item {
+                                    Val::Lines(_) => {
+                                        out.push_str(&format!(" \"${{__sh2_for_lines_{}[@]}}\"", idx));
+                                    }
+                                    Val::Split { .. } => {
+                                        // Bash array pre-calc handled above
+                                        out.push_str(&format!(" \"${{__sh2_for_split_{}[@]}}\"", idx));
+                                    }
+                                    Val::List(elems) => {
+                                        for elem in elems {
+                                            out.push(' ');
+                                            out.push_str(&emit_word(elem, target)?);
+                                        }
+                                    }
+                                    Val::Var(name) => {
+                                        if target == TargetShell::Posix {
+                                            return Err(CompileError::unsupported("Iterating over array variable not supported in POSIX", target));
+                                        }
+                                        out.push_str(&format!(" \"${{{}[@]}}\"", name));
+                                    }
+                                    _ => {
                                         out.push(' ');
-                                        out.push_str(&emit_word(elem, target)?);
+                                        out.push_str(&emit_word(item, target)?);
                                     }
-                                }
-                                Val::Var(name) => {
-                                    if target == TargetShell::Posix {
-                                        return Err(CompileError::unsupported("Iterating over array variable not supported in POSIX", target));
-                                    }
-                                    out.push_str(&format!(" \"${{{}[@]}}\"", name));
-                                }
-                                _ => {
-                                    out.push(' ');
-                                    out.push_str(&emit_word(item, target)?);
                                 }
                             }
+                            out.push_str("; do\n");
+                        
+                            for c in body {
+                                emit_cmd(c, out, indent + 2, opts, in_cond_ctx, ctx)?;
+                            }
+                            
+                            out.push_str(&pad);
+                            out.push_str("done\n");
                         }
-                        out.push_str("; do\n");
-                    }
-
-                    for c in body {
-                        emit_cmd(c, out, indent + 2, opts, in_cond_ctx, ctx)?;
-                    }
-
-                    if is_posix_list_mode {
-                        out.push_str(&pad);
-                        out.push_str("done < \"$__sh2_for_tmp_");
-                        out.push_str(var);
-                        out.push_str("\"\n");
-                        out.push_str(&pad);
-                        out.push_str(&format!("rm -f \"$__sh2_for_tmp_{}\"\n", var));
-                    } else {
-                        out.push_str(&pad);
-                        out.push_str("done\n");
                     }
                 }
                 crate::ir::ForIterable::Range(start, end) => {
