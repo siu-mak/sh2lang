@@ -1,4 +1,4 @@
 func main() {
-  set x = index(["a", "b"], 0)
+  let x = index(["a", "b"], 0)
   run("echo", x)
 }

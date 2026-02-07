@@ -6,3 +6,8 @@ mod common;
 fn test_capture_allow_fail_status() {
     assert_exec_matches_fixture_target("capture_allow_fail_preserves_status", TargetShell::Bash);
 }
+
+#[test]
+fn test_capture_allow_fail_exit_only() {
+    assert_exec_matches_fixture_target("capture_allow_fail_exit_only", TargetShell::Bash);
+}

@@ -1,4 +1,4 @@
 func main() {
-  set x = "X"
+  let x = "X"
   run("printf", "%s\n", "a" + x + "b")
 }

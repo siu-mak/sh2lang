@@ -283,15 +283,32 @@ print(m["k"])
 
 ### 4.1 Declaration: `let`
 
+Variables must be declared with `let` before use.
+
 ```sh2
 let msg = "hello"
 ```
 
+**Scope**: Variables are function-scoped. Variables declared inside blocks (e.g., `if`, `while`) are visible in the rest of the function, provided they are guaranteed to be initialized on all control paths.
+
+**Redeclaration**: Declaring a variable that already exists in the current scope is a compile error.
+
 ### 4.2 Reassignment: `set`
+
+To update an existing variable, use `set`. The variable must already be declared.
 
 ```sh2
 let n = 0
 set n = n + 1
+```
+
+### 4.3 `try_run` Binding
+
+The result of `try_run(...)` must be immediately bound to a variable via `let`. It cannot be used directly in complex expressions.
+
+```sh2
+let result = try_run("ls")
+if result.status == 0 { ... }
 ```
 
 ### 4.3 Environment access

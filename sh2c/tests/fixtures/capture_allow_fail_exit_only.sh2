@@ -1,0 +1,5 @@
+func main() {
+    let a = capture(run("sh", "-c", "exit 7"), allow_fail=true)
+    print("a=" & trim(a))
+    print("status=" & status())
+}

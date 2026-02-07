@@ -1,4 +1,4 @@
 func main() {
-  set x = "world"
+  let x = "world"
   run("echo", "hello", x)
 }

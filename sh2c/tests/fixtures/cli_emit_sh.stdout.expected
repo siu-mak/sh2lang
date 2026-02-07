@@ -4,7 +4,7 @@ main() {
   x="1"
   __sh2_status=$?
   __sh2_check "$__sh2_status" "${__sh2_loc:-}"
-  "$echo" "$x"; __sh2_status=$?
+  'echo' "$x"; __sh2_status=$?
   __sh2_check "$__sh2_status" "${__sh2_loc:-}" "exit"
 }
 __sh2_status=0

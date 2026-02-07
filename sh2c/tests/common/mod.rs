@@ -152,6 +152,10 @@ pub fn try_compile_to_shell(src: &str, target: TargetShell) -> Result<String, St
     let mut program = parser::parse(&tokens, &sm, "inline_test").map_err(|d| d.format(None))?;
     program.source_maps.insert("inline_test".to_string(), sm);
     
+    // Semantic analysis: check variable declarations
+    sh2c::semantics::check_semantics(&program, &sh2c::semantics::SemanticOptions::default())
+        .map_err(|e| e.message)?;
+    
     let opts = sh2c::lower::LowerOptions {
         include_diagnostics: true,
         diag_base_dir: Some(std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))),
@@ -201,6 +205,11 @@ pub fn compile_to_shell(src: &str, target: TargetShell) -> String {
     let mut program = parser::parse(&tokens, &sm, "inline_test")
         .unwrap_or_else(|d| panic!("{}", d.format(None)));
     program.source_maps.insert("inline_test".to_string(), sm);
+    
+    // Semantic analysis: check variable declarations
+    sh2c::semantics::check_semantics(&program, &sh2c::semantics::SemanticOptions::default())
+        .expect("Semantic analysis failed");
+    
     // Note: lower calls generally require accurate file info but here we use "inline_test"
     let opts = sh2c::lower::LowerOptions {
         include_diagnostics: true,

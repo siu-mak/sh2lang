@@ -1,6 +1,7 @@
 use crate::codegen::{self, TargetShell};
 use crate::loader;
 use crate::lower;
+use crate::semantics;
 #[cfg(unix)]
 use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};
@@ -70,6 +71,11 @@ pub fn compile_file(path: &Path, options: CompileOptions) -> Result<String, Driv
         return Ok(format!("{:#?}", ast));
     }
 
+    // Semantic analysis: check variable declarations before lowering
+    semantics::check_semantics(&ast, &semantics::SemanticOptions {
+        diag_base_dir: diag_base_dir.clone(),
+    }).map_err(|e| DriverError::compile(e.to_string()))?;
+
     let ir = lower::lower_with_options(
         ast,
         &lower::LowerOptions {
@@ -77,6 +83,7 @@ pub fn compile_file(path: &Path, options: CompileOptions) -> Result<String, Driv
             diag_base_dir: diag_base_dir.clone(),
         },
     ).map_err(|e| DriverError::compile(e.to_string()))?;
+
 
     if let Mode::EmitIr = options.mode {
         let mut ir_stripped = ir;
