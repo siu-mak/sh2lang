@@ -370,6 +370,28 @@ if count(configs) == 0 {
 
 `glob()` returns a sorted list (`LC_ALL=C` stable); empty pattern = empty list (no error). **Bash 4.3+ required.**
 
+### Concurrent Tasks (Job Control)
+
+Start background tasks with `spawn(...)` and wait for them with `wait(...)`. This compiles to standard shell background jobs (`&` and `wait`).
+
+```sh2
+# Start tasks in the background
+let job1 = spawn(run("sleep", "2"))
+let job2 = spawn(run("grep", "-r", "pattern", "."))
+
+print("Tasks running...")
+
+# Wait for completion (returns exit code)
+let rc1 = wait(job1)
+let rc2 = wait(job2, allow_fail=true)
+
+if rc1 != 0 {
+  print_err("Job 1 failed")
+}
+```
+
+`spawn` only accepts `run(...)` or `sudo(...)` commands.
+
 ### Safe Recursive File Finding (Bash-only)
 
 Use `find_files(dir=".", name="*")` to recursively find files with NUL-safe handling:

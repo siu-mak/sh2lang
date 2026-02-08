@@ -1177,7 +1177,44 @@ for f in glob("*.txt") { ... }
 
 ---
 
-## 11. Targets and Portability
+## 11. Job Control
+
+Concurrent execution of commands is supported via `spawn(...)` and `wait(...)`.
+
+### 11.1 Spawning Background Jobs
+
+`spawn(run(...))` starts a command in the background and returns its PID (as a string).
+
+```sh2
+let pid = spawn(run("sleep", "10"))
+```
+
+- **Restricted Argument**: `spawn` only deals with `run(...)` or `sudo(...)` expressions. It does not accept arbitrary blocks.
+- **Return Value**: Returns the PID of the spawned process.
+
+### 11.2 Waiting for Jobs
+
+`wait(pid)` waits for a process to complete and returns its exit code.
+
+```sh2
+let rc = wait(pid)
+```
+
+- **Return Value**: The exit code (0-255).
+- **Status**: The `status()` global is also updated.
+- **Fail-fast**: By default, if the job exits with non-zero, the script aborts (like `run`).
+- **Allow Failure**: Use `allow_fail=true` to prevent aborting on non-zero exit code.
+
+```sh2
+let rc = wait(pid, allow_fail=true)
+if rc != 0 {
+    print("Job failed with: " & rc)
+}
+```
+
+---
+
+## 12. Targets and Portability
 
 ### `--target bash` (default)
 Supports the full implemented feature set, including lists/maps, `with log`, interactive helpers (if enabled), and full `try_run` capture.

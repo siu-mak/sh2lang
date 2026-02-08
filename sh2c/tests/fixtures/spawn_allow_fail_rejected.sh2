@@ -1,0 +1,5 @@
+#!/usr/bin/env sh2
+func main() {
+    // This should fail compilation because allow_fail is not supported in spawn
+    let job = spawn(run("true", allow_fail=true))
+}

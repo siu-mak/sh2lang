@@ -532,10 +532,10 @@ impl<'a> Parser<'a> {
 
                                 if is_named {
                                     // Named argument - only allowed for specific builtins
-                                    let allowed_builtins = ["run", "sudo", "sh", "capture", "confirm", "find_files"];
+                                    let allowed_builtins = ["run", "sudo", "sh", "capture", "confirm", "find_files", "wait"];
                                     if !allowed_builtins.contains(&s.as_str()) {
                                         return self.error(
-                                            "Named arguments are only supported for builtins: run, sudo, sh, capture, confirm, find_files",
+                                            "Named arguments are only supported for builtins: run, sudo, sh, capture, confirm, find_files, wait",
                                             self.current_span()
                                         );
                                     }
@@ -909,6 +909,64 @@ impl<'a> Parser<'a> {
             TokenKind::Semi => {
                  return self.error("Unexpected statement separator ';' inside expression. Use ';' only between statements.", span);
              }
+            // Spawn and wait are EXPR_BUILTINS, parse as calls
+            TokenKind::Spawn | TokenKind::Wait => {
+                // These are builtins that look like function calls: spawn(...) or wait(...)
+                let name = match t.kind {
+                    TokenKind::Spawn => "spawn".to_string(),
+                    TokenKind::Wait => "wait".to_string(),
+                    _ => unreachable!(),
+                };
+                
+                let mut args = Vec::new();
+                let mut options = Vec::new();
+                
+                self.expect(TokenKind::LParen)?;
+                
+                if !self.match_kind(TokenKind::RParen) {
+                    loop {
+                        // Check for named argument: IDENT = ...
+                        let mut is_named = false;
+                        if let Some(TokenKind::Ident(_)) = self.peek_kind() {
+                            if self.tokens.get(self.pos + 1).map(|t| &t.kind) == Some(&TokenKind::Equals) {
+                                is_named = true;
+                            }
+                        }
+                        
+                        if is_named {
+                            // Named argument
+                            let opt_name = if let Some(TokenKind::Ident(s)) = self.peek_kind() {
+                                s.clone()
+                            } else {
+                                unreachable!()
+                            };
+                            let name_span = self.advance().unwrap().span;
+                            self.expect(TokenKind::Equals)?;
+                            let value = self.parse_expr()?;
+                            
+                            options.push(CallOption {
+                                name: opt_name,
+                                value,
+                                span: name_span,
+                            });
+                        } else {
+                            // Positional argument
+                            args.push(self.parse_expr()?);
+                        }
+                        
+                        if !self.match_kind(TokenKind::Comma) {
+                            break;
+                        }
+                    }
+                    self.expect(TokenKind::RParen)?;
+                }
+                
+                let full_span = span.merge(self.previous_span());
+                Ok(Expr {
+                    node: ExprKind::Call { name, args, options },
+                    span: full_span,
+                })
+            }
             _ => {
                 self.error(&format!("Expected expression, got {:?}", t.kind), span)
             }

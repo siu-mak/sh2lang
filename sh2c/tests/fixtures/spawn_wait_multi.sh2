@@ -1,0 +1,15 @@
+#!/usr/bin/env sh2
+func main() {
+    // Spawn two jobs with different exit codes
+    let p_a = spawn(run("sh", "-c", "sleep 0.15; exit 3"))
+    let p_b = spawn(run("sh", "-c", "sleep 0.05; exit 9"))
+    
+    // Wait in reverse order
+    let rc_b = wait(p_b, allow_fail=true)
+    print($"job B exit: {rc_b}")
+    print($"status after B: {status()}")
+    
+    let rc_a = wait(p_a, allow_fail=true)
+    print($"job A exit: {rc_a}")
+    print($"status after A: {status()}")
+}

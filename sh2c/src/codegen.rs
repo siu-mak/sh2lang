@@ -475,6 +475,14 @@ fn visit_val(val: &Val, usage: &mut PreludeUsage) {
             visit_val(dir, usage);
             visit_val(name, usage);
         }
+        Val::Spawn { args, .. } => {
+            for a in args {
+                visit_val(a, usage);
+            }
+        }
+        Val::Wait { pid, .. } => {
+            visit_val(pid, usage);
+        }
         _ => {}
     }
 }
@@ -850,6 +858,18 @@ fn emit_val(v: &Val, target: TargetShell) -> Result<String, CompileError> {
         Val::Glob(_) => {
             return Err(CompileError::unsupported(
                 "glob() can only be used in 'for' loops or assignments",
+                target,
+            ));
+        }
+        Val::Spawn { .. } => {
+            return Err(CompileError::unsupported(
+                "spawn() can only be used in 'let' assignments",
+                target,
+            ));
+        }
+        Val::Wait { .. } => {
+            return Err(CompileError::unsupported(
+                "wait() can only be used in 'let' assignments",
                 target,
             ));
         }
@@ -1234,6 +1254,40 @@ fn emit_cmd(
                 out.push_str(&format!("__sh2_find_files {} {} {}\n", name, emit_val(dir, target)?, emit_val(pattern, target)?));
                 out.push_str(&format!("{}__sh2_status=$?\n", pad));
                 out.push_str(&format!("{}__sh2_check \"$__sh2_status\" \"${{__sh2_loc:-}}\"\n", pad));
+                return Ok(());
+            }
+            if let Val::Spawn { args, loc } = val {
+                // Spawn command in background and capture PID
+                // Emit: cmd args & ; varname=$!
+                if let Some(l) = loc {
+                    out.push_str(&format!("{}__sh2_loc=\"{}\"\n", pad, l));
+                }
+                let shell_cmd = args
+                    .iter()
+                    .map(|a| emit_word(a, target))
+                    .collect::<Result<Vec<_>, _>>()?
+                    .join(" ");
+                out.push_str(&pad);
+                out.push_str(&format!("{} &\n", shell_cmd));
+                out.push_str(&format!("{}__sh2_status=$?\n", pad));
+                out.push_str(&format!("{}{}=$!\n", pad, name));
+                // Check if spawn itself failed (rare, e.g., command not found is async)
+                out.push_str(&format!("{}__sh2_check \"$__sh2_status\" \"${{__sh2_loc:-}}\"\n", pad));
+                return Ok(());
+            }
+            if let Val::Wait { pid, allow_fail, loc } = val {
+                // Wait for PID and capture exit code
+                if let Some(l) = loc {
+                    out.push_str(&format!("{}__sh2_loc=\"{}\"\n", pad, l));
+                }
+                out.push_str(&pad);
+                out.push_str(&format!("wait {}\n", emit_word(pid, target)?));
+                out.push_str(&format!("{}__sh2_status=$?\n", pad));
+                if !allow_fail {
+                    out.push_str(&format!("{}__sh2_check \"$__sh2_status\" \"${{__sh2_loc:-}}\"\n", pad));
+                }
+                // Assign exit code to variable
+                out.push_str(&format!("{}{}=$__sh2_status\n", pad, name));
                 return Ok(());
             }
             if target == TargetShell::Posix {

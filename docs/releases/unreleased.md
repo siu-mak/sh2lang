@@ -6,6 +6,7 @@
 - **Glob Expansion**: Added `glob(pattern)` builtin (Bash-only) to safely expand filesystem glob patterns. Returns a sorted list of matched paths; empty list if no matches. Uses `compgen -G` internally (no eval). Requires Bash 4.3+.
 - **Recursive File Finding**: Added `find_files(dir=".", name="*")` builtin (Bash-only) to recursively find files using `find ... -print0`. Handles "weird" filenames (spaces, newlines) safely. Returns a sorted list of paths. Requires Bash 4.3+, GNU find, and GNU sort.
 - **Structured Pipeline Iteration**: Added `| each_line <var> { ... }` pipeline consumer. Executes loop in the main process (preserving variable updates) and correctly propagates upstream exit status. Replaces fragile `| while read` patterns. Bash-only (uses process substitution).
+- **Job Control**: Added `spawn(cmd)` and `wait(pid)` builtins for running concurrent tasks. `spawn` starts a background job (like `&`) and returns a PID. `wait` waits for a PID and returns its exit code. Supports `allow_fail=true` for non-aborting waits. Portable to both Bash and POSIX.
 
 
 ## Diagnostics

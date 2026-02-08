@@ -113,6 +113,17 @@ pub enum Val {
         value: Box<Val>,
         allow_fail: bool,
     },
+    /// Spawn a command in background, returns PID. Restricted-context (let only).
+    Spawn {
+        args: Vec<Val>,
+        loc: Option<String>,
+    },
+    /// Wait for a PID and return exit code. Restricted-context (let only).
+    Wait {
+        pid: Box<Val>,
+        allow_fail: bool,
+        loc: Option<String>,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq)]

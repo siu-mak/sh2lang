@@ -1,0 +1,11 @@
+#!/usr/bin/env sh2
+func main() {
+    // Spawn a background job that exits with code 7
+    let job_pid = spawn(run("sh", "-c", "sleep 0.1; exit 7"))
+    print($"spawned pid: {job_pid}")
+    
+    // Wait for it with allow_fail=true
+    let rc = wait(job_pid, allow_fail=true)
+    print($"exit code: {rc}")
+    print($"status: {status()}")
+}

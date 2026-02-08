@@ -31,7 +31,6 @@ statement = let_stmt
           | with_stmt
           | subshell_stmt
           | group_stmt
-          | spawn_stmt
           | pipe_stmt
           | return_stmt
           | exit_stmt
@@ -61,7 +60,7 @@ unset_stmt = "unset" , "(" , string_literal , ")" ;
 source_stmt = "source" , "(" , expression , ")" ;
 sh_stmt = "sh" , "(" , string_literal , ")" | "sh" , block ;
 cd_stmt = "cd" , "(" , expression , ")" ;
-wait_stmt = "wait" , [ "(" , expression , ")" ] ;
+
 return_stmt = "return" , [ expression ] ;
 exit_stmt = "exit" , [ expression ] ;
 break_stmt = "break" ;
@@ -114,7 +113,6 @@ input_target = "file" , "(" , expression , ")"
 
 subshell_stmt = "subshell" , block ;
 group_stmt = "group" , block ;
-spawn_stmt = "spawn" , ( block | statement ) ;
 
 pipe_stmt = "pipe" , pipe_segment , "|" , pipe_segment , { "|" , pipe_segment }
           | run_call , "|" , pipe_segment , { "|" , pipe_segment } ;
@@ -200,6 +198,8 @@ builtin_expr = "arg" , "(" , expression , ")"
              | sudo_call
              | "sh" , "(" , expression , [ "," , arg_list ] , ")"
              | "which" , "(" , expression , ")"
+             | "spawn" , "(" , expression , ")"
+             | "wait" , "(" , expression , [ "," , "allow_fail" , "=" , bool_literal ] , ")"
              ;
 
 arg_list = expression , { "," , expression } ; (* Deprecated/Legacy: use pos_arg_list or builtin_arg_list *)

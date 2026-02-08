@@ -1726,6 +1726,132 @@ fn lower_expr<'a>(e: ast::Expr, out: &mut Vec<ir::Cmd>, ctx: &mut LoweringContex
                     dir: Box::new(dir_val),
                     name: Box::new(name_val),
                 })
+            } else if name == "spawn" {
+                // spawn(run(...)) or spawn(sudo(...)) - returns PID
+                if args.len() != 1 {
+                    return Err(CompileError::new(sm.format_diagnostic(
+                        file,
+                        opts.diag_base_dir.as_deref(),
+                        "spawn() requires exactly 1 argument: run(...) or sudo(...)",
+                        e.span,
+                    )));
+                }
+                if !options.is_empty() {
+                    return Err(CompileError::new(sm.format_diagnostic(
+                        file,
+                        opts.diag_base_dir.as_deref(),
+                        "spawn() does not accept named arguments",
+                        options[0].span,
+                    )));
+                }
+                
+                let inner_expr = args.into_iter().next().unwrap();
+                let loc = Some(resolve_span(inner_expr.span, sm, file, opts.diag_base_dir.as_deref()));
+                
+                // Validate it's run() or sudo()
+                match &inner_expr.node {
+                    ast::ExprKind::Run(run_call) => {
+                        // LEVERAGE lower_run_call_args to handle/reject options like 'shell' or 'allow_fail'
+                        // We clone ctx because lower_run_call_args mutates it (e.g. for dynamic args?) 
+                        // but generally we want side effects (like defined vars? no run call args are expressions).
+                        // Actually lower_run_call_args takes &mut ctx.
+                        
+                        let (lowered_args, allow_fail) = lower_run_call_args(run_call, out, ctx, sm, file, opts)?;
+                        
+                        // Reject allow_fail in spawn() because it's ambiguous/redundant with wait checking
+                        if allow_fail {
+                             return Err(CompileError::new(sm.format_diagnostic(
+                                file,
+                                opts.diag_base_dir.as_deref(),
+                                "allow_fail=true is not supported in spawn(); use wait(pid, allow_fail=true) instead",
+                                run_call.options.iter().find(|o| o.name == "allow_fail").map(|o| o.span).unwrap_or(inner_expr.span),
+                            )));
+                        }
+                        
+                        Ok(ir::Val::Spawn { args: lowered_args, loc })
+                    }
+                    ast::ExprKind::Sudo { args: sudo_args, options: sudo_opts } => {
+                        // Lower sudo command (reuse existing helper logic)
+                        let (argv, allow_fail_span) = lower_sudo_command(
+                            sudo_args.clone(),
+                            sudo_opts.clone(),
+                            out,
+                            ctx,
+                            sm,
+                            file,
+                        )?;
+                        
+                        // Reject allow_fail in sudo inside spawn
+                        if let Some(span) = allow_fail_span {
+                            return Err(CompileError::new(sm.format_diagnostic(
+                                file,
+                                opts.diag_base_dir.as_deref(),
+                                "allow_fail=true is not supported in spawn(); use wait(pid, allow_fail=true) instead",
+                                span,
+                            )));
+                        }
+                        
+                        Ok(ir::Val::Spawn { args: argv, loc })
+                    }
+                    _ => {
+                        Err(CompileError::new(sm.format_diagnostic(
+                            file,
+                            opts.diag_base_dir.as_deref(),
+                            "spawn() only accepts run(...) or sudo(...) as its argument",
+                            inner_expr.span,
+                        )))
+                    }
+                }
+            } else if name == "wait" {
+                // wait(pid) or wait(pid, allow_fail=true)
+                if args.len() != 1 {
+                    return Err(CompileError::new(sm.format_diagnostic(
+                        file,
+                        opts.diag_base_dir.as_deref(),
+                        "wait() requires exactly 1 positional argument (the PID)",
+                        e.span,
+                    )));
+                }
+                
+                // Location for wait() call itself
+                let loc = Some(resolve_span(e.span, sm, file, opts.diag_base_dir.as_deref()));
+
+                // Process options
+                let mut allow_fail = false;
+                for opt in options {
+                    match opt.name.as_str() {
+                        "allow_fail" => {
+                            match &opt.value.node {
+                                ast::ExprKind::Bool(b) => {
+                                    allow_fail = *b;
+                                }
+                                _ => {
+                                    return Err(CompileError::new(sm.format_diagnostic(
+                                        file,
+                                        opts.diag_base_dir.as_deref(),
+                                        "allow_fail must be a boolean literal (true or false)",
+                                        opt.value.span,
+                                    )));
+                                }
+                            }
+                        }
+                        _ => {
+                            return Err(CompileError::new(sm.format_diagnostic(
+                                file,
+                                opts.diag_base_dir.as_deref(),
+                                &format!("Unknown option '{}'. Supported: allow_fail", opt.name),
+                                opt.span,
+                            )));
+                        }
+                    }
+                }
+                
+                let pid_val = lower_expr(args.into_iter().next().unwrap(), out, ctx, sm, file)?;
+                Ok(ir::Val::Wait {
+                    pid: Box::new(pid_val),
+                    allow_fail,
+                    loc,
+                })
             } else if name == "save_envfile" {
                 return Err(CompileError::new(sm.format_diagnostic(
                     file,

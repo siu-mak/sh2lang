@@ -1,0 +1,9 @@
+#!/usr/bin/env sh2
+func main() {
+    // Spawn a job that succeeds
+    let job_pid = spawn(run("sh", "-c", "exit 0"))
+    
+    // Wait without allow_fail (default)
+    let rc = wait(job_pid)
+    print($"exit code: {rc}")
+}
