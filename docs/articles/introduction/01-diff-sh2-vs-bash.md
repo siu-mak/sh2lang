@@ -36,7 +36,7 @@ sh2 is aiming at **structured shell scripting**:
 
 * statements like `let`, `if {}`, `while {}`, `case {}`, `for … in (…) {}` are explicit
 * command execution is explicit via `run(...)`
-* string building is explicit via `+`
+* string building is explicit via `&`
 * command substitution is explicit via `$(run(...))`
 
 That “forced explicitness” is the whole point: **make intent visible and reduce accidental complexity.**
@@ -74,7 +74,7 @@ It also makes refactoring easier: reordering arguments is less error-prone than 
 
 ---
 
-## 3) String concatenation: bash expands everywhere, sh2 uses `+`
+## 3) String concatenation: bash expands everywhere, sh2 uses `&`
 
 ### Bash
 
@@ -91,7 +91,7 @@ You must remember when `$...` expands, when it doesn’t, and which quotes do wh
 sh2 makes concatenation explicit:
 
 ```sh2
-let path = env.HOME + "/repos/" + name
+let path = env.HOME & "/repos/" & name
 ```
 
 The win is readability and fewer “wait, was that quoted?” moments.
