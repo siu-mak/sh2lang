@@ -93,6 +93,7 @@ use std::path::PathBuf;
 pub struct LowerOptions {
     pub include_diagnostics: bool,
     pub diag_base_dir: Option<PathBuf>,
+    pub target: crate::codegen::TargetShell,
 }
 
 impl Default for LowerOptions {
@@ -100,6 +101,7 @@ impl Default for LowerOptions {
         Self {
             include_diagnostics: true,
             diag_base_dir: None,
+            target: crate::codegen::TargetShell::Bash,
         }
     }
 }
@@ -1849,6 +1851,85 @@ fn lower_expr<'a>(e: ast::Expr, out: &mut Vec<ir::Cmd>, ctx: &mut LoweringContex
                 let pid_val = lower_expr(args.into_iter().next().unwrap(), out, ctx, sm, file)?;
                 Ok(ir::Val::Wait {
                     pid: Box::new(pid_val),
+                    allow_fail,
+                    loc,
+                })
+            } else if name == "wait_all" {
+                // wait_all(pids) or wait_all(pids, allow_fail=true)
+                // Lowers to loop IR that waits for all PIDs and returns first non-zero exit code
+                if args.len() != 1 {
+                    return Err(CompileError::new(sm.format_diagnostic(
+                        file,
+                        opts.diag_base_dir.as_deref(),
+                        "wait_all() requires exactly 1 positional argument (a list of PIDs)",
+                        e.span,
+                    )));
+                }
+                
+                let loc = Some(resolve_span(e.span, sm, file, opts.diag_base_dir.as_deref()));
+                
+                // Process options
+                let mut allow_fail = false;
+                for opt in options {
+                    match opt.name.as_str() {
+                        "allow_fail" => {
+                            match &opt.value.node {
+                                ast::ExprKind::Bool(b) => {
+                                    allow_fail = *b;
+                                }
+                                _ => {
+                                    return Err(CompileError::new(sm.format_diagnostic(
+                                        file,
+                                        opts.diag_base_dir.as_deref(),
+                                        "allow_fail must be a boolean literal (true or false)",
+                                        opt.value.span,
+                                    )));
+                                }
+                            }
+                        }
+                        _ => {
+                            return Err(CompileError::new(sm.format_diagnostic(
+                                file,
+                                opts.diag_base_dir.as_deref(),
+                                &format!("Unknown option '{}'. Supported: allow_fail", opt.name),
+                                opt.span,
+                            )));
+                        }
+                    }
+                }
+                
+                // Lower the pids argument (must be a list)
+                let pids_expr = args.into_iter().next().unwrap();
+                let pids_val = lower_expr(pids_expr.clone(), out, ctx, sm, file)?;
+                
+                // Validate it's a list - target-aware check
+                match &pids_expr.node {
+                    ast::ExprKind::List(_) => { /* ok for all targets */ }
+                    ast::ExprKind::Var(_) | ast::ExprKind::Call { .. } => {
+                        // Only allow on Bash target - POSIX requires inline list literals
+                        if opts.target == crate::codegen::TargetShell::Posix {
+                            return Err(CompileError::new(sm.format_diagnostic(
+                                file,
+                                opts.diag_base_dir.as_deref(),
+                                "wait_all() on --target posix requires an inline list literal, e.g. wait_all([p1, p2])",
+                                pids_expr.span,
+                            )));
+                        }
+                        // Bash: assume ok - could be a list variable or list-returning call
+                    }
+                    _ => {
+                        return Err(CompileError::new(sm.format_diagnostic(
+                            file,
+                            opts.diag_base_dir.as_deref(),
+                            "wait_all() requires a list of PIDs",
+                            pids_expr.span,
+                        )));
+                    }
+                }
+                
+                // Return a special WaitAll value that codegen will handle
+                Ok(ir::Val::WaitAll {
+                    pids: Box::new(pids_val),
                     allow_fail,
                     loc,
                 })

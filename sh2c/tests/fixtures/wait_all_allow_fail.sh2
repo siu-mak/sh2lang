@@ -1,0 +1,12 @@
+#!/usr/bin/env sh2
+func main() {
+    // Spawn jobs with different exit codes - first list item fails
+    let p1 = spawn(run("sh", "-c", "sleep 0.05; exit 3"))
+    let p2 = spawn(run("sh", "-c", "exit 0"))
+    
+    let pids = [p1, p2]
+    let rc = wait_all(pids, allow_fail=true)
+    
+    print($"first fail code: {rc}")
+    print($"status: {status()}")
+}

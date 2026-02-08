@@ -39,6 +39,7 @@ pub const EXPR_BUILTINS: &[&str] = &[
     "find_files", // lowers to ir::Val::FindFiles (bash-only)
     "spawn",      // lowers to ir::Val::Spawn (job control)
     "wait",       // lowers to ir::Val::Wait (job control)
+    "wait_all",   // lowers to loop IR (job control)
 ];
 
 /// Prelude helper functions that pass through to ir::Val::Call.

@@ -200,6 +200,7 @@ builtin_expr = "arg" , "(" , expression , ")"
              | "which" , "(" , expression , ")"
              | "spawn" , "(" , expression , ")"
              | "wait" , "(" , expression , [ "," , "allow_fail" , "=" , bool_literal ] , ")"
+             | "wait_all" , "(" , expression , [ "," , "allow_fail" , "=" , bool_literal ] , ")"
              ;
 
 arg_list = expression , { "," , expression } ; (* Deprecated/Legacy: use pos_arg_list or builtin_arg_list *)

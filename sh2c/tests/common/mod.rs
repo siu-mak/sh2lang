@@ -159,6 +159,7 @@ pub fn try_compile_to_shell(src: &str, target: TargetShell) -> Result<String, St
     let opts = sh2c::lower::LowerOptions {
         include_diagnostics: true,
         diag_base_dir: Some(std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))),
+        target,
     };
 
     // Use formatted diagnostics for better error messages
@@ -178,6 +179,7 @@ pub fn try_compile_path_to_shell(path: &Path, target: TargetShell) -> Result<Str
     let opts = sh2c::lower::LowerOptions {
         include_diagnostics: true,
         diag_base_dir: Some(std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))),
+        target,
     };
     
     let ir = lower::lower_with_options(program, &opts).map_err(|e| e.message)?;
@@ -214,6 +216,7 @@ pub fn compile_to_shell(src: &str, target: TargetShell) -> String {
     let opts = sh2c::lower::LowerOptions {
         include_diagnostics: true,
         diag_base_dir: Some(std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))),
+        target,
     };
     let ir = lower::lower_with_options(program, &opts).expect("Lowering failed");
     codegen::emit_with_options(&ir, codegen::CodegenOptions { target, include_diagnostics: true }).expect("Codegen failed")

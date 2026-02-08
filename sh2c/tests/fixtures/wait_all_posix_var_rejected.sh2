@@ -1,0 +1,13 @@
+#!/usr/bin/env sh2
+func main() {
+    // This should fail to compile on POSIX target:
+    // wait_all with non-literal list (variable) is not supported
+    let p1 = spawn(run("sh", "-c", "exit 0"))
+    let p2 = spawn(run("sh", "-c", "exit 0"))
+    
+    // Assigning to a variable and then passing it
+    let pids = [p1, p2]
+    let rc = wait_all(pids)
+    
+    print($"rc: {rc}")
+}

@@ -1,0 +1,11 @@
+#!/usr/bin/env sh2
+func main() {
+    // Spawn two jobs that both succeed
+    let p1 = spawn(run("sh", "-c", "exit 0"))
+    let p2 = spawn(run("sh", "-c", "exit 0"))
+    
+    let pids = [p1, p2]
+    let rc = wait_all(pids)
+    
+    print($"all succeeded, rc: {rc}")
+}

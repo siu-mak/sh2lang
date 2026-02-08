@@ -124,6 +124,12 @@ pub enum Val {
         allow_fail: bool,
         loc: Option<String>,
     },
+    /// Wait for all PIDs in a list and return first non-zero exit code (or 0 if all succeed).
+    WaitAll {
+        pids: Box<Val>,
+        allow_fail: bool,
+        loc: Option<String>,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq)]

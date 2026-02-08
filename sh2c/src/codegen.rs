@@ -483,6 +483,9 @@ fn visit_val(val: &Val, usage: &mut PreludeUsage) {
         Val::Wait { pid, .. } => {
             visit_val(pid, usage);
         }
+        Val::WaitAll { pids, .. } => {
+            visit_val(pids, usage);
+        }
         _ => {}
     }
 }
@@ -870,6 +873,12 @@ fn emit_val(v: &Val, target: TargetShell) -> Result<String, CompileError> {
         Val::Wait { .. } => {
             return Err(CompileError::unsupported(
                 "wait() can only be used in 'let' assignments",
+                target,
+            ));
+        }
+        Val::WaitAll { .. } => {
+            return Err(CompileError::unsupported(
+                "wait_all() can only be used in 'let' assignments",
                 target,
             ));
         }
@@ -1288,6 +1297,86 @@ fn emit_cmd(
                 }
                 // Assign exit code to variable
                 out.push_str(&format!("{}{}=$__sh2_status\n", pad, name));
+                return Ok(());
+            }
+            if let Val::WaitAll { pids, allow_fail, loc } = val {
+                // Wait for all PIDs and return first non-zero exit code (in list order)
+                if let Some(l) = loc {
+                    out.push_str(&format!("{}__sh2_loc=\"{}\"\n", pad, l));
+                }
+                
+                // Use internal temp (no user variable collision)
+                out.push_str(&format!("{}__sh2_wait_all_first=0\n", pad));
+                
+                match target {
+                    TargetShell::Bash => {
+                        // Handle list literals and variables correctly
+                        match pids.as_ref() {
+                            Val::List(elements) => {
+                                // Emit elements directly as space-separated values (no parentheses)
+                                let items: Vec<String> = elements.iter()
+                                    .map(|e| emit_word(e, target))
+                                    .collect::<Result<Vec<_>, _>>()?;
+                                let iter_expr = items.join(" ");
+                                out.push_str(&format!("{}for __sh2_pid in {}; do\n", pad, iter_expr));
+                            }
+                            Val::Var(v) => {
+                                // Variable is a Bash array - use proper expansion
+                                out.push_str(&format!("{}for __sh2_pid in \"${{{}[@]}}\"; do\n", pad, v));
+                            }
+                            _ => {
+                                // Other expressions - shouldn't reach here with current lowering
+                                return Err(CompileError::unsupported(
+                                    "wait_all() argument must be a list literal or list variable",
+                                    target,
+                                ));
+                            }
+                        }
+                        out.push_str(&format!("{}  wait \"$__sh2_pid\"\n", pad));
+                        out.push_str(&format!("{}  __sh2_status=$?\n", pad));
+                        out.push_str(&format!("{}  if [ \"$__sh2_status\" -ne 0 ] && [ \"$__sh2_wait_all_first\" -eq 0 ]; then\n", pad));
+                        out.push_str(&format!("{}    __sh2_wait_all_first=$__sh2_status\n", pad));
+                        out.push_str(&format!("{}  fi\n", pad));
+                        out.push_str(&format!("{}done\n", pad));
+                    }
+                    TargetShell::Posix => {
+                        // POSIX only supports list literals (enforced in lowering)
+                        match pids.as_ref() {
+                            Val::List(elements) => {
+                                // Emit elements as space-separated quoted values
+                                let items: Vec<String> = elements.iter()
+                                    .map(|e| emit_word(e, target))
+                                    .collect::<Result<Vec<_>, _>>()?;
+                                let iter_expr = items.join(" ");
+                                out.push_str(&format!("{}for __sh2_pid in {}; do\n", pad, iter_expr));
+                            }
+                            _ => {
+                                // Should be caught in lowering, but safety net
+                                return Err(CompileError::unsupported(
+                                    "wait_all() requires a list literal on --target posix",
+                                    target,
+                                ));
+                            }
+                        }
+                        out.push_str(&format!("{}  wait \"$__sh2_pid\"\n", pad));
+                        out.push_str(&format!("{}  __sh2_status=$?\n", pad));
+                        out.push_str(&format!("{}  if [ \"$__sh2_status\" -ne 0 ] && [ \"$__sh2_wait_all_first\" -eq 0 ]; then\n", pad));
+                        out.push_str(&format!("{}    __sh2_wait_all_first=$__sh2_status\n", pad));
+                        out.push_str(&format!("{}  fi\n", pad));
+                        out.push_str(&format!("{}done\n", pad));
+                    }
+                }
+                
+                // Set final status
+                out.push_str(&format!("{}__sh2_status=$__sh2_wait_all_first\n", pad));
+                
+                // Check for failure if allow_fail is false
+                if !allow_fail {
+                    out.push_str(&format!("{}__sh2_check \"$__sh2_status\" \"${{__sh2_loc:-}}\"\n", pad));
+                }
+                
+                // Assign result to LHS variable
+                out.push_str(&format!("{}{}=$__sh2_wait_all_first\n", pad, name));
                 return Ok(());
             }
             if target == TargetShell::Posix {

@@ -1212,6 +1212,28 @@ if rc != 0 {
 }
 ```
 
+### 11.3 Waiting for Multiple Jobs
+
+`wait_all(pids)` waits for all processes in a list and returns the first non-zero exit code (in list order) or 0 if all succeed.
+
+```sh2
+let pids = [spawn(run("task1")), spawn(run("task2"))]
+let rc = wait_all(pids)
+```
+
+- **Return Value**: First non-zero exit code in **list order**, or 0 if all succeed.
+- **Status**: The `status()` global is set to the returned value.
+- **Fail-fast**: By default, if any job exits non-zero, the script aborts after all jobs are waited.
+- **Allow Failure**: Use `allow_fail=true` to suppress the abort.
+- **POSIX Restriction**: On `--target posix`, only inline list literals are supported (e.g., `wait_all([p1, p2])`). List variables are not supported.
+
+```sh2
+let rc = wait_all(pids, allow_fail=true)
+if rc != 0 {
+    print($"First failure code: {rc}")
+}
+```
+
 ---
 
 ## 12. Targets and Portability

@@ -81,6 +81,7 @@ pub fn compile_file(path: &Path, options: CompileOptions) -> Result<String, Driv
         &lower::LowerOptions {
             include_diagnostics: options.include_diagnostics,
             diag_base_dir: diag_base_dir.clone(),
+            target: options.target,
         },
     ).map_err(|e| DriverError::compile(e.to_string()))?;
 

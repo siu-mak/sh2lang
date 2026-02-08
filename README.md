@@ -390,6 +390,16 @@ if rc1 != 0 {
 }
 ```
 
+For multiple jobs, use `wait_all(pids)` which returns the first non-zero exit code (in list order) or 0 if all succeed:
+
+```sh2
+let pids = [spawn(run("sleep", "1")), spawn(run("sleep", "2")), spawn(run("sleep", "1"))]
+let rc = wait_all(pids, allow_fail=true)
+if rc != 0 {
+  print_err($"A task failed with code: {rc}")
+}
+```
+
 `spawn` only accepts `run(...)` or `sudo(...)` commands.
 
 ### Safe Recursive File Finding (Bash-only)

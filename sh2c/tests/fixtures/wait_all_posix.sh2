@@ -1,0 +1,11 @@
+#!/usr/bin/env sh2
+func main() {
+    // For POSIX, we use an inline list directly instead of assigning to a variable
+    let p1 = spawn(run("sh", "-c", "exit 0"))
+    let p2 = spawn(run("sh", "-c", "exit 0"))
+    
+    // Use inline list literal directly - no array assignment
+    let rc = wait_all([p1, p2])
+    
+    print($"all succeeded, rc: {rc}")
+}

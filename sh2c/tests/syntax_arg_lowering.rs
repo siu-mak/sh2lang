@@ -20,6 +20,7 @@ fn test_arg_zero_lowers_to_dynamic() {
     let opts = lower::LowerOptions {
         include_diagnostics: false,
         diag_base_dir: None,
+        target: sh2c::codegen::TargetShell::Bash,
     };
     
     let mut prog_with_maps = program;
@@ -71,6 +72,7 @@ fn test_arg_one_lowers_to_fast_path() {
     let opts = lower::LowerOptions {
         include_diagnostics: false,
         diag_base_dir: None,
+        target: sh2c::codegen::TargetShell::Bash,
     };
     
     let mut prog_with_maps = program;

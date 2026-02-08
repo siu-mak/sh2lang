@@ -24,6 +24,7 @@ fn main() {
         let opts = lower::LowerOptions {
             include_diagnostics: true,
             diag_base_dir: Some(fs::canonicalize(PathBuf::from(env!("CARGO_MANIFEST_DIR"))).unwrap()),
+            target: TargetShell::Bash,  // Use Bash for regeneration (permissive)
         };
         
         // Lowering (might panic, but we deal with it mostly working for valid fixtures)

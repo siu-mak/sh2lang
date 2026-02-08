@@ -1,0 +1,13 @@
+#!/usr/bin/env sh2
+func main() {
+    // Jobs finish out of order but we want FIRST list failure (p1 = exit 5)
+    // p2 finishes first with exit 7, but p1 is first in list with exit 5
+    let p1 = spawn(run("sh", "-c", "sleep 0.1; exit 5"))
+    let p2 = spawn(run("sh", "-c", "exit 7"))
+    
+    let pids = [p1, p2]
+    let rc = wait_all(pids, allow_fail=true)
+    
+    // Should return 5 (first in list order), not 7 (first to fail chronologically)
+    print($"first list fail: {rc}")
+}
