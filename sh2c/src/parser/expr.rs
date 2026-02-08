@@ -516,20 +516,49 @@ impl<'a> Parser<'a> {
 
                     
                     let mut args = Vec::new();
+                    let mut options = Vec::new();
+                    
                     if self.match_kind(TokenKind::LParen) {
                         if !self.match_kind(TokenKind::RParen) {
                             loop {
-                                // Lookahead for named argument key=value
+                                // Check for named argument: IDENT = ...
+                                // We allow mixing for now, but builtins usually enforce one or the other.
+                                let mut is_named = false;
                                 if let Some(TokenKind::Ident(_)) = self.peek_kind() {
-                                    if let Some(TokenKind::Equals) = self.tokens.get(self.pos + 1).map(|t| &t.kind) {
+                                    if self.tokens.get(self.pos + 1).map(|t| &t.kind) == Some(&TokenKind::Equals) {
+                                       is_named = true;
+                                    }
+                                }
+
+                                if is_named {
+                                    // Named argument - only allowed for specific builtins
+                                    let allowed_builtins = ["run", "sudo", "sh", "capture", "confirm", "find_files"];
+                                    if !allowed_builtins.contains(&s.as_str()) {
                                         return self.error(
-                                            "Named arguments are only supported for builtins: run, sudo, sh, capture, confirm",
+                                            "Named arguments are only supported for builtins: run, sudo, sh, capture, confirm, find_files",
                                             self.current_span()
                                         );
                                     }
+                                    
+                                    let name = if let Some(TokenKind::Ident(s)) = self.peek_kind() {
+                                        s.clone()
+                                    } else {
+                                        unreachable!()
+                                    };
+                                    let name_span = self.advance().unwrap().span;
+                                    self.expect(TokenKind::Equals)?;
+                                    let value = self.parse_expr()?;
+
+                                    options.push(CallOption {
+                                        name,
+                                        value,
+                                        span: name_span,
+                                    });
+                                } else {
+                                    // Positional argument
+                                    args.push(self.parse_expr()?);
                                 }
-                                
-                                args.push(self.parse_expr()?);
+
                                 if !self.match_kind(TokenKind::Comma) {
                                     break;
                                 }
@@ -571,7 +600,7 @@ impl<'a> Parser<'a> {
                     }
 
                     Ok(Expr {
-                        node: ExprKind::Call { name: s, args },
+                        node: ExprKind::Call { name: s, args, options },
                         span: full_span,
                     })
                 } else {

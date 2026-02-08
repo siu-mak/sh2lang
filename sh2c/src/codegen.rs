@@ -48,6 +48,7 @@ pub struct PreludeUsage {
     pub which: bool,
     pub require: bool,
     pub tmpfile: bool,
+    pub find_files: bool,
     pub read_file: bool,
     pub write_file: bool,
     pub log: bool,
@@ -468,6 +469,12 @@ fn visit_val(val: &Val, usage: &mut PreludeUsage) {
             visit_val(file, usage);
             visit_val(needle, usage);
         }
+
+        Val::FindFiles { dir, name } => {
+            usage.find_files = true;
+            visit_val(dir, usage);
+            visit_val(name, usage);
+        }
         _ => {}
     }
 }
@@ -612,6 +619,18 @@ fn emit_val(v: &Val, target: TargetShell) -> Result<String, CompileError> {
                 TargetShell::Bash => Ok(format!("\"$( trap '' ERR; __sh2_read_file {} )\"", path)),
                 _ => Ok(format!("\"$( __sh2_read_file {} )\"", path)),
             }
+        }
+        Val::Lines(_) => {
+             return Err(CompileError::unsupported(
+                "lines() is only valid in 'for' loops or 'let' assignment",
+                target,
+            ));
+        }
+        Val::FindFiles { .. } => {
+            return Err(CompileError::unsupported(
+                "find_files() is only valid in 'for' loops or 'let' assignment",
+                target,
+            ));
         }
 
 
@@ -828,14 +847,13 @@ fn emit_val(v: &Val, target: TargetShell) -> Result<String, CompileError> {
         Val::LoadEnvfile(path) => {
             Ok(format!("\"$( __sh2_load_envfile {} )\"", emit_word(path, target)?))
         }
-        Val::Lines(_) => Err(CompileError::unsupported(
-            "lines() is only valid in 'for' loops or 'let' assignment",
-            target,
-        )),
-        Val::Glob(_) => Err(CompileError::unsupported(
-            "glob() must be bound to 'let' or used in 'for' loop",
-            target,
-        )),
+        Val::Glob(_) => {
+            return Err(CompileError::unsupported(
+                "glob() can only be used in 'for' loops or assignments",
+                target,
+            ));
+        }
+
         Val::JsonKv(blob) => {
             Ok(format!("\"$( __sh2_json_kv {} )\"", emit_word(blob, target)?))
         }
@@ -1207,6 +1225,16 @@ fn emit_cmd(
                          return Ok(());
                     }
                 }
+            }
+            if let Val::FindFiles { dir, name: pattern } = val {
+                if target == TargetShell::Posix {
+                    return Err(CompileError::unsupported("find_files() is only supported in Bash (requires NUL-delimited read)", target));
+                }
+                out.push_str(&pad);
+                out.push_str(&format!("__sh2_find_files {} {} {}\n", name, emit_val(dir, target)?, emit_val(pattern, target)?));
+                out.push_str(&format!("{}__sh2_status=$?\n", pad));
+                out.push_str(&format!("{}__sh2_check \"$__sh2_status\" \"${{__sh2_loc:-}}\"\n", pad));
+                return Ok(());
             }
             if target == TargetShell::Posix {
                 if matches!(val, Val::MapLiteral(_)) {
@@ -1788,6 +1816,13 @@ fn emit_cmd(
                                 out.push_str(&pad);
                                 out.push_str(&format!("__sh2_glob __sh2_for_glob_{} {}\n", idx, emit_val(inner, target)?));
                             }
+                            if let Val::FindFiles { dir, name } = item {
+                                if target == TargetShell::Posix {
+                                    return Err(CompileError::unsupported("find_files() is only supported in Bash (requires NUL-delimited read)", target));
+                                }
+                                out.push_str(&pad);
+                                out.push_str(&format!("__sh2_find_files __sh2_for_find_{} {} {}\n", idx, emit_val(dir, target)?, emit_val(name, target)?));
+                            }
                         }
 
                         // Standard for loop
@@ -1812,6 +1847,9 @@ fn emit_cmd(
                                     Val::Glob(_) => {
                                         // Bash array pre-calc handled above
                                         out.push_str(&format!(" \"${{__sh2_for_glob_{}[@]}}\"", idx));
+                                    }
+                                    Val::FindFiles { .. } => {
+                                        out.push_str(&format!(" \"${{__sh2_for_find_{}[@]}}\"", idx));
                                     }
                                     Val::List(elems) => {
                                         for elem in elems {
@@ -3160,6 +3198,22 @@ __sh2_split() {
     if usage.tmpfile {
         s.push_str(r#"__sh2_tmpfile() { if command -v mktemp >/dev/null 2>&1; then mktemp; else printf "%s/sh2_tmp_%s_%s" "${TMPDIR:-/tmp}" "$$" "$(awk 'BEGIN{srand();print int(rand()*1000000)}')"; fi; }
 "#);
+    }
+    if usage.find_files {
+        match target {
+            TargetShell::Bash => {
+                s.push_str(r#"__sh2_find_files() {
+  local __out_var="$1" __dir="$2" __pat="$3"
+  local -n __ref="$__out_var"
+  __ref=()
+  while IFS= read -r -d '' __file; do
+    __ref+=("$__file")
+  done < <(find "$__dir" -name "$__pat" -print0 | LC_ALL=C sort -z)
+}
+"#);
+            }
+            TargetShell::Posix => {} // Compile error handled in emit_cmd
+        }
     }
     if usage.read_file {
         s.push_str(

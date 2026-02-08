@@ -186,6 +186,7 @@ builtin_expr = "arg" , "(" , expression , ")"
              | "join" , "(" , expression , "," , expression , ")"
              | "split" , "(" , expression , "," , expression , ")"
              | "lines" , "(" , expression , ")"
+             | "find_files" , "(" , [ builtin_arg_list ] , ")" (* bash-only; returns sorted list of paths recursively *)
              | "glob" , "(" , expression , ")"  (* bash-only; returns sorted list of matched paths *)
              | "trim" , "(" , expression , ")"
              | "replace" , "(" , expression , "," , expression , "," , expression , ")"

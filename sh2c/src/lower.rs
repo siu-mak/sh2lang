@@ -245,8 +245,7 @@ fn lower_stmt<'a>(
             // Special handling for try_run to allow it ONLY during strict let-binding lowering.
             if let ast::ExprKind::Call {
                 name: func_name,
-                args,
-            } = &value.node
+                args, options: _ } = &value.node
             {
                 if func_name == "try_run" {
                     if args.is_empty() {
@@ -333,7 +332,7 @@ fn lower_stmt<'a>(
         }
 
         ast::StmtKind::Print(e) => {
-            if let ast::ExprKind::Call { name, args: _ } = &e.node {
+            if let ast::ExprKind::Call { name, args: _, options: _ } = &e.node {
                 if name == "split" {
                      return Err(CompileError::new(sm.format_diagnostic(
                         file,
@@ -1434,7 +1433,7 @@ fn lower_expr<'a>(e: ast::Expr, out: &mut Vec<ir::Cmd>, ctx: &mut LoweringContex
             Ok(ir::Val::Command(lowered_args))
         }
 
-        ast::ExprKind::Call { name, args } => {
+        ast::ExprKind::Call { name, args, options } => {
             if name == "argv" {
                 if !args.is_empty() {
                     return Err(CompileError::new(sm.format_diagnostic(
@@ -1646,7 +1645,7 @@ fn lower_expr<'a>(e: ast::Expr, out: &mut Vec<ir::Cmd>, ctx: &mut LoweringContex
                     return Err(CompileError::new(sm.format_diagnostic(
                         file,
                         opts.diag_base_dir.as_deref(),
-                        "lines() requires exactly 1 argument (text)",
+                        "lines() requires exactly 1 argument (the source)",
                         e.span,
                     )));
                 }
@@ -1679,6 +1678,54 @@ fn lower_expr<'a>(e: ast::Expr, out: &mut Vec<ir::Cmd>, ctx: &mut LoweringContex
                 }
                 let arg = lower_expr(args.into_iter().next().unwrap(), out, ctx, sm, file)?;
                 Ok(ir::Val::Glob(Box::new(arg)))
+            } else if name == "find_files" {
+                // Ensure no positional arguments
+                if !args.is_empty() {
+                    return Err(CompileError::new(sm.format_diagnostic(
+                        file,
+                        opts.diag_base_dir.as_deref(),
+                        "find_files() does not accept positional arguments. Use named arguments: find_files(dir=\"...\", name=\"...\")",
+                        e.span,
+                    )));
+                }
+
+                // Process options
+                let mut dir = None;
+                let mut name_arg = None;
+
+                for opt in options {
+                    match opt.name.as_str() {
+                        "dir" => {
+                            if dir.is_some() {
+                                return Err(CompileError::new(sm.format_diagnostic(file, opts.diag_base_dir.as_deref(), "Duplicate argument 'dir'", opt.span)));
+                            }
+                            dir = Some(lower_expr(opt.value, out, ctx, sm, file)?);
+                        }
+                        "name" => {
+                            if name_arg.is_some() {
+                                return Err(CompileError::new(sm.format_diagnostic(file, opts.diag_base_dir.as_deref(), "Duplicate argument 'name'", opt.span)));
+                            }
+                            name_arg = Some(lower_expr(opt.value, out, ctx, sm, file)?);
+                        }
+                        _ => {
+                            return Err(CompileError::new(sm.format_diagnostic(
+                                file, 
+                                opts.diag_base_dir.as_deref(), 
+                                format!("Unknown argument '{}'. Supported: dir, name", opt.name).as_str(), 
+                                opt.span
+                            )));
+                        }
+                    }
+                }
+
+                // Apply defaults
+                let dir_val = dir.unwrap_or(ir::Val::Literal(".".to_string()));
+                let name_val = name_arg.unwrap_or(ir::Val::Literal("*".to_string()));
+
+                Ok(ir::Val::FindFiles {
+                    dir: Box::new(dir_val),
+                    name: Box::new(name_val),
+                })
             } else if name == "save_envfile" {
                 return Err(CompileError::new(sm.format_diagnostic(
                     file,

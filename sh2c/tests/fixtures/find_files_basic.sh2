@@ -1,0 +1,11 @@
+func main() {
+    run("mkdir", "-p", "test_basic")
+    run("touch", "test_basic/a.txt", "test_basic/b.txt", "test_basic/c.log")
+    
+    # Test basic find with dir argument
+    for f in find_files(dir="test_basic", name="*.txt") {
+        print("{f}")
+    }
+
+    run("rm", "-rf", "test_basic")
+}

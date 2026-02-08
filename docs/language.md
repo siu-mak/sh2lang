@@ -293,6 +293,38 @@ let msg = "hello"
 
 **Redeclaration**: Declaring a variable that already exists in the current scope is a compile error.
 
+### `find_files()`
+
+Recursively find files in a directory, returning a list of paths.
+
+**Signature**: `find_files(dir=".", name="*") -> List[String]`
+
+- **Parameters**:
+  - `dir` (optional): The root directory to search. Defaults to current directory (`.`).
+  - `name` (optional): A glob pattern for filenames. Defaults to all files (`*`).
+- **Features**:
+  - **NUL-Safe**: Handles filenames with spaces, newlines, and other special characters safely using `find ... -print0`.
+  - **Sorted**: Returns paths sorted lexicographically for deterministic behavior.
+  - **Recursive**: searches subdirectories.
+- **Dependencies**:
+  - Requires **Bash 4.3+** target. Not supported on POSIX sh.
+  - Requires **GNU find** and **GNU sort** for `-print0` and `-z` flags.
+
+**Example**:
+```sh2
+# Find all Rust files in src/
+for f in find_files(dir="src", name="*.rs") {
+    print("Found source file: {f}")
+}
+
+# Find all files in current dir (recursive)
+let all_files = find_files()
+```
+
+### `glob()`
+
+Expand a glob pattern in the current directory (non-recursive).
+
 ### 4.2 Reassignment: `set`
 
 To update an existing variable, use `set`. The variable must already be declared.
@@ -1102,6 +1134,46 @@ run(sh_path, "-c", "echo hello")
 - Portable: Works on both Bash and POSIX targets without external `which` dependency
 
 
+
+### 10.9 Builtin Filesystem Helpers
+
+#### `find_files(dir=".", name="*")` → list (Bash-only)
+
+Recursively find files in a directory, returning a list of paths.
+
+- **Parameters**:
+  - `dir` (optional): The root directory to search. Defaults to current directory (`.`).
+  - `name` (optional): A glob pattern for filenames. Defaults to all files (`*`).
+- **Features**:
+  - **NUL-Safe**: Handles filenames with spaces, newlines, and other special characters safely using `find ... -print0`.
+  - **Sorted**: Returns paths sorted lexicographically for deterministic behavior.
+  - **Recursive**: searches subdirectories.
+- **Dependencies**:
+  - Requires **Bash 4.3+** target. Not supported on POSIX sh.
+  - Requires **GNU find** and **GNU sort** for `-print0` and `-z` flags.
+
+**Example**:
+```sh2
+# Find all Rust files in src/
+for f in find_files(dir="src", name="*.rs") {
+    print("Found source file: {f}")
+}
+
+# Find all files in current dir (recursive)
+let all_files = find_files()
+```
+
+#### `glob(pattern)` → list (Bash-only)
+
+Expand a glob pattern in the current directory (non-recursive). Uses `compgen -G`.
+
+- **Parameters**:
+  - `pattern`: The glob pattern (e.g. `*.txt`).
+- **Target**: Bash-only.
+
+```sh2
+for f in glob("*.txt") { ... }
+```
 
 ---
 

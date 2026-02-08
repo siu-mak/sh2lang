@@ -35,7 +35,8 @@ pub const EXPR_BUILTINS: &[&str] = &[
     "lines",
     "split", // lowers to ir::Val::Split
     "save_envfile",
-    "glob", // lowers to ir::Val::Glob (bash-only)
+    "glob",
+    "find_files", // lowers to ir::Val::FindFiles (bash-only)
 ];
 
 /// Prelude helper functions that pass through to ir::Val::Call.

@@ -142,7 +142,7 @@ fn check_stmt(stmt: &ast::Stmt, ctx: &mut BinderContext) -> Result<(), CompileEr
         StmtKind::Let { name, value } => {
             // Special handling for try_run: allowed ONLY in Let RHS
             // We check this BEFORE general check_expr to allow it here (it's disallowed elsewhere)
-            if let ExprKind::Call { name: fname, args } = &value.node {
+            if let ExprKind::Call { name: fname, args, options: _ } = &value.node {
                 if fname == "try_run" {
                     // Check try_run args normally
                     for arg in args {
@@ -537,7 +537,7 @@ fn check_expr(expr: &ast::Expr, ctx: &mut BinderContext) -> Result<(), CompileEr
             }
         }
 
-        ExprKind::Call { name, args } => {
+        ExprKind::Call { name, args, options: _ } => {
             check_function_call(name, args, expr.span, ctx)?;
         }
 

@@ -86,6 +86,10 @@ pub enum Val {
     Lines(Box<Val>),
     /// Glob pattern expansion (bash-only). Returns list of matched paths.
     Glob(Box<Val>),
+    FindFiles {
+        dir: Box<Val>,
+        name: Box<Val>,
+    },
 
     ContainsList {
         list: Box<Val>,

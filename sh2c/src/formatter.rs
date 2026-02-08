@@ -372,8 +372,11 @@ fn format_expr_prec(kind: &ExprKind, min_prec: u8) -> String {
              let parts: Vec<String> = entries.iter().map(|(k, v)| format!("\"{}\": {}", sh_escape(k), format_expr(v))).collect();
              format!("{{ {} }}", parts.join(", "))
         }
-        ExprKind::Call { name, args } => {
-             let parts: Vec<String> = args.iter().map(format_expr).collect();
+        ExprKind::Call { name, args, options } => {
+             let mut parts: Vec<String> = args.iter().map(format_expr).collect();
+             for opt in options {
+                 parts.push(format!("{}={}", opt.name, format_expr(&opt.value)));
+             }
              format!("{}({})", name, parts.join(", "))
         }
         ExprKind::Run(call) => format_run_call(call),

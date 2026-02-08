@@ -50,7 +50,7 @@ fn fail_glob_invalid_context() {
     let path = std::path::Path::new("tests/fixtures/glob_invalid_ctx.sh2");
     let res = try_compile_path_to_shell(path, TargetShell::Bash);
     match res {
-        Err(msg) => assert!(msg.contains("glob() must be bound to 'let' or used in 'for' loop"), "Unexpected error: {}", msg),
+        Err(msg) => assert!(msg.contains("glob() can only be used in 'for' loops or assignments"), "Unexpected error: {}", msg),
         Ok(_) => panic!("Expected compilation failure for glob in invalid context"),
     }
 }

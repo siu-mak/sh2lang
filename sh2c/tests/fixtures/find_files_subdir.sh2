@@ -1,0 +1,11 @@
+func main() {
+    run("mkdir", "-p", "test_subdir/nested")
+    run("touch", "test_subdir/x.rs", "test_subdir/nested/y.rs")
+    
+    let files = find_files(dir="test_subdir", name="*.rs")
+    for f in files {
+        print("{f}")
+    }
+
+    run("rm", "-rf", "test_subdir")
+}

@@ -1,0 +1,12 @@
+func main() {
+    run("mkdir", "-p", "test_weird")
+    run("touch", "test_weird/space file.txt")
+    run("touch", "test_weird/quote'file.txt")
+    
+    for f in find_files(dir="test_weird") {
+        # Printing filenames safely
+        print("Found: {f}")
+    }
+
+    run("rm", "-rf", "test_weird")
+}

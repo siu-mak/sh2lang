@@ -370,6 +370,19 @@ if count(configs) == 0 {
 
 `glob()` returns a sorted list (`LC_ALL=C` stable); empty pattern = empty list (no error). **Bash 4.3+ required.**
 
+### Safe Recursive File Finding (Bash-only)
+
+Use `find_files(dir=".", name="*")` to recursively find files with NUL-safe handling:
+
+```sh2
+# Find specific files in a subdirectory
+for f in find_files(dir="src", name="*.rs") {
+  print("Found: " & f)
+}
+```
+
+It uses `find ... -print0` and `mapfile`/`read -d ''` to safely handle all filenames, including those with newlines.
+
 ### Variables
 
 ### Logical operators are `&&` / `||`
