@@ -1,0 +1,12 @@
+#!/bin/sh
+__sh2_check() { __sh2_s="$1"; __sh2_l="$2"; __sh2_m="$3"; if [ "$__sh2_s" -ne 0 ]; then if [ "$__sh2_m" = "return" ]; then return "$__sh2_s"; fi; if [ -n "$__sh2_l" ]; then printf 'Error in %s\n' "$__sh2_l" >&2; fi; exit "$__sh2_s"; fi; }
+main() {
+  printf '%s\n' "$( if [ "$#" = "0" ]; then printf "%s" "true"; else printf "%s" "false"; fi )"
+  printf '%s\n' "$1"
+  printf '%s\n' "$( if true; then printf "%s" "true"; else printf "%s" "false"; fi )"
+  for a in "$@"; do
+    printf '%s\n' "$a"
+  done
+}
+__sh2_status=0
+main "$@"

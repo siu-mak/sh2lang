@@ -1,5 +1,5 @@
 #!/bin/sh
-__sh2_check() { s="$1"; loc="$2"; mode="$3"; if [ "$s" -ne 0 ]; then if [ -n "$loc" ]; then printf 'Error in %s\n' "$loc" >&2; fi; if [ "$mode" = "return" ]; then return "$s"; else exit "$s"; fi; fi; }
+__sh2_check() { __sh2_s="$1"; __sh2_l="$2"; __sh2_m="$3"; if [ "$__sh2_s" -ne 0 ]; then if [ "$__sh2_m" = "return" ]; then return "$__sh2_s"; fi; if [ -n "$__sh2_l" ]; then printf 'Error in %s\n' "$__sh2_l" >&2; fi; exit "$__sh2_s"; fi; }
 main() {
   __sh2_loc="tests/fixtures/run_args.sh2:2:3"
   'echo' "$@"; __sh2_status=$?

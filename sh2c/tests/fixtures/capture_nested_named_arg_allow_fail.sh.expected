@@ -1,0 +1,38 @@
+#!/usr/bin/env bash
+__sh2_check() { local s="$1"; local loc="$2"; local mode="$3"; if (( s != 0 )); then if [[ "$mode" == "return" ]]; then return "$s"; else if [[ -n "$loc" ]]; then printf 'Error in %s\n' "$loc" >&2; fi; exit "$s"; fi; fi; }
+__sh2_err_handler() {
+  local s=$?
+  local loc="${__sh2_loc:-}"
+  if [[ "${BASH_COMMAND}" == *"(exit "* ]]; then return $s; fi
+  if (( ${__sh2_suppress_err_depth:-0} > 0 )); then return "$s"; fi
+  if [[ -z "$loc" ]]; then return $s; fi
+  if [[ "$loc" == "${__sh2_last_err_loc:-}" && "$s" == "${__sh2_last_err_status:-}" ]]; then return $s; fi
+  __sh2_last_err_loc="$loc"
+  __sh2_last_err_status="$s"
+  printf "Error in %s\n" "$loc" >&2
+  return $s
+}
+set -o errtrace
+trap '__sh2_err_handler' ERR
+__sh2_tmpfile() { if command -v mktemp >/dev/null 2>&1; then mktemp; else printf "%s/sh2_tmp_%s_%s" "${TMPDIR:-/tmp}" "$$" "$(awk 'BEGIN{srand();print int(rand()*1000000)}')"; fi; }
+main() {
+  local __sh2_loc=""
+  __sh2_loc="tests/fixtures/capture_nested_named_arg_allow_fail.sh2:9:5"
+    res__stdout_tmp=$(__sh2_tmpfile)
+  res__stderr_tmp=$(__sh2_tmpfile)
+  res__cs=0
+  ( 'sh' '-c' 'exit 7' ) >"${res__stdout_tmp}" 2>"${res__stderr_tmp}" || res__cs=$?
+  res__status="${res__cs}"
+  __sh2_status="${res__cs}"
+  res__stdout=$(cat "${res__stdout_tmp}")
+  res__stderr=$(cat "${res__stderr_tmp}")
+  res="${res__stdout}"
+  rm -f "${res__stdout_tmp}" "${res__stderr_tmp}"
+  if [ "$res__status" != "7" ]; then
+    printf '%s\n' 'Expected status 7, but got '"$res__status"
+    exit "1"
+  fi
+  printf '%s\n' 'Success: Captured status '"$res__status"
+}
+__sh2_status=0
+main "$@"

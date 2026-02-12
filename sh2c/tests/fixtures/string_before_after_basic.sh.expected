@@ -6,6 +6,7 @@ __sh2_err_handler() {
   local s=$?
   local loc="${__sh2_loc:-}"
   if [[ "${BASH_COMMAND}" == *"(exit "* ]]; then return $s; fi
+  if (( ${__sh2_suppress_err_depth:-0} > 0 )); then return "$s"; fi
   if [[ -z "$loc" ]]; then return $s; fi
   if [[ "$loc" == "${__sh2_last_err_loc:-}" && "$s" == "${__sh2_last_err_status:-}" ]]; then return $s; fi
   __sh2_last_err_loc="$loc"

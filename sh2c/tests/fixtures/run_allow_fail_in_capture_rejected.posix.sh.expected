@@ -1,0 +1,19 @@
+#!/bin/sh
+__sh2_check() { __sh2_s="$1"; __sh2_l="$2"; __sh2_m="$3"; if [ "$__sh2_s" -ne 0 ]; then if [ "$__sh2_m" = "return" ]; then return "$__sh2_s"; fi; if [ -n "$__sh2_l" ]; then printf 'Error in %s\n' "$__sh2_l" >&2; fi; exit "$__sh2_s"; fi; }
+__sh2_tmpfile() { if command -v mktemp >/dev/null 2>&1; then mktemp; else printf "%s/sh2_tmp_%s_%s" "${TMPDIR:-/tmp}" "$$" "$(awk 'BEGIN{srand();print int(rand()*1000000)}')"; fi; }
+main() {
+  __sh2_loc="tests/fixtures/run_allow_fail_in_capture_rejected.sh2:2:5"
+    x__stdout_tmp=$(__sh2_tmpfile)
+  x__stderr_tmp=$(__sh2_tmpfile)
+  x__cs=0
+  ( 'sh' '-c' 'exit 7' ) >"${x__stdout_tmp}" 2>"${x__stderr_tmp}" || x__cs=$?
+  x__status="${x__cs}"
+  __sh2_status="${x__cs}"
+  x__stdout=$(cat "${x__stdout_tmp}")
+  x__stderr=$(cat "${x__stderr_tmp}")
+  x="${x__stdout}"
+  rm -f "${x__stdout_tmp}" "${x__stderr_tmp}"
+  printf '%s\n' "$x"
+}
+__sh2_status=0
+main "$@"

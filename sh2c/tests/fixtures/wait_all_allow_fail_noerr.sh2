@@ -1,0 +1,12 @@
+// Test: wait_all(pids, allow_fail=true) should not emit "Error in ..."
+func main() {
+    let child1 = spawn(run("sh", "-c", "exit 0"))
+    let child2 = spawn(run("sh", "-c", "exit 7"))
+    let child3 = spawn(run("sh", "-c", "exit 0"))
+    let rc = wait_all([child1, child2, child3], allow_fail=true)
+    if rc == 7 {
+        print("wait_all correctly captured failure")
+    } else {
+        print("wait_all: unexpected exit code")
+    }
+}

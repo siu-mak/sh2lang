@@ -1,0 +1,32 @@
+#!/bin/sh
+__sh2_check() { __sh2_s="$1"; __sh2_l="$2"; __sh2_m="$3"; if [ "$__sh2_s" -ne 0 ]; then if [ "$__sh2_m" = "return" ]; then return "$__sh2_s"; fi; if [ -n "$__sh2_l" ]; then printf 'Error in %s\n' "$__sh2_l" >&2; fi; exit "$__sh2_s"; fi; }
+main() {
+  __sh2_loc="tests/fixtures/wait_all_posix.sh2:4:5"
+  __sh2_loc="tests/fixtures/wait_all_posix.sh2:4:20"
+  'sh' '-c' 'exit 0' &
+  __sh2_status=$?
+  p1=$!
+  __sh2_check "$__sh2_status" "${__sh2_loc:-}"
+  __sh2_loc="tests/fixtures/wait_all_posix.sh2:5:5"
+  __sh2_loc="tests/fixtures/wait_all_posix.sh2:5:20"
+  'sh' '-c' 'exit 0' &
+  __sh2_status=$?
+  p2=$!
+  __sh2_check "$__sh2_status" "${__sh2_loc:-}"
+  __sh2_loc="tests/fixtures/wait_all_posix.sh2:8:5"
+  __sh2_loc="tests/fixtures/wait_all_posix.sh2:8:14"
+  __sh2_wait_all_first=0
+  for __sh2_pid in "$p1" "$p2"; do
+    wait "$__sh2_pid"
+    __sh2_status=$?
+    if [ "$__sh2_status" -ne 0 ] && [ "$__sh2_wait_all_first" -eq 0 ]; then
+      __sh2_wait_all_first=$__sh2_status
+    fi
+  done
+  __sh2_status=$__sh2_wait_all_first
+  __sh2_check "$__sh2_status" "${__sh2_loc:-}"
+  rc=$__sh2_wait_all_first
+  printf '%s\n' 'all succeeded, rc: '"$rc"
+}
+__sh2_status=0
+main "$@"

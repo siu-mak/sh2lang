@@ -1,0 +1,46 @@
+#!/bin/sh
+__sh2_check() { __sh2_s="$1"; __sh2_l="$2"; __sh2_m="$3"; if [ "$__sh2_s" -ne 0 ]; then if [ "$__sh2_m" = "return" ]; then return "$__sh2_s"; fi; if [ -n "$__sh2_l" ]; then printf 'Error in %s\n' "$__sh2_l" >&2; fi; exit "$__sh2_s"; fi; }
+main() {
+  __sh2_loc="tests/fixtures/bool_var_basic.sh2:2:5"
+  x="42"
+  __sh2_status=$?
+  __sh2_check "$__sh2_status" "${__sh2_loc:-}"
+  __sh2_loc="tests/fixtures/bool_var_basic.sh2:5:5"
+  ok="$( if [ "$x" = "42" ]; then printf true; else printf false; fi )"
+  __sh2_status=0
+  if [ "$ok" = "true" ]; then
+    printf '%s\n' 'ok is true'
+  else
+    printf '%s\n' 'ok is false'
+  fi
+  __sh2_loc="tests/fixtures/bool_var_basic.sh2:13:5"
+  not_ok="$( if [ "$x" = "99" ]; then printf true; else printf false; fi )"
+  __sh2_status=0
+  if [ "$not_ok" = "true" ]; then
+    printf '%s\n' 'not_ok is true'
+  else
+    printf '%s\n' 'not_ok is false'
+  fi
+  __sh2_loc="tests/fixtures/bool_var_basic.sh2:21:5"
+  a="$( if [ "1" = "1" ]; then printf true; else printf false; fi )"
+  __sh2_status=0
+  __sh2_loc="tests/fixtures/bool_var_basic.sh2:22:5"
+  b="$( if [ "1" = "2" ]; then printf true; else printf false; fi )"
+  __sh2_status=0
+  if [ "$a" = "true" ]; then
+    printf '%s\n' 'a is true'
+  fi
+  if [ "$b" = "true" ]; then
+    printf '%s\n' 'b should not print'
+  fi
+  if [ -e '/' ]; then
+    __sh2_loc="tests/fixtures/bool_var_basic.sh2:34:9"
+    root_exists="$( if [ -e '/' ]; then printf true; else printf false; fi )"
+    __sh2_status=0
+    if [ -n "$root_exists" ]; then
+      printf '%s\n' 'root_exists works'
+    fi
+  fi
+}
+__sh2_status=0
+main "$@"

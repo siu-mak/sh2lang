@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+__sh2_check() { local s="$1"; local loc="$2"; local mode="$3"; if (( s != 0 )); then if [[ "$mode" == "return" ]]; then return "$s"; else if [[ -n "$loc" ]]; then printf 'Error in %s\n' "$loc" >&2; fi; exit "$s"; fi; fi; }
+main() {
+  __sh2_loc="tests/fixtures/sh_block_fail_fast.sh2:2:5"
+  false
+  __sh2_status=$?
+  __sh2_check "$__sh2_status" "${__sh2_loc:-}" "exit"
+  printf '%s\n' 'should_not_print'
+}
+__sh2_status=0
+main "$@"

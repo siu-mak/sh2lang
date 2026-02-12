@@ -1,0 +1,21 @@
+#!/bin/sh
+__sh2_check() { __sh2_s="$1"; __sh2_l="$2"; __sh2_m="$3"; if [ "$__sh2_s" -ne 0 ]; then if [ "$__sh2_m" = "return" ]; then return "$__sh2_s"; fi; if [ -n "$__sh2_l" ]; then printf 'Error in %s\n' "$__sh2_l" >&2; fi; exit "$__sh2_s"; fi; }
+__sh2_trim() { awk -v s="$1" 'BEGIN { sub(/^[[:space:]]+/, "", s); sub(/[[:space:]]+$/, "", s); printf "%s", s }'; }
+__sh2_tmpfile() { if command -v mktemp >/dev/null 2>&1; then mktemp; else printf "%s/sh2_tmp_%s_%s" "${TMPDIR:-/tmp}" "$$" "$(awk 'BEGIN{srand();print int(rand()*1000000)}')"; fi; }
+main() {
+  __sh2_loc="tests/fixtures/capture_allow_fail_exit_only.sh2:2:5"
+    a__stdout_tmp=$(__sh2_tmpfile)
+  a__stderr_tmp=$(__sh2_tmpfile)
+  a__cs=0
+  ( 'sh' '-c' 'exit 7' ) >"${a__stdout_tmp}" 2>"${a__stderr_tmp}" || a__cs=$?
+  a__status="${a__cs}"
+  __sh2_status="${a__cs}"
+  a__stdout=$(cat "${a__stdout_tmp}")
+  a__stderr=$(cat "${a__stderr_tmp}")
+  a="${a__stdout}"
+  rm -f "${a__stdout_tmp}" "${a__stderr_tmp}"
+  printf '%s\n' 'a='"$( __sh2_trim "$a" )"
+  printf '%s\n' 'status='"$__sh2_status"
+}
+__sh2_status=0
+main "$@"

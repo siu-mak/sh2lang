@@ -623,7 +623,12 @@ fn emit_val(v: &Val, target: TargetShell) -> Result<String, CompileError> {
         Val::Var(s) => Ok(format!("\"${}\"", s)),
         Val::Concat(l, r) => Ok(format!("{}{}", emit_val(l, target)?, emit_val(r, target)?)),
         Val::TryRun(_) => Err(CompileError::unsupported("try_run() must be bound via let (e.g., let r = try_run(...))", target)),
-        Val::Which(arg) => Ok(format!("\"$( __sh2_which {} )\"", emit_word(arg, target)?)),
+        Val::Which(arg) => {
+            match target {
+                TargetShell::Bash => Ok(format!("\"$( __sh2_suppress_err_depth=$((${{__sh2_suppress_err_depth:-0}}+1)); __sh2_which {} )\"", emit_word(arg, target)?)),
+                _ => Ok(format!("\"$( __sh2_which {} )\"", emit_word(arg, target)?)),
+            }
+        }
         Val::ReadFile(arg) => {
             let path = emit_word(arg, target)?;
             match target {
@@ -1290,8 +1295,17 @@ fn emit_cmd(
                     out.push_str(&format!("{}__sh2_loc=\"{}\"\n", pad, l));
                 }
                 out.push_str(&pad);
-                out.push_str(&format!("wait {}\n", emit_word(pid, target)?));
-                out.push_str(&format!("{}__sh2_status=$?\n", pad));
+                
+                if *allow_fail && target == TargetShell::Bash {
+                     out.push_str("__sh2_suppress_err_depth=$((${__sh2_suppress_err_depth:-0}+1))\n");
+                     out.push_str(&format!("{}wait {}\n", pad, emit_word(pid, target)?));
+                     out.push_str(&format!("{}__sh2_status=$?\n", pad));
+                     out.push_str(&format!("{}__sh2_suppress_err_depth=$((${{__sh2_suppress_err_depth:-0}}-1))\n", pad));
+                } else {
+                     out.push_str(&format!("wait {}\n", emit_word(pid, target)?));
+                     out.push_str(&format!("{}__sh2_status=$?\n", pad));
+                }
+
                 if !allow_fail {
                     out.push_str(&format!("{}__sh2_check \"$__sh2_status\" \"${{__sh2_loc:-}}\"\n", pad));
                 }
@@ -1310,6 +1324,10 @@ fn emit_cmd(
                 
                 match target {
                     TargetShell::Bash => {
+                        if *allow_fail {
+                             out.push_str(&format!("{}__sh2_suppress_err_depth=$((${{__sh2_suppress_err_depth:-0}}+1))\n", pad));
+                        }
+
                         // Handle list literals and variables correctly
                         match pids.as_ref() {
                             Val::List(elements) => {
@@ -1332,12 +1350,17 @@ fn emit_cmd(
                                 ));
                             }
                         }
+
                         out.push_str(&format!("{}  wait \"$__sh2_pid\"\n", pad));
                         out.push_str(&format!("{}  __sh2_status=$?\n", pad));
                         out.push_str(&format!("{}  if [ \"$__sh2_status\" -ne 0 ] && [ \"$__sh2_wait_all_first\" -eq 0 ]; then\n", pad));
                         out.push_str(&format!("{}    __sh2_wait_all_first=$__sh2_status\n", pad));
                         out.push_str(&format!("{}  fi\n", pad));
                         out.push_str(&format!("{}done\n", pad));
+
+                        if *allow_fail {
+                            out.push_str(&format!("{}__sh2_suppress_err_depth=$((${{__sh2_suppress_err_depth:-0}}-1))\n", pad));
+                        }
                     }
                     TargetShell::Posix => {
                         // POSIX only supports list literals (enforced in lowering)
@@ -1565,11 +1588,20 @@ fn emit_cmd(
             } else if matches!(val, Val::Which(_)) {
                 // which() is allow-fail by design: not-found is normal control flow
                 // Capture status but do NOT call __sh2_check
-                out.push_str(name);
-                out.push('=');
-                out.push_str(&emit_val(val, target)?);
-                out.push('\n');
-                out.push_str(&format!("{}__sh2_status=$?\n", pad));
+                if target == TargetShell::Bash {
+                    // TICKET 9c: Prevent parent-shell ERR trap on assignment failure
+                    // Use: name=$(...) && __sh2_status=0 || __sh2_status=$?
+                    out.push_str(name);
+                    out.push('=');
+                    out.push_str(&emit_val(val, target)?);
+                    out.push_str(&format!(" && {}__sh2_status=0 || {}__sh2_status=$?\n", pad, pad));
+                } else {
+                    out.push_str(name);
+                    out.push('=');
+                    out.push_str(&emit_val(val, target)?);
+                    out.push('\n');
+                    out.push_str(&format!("{}__sh2_status=$?\n", pad));
+                }
                 // No __sh2_check: which() returning 1 (not found) is intentional
             } else {
                 out.push_str(name);
@@ -3185,6 +3217,7 @@ __sh2_split() {
   local s=$?
   local loc="${__sh2_loc:-}"
   if [[ "${BASH_COMMAND}" == *"(exit "* ]]; then return $s; fi
+  if (( ${__sh2_suppress_err_depth:-0} > 0 )); then return "$s"; fi
   if [[ -z "$loc" ]]; then return $s; fi
   if [[ "$loc" == "${__sh2_last_err_loc:-}" && "$s" == "${__sh2_last_err_status:-}" ]]; then return $s; fi
   __sh2_last_err_loc="$loc"

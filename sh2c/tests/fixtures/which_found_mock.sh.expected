@@ -46,7 +46,7 @@ __sh2_which() {
 }
 
 main() {
-  printf '%s\n' "$( __sh2_which 'mockcmd' )"
+  printf '%s\n' "$( __sh2_suppress_err_depth=$((${__sh2_suppress_err_depth:-0}+1)); __sh2_which 'mockcmd' )"
 }
 __sh2_status=0
 main "$@"

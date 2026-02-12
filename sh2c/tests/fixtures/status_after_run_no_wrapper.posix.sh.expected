@@ -1,14 +1,26 @@
 #!/bin/sh
-__sh2_check() { s="$1"; loc="$2"; mode="$3"; if [ "$s" -ne 0 ]; then if [ -n "$loc" ]; then printf 'Error in %s\n' "$loc" >&2; fi; if [ "$mode" = "return" ]; then return "$s"; else exit "$s"; fi; fi; }
+__sh2_check() { __sh2_s="$1"; __sh2_l="$2"; __sh2_m="$3"; if [ "$__sh2_s" -ne 0 ]; then if [ "$__sh2_m" = "return" ]; then return "$__sh2_s"; fi; if [ -n "$__sh2_l" ]; then printf 'Error in %s\n' "$__sh2_l" >&2; fi; exit "$__sh2_s"; fi; }
 main() {
-  __sh2_loc="tests/fixtures/status_after_run_no_wrapper.sh2:2:5"
-  'sh' '-c' 'exit 9'; __sh2_status=$?
-  __sh2_check "$__sh2_status" "${__sh2_loc:-}" "exit"
+  case $- in *e*) __sh2_e=1;; *) __sh2_e=0;; esac; set +e
+  if {
+    {
+      'sh' '-c' 'exit 9'; __sh2_status=$?
+      __sh2_check "$__sh2_status" "${__sh2_loc:-}" "return"
+    }
+  }; then
+    if [ "${__sh2_e:-0}" = 1 ]; then set -e; fi
+  else
+    if [ "${__sh2_e:-0}" = 1 ]; then set -e; fi
+    __sh2_loc="tests/fixtures/status_after_run_no_wrapper.sh2:5:9"
+    'true'; __sh2_status=$?
+    __sh2_check "$__sh2_status" "${__sh2_loc:-}" "exit"
+  fi
   printf '%s\n' "$__sh2_status"
-  __sh2_loc="tests/fixtures/status_after_run_no_wrapper.sh2:4:5"
+  __sh2_loc="tests/fixtures/status_after_run_no_wrapper.sh2:8:5"
   'echo' 'hi'; __sh2_status=$?
   __sh2_check "$__sh2_status" "${__sh2_loc:-}" "exit"
   printf '%s\n' "$__sh2_status"
+  exit "0"
 }
 __sh2_status=0
 main "$@"

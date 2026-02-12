@@ -1,0 +1,7 @@
+// Test: wait_all without allow_fail SHOULD abort and emit "Error in ..."
+func main() {
+    let child1 = spawn(run("sh", "-c", "exit 0"))
+    let child2 = spawn(run("sh", "-c", "exit 99"))
+    let rc = wait_all([child1, child2])
+    print("should not reach here")
+}

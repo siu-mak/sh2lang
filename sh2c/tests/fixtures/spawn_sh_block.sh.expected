@@ -1,14 +1,16 @@
 #!/usr/bin/env bash
-__sh2_check() { local s="$1"; local loc="$2"; local mode="$3"; if (( s != 0 )); then if [[ -n "$loc" ]]; then printf 'Error in %s\n' "$loc" >&2; fi; if [[ "$mode" == "return" ]]; then return "$s"; else exit "$s"; fi; fi; }
+__sh2_check() { local s="$1"; local loc="$2"; local mode="$3"; if (( s != 0 )); then if [[ "$mode" == "return" ]]; then return "$s"; else if [[ -n "$loc" ]]; then printf 'Error in %s\n' "$loc" >&2; fi; exit "$s"; fi; fi; }
 main() {
   ( 
     {
+      __sh2_loc="tests/fixtures/spawn_sh_block.sh2:2:9"
       echo one
       __sh2_status=$?
-      __sh2_check "$__sh2_status" "${__sh2_loc:-}"
+      __sh2_check "$__sh2_status" "${__sh2_loc:-}" "exit"
+      __sh2_loc="tests/fixtures/spawn_sh_block.sh2:2:9"
       echo two
       __sh2_status=$?
-      __sh2_check "$__sh2_status" "${__sh2_loc:-}"
+      __sh2_check "$__sh2_status" "${__sh2_loc:-}" "exit"
     }
   ) &
   wait; __sh2_status=$?

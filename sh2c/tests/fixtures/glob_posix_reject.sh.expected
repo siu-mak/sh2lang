@@ -1,0 +1,45 @@
+#!/usr/bin/env bash
+__sh2_check() { local s="$1"; local loc="$2"; local mode="$3"; if (( s != 0 )); then if [[ "$mode" == "return" ]]; then return "$s"; else if [[ -n "$loc" ]]; then printf 'Error in %s\n' "$loc" >&2; fi; exit "$s"; fi; fi; }
+__sh2_err_handler() {
+  local s=$?
+  local loc="${__sh2_loc:-}"
+  if [[ "${BASH_COMMAND}" == *"(exit "* ]]; then return $s; fi
+  if (( ${__sh2_suppress_err_depth:-0} > 0 )); then return "$s"; fi
+  if [[ -z "$loc" ]]; then return $s; fi
+  if [[ "$loc" == "${__sh2_last_err_loc:-}" && "$s" == "${__sh2_last_err_status:-}" ]]; then return $s; fi
+  __sh2_last_err_loc="$loc"
+  __sh2_last_err_status="$s"
+  printf "Error in %s\n" "$loc" >&2
+  return $s
+}
+set -o errtrace
+trap '__sh2_err_handler' ERR
+if [[ -z "${BASH_VERSINFO:-}" || ${BASH_VERSINFO[0]} -lt 4 || ( ${BASH_VERSINFO[0]} -eq 4 && ${BASH_VERSINFO[1]} -lt 3 ) ]]; then
+  echo "sh2: glob() requires Bash 4.3+" >&2
+  exit 2
+fi
+__sh2_glob() {
+  local __out_var="$1" __pat="$2"
+  if [[ -z "$__pat" ]]; then
+    local -n __ref="$__out_var"
+    __ref=()
+    return 0
+  fi
+  local -a __tmp=() __sorted=()
+  mapfile -t __tmp < <(compgen -G "$__pat" || true)
+  if ((${#__tmp[@]})); then
+    mapfile -t __sorted < <(printf '%s\n' "${__tmp[@]}" | LC_ALL=C sort)
+  fi
+  local -n __ref="$__out_var"
+  __ref=("${__sorted[@]}")
+}
+main() {
+  local __sh2_loc=""
+  __sh2_loc="tests/fixtures/glob_posix_reject.sh2:2:3"
+  __sh2_glob xs '*.conf'
+  __sh2_status=$?
+  __sh2_check "$__sh2_status" "${__sh2_loc:-}"
+  printf '%s\n' "$( IFS=','; printf "%s" "${xs[*]}" )"
+}
+__sh2_status=0
+main "$@"

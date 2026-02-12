@@ -1,0 +1,19 @@
+#!/bin/sh
+__sh2_check() { __sh2_s="$1"; __sh2_l="$2"; __sh2_m="$3"; if [ "$__sh2_s" -ne 0 ]; then if [ "$__sh2_m" = "return" ]; then return "$__sh2_s"; fi; if [ -n "$__sh2_l" ]; then printf 'Error in %s\n' "$__sh2_l" >&2; fi; exit "$__sh2_s"; fi; }
+__sh2_arg_by_index() { __sh2_idx="$1"; shift; case "$__sh2_idx" in (''|*[!0-9]*) printf ''; return 0;; esac; [ "$__sh2_idx" -ge 1 ] 2>/dev/null || { printf ''; return 0; }; [ "$__sh2_idx" -le "$#" ] 2>/dev/null || { printf ''; return 0; }; eval "printf '%s' \"\${$__sh2_idx}\""; }
+main() {
+  __sh2_loc="tests/fixtures/arg_dynamic_index.sh2:2:5"
+  i="1"
+  __sh2_status=$?
+  __sh2_check "$__sh2_status" "${__sh2_loc:-}"
+  __sh2_loc="tests/fixtures/arg_dynamic_index.sh2:3:5"
+  j="2"
+  __sh2_status=$?
+  __sh2_check "$__sh2_status" "${__sh2_loc:-}"
+  printf '%s\n' 'a1='"$( __sh2_arg_by_index "$i" "$@" )"
+  printf '%s\n' 'a2='"$( __sh2_arg_by_index "$j" "$@" )"
+  printf '%s\n' 'a3='"$( __sh2_arg_by_index "$(( ( i + 2 ) ))" "$@" )"
+  printf '%s\n' 'a4='"$4"
+}
+__sh2_status=0
+main "$@"

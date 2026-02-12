@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+__sh2_check() { local s="$1"; local loc="$2"; local mode="$3"; if (( s != 0 )); then if [[ "$mode" == "return" ]]; then return "$s"; else if [[ -n "$loc" ]]; then printf 'Error in %s\n' "$loc" >&2; fi; exit "$s"; fi; fi; }
+__sh2_contains() { local -n __arr="$1"; local __val="$2"; for __e in "${__arr[@]}"; do [[ "$__e" == "$__val" ]] && return 0; done; return 1; }
+main() {
+  __sh2_tmp_list_1=('a' 'b')
+  if __sh2_contains "__sh2_tmp_list_1" 'c'; then
+    printf '%s\n' 'true'
+  else
+    printf '%s\n' 'false'
+  fi
+}
+__sh2_status=0
+main "$@"

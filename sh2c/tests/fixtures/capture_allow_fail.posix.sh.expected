@@ -1,0 +1,65 @@
+#!/bin/sh
+__sh2_check() { __sh2_s="$1"; __sh2_l="$2"; __sh2_m="$3"; if [ "$__sh2_s" -ne 0 ]; then if [ "$__sh2_m" = "return" ]; then return "$__sh2_s"; fi; if [ -n "$__sh2_l" ]; then printf 'Error in %s\n' "$__sh2_l" >&2; fi; exit "$__sh2_s"; fi; }
+__sh2_tmpfile() { if command -v mktemp >/dev/null 2>&1; then mktemp; else printf "%s/sh2_tmp_%s_%s" "${TMPDIR:-/tmp}" "$$" "$(awk 'BEGIN{srand();print int(rand()*1000000)}')"; fi; }
+main() {
+  __sh2_loc="tests/fixtures/capture_allow_fail.sh2:3:5"
+    res1__stdout_tmp=$(__sh2_tmpfile)
+  res1__stderr_tmp=$(__sh2_tmpfile)
+  res1__cs=0
+  ( 'printf' 'hello' ) >"${res1__stdout_tmp}" 2>"${res1__stderr_tmp}" || res1__cs=$?
+  res1__status="${res1__cs}"
+  __sh2_status="${res1__cs}"
+  res1__stdout=$(cat "${res1__stdout_tmp}")
+  res1__stderr=$(cat "${res1__stderr_tmp}")
+  res1="${res1__stdout}"
+  rm -f "${res1__stdout_tmp}" "${res1__stderr_tmp}"
+  if [ "$res1__status" = "0" ] && [ "$res1__stdout" = 'hello' ]; then
+    printf '%s\n' 'ok1'
+  else
+    printf '%s\n' 'fail1'
+    printf '%s\n' "$res1__status"
+    printf '%s\n' "$res1__stdout"
+  fi
+  __sh2_loc="tests/fixtures/capture_allow_fail.sh2:13:5"
+    res2__stdout_tmp=$(__sh2_tmpfile)
+  res2__stderr_tmp=$(__sh2_tmpfile)
+  res2__cs=0
+  ( 'sh' '-c' 'exit 42' ) >"${res2__stdout_tmp}" 2>"${res2__stderr_tmp}" || res2__cs=$?
+  res2__status="${res2__cs}"
+  __sh2_status="${res2__cs}"
+  res2__stdout=$(cat "${res2__stdout_tmp}")
+  res2__stderr=$(cat "${res2__stderr_tmp}")
+  res2="${res2__stdout}"
+  rm -f "${res2__stdout_tmp}" "${res2__stderr_tmp}"
+  if [ "$res2__status" = "42" ]; then
+    printf '%s\n' 'ok2 status'
+  else
+    printf '%s\n' 'fail2'
+    printf '%s\n' "$res2__status"
+  fi
+  __sh2_loc="tests/fixtures/capture_allow_fail.sh2:22:5"
+    res3__stdout_tmp=$(__sh2_tmpfile)
+  res3__stderr_tmp=$(__sh2_tmpfile)
+  res3__cs=0
+  ( 'sh' '-c' 'printf err >&2; exit 1' ) >"${res3__stdout_tmp}" 2>"${res3__stderr_tmp}" || res3__cs=$?
+  res3__status="${res3__cs}"
+  __sh2_status="${res3__cs}"
+  res3__stdout=$(cat "${res3__stdout_tmp}")
+  res3__stderr=$(cat "${res3__stderr_tmp}")
+  res3="${res3__stdout}"
+  rm -f "${res3__stdout_tmp}" "${res3__stderr_tmp}"
+  if [ "$res3__stderr" = 'err' ] && [ "$res3__status" = "1" ]; then
+    printf '%s\n' 'ok3 stderr'
+  else
+    printf '%s\n' 'fail3'
+    printf '%s\n' "$res3__stderr"
+    printf '%s\n' "$res3__status"
+  fi
+  __sh2_loc="tests/fixtures/capture_allow_fail.sh2:32:5"
+  s="$( 'printf' 'legacy' )"
+  __sh2_status=$?
+  __sh2_check "$__sh2_status" "${__sh2_loc:-}"
+  printf '%s\n' "$s"
+}
+__sh2_status=0
+main "$@"

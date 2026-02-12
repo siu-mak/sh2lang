@@ -1,0 +1,58 @@
+#!/usr/bin/env bash
+__sh2_check() { local s="$1"; local loc="$2"; local mode="$3"; if (( s != 0 )); then if [[ "$mode" == "return" ]]; then return "$s"; else if [[ -n "$loc" ]]; then printf 'Error in %s\n' "$loc" >&2; fi; exit "$s"; fi; fi; }
+__sh2_err_handler() {
+  local s=$?
+  local loc="${__sh2_loc:-}"
+  if [[ "${BASH_COMMAND}" == *"(exit "* ]]; then return $s; fi
+  if (( ${__sh2_suppress_err_depth:-0} > 0 )); then return "$s"; fi
+  if [[ -z "$loc" ]]; then return $s; fi
+  if [[ "$loc" == "${__sh2_last_err_loc:-}" && "$s" == "${__sh2_last_err_status:-}" ]]; then return $s; fi
+  __sh2_last_err_loc="$loc"
+  __sh2_last_err_status="$s"
+  printf "Error in %s\n" "$loc" >&2
+  return $s
+}
+set -o errtrace
+trap '__sh2_err_handler' ERR
+main() {
+  local __sh2_loc=""
+  __sh2_loc="tests/fixtures/wait_all_allow_fail_noerr.sh2:3:5"
+  __sh2_loc="tests/fixtures/wait_all_allow_fail_noerr.sh2:3:24"
+  'sh' '-c' 'exit 0' &
+  __sh2_status=$?
+  child1=$!
+  __sh2_check "$__sh2_status" "${__sh2_loc:-}"
+  __sh2_loc="tests/fixtures/wait_all_allow_fail_noerr.sh2:4:5"
+  __sh2_loc="tests/fixtures/wait_all_allow_fail_noerr.sh2:4:24"
+  'sh' '-c' 'exit 7' &
+  __sh2_status=$?
+  child2=$!
+  __sh2_check "$__sh2_status" "${__sh2_loc:-}"
+  __sh2_loc="tests/fixtures/wait_all_allow_fail_noerr.sh2:5:5"
+  __sh2_loc="tests/fixtures/wait_all_allow_fail_noerr.sh2:5:24"
+  'sh' '-c' 'exit 0' &
+  __sh2_status=$?
+  child3=$!
+  __sh2_check "$__sh2_status" "${__sh2_loc:-}"
+  __sh2_loc="tests/fixtures/wait_all_allow_fail_noerr.sh2:6:5"
+  __sh2_loc="tests/fixtures/wait_all_allow_fail_noerr.sh2:6:14"
+  __sh2_wait_all_first=0
+  __sh2_suppress_err_depth=$((${__sh2_suppress_err_depth:-0}+1))
+  for __sh2_pid in "$child1" "$child2" "$child3"; do
+    wait "$__sh2_pid"
+    __sh2_status=$?
+    if [ "$__sh2_status" -ne 0 ] && [ "$__sh2_wait_all_first" -eq 0 ]; then
+      __sh2_wait_all_first=$__sh2_status
+    fi
+  done
+  __sh2_suppress_err_depth=$((${__sh2_suppress_err_depth:-0}-1))
+  __sh2_status=$__sh2_wait_all_first
+  rc=$__sh2_wait_all_first
+  if [ "$rc" = "7" ]; then
+    printf '%s\n' 'wait_all correctly captured failure'
+  else
+    printf '%s\n' 'wait_all: unexpected exit code'
+  fi
+}
+__sh2_status=0
+main "$@"

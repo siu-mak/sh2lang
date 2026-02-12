@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+__sh2_check() { local s="$1"; local loc="$2"; local mode="$3"; if (( s != 0 )); then if [[ "$mode" == "return" ]]; then return "$s"; else if [[ -n "$loc" ]]; then printf 'Error in %s\n' "$loc" >&2; fi; exit "$s"; fi; fi; }
+__sh2_starts_with() { [[ "$1" == "$2"* ]]; return $?; }
+main() {
+  if __sh2_starts_with 'abc' 'a'; then
+    printf '%s\n' 'yes'
+  else
+    printf '%s\n' 'no'
+  fi
+  if __sh2_starts_with 'abc' 'b'; then
+    printf '%s\n' 'no'
+  else
+    printf '%s\n' 'yes'
+  fi
+  printf '%s\n' "$( if __sh2_starts_with 'foo' 'foo'; then printf "%s" "true"; else printf "%s" "false"; fi )"
+  printf '%s\n' "$( if __sh2_starts_with 'foo' ''; then printf "%s" "true"; else printf "%s" "false"; fi )"
+}
+__sh2_status=0
+main "$@"

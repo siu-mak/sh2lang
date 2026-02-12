@@ -1,0 +1,19 @@
+#!/bin/sh
+__sh2_check() { __sh2_s="$1"; __sh2_l="$2"; __sh2_m="$3"; if [ "$__sh2_s" -ne 0 ]; then if [ "$__sh2_m" = "return" ]; then return "$__sh2_s"; fi; if [ -n "$__sh2_l" ]; then printf 'Error in %s\n' "$__sh2_l" >&2; fi; exit "$__sh2_s"; fi; }
+__sh2_sh_probe() { cmd="$1"; if sh -c "$cmd"; then __sh2_status=0; else __sh2_status=$?; fi; return 0; }
+main() {
+  __sh2_loc="tests/fixtures/sh_probe_status.sh2:2:5"
+  __sh2_sh_probe 'exit 1'
+  printf '%s\n' "$__sh2_status"
+  __sh2_loc="tests/fixtures/sh_probe_status.sh2:5:5"
+  __sh2_sh_probe 'exit 2'
+  printf '%s\n' "$__sh2_status"
+  __sh2_loc="tests/fixtures/sh_probe_status.sh2:8:5"
+  __sh2_sh_probe 'true'
+  printf '%s\n' "$__sh2_status"
+  __sh2_loc="tests/fixtures/sh_probe_status.sh2:11:5"
+  __sh2_sh_probe 'echo ok'
+  printf '%s\n' "$__sh2_status"
+}
+__sh2_status=0
+main "$@"

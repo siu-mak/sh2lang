@@ -1,0 +1,27 @@
+#!/bin/sh
+__sh2_check() { __sh2_s="$1"; __sh2_l="$2"; __sh2_m="$3"; if [ "$__sh2_s" -ne 0 ]; then if [ "$__sh2_m" = "return" ]; then return "$__sh2_s"; fi; if [ -n "$__sh2_l" ]; then printf 'Error in %s\n' "$__sh2_l" >&2; fi; exit "$__sh2_s"; fi; }
+__sh2_sh_probe() { cmd="$1"; if sh -c "$cmd"; then __sh2_status=0; else __sh2_status=$?; fi; return 0; }
+die() {
+  m="${1}"
+  printf '%s\n' "$m" >&2
+  exit "1"
+}
+
+need_root() {
+  __sh2_loc="tests/fixtures/status_probe_die_message.sh2:7:5"
+  __sh2_sh_probe 'false'
+  if [ "$__sh2_status" != "0" ]; then
+    __sh2_loc="tests/fixtures/status_probe_die_message.sh2:9:9"
+    'die' 'Custom Error Message'; __sh2_status=$?
+    __sh2_check "$__sh2_status" "${__sh2_loc:-}" "exit"
+  fi
+}
+
+main() {
+  __sh2_loc="tests/fixtures/status_probe_die_message.sh2:14:5"
+  'need_root'; __sh2_status=$?
+  __sh2_check "$__sh2_status" "${__sh2_loc:-}" "exit"
+  printf '%s\n' 'ok'
+}
+__sh2_status=0
+main "$@"

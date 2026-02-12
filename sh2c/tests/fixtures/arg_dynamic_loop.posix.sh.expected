@@ -1,0 +1,29 @@
+#!/bin/sh
+__sh2_check() { __sh2_s="$1"; __sh2_l="$2"; __sh2_m="$3"; if [ "$__sh2_s" -ne 0 ]; then if [ "$__sh2_m" = "return" ]; then return "$__sh2_s"; fi; if [ -n "$__sh2_l" ]; then printf 'Error in %s\n' "$__sh2_l" >&2; fi; exit "$__sh2_s"; fi; }
+__sh2_arg_by_index() { __sh2_idx="$1"; shift; case "$__sh2_idx" in (''|*[!0-9]*) printf ''; return 0;; esac; [ "$__sh2_idx" -ge 1 ] 2>/dev/null || { printf ''; return 0; }; [ "$__sh2_idx" -le "$#" ] 2>/dev/null || { printf ''; return 0; }; eval "printf '%s' \"\${$__sh2_idx}\""; }
+main() {
+  printf '%s\n' 'argc: '"$#"
+  for i in $(seq "1" "$#"); do
+    printf '%s\n' 'arg['"$i"']: '"$( __sh2_arg_by_index "$i" "$@" )"
+  done
+  __sh2_loc="tests/fixtures/arg_dynamic_loop.sh2:9:5"
+  oob="$( __sh2_arg_by_index "$(( ( $# + 1 ) ))" "$@" )"
+  __sh2_status=$?
+  __sh2_check "$__sh2_status" "${__sh2_loc:-}"
+  printf '%s\n' 'out of bounds: '\'''"$oob"''\'''
+  __sh2_loc="tests/fixtures/arg_dynamic_loop.sh2:13:5"
+  idx="2"
+  __sh2_status=$?
+  __sh2_check "$__sh2_status" "${__sh2_loc:-}"
+  if [ "$#" -ge "2" ]; then
+    printf '%s\n' 'arg['"$idx"']: '"$( __sh2_arg_by_index "$idx" "$@" )"
+  fi
+  printf '%s\n' 'arg[0]: '\'''"$( __sh2_arg_by_index "0" "$@" )"''\'''
+  __sh2_loc="tests/fixtures/arg_dynamic_loop.sh2:20:5"
+  neg="$(( ( 0 - 1 ) ))"
+  __sh2_status=$?
+  __sh2_check "$__sh2_status" "${__sh2_loc:-}"
+  printf '%s\n' 'arg[neg]: '\'''"$( __sh2_arg_by_index "$neg" "$@" )"''\'''
+}
+__sh2_status=0
+main "$@"

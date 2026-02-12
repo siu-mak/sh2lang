@@ -1,0 +1,22 @@
+#!/bin/sh
+__sh2_check() { __sh2_s="$1"; __sh2_l="$2"; __sh2_m="$3"; if [ "$__sh2_s" -ne 0 ]; then if [ "$__sh2_m" = "return" ]; then return "$__sh2_s"; fi; if [ -n "$__sh2_l" ]; then printf 'Error in %s\n' "$__sh2_l" >&2; fi; exit "$__sh2_s"; fi; }
+main() {
+  __sh2_loc="tests/fixtures/wait_allow_fail_noerr.sh2:3:5"
+  __sh2_loc="tests/fixtures/wait_allow_fail_noerr.sh2:3:23"
+  'sh' '-c' 'exit 42' &
+  __sh2_status=$?
+  child=$!
+  __sh2_check "$__sh2_status" "${__sh2_loc:-}"
+  __sh2_loc="tests/fixtures/wait_allow_fail_noerr.sh2:4:5"
+  __sh2_loc="tests/fixtures/wait_allow_fail_noerr.sh2:4:14"
+  wait "$child"
+  __sh2_status=$?
+  rc=$__sh2_status
+  if [ "$rc" = "42" ]; then
+    printf '%s\n' 'wait correctly captured failure'
+  else
+    printf '%s\n' 'wait: unexpected exit code'
+  fi
+}
+__sh2_status=0
+main "$@"

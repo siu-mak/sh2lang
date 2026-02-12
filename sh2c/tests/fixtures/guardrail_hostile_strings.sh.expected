@@ -1,0 +1,75 @@
+#!/usr/bin/env bash
+__sh2_check() { local s="$1"; local loc="$2"; local mode="$3"; if (( s != 0 )); then if [[ "$mode" == "return" ]]; then return "$s"; else if [[ -n "$loc" ]]; then printf 'Error in %s\n' "$loc" >&2; fi; exit "$s"; fi; fi; }
+__sh2_err_handler() {
+  local s=$?
+  local loc="${__sh2_loc:-}"
+  if [[ "${BASH_COMMAND}" == *"(exit "* ]]; then return $s; fi
+  if (( ${__sh2_suppress_err_depth:-0} > 0 )); then return "$s"; fi
+  if [[ -z "$loc" ]]; then return $s; fi
+  if [[ "$loc" == "${__sh2_last_err_loc:-}" && "$s" == "${__sh2_last_err_status:-}" ]]; then return $s; fi
+  __sh2_last_err_loc="$loc"
+  __sh2_last_err_status="$s"
+  printf "Error in %s\n" "$loc" >&2
+  return $s
+}
+set -o errtrace
+trap '__sh2_err_handler' ERR
+main() {
+  local __sh2_loc=""
+  __sh2_loc="tests/fixtures/guardrail_hostile_strings.sh2:3:5"
+  space_str='hello world'
+  __sh2_status=$?
+  __sh2_check "$__sh2_status" "${__sh2_loc:-}"
+  __sh2_loc="tests/fixtures/guardrail_hostile_strings.sh2:4:5"
+  quote_str='he said "hello"'
+  __sh2_status=$?
+  __sh2_check "$__sh2_status" "${__sh2_loc:-}"
+  __sh2_loc="tests/fixtures/guardrail_hostile_strings.sh2:5:5"
+  dollar_str='$HOME and $USER'
+  __sh2_status=$?
+  __sh2_check "$__sh2_status" "${__sh2_loc:-}"
+  __sh2_loc="tests/fixtures/guardrail_hostile_strings.sh2:6:5"
+  semicolon_str='cmd1; cmd2'
+  __sh2_status=$?
+  __sh2_check "$__sh2_status" "${__sh2_loc:-}"
+  __sh2_loc="tests/fixtures/guardrail_hostile_strings.sh2:7:5"
+  amp_str='bg &'
+  __sh2_status=$?
+  __sh2_check "$__sh2_status" "${__sh2_loc:-}"
+  __sh2_loc="tests/fixtures/guardrail_hostile_strings.sh2:8:5"
+  pipe_str='a | b'
+  __sh2_status=$?
+  __sh2_check "$__sh2_status" "${__sh2_loc:-}"
+  __sh2_loc="tests/fixtures/guardrail_hostile_strings.sh2:9:5"
+  newline_str='line1
+line2'
+  __sh2_status=$?
+  __sh2_check "$__sh2_status" "${__sh2_loc:-}"
+  __sh2_loc="tests/fixtures/guardrail_hostile_strings.sh2:12:5"
+  'echo' "$space_str"; __sh2_status=$?
+  __sh2_check "$__sh2_status" "${__sh2_loc:-}" "exit"
+  __sh2_loc="tests/fixtures/guardrail_hostile_strings.sh2:13:5"
+  'echo' "$quote_str"; __sh2_status=$?
+  __sh2_check "$__sh2_status" "${__sh2_loc:-}" "exit"
+  __sh2_loc="tests/fixtures/guardrail_hostile_strings.sh2:14:5"
+  'echo' "$dollar_str"; __sh2_status=$?
+  __sh2_check "$__sh2_status" "${__sh2_loc:-}" "exit"
+  __sh2_loc="tests/fixtures/guardrail_hostile_strings.sh2:15:5"
+  'echo' "$semicolon_str"; __sh2_status=$?
+  __sh2_check "$__sh2_status" "${__sh2_loc:-}" "exit"
+  __sh2_loc="tests/fixtures/guardrail_hostile_strings.sh2:16:5"
+  'echo' "$amp_str"; __sh2_status=$?
+  __sh2_check "$__sh2_status" "${__sh2_loc:-}" "exit"
+  __sh2_loc="tests/fixtures/guardrail_hostile_strings.sh2:19:5"
+  if ( set -o pipefail; set +e; 'printf' '%s' "$pipe_str" | 'cat' ); then __sh2_status=0; else __sh2_status=$?; fi; (exit $__sh2_status)
+  __sh2_loc="tests/fixtures/guardrail_hostile_strings.sh2:22:5"
+  combined="$space_str"' '"$quote_str"
+  __sh2_status=$?
+  __sh2_check "$__sh2_status" "${__sh2_loc:-}"
+  __sh2_loc="tests/fixtures/guardrail_hostile_strings.sh2:23:5"
+  'echo' "$combined"; __sh2_status=$?
+  __sh2_check "$__sh2_status" "${__sh2_loc:-}" "exit"
+  printf '%s\n' 'All hostile strings handled safely'
+}
+__sh2_status=0
+main "$@"

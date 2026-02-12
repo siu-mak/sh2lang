@@ -1,0 +1,45 @@
+#!/usr/bin/env bash
+__sh2_check() { local s="$1"; local loc="$2"; local mode="$3"; if (( s != 0 )); then if [[ "$mode" == "return" ]]; then return "$s"; else if [[ -n "$loc" ]]; then printf 'Error in %s\n' "$loc" >&2; fi; exit "$s"; fi; fi; }
+__sh2_err_handler() {
+  local s=$?
+  local loc="${__sh2_loc:-}"
+  if [[ "${BASH_COMMAND}" == *"(exit "* ]]; then return $s; fi
+  if (( ${__sh2_suppress_err_depth:-0} > 0 )); then return "$s"; fi
+  if [[ -z "$loc" ]]; then return $s; fi
+  if [[ "$loc" == "${__sh2_last_err_loc:-}" && "$s" == "${__sh2_last_err_status:-}" ]]; then return $s; fi
+  __sh2_last_err_loc="$loc"
+  __sh2_last_err_status="$s"
+  printf "Error in %s\n" "$loc" >&2
+  return $s
+}
+set -o errtrace
+trap '__sh2_err_handler' ERR
+__sh2_find_files() {
+  local __out_var="$1" __dir="$2" __pat="$3"
+  local -n __ref="$__out_var"
+  __ref=()
+  while IFS= read -r -d '' __file; do
+    __ref+=("$__file")
+  done < <(find "$__dir" -name "$__pat" -print0 | LC_ALL=C sort -z)
+}
+main() {
+  local __sh2_loc=""
+  __sh2_loc="tests/fixtures/find_files_weird_names.sh2:2:5"
+  'mkdir' '-p' 'test_weird'; __sh2_status=$?
+  __sh2_check "$__sh2_status" "${__sh2_loc:-}" "exit"
+  __sh2_loc="tests/fixtures/find_files_weird_names.sh2:3:5"
+  'touch' 'test_weird/space file.txt'; __sh2_status=$?
+  __sh2_check "$__sh2_status" "${__sh2_loc:-}" "exit"
+  __sh2_loc="tests/fixtures/find_files_weird_names.sh2:4:5"
+  'touch' 'test_weird/quote'\''file.txt'; __sh2_status=$?
+  __sh2_check "$__sh2_status" "${__sh2_loc:-}" "exit"
+  __sh2_find_files __sh2_for_find_0 'test_weird' '*'
+  for f in "${__sh2_for_find_0[@]}"; do
+    printf '%s\n' 'Found: {f}'
+  done
+  __sh2_loc="tests/fixtures/find_files_weird_names.sh2:11:5"
+  'rm' '-rf' 'test_weird'; __sh2_status=$?
+  __sh2_check "$__sh2_status" "${__sh2_loc:-}" "exit"
+}
+__sh2_status=0
+main "$@"

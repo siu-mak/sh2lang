@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+__sh2_check() { local s="$1"; local loc="$2"; local mode="$3"; if (( s != 0 )); then if [[ "$mode" == "return" ]]; then return "$s"; else if [[ -n "$loc" ]]; then printf 'Error in %s\n' "$loc" >&2; fi; exit "$s"; fi; fi; }
+__sh2_split() {
+  local -n __o=$1
+  if [[ -z "$3" ]]; then eval "$1=(\"$2\")"; return; fi
+  mapfile -t __o < <(awk -v s="$2" -v sep="$3" 'BEGIN {
+     len=length(sep);
+     while(i=index(s, sep)) { print substr(s, 1, i-1); s=substr(s, i+len) }
+     print s
+  }')
+}
+__sh2_contains() { local -n __arr="$1"; local __val="$2"; for __e in "${__arr[@]}"; do [[ "$__e" == "$__val" ]] && return 0; done; return 1; }
+main() {
+  __sh2_split __sh2_tmp_list_1 'a,b,c' ','
+  __sh2_status=$?
+  __sh2_check "$__sh2_status" "${__sh2_loc:-}"
+  if __sh2_contains "__sh2_tmp_list_1" 'b'; then
+    printf '%s\n' 'true'
+  else
+    printf '%s\n' 'false'
+  fi
+}
+__sh2_status=0
+main "$@"

@@ -1,0 +1,23 @@
+#!/bin/sh
+__sh2_check() { __sh2_s="$1"; __sh2_l="$2"; __sh2_m="$3"; if [ "$__sh2_s" -ne 0 ]; then if [ "$__sh2_m" = "return" ]; then return "$__sh2_s"; fi; if [ -n "$__sh2_l" ]; then printf 'Error in %s\n' "$__sh2_l" >&2; fi; exit "$__sh2_s"; fi; }
+__sh2_tmpfile() { if command -v mktemp >/dev/null 2>&1; then mktemp; else printf "%s/sh2_tmp_%s_%s" "${TMPDIR:-/tmp}" "$$" "$(awk 'BEGIN{srand();print int(rand()*1000000)}')"; fi; }
+main() {
+  __sh2_loc="tests/fixtures/capture_nested_named_arg_allow_fail.sh2:9:5"
+    res__stdout_tmp=$(__sh2_tmpfile)
+  res__stderr_tmp=$(__sh2_tmpfile)
+  res__cs=0
+  ( 'sh' '-c' 'exit 7' ) >"${res__stdout_tmp}" 2>"${res__stderr_tmp}" || res__cs=$?
+  res__status="${res__cs}"
+  __sh2_status="${res__cs}"
+  res__stdout=$(cat "${res__stdout_tmp}")
+  res__stderr=$(cat "${res__stderr_tmp}")
+  res="${res__stdout}"
+  rm -f "${res__stdout_tmp}" "${res__stderr_tmp}"
+  if [ "$res__status" != "7" ]; then
+    printf '%s\n' 'Expected status 7, but got '"$res__status"
+    exit "1"
+  fi
+  printf '%s\n' 'Success: Captured status '"$res__status"
+}
+__sh2_status=0
+main "$@"

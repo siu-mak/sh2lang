@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+__sh2_check() { local s="$1"; local loc="$2"; local mode="$3"; if (( s != 0 )); then if [[ "$mode" == "return" ]]; then return "$s"; else if [[ -n "$loc" ]]; then printf 'Error in %s\n' "$loc" >&2; fi; exit "$s"; fi; fi; }
+main() {
+  (
+    cd '~/subdir' || { __sh2_err=$?; printf '%s\n' "hint: '~' is not expanded; use env.HOME & \"/path\" or an absolute path." >&2; exit $__sh2_err; }
+    printf '%s\n' 'should fail'
+  )
+}
+__sh2_status=0
+main "$@"

@@ -1,0 +1,40 @@
+#!/bin/sh
+__sh2_check() { __sh2_s="$1"; __sh2_l="$2"; __sh2_m="$3"; if [ "$__sh2_s" -ne 0 ]; then if [ "$__sh2_m" = "return" ]; then return "$__sh2_s"; fi; if [ -n "$__sh2_l" ]; then printf 'Error in %s\n' "$__sh2_l" >&2; fi; exit "$__sh2_s"; fi; }
+main() {
+  __sh2_loc="tests/fixtures/contains_line_hostile.sh2:2:5"
+  t='sp ace
+quote"d
+$HOME
+;;&|
+-leading
+'
+  __sh2_status=$?
+  __sh2_check "$__sh2_status" "${__sh2_loc:-}"
+  if ( grep -Fqx -e 'sp ace' "$t" ); then
+    printf '%s\n' 'ok 1'
+  else
+    printf '%s\n' 'fail 1'
+  fi
+  if ( grep -Fqx -e 'quote"d' "$t" ); then
+    printf '%s\n' 'ok 2'
+  else
+    printf '%s\n' 'fail 2'
+  fi
+  if ( grep -Fqx -e '$HOME' "$t" ); then
+    printf '%s\n' 'ok 3'
+  else
+    printf '%s\n' 'fail 3'
+  fi
+  if ( grep -Fqx -e ';;&|' "$t" ); then
+    printf '%s\n' 'ok 4'
+  else
+    printf '%s\n' 'fail 4'
+  fi
+  if ( grep -Fqx -e '-leading' "$t" ); then
+    printf '%s\n' 'ok 5'
+  else
+    printf '%s\n' 'fail 5'
+  fi
+}
+__sh2_status=0
+main "$@"

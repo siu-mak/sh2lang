@@ -1,0 +1,29 @@
+#!/bin/sh
+__sh2_check() { __sh2_s="$1"; __sh2_l="$2"; __sh2_m="$3"; if [ "$__sh2_s" -ne 0 ]; then if [ "$__sh2_m" = "return" ]; then return "$__sh2_s"; fi; if [ -n "$__sh2_l" ]; then printf 'Error in %s\n' "$__sh2_l" >&2; fi; exit "$__sh2_s"; fi; }
+__sh2_sh_probe() { cmd="$1"; if sh -c "$cmd"; then __sh2_status=0; else __sh2_status=$?; fi; return 0; }
+main() {
+  __sh2_loc="tests/fixtures/sh_expr_var_probe.sh2:2:5"
+  cmd='false'
+  __sh2_status=$?
+  __sh2_check "$__sh2_status" "${__sh2_loc:-}"
+  __sh2_loc="tests/fixtures/sh_expr_var_probe.sh2:3:5"
+  __sh2_cmd="$cmd"
+  __sh2_sh_probe "$__sh2_cmd"
+  if [ "$__sh2_status" != "1" ]; then
+    printf '%s\n' 'Expected status 1' >&2
+    exit "1"
+  fi
+  __sh2_loc="tests/fixtures/sh_expr_var_probe.sh2:10:5"
+  echo_cmd='echo hello'
+  __sh2_status=$?
+  __sh2_check "$__sh2_status" "${__sh2_loc:-}"
+  __sh2_loc="tests/fixtures/sh_expr_var_probe.sh2:11:5"
+  __sh2_cmd="$echo_cmd"
+  __sh2_sh_probe "$__sh2_cmd"
+  if [ "$__sh2_status" != "0" ]; then
+    printf '%s\n' 'Expected status 0' >&2
+    exit "1"
+  fi
+}
+__sh2_status=0
+main "$@"

@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+__sh2_check() { local s="$1"; local loc="$2"; local mode="$3"; if (( s != 0 )); then if [[ "$mode" == "return" ]]; then return "$s"; else if [[ -n "$loc" ]]; then printf 'Error in %s\n' "$loc" >&2; fi; exit "$s"; fi; fi; }
+__sh2_split() {
+  local -n __o=$1
+  if [[ -z "$3" ]]; then eval "$1=(\"$2\")"; return; fi
+  mapfile -t __o < <(awk -v s="$2" -v sep="$3" 'BEGIN {
+     len=length(sep);
+     while(i=index(s, sep)) { print substr(s, 1, i-1); s=substr(s, i+len) }
+     print s
+  }')
+}
+__sh2_lines() { mapfile -t "$2" <<< "$1"; if [[ -z "$1" ]]; then eval "$2=()"; elif [[ "$1" == *$'\n' ]]; then eval "unset '$2[\${#$2[@]}-1]'"; fi; }
+main() {
+  __sh2_lines 'a
+b
+c' __sh2_for_lines_0
+  for line in "${__sh2_for_lines_0[@]}"; do
+    printf '%s\n' "$line"
+  done
+  __sh2_split __sh2_for_split_0 'x:y:z' ':'
+  for part in "${__sh2_for_split_0[@]}"; do
+    printf '%s\n' "$part"
+  done
+}
+__sh2_status=0
+main "$@"

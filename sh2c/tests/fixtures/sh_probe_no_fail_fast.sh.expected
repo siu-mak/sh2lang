@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+__sh2_check() { local s="$1"; local loc="$2"; local mode="$3"; if (( s != 0 )); then if [[ "$mode" == "return" ]]; then return "$s"; else if [[ -n "$loc" ]]; then printf 'Error in %s\n' "$loc" >&2; fi; exit "$s"; fi; fi; }
+__sh2_sh_probe() { local cmd="$1"; if bash -c "$cmd"; then __sh2_status=0; else __sh2_status=$?; fi; return 0; }
+main() {
+  __sh2_loc="tests/fixtures/sh_probe_no_fail_fast.sh2:2:5"
+  __sh2_sh_probe 'false'
+  printf '%s\n' 'after'
+  if [ "$__sh2_status" = "0" ]; then
+    printf '%s\n' 'Expected status 1' >&2
+    exit "2"
+  fi
+}
+__sh2_status=0
+main "$@"

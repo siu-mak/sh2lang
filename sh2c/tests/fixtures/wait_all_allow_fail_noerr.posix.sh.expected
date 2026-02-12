@@ -1,0 +1,41 @@
+#!/bin/sh
+__sh2_check() { __sh2_s="$1"; __sh2_l="$2"; __sh2_m="$3"; if [ "$__sh2_s" -ne 0 ]; then if [ "$__sh2_m" = "return" ]; then return "$__sh2_s"; fi; if [ -n "$__sh2_l" ]; then printf 'Error in %s\n' "$__sh2_l" >&2; fi; exit "$__sh2_s"; fi; }
+main() {
+  __sh2_loc="tests/fixtures/wait_all_allow_fail_noerr.sh2:3:5"
+  __sh2_loc="tests/fixtures/wait_all_allow_fail_noerr.sh2:3:24"
+  'sh' '-c' 'exit 0' &
+  __sh2_status=$?
+  child1=$!
+  __sh2_check "$__sh2_status" "${__sh2_loc:-}"
+  __sh2_loc="tests/fixtures/wait_all_allow_fail_noerr.sh2:4:5"
+  __sh2_loc="tests/fixtures/wait_all_allow_fail_noerr.sh2:4:24"
+  'sh' '-c' 'exit 7' &
+  __sh2_status=$?
+  child2=$!
+  __sh2_check "$__sh2_status" "${__sh2_loc:-}"
+  __sh2_loc="tests/fixtures/wait_all_allow_fail_noerr.sh2:5:5"
+  __sh2_loc="tests/fixtures/wait_all_allow_fail_noerr.sh2:5:24"
+  'sh' '-c' 'exit 0' &
+  __sh2_status=$?
+  child3=$!
+  __sh2_check "$__sh2_status" "${__sh2_loc:-}"
+  __sh2_loc="tests/fixtures/wait_all_allow_fail_noerr.sh2:6:5"
+  __sh2_loc="tests/fixtures/wait_all_allow_fail_noerr.sh2:6:14"
+  __sh2_wait_all_first=0
+  for __sh2_pid in "$child1" "$child2" "$child3"; do
+    wait "$__sh2_pid"
+    __sh2_status=$?
+    if [ "$__sh2_status" -ne 0 ] && [ "$__sh2_wait_all_first" -eq 0 ]; then
+      __sh2_wait_all_first=$__sh2_status
+    fi
+  done
+  __sh2_status=$__sh2_wait_all_first
+  rc=$__sh2_wait_all_first
+  if [ "$rc" = "7" ]; then
+    printf '%s\n' 'wait_all correctly captured failure'
+  else
+    printf '%s\n' 'wait_all: unexpected exit code'
+  fi
+}
+__sh2_status=0
+main "$@"

@@ -1,0 +1,10 @@
+// Test: wait(pid, allow_fail=true) should not emit "Error in ..."
+func main() {
+    let child = spawn(run("sh", "-c", "exit 42"))
+    let rc = wait(child, allow_fail=true)
+    if rc == 42 {
+        print("wait correctly captured failure")
+    } else {
+        print("wait: unexpected exit code")
+    }
+}

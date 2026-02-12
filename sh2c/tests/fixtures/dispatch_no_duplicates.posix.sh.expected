@@ -1,0 +1,31 @@
+#!/bin/sh
+__sh2_check() { __sh2_s="$1"; __sh2_l="$2"; __sh2_m="$3"; if [ "$__sh2_s" -ne 0 ]; then if [ "$__sh2_m" = "return" ]; then return "$__sh2_s"; fi; if [ -n "$__sh2_l" ]; then printf 'Error in %s\n' "$__sh2_l" >&2; fi; exit "$__sh2_s"; fi; }
+main() {
+  __sh2_loc="tests/fixtures/dispatch_no_duplicates.sh2:2:3"
+  cmd="$1"
+  __sh2_status=$?
+  __sh2_check "$__sh2_status" "${__sh2_loc:-}"
+  if [ "$cmd" = 'core' ]; then
+    __sh2_loc="tests/fixtures/dispatch_no_duplicates.sh2:4:5"
+    sub="$2"
+    __sh2_status=$?
+    __sh2_check "$__sh2_status" "${__sh2_loc:-}"
+    if [ "$sub" = 'dirs' ]; then
+      printf '%s\n' 'dirs'
+      return 0
+    fi
+    if [ "$sub" = 'install' ]; then
+      printf '%s\n' 'install'
+      return 0
+    fi
+    if [ "$sub" = 'registry' ]; then
+      printf '%s\n' 'registry'
+      return 0
+    fi
+    printf '%s\n' 'unknown'
+    return 0
+  fi
+  printf '%s\n' 'other'
+}
+__sh2_status=0
+main "$@"

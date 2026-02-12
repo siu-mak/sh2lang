@@ -4,6 +4,7 @@ __sh2_err_handler() {
   local s=$?
   local loc="${__sh2_loc:-}"
   if [[ "${BASH_COMMAND}" == *"(exit "* ]]; then return $s; fi
+  if (( ${__sh2_suppress_err_depth:-0} > 0 )); then return "$s"; fi
   if [[ -z "$loc" ]]; then return $s; fi
   if [[ "$loc" == "${__sh2_last_err_loc:-}" && "$s" == "${__sh2_last_err_status:-}" ]]; then return $s; fi
   __sh2_last_err_loc="$loc"
@@ -61,23 +62,20 @@ __sh2_which() {
 main() {
   local __sh2_loc=""
   __sh2_loc="tests/fixtures/which_basic.sh2:5:5"
-  sh_path="$( __sh2_which 'sh' )"
-  __sh2_status=$?
+  sh_path="$( __sh2_suppress_err_depth=$((${__sh2_suppress_err_depth:-0}+1)); __sh2_which 'sh' )" &&   __sh2_status=0 ||   __sh2_status=$?
   __sh2_loc="tests/fixtures/which_basic.sh2:6:5"
   found_sh="$( if [ "$sh_path" != '' ]; then printf true; else printf false; fi )"
   __sh2_status=0
   printf '%s\n' 'found sh: '"$( if [ "$found_sh" = "true" ]; then printf "%s" "true"; else printf "%s" "false"; fi )"
   __sh2_loc="tests/fixtures/which_basic.sh2:10:5"
-  bad_path="$( __sh2_which 'non_existent_command_xyz_123' )"
-  __sh2_status=$?
+  bad_path="$( __sh2_suppress_err_depth=$((${__sh2_suppress_err_depth:-0}+1)); __sh2_which 'non_existent_command_xyz_123' )" &&   __sh2_status=0 ||   __sh2_status=$?
   __sh2_loc="tests/fixtures/which_basic.sh2:11:5"
   found_bad="$( if [ "$bad_path" != '' ]; then printf true; else printf false; fi )"
   __sh2_status=0
   printf '%s\n' 'found bad: '"$( if [ "$found_bad" = "true" ]; then printf "%s" "true"; else printf "%s" "false"; fi )"
   if [ "$found_sh" = "true" ]; then
     __sh2_loc="tests/fixtures/which_basic.sh2:16:9"
-    abs_lookup="$( __sh2_which "$sh_path" )"
-    __sh2_status=$?
+    abs_lookup="$( __sh2_suppress_err_depth=$((${__sh2_suppress_err_depth:-0}+1)); __sh2_which "$sh_path" )" &&     __sh2_status=0 ||     __sh2_status=$?
     __sh2_loc="tests/fixtures/which_basic.sh2:17:9"
     found_abs="$( if [ "$abs_lookup" = "$sh_path" ]; then printf true; else printf false; fi )"
     __sh2_status=0

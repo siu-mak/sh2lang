@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
-__sh2_check() { local s="$1"; local loc="$2"; local mode="$3"; if (( s != 0 )); then if [[ -n "$loc" ]]; then printf 'Error in %s\n' "$loc" >&2; fi; if [[ "$mode" == "return" ]]; then return "$s"; else exit "$s"; fi; fi; }
+__sh2_check() { local s="$1"; local loc="$2"; local mode="$3"; if (( s != 0 )); then if [[ "$mode" == "return" ]]; then return "$s"; else if [[ -n "$loc" ]]; then printf 'Error in %s\n' "$loc" >&2; fi; exit "$s"; fi; fi; }
 __sh2_err_handler() {
   local s=$?
   local loc="${__sh2_loc:-}"
   if [[ "${BASH_COMMAND}" == *"(exit "* ]]; then return $s; fi
+  if (( ${__sh2_suppress_err_depth:-0} > 0 )); then return "$s"; fi
   if [[ -z "$loc" ]]; then return $s; fi
   if [[ "$loc" == "${__sh2_last_err_loc:-}" && "$s" == "${__sh2_last_err_status:-}" ]]; then return $s; fi
   __sh2_last_err_loc="$loc"
@@ -16,7 +17,7 @@ trap '__sh2_err_handler' ERR
 __sh2_read_file() { cat "$1"; }
 main() {
   local __sh2_loc=""
-  __sh2_loc="tests/fixtures/read_file_missing_error.sh2:2:1"
+  __sh2_loc="tests/fixtures/read_file_missing_error.sh2:3:1"
   ignored="$( trap '' ERR; __sh2_read_file 'non_existent_file.txt' )"
   __sh2_status=$?
   __sh2_check "$__sh2_status" "${__sh2_loc:-}"

@@ -1,0 +1,97 @@
+#!/bin/sh
+__sh2_check() { __sh2_s="$1"; __sh2_l="$2"; __sh2_m="$3"; if [ "$__sh2_s" -ne 0 ]; then if [ "$__sh2_m" = "return" ]; then return "$__sh2_s"; fi; if [ -n "$__sh2_l" ]; then printf 'Error in %s\n' "$__sh2_l" >&2; fi; exit "$__sh2_s"; fi; }
+main() {
+  __sh2_loc="tests/fixtures/pipe_sudo_basic.sh2:2:5"
+  {
+    case $- in *e*) __sh2_e=1;; *) __sh2_e=0;; esac; set +e;
+    __sh2_saved_traps=$(trap);
+    __sh2_base="${TMPDIR:-/tmp}/sh2_fifo_$$";
+    rm -f "${__sh2_base}_"*;
+    mkfifo "${__sh2_base}_0";
+    trap 'rm -f "${__sh2_base}_"*' EXIT;
+    trap 'rm -f "${__sh2_base}_"*; exit 1' INT TERM QUIT;
+    __sh2_fd=3;
+    __sh2_fds="";
+    eval "exec ${__sh2_fd}<>\"${__sh2_base}_0\"";
+    __sh2_fds="$__sh2_fds $__sh2_fd";
+    __sh2_fd=$((__sh2_fd + 1));
+    ( for fd in $__sh2_fds; do eval "exec $fd>&-"; done; 'printf' 'hi
+' )  > "${__sh2_base}_0" & __sh2_p0=$!;
+    ( for fd in $__sh2_fds; do eval "exec $fd>&-"; done; 'sudo' '-n' '--' 'cat' )  < "${__sh2_base}_0" & __sh2_p1=$!;
+    for fd in $__sh2_fds; do eval "exec $fd>&-"; done;
+    wait "$__sh2_p0"; __sh2_s0=$?;
+    wait "$__sh2_p1"; __sh2_s1=$?;
+    __sh2_status=0;
+    if [ "$__sh2_s0" -ne 0 ]; then __sh2_status="$__sh2_s0"; fi;
+    if [ "$__sh2_s1" -ne 0 ]; then __sh2_status="$__sh2_s1"; fi;
+    trap - EXIT INT TERM QUIT;
+    rm -f "${__sh2_base}_"*;
+    if [ -n "$__sh2_saved_traps" ]; then eval "$__sh2_saved_traps"; fi;
+    if [ "$__sh2_e" = 1 ]; then set -e; fi;
+    (exit $__sh2_status)
+  }
+  __sh2_loc="tests/fixtures/pipe_sudo_basic.sh2:4:5"
+  {
+    case $- in *e*) __sh2_e=1;; *) __sh2_e=0;; esac; set +e;
+    __sh2_saved_traps=$(trap);
+    __sh2_base="${TMPDIR:-/tmp}/sh2_fifo_$$";
+    rm -f "${__sh2_base}_"*;
+    mkfifo "${__sh2_base}_0";
+    trap 'rm -f "${__sh2_base}_"*' EXIT;
+    trap 'rm -f "${__sh2_base}_"*; exit 1' INT TERM QUIT;
+    __sh2_fd=3;
+    __sh2_fds="";
+    eval "exec ${__sh2_fd}<>\"${__sh2_base}_0\"";
+    __sh2_fds="$__sh2_fds $__sh2_fd";
+    __sh2_fd=$((__sh2_fd + 1));
+    ( for fd in $__sh2_fds; do eval "exec $fd>&-"; done; 'sudo' '-n' '--' 'echo' 'root' )  > "${__sh2_base}_0" & __sh2_p0=$!;
+    ( for fd in $__sh2_fds; do eval "exec $fd>&-"; done; 'cat' )  < "${__sh2_base}_0" & __sh2_p1=$!;
+    for fd in $__sh2_fds; do eval "exec $fd>&-"; done;
+    wait "$__sh2_p0"; __sh2_s0=$?;
+    wait "$__sh2_p1"; __sh2_s1=$?;
+    __sh2_status=0;
+    if [ "$__sh2_s0" -ne 0 ]; then __sh2_status="$__sh2_s0"; fi;
+    if [ "$__sh2_s1" -ne 0 ]; then __sh2_status="$__sh2_s1"; fi;
+    trap - EXIT INT TERM QUIT;
+    rm -f "${__sh2_base}_"*;
+    if [ -n "$__sh2_saved_traps" ]; then eval "$__sh2_saved_traps"; fi;
+    if [ "$__sh2_e" = 1 ]; then set -e; fi;
+    (exit $__sh2_status)
+  }
+  __sh2_loc="tests/fixtures/pipe_sudo_basic.sh2:6:5"
+  {
+    case $- in *e*) __sh2_e=1;; *) __sh2_e=0;; esac; set +e;
+    __sh2_saved_traps=$(trap);
+    __sh2_base="${TMPDIR:-/tmp}/sh2_fifo_$$";
+    rm -f "${__sh2_base}_"*;
+    mkfifo "${__sh2_base}_0";
+    trap 'rm -f "${__sh2_base}_"*' EXIT;
+    trap 'rm -f "${__sh2_base}_"*; exit 1' INT TERM QUIT;
+    __sh2_fd=3;
+    __sh2_fds="";
+    eval "exec ${__sh2_fd}<>\"${__sh2_base}_0\"";
+    __sh2_fds="$__sh2_fds $__sh2_fd";
+    __sh2_fd=$((__sh2_fd + 1));
+    ( for fd in $__sh2_fds; do eval "exec $fd>&-"; done; {
+    printf '%s\n' 'block'
+  } )  > "${__sh2_base}_0" & __sh2_p0=$!;
+    ( for fd in $__sh2_fds; do eval "exec $fd>&-"; done; {
+    __sh2_loc="tests/fixtures/pipe_sudo_basic.sh2:8:9"
+    'sudo' '-n' '--' 'tee' '/dev/null'; __sh2_status=$?
+    __sh2_check "$__sh2_status" "${__sh2_loc:-}" "exit"
+  } )  < "${__sh2_base}_0" & __sh2_p1=$!;
+    for fd in $__sh2_fds; do eval "exec $fd>&-"; done;
+    wait "$__sh2_p0"; __sh2_s0=$?;
+    wait "$__sh2_p1"; __sh2_s1=$?;
+    __sh2_status=0;
+    if [ "$__sh2_s0" -ne 0 ]; then __sh2_status="$__sh2_s0"; fi;
+    if [ "$__sh2_s1" -ne 0 ]; then __sh2_status="$__sh2_s1"; fi;
+    trap - EXIT INT TERM QUIT;
+    rm -f "${__sh2_base}_"*;
+    if [ -n "$__sh2_saved_traps" ]; then eval "$__sh2_saved_traps"; fi;
+    if [ "$__sh2_e" = 1 ]; then set -e; fi;
+    (exit $__sh2_status)
+  }
+}
+__sh2_status=0
+main "$@"

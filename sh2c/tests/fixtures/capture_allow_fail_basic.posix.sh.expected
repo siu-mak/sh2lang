@@ -1,0 +1,21 @@
+#!/bin/sh
+__sh2_check() { __sh2_s="$1"; __sh2_l="$2"; __sh2_m="$3"; if [ "$__sh2_s" -ne 0 ]; then if [ "$__sh2_m" = "return" ]; then return "$__sh2_s"; fi; if [ -n "$__sh2_l" ]; then printf 'Error in %s\n' "$__sh2_l" >&2; fi; exit "$__sh2_s"; fi; }
+__sh2_tmpfile() { if command -v mktemp >/dev/null 2>&1; then mktemp; else printf "%s/sh2_tmp_%s_%s" "${TMPDIR:-/tmp}" "$$" "$(awk 'BEGIN{srand();print int(rand()*1000000)}')"; fi; }
+main() {
+  __sh2_loc="tests/fixtures/capture_allow_fail_basic.sh2:2:5"
+    out__stdout_tmp=$(__sh2_tmpfile)
+  out__stderr_tmp=$(__sh2_tmpfile)
+  out__cs=0
+  ( 'sh' '-c' 'printf hi; exit 7' ) >"${out__stdout_tmp}" 2>"${out__stderr_tmp}" || out__cs=$?
+  out__status="${out__cs}"
+  __sh2_status="${out__cs}"
+  out__stdout=$(cat "${out__stdout_tmp}")
+  out__stderr=$(cat "${out__stderr_tmp}")
+  out="${out__stdout}"
+  rm -f "${out__stdout_tmp}" "${out__stderr_tmp}"
+  printf '%s\n' "$out__stdout"
+  printf '%s\n' "$out__status"
+  printf '%s\n' 'Global status: '"$__sh2_status"
+}
+__sh2_status=0
+main "$@"

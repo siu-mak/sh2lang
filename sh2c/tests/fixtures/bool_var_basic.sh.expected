@@ -1,0 +1,61 @@
+#!/usr/bin/env bash
+__sh2_check() { local s="$1"; local loc="$2"; local mode="$3"; if (( s != 0 )); then if [[ "$mode" == "return" ]]; then return "$s"; else if [[ -n "$loc" ]]; then printf 'Error in %s\n' "$loc" >&2; fi; exit "$s"; fi; fi; }
+__sh2_err_handler() {
+  local s=$?
+  local loc="${__sh2_loc:-}"
+  if [[ "${BASH_COMMAND}" == *"(exit "* ]]; then return $s; fi
+  if (( ${__sh2_suppress_err_depth:-0} > 0 )); then return "$s"; fi
+  if [[ -z "$loc" ]]; then return $s; fi
+  if [[ "$loc" == "${__sh2_last_err_loc:-}" && "$s" == "${__sh2_last_err_status:-}" ]]; then return $s; fi
+  __sh2_last_err_loc="$loc"
+  __sh2_last_err_status="$s"
+  printf "Error in %s\n" "$loc" >&2
+  return $s
+}
+set -o errtrace
+trap '__sh2_err_handler' ERR
+main() {
+  local __sh2_loc=""
+  __sh2_loc="tests/fixtures/bool_var_basic.sh2:2:5"
+  x="42"
+  __sh2_status=$?
+  __sh2_check "$__sh2_status" "${__sh2_loc:-}"
+  __sh2_loc="tests/fixtures/bool_var_basic.sh2:5:5"
+  ok="$( if [ "$x" = "42" ]; then printf true; else printf false; fi )"
+  __sh2_status=0
+  if [ "$ok" = "true" ]; then
+    printf '%s\n' 'ok is true'
+  else
+    printf '%s\n' 'ok is false'
+  fi
+  __sh2_loc="tests/fixtures/bool_var_basic.sh2:13:5"
+  not_ok="$( if [ "$x" = "99" ]; then printf true; else printf false; fi )"
+  __sh2_status=0
+  if [ "$not_ok" = "true" ]; then
+    printf '%s\n' 'not_ok is true'
+  else
+    printf '%s\n' 'not_ok is false'
+  fi
+  __sh2_loc="tests/fixtures/bool_var_basic.sh2:21:5"
+  a="$( if [ "1" = "1" ]; then printf true; else printf false; fi )"
+  __sh2_status=0
+  __sh2_loc="tests/fixtures/bool_var_basic.sh2:22:5"
+  b="$( if [ "1" = "2" ]; then printf true; else printf false; fi )"
+  __sh2_status=0
+  if [ "$a" = "true" ]; then
+    printf '%s\n' 'a is true'
+  fi
+  if [ "$b" = "true" ]; then
+    printf '%s\n' 'b should not print'
+  fi
+  if [ -e '/' ]; then
+    __sh2_loc="tests/fixtures/bool_var_basic.sh2:34:9"
+    root_exists="$( if [ -e '/' ]; then printf true; else printf false; fi )"
+    __sh2_status=0
+    if [ -n "$root_exists" ]; then
+      printf '%s\n' 'root_exists works'
+    fi
+  fi
+}
+__sh2_status=0
+main "$@"

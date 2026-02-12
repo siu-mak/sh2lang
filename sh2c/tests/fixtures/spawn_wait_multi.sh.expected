@@ -1,0 +1,51 @@
+#!/usr/bin/env bash
+__sh2_check() { local s="$1"; local loc="$2"; local mode="$3"; if (( s != 0 )); then if [[ "$mode" == "return" ]]; then return "$s"; else if [[ -n "$loc" ]]; then printf 'Error in %s\n' "$loc" >&2; fi; exit "$s"; fi; fi; }
+__sh2_err_handler() {
+  local s=$?
+  local loc="${__sh2_loc:-}"
+  if [[ "${BASH_COMMAND}" == *"(exit "* ]]; then return $s; fi
+  if (( ${__sh2_suppress_err_depth:-0} > 0 )); then return "$s"; fi
+  if [[ -z "$loc" ]]; then return $s; fi
+  if [[ "$loc" == "${__sh2_last_err_loc:-}" && "$s" == "${__sh2_last_err_status:-}" ]]; then return $s; fi
+  __sh2_last_err_loc="$loc"
+  __sh2_last_err_status="$s"
+  printf "Error in %s\n" "$loc" >&2
+  return $s
+}
+set -o errtrace
+trap '__sh2_err_handler' ERR
+main() {
+  local __sh2_loc=""
+  __sh2_loc="tests/fixtures/spawn_wait_multi.sh2:4:5"
+  __sh2_loc="tests/fixtures/spawn_wait_multi.sh2:4:21"
+  'sh' '-c' 'sleep 0.15; exit 3' &
+  __sh2_status=$?
+  p_a=$!
+  __sh2_check "$__sh2_status" "${__sh2_loc:-}"
+  __sh2_loc="tests/fixtures/spawn_wait_multi.sh2:5:5"
+  __sh2_loc="tests/fixtures/spawn_wait_multi.sh2:5:21"
+  'sh' '-c' 'sleep 0.05; exit 9' &
+  __sh2_status=$?
+  p_b=$!
+  __sh2_check "$__sh2_status" "${__sh2_loc:-}"
+  __sh2_loc="tests/fixtures/spawn_wait_multi.sh2:8:5"
+  __sh2_loc="tests/fixtures/spawn_wait_multi.sh2:8:16"
+  __sh2_suppress_err_depth=$((${__sh2_suppress_err_depth:-0}+1))
+  wait "$p_b"
+  __sh2_status=$?
+  __sh2_suppress_err_depth=$((${__sh2_suppress_err_depth:-0}-1))
+  rc_b=$__sh2_status
+  printf '%s\n' 'job B exit: '"$rc_b"
+  printf '%s\n' 'status after B: '"$__sh2_status"
+  __sh2_loc="tests/fixtures/spawn_wait_multi.sh2:12:5"
+  __sh2_loc="tests/fixtures/spawn_wait_multi.sh2:12:16"
+  __sh2_suppress_err_depth=$((${__sh2_suppress_err_depth:-0}+1))
+  wait "$p_a"
+  __sh2_status=$?
+  __sh2_suppress_err_depth=$((${__sh2_suppress_err_depth:-0}-1))
+  rc_a=$__sh2_status
+  printf '%s\n' 'job A exit: '"$rc_a"
+  printf '%s\n' 'status after A: '"$__sh2_status"
+}
+__sh2_status=0
+main "$@"

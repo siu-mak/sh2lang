@@ -1,0 +1,32 @@
+#!/bin/sh
+__sh2_check() { __sh2_s="$1"; __sh2_l="$2"; __sh2_m="$3"; if [ "$__sh2_s" -ne 0 ]; then if [ "$__sh2_m" = "return" ]; then return "$__sh2_s"; fi; if [ -n "$__sh2_l" ]; then printf 'Error in %s\n' "$__sh2_l" >&2; fi; exit "$__sh2_s"; fi; }
+main() {
+  __sh2_loc="tests/fixtures/spawn_wait_multi.sh2:4:5"
+  __sh2_loc="tests/fixtures/spawn_wait_multi.sh2:4:21"
+  'sh' '-c' 'sleep 0.15; exit 3' &
+  __sh2_status=$?
+  p_a=$!
+  __sh2_check "$__sh2_status" "${__sh2_loc:-}"
+  __sh2_loc="tests/fixtures/spawn_wait_multi.sh2:5:5"
+  __sh2_loc="tests/fixtures/spawn_wait_multi.sh2:5:21"
+  'sh' '-c' 'sleep 0.05; exit 9' &
+  __sh2_status=$?
+  p_b=$!
+  __sh2_check "$__sh2_status" "${__sh2_loc:-}"
+  __sh2_loc="tests/fixtures/spawn_wait_multi.sh2:8:5"
+  __sh2_loc="tests/fixtures/spawn_wait_multi.sh2:8:16"
+  wait "$p_b"
+  __sh2_status=$?
+  rc_b=$__sh2_status
+  printf '%s\n' 'job B exit: '"$rc_b"
+  printf '%s\n' 'status after B: '"$__sh2_status"
+  __sh2_loc="tests/fixtures/spawn_wait_multi.sh2:12:5"
+  __sh2_loc="tests/fixtures/spawn_wait_multi.sh2:12:16"
+  wait "$p_a"
+  __sh2_status=$?
+  rc_a=$__sh2_status
+  printf '%s\n' 'job A exit: '"$rc_a"
+  printf '%s\n' 'status after A: '"$__sh2_status"
+}
+__sh2_status=0
+main "$@"

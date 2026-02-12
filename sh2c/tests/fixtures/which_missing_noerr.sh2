@@ -1,0 +1,9 @@
+// Test: which() for nonexistent command should not emit "Error in ..."
+func main() {
+    let path = which("nonexistent_command_xyz_missing")
+    if path == "" {
+        print("which correctly returned empty")
+    } else {
+        print("which: unexpected path")
+    }
+}
