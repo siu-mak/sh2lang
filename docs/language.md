@@ -578,6 +578,7 @@ let who = capture(run("whoami"))
 let n = capture(run("printf", "a\n") | run("wc", "-l"))
 
 # With allowed failure (returns captured stdout even if command fails)
+# The command's exit code is preserved in status() after capture returns.
 let output = capture(run("ls", "missing"), allow_fail=true)
 if status() != 0 {
     print("ls failed with status " & status())

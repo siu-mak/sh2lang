@@ -1572,7 +1572,9 @@ fn emit_cmd(
                 out.push_str(&format!("{}{}=\"${{{}__stdout}}\"\n", pad, name, name));
                 out.push_str(&format!("{}rm -f \"${{{}__stdout_tmp}}\" \"${{{}__stderr_tmp}}\"\n", pad, name, name));
                 
-                // Status captured above
+                // Status captured above into name__status
+                // Restore __sh2_status from the preserved capture status, in case cleanup clobbered it.
+                out.push_str(&format!("{pad}__sh2_status=\"${{{name}__status}}\"\n", pad = pad, name = name));
 
 
             } else if let Val::Args = val {

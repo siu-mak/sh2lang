@@ -457,8 +457,11 @@ if status() == 0 {
   print("Files found: " & files)
 }
 
-# Nested allow_fail is also supported and equivalent to outer form
-let out = capture(run("grep", "pattern", "file", allow_fail=true))
+# Output is captured, and exit code is preserved in status()
+let result = capture(run("grep", "pattern", "file"), allow_fail=true)
+if status() != 0 {
+    print_err("grep failed with status: " & status())
+}
 ```
 
 ### `sudo(...)` for privileged commands

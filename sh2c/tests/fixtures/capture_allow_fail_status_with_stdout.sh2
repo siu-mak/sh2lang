@@ -1,0 +1,6 @@
+
+func main() {
+    let x = capture(run("sh","-c","printf \"hi\"; exit 5"), allow_fail=true)
+    print(x)
+    print(status())
+}

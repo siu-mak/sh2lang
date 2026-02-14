@@ -13,6 +13,7 @@
 - **Unknown function detection**: Calling an undefined function in expression context now produces a compile error with hints to use `run(...)` for external commands or define the function.
 
 ## Fixes
+- **Capture Status**: `capture(..., allow_fail=true)` now correctly preserves the command's exit status in `status()` across all targets, ensuring it isn't clobbered by internal cleanup operations. [#11]
 - **`sh(...)` expression contexts**: `sh(...)` inside `capture(...)` and other expression contexts now correctly executes via `sh -c`. Previously, the command string was passed as a filename argument to `sh` rather than as code to execute.
 
 ## Docs
