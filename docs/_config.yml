@@ -18,3 +18,35 @@ defaults:
       path: "google796f0b1fd48dd05d.html"
     values:
       sitemap: false
+  - scope:
+      path: "articles"
+    values:
+      layout: "sh2_doc"
+  - scope:
+      path: "tutorials"
+    values:
+      layout: "sh2_doc"
+  - scope:
+      path: "releases"
+    values:
+      layout: "sh2_doc"
+  - scope:
+      path: "language.md"
+    values:
+      layout: "sh2_doc"
+  - scope:
+      path: "sh2do.md"
+    values:
+      layout: "sh2_doc"
+  - scope:
+      path: "feature_matrix.md"
+    values:
+      layout: "sh2_doc"
+  - scope:
+      path: "codegen-safety.md"
+    values:
+      layout: "sh2_doc"
+  - scope:
+      path: "editor_keywords.md"
+    values:
+      layout: "sh2_doc"
