@@ -58,7 +58,7 @@ set_stmt = "set" , lvalue , "=" , expression ;
 export_stmt = "export" , "(" , string_literal , [ "," , expression ] , ")" ;
 unset_stmt = "unset" , "(" , string_literal , ")" ;
 source_stmt = "source" , "(" , expression , ")" ;
-sh_stmt = "sh" , "(" , string_literal , ")" | "sh" , block ;
+sh_stmt = "sh" , "(" , expression , { "," , named_arg } , ")" | "sh" , block ;
 cd_stmt = "cd" , "(" , expression , ")" ;
 
 return_stmt = "return" , [ expression ] ;
@@ -196,7 +196,7 @@ builtin_expr = "arg" , "(" , expression , ")"
              | "confirm" , "(" , expression , [ "," , "default" , "=" , bool_literal ] , ")"
              | "bool_str" , "(" , expression , ")"
              | sudo_call
-             | "sh" , "(" , expression , [ "," , arg_list ] , ")"
+             | "sh" , "(" , expression , { "," , named_arg } , ")"
              | "which" , "(" , expression , ")"
              | "spawn" , "(" , expression , ")"
              | "wait" , "(" , expression , [ "," , "allow_fail" , "=" , bool_literal ] , ")"

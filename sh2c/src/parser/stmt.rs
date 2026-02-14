@@ -515,9 +515,16 @@ impl<'a> Parser<'a> {
             TokenKind::Sh => {
                 self.advance();
                 if self.match_kind(TokenKind::LParen) {
-                    let expr = self.parse_expr()?;
+                    let cmd = self.parse_expr()?;
+                    let options = self.parse_sh_options(true)?;
                     self.expect(TokenKind::RParen)?;
-                    StmtKind::Sh(expr)
+                    StmtKind::Sh(Expr {
+                        node: ExprKind::Sh {
+                             cmd: Box::new(cmd),
+                             options,
+                        },
+                        span: self.current_span(), // Approximate span, or use better tracking
+                    })
                 } else if self.match_kind(TokenKind::LBrace) {
                     let mut lines = Vec::new();
                     while !self.match_kind(TokenKind::RBrace) {
@@ -590,57 +597,8 @@ impl<'a> Parser<'a> {
                     self.expect(TokenKind::LParen)?;
                     let cmd = self.parse_expr()?;
                     
-                    // Parse options: shell=..., allow_fail=...
-                    let mut _shell_expr = Expr {
-                        node: ExprKind::Literal("sh".to_string()),
-                        span: start_span,
-                    };
-                    let mut options = Vec::new();
-                    let mut seen_shell = false;
-                    let mut seen_allow_fail = false;
-                    
-                    while self.match_kind(TokenKind::Comma) {
-                        let opt_start = self.current_span();
-                        if let Some(TokenKind::Ident(opt_name)) = self.peek_kind() {
-                            let opt_name = opt_name.clone();
-                            let name_span = self.advance().unwrap().span;
-                            self.expect(TokenKind::Equals)?;
-                            let value = self.parse_expr()?;
-                            
-                            match opt_name.as_str() {
-                                "shell" => {
-                                    if seen_shell {
-                                        self.error("shell specified more than once", opt_start)?;
-                                    }
-                                    seen_shell = true;
-                                    _shell_expr = value;
-                                }
-                                "allow_fail" => {
-                                    if seen_allow_fail {
-                                        self.error("allow_fail specified more than once", opt_start)?;
-                                    }
-                                    seen_allow_fail = true;
-                                    if let ExprKind::Bool(_) = value.node {
-                                        // OK
-                                    } else {
-                                        self.error("allow_fail must be a boolean", value.span)?;
-                                    }
-                                    
-                                    // Add to options so lowering sees it
-                                    options.push(CallOption {
-                                        name: opt_name,
-                                        value,
-                                        span: name_span,
-                                    });
-                                }
-                                _ => {
-                                    self.error(format!("Unknown option '{}'", opt_name).as_str(), opt_start)?;
-                                }
-                            }
-                        } else {
-                             self.error("Expected option name", self.current_span())?;
-                        }
-                    }
+                    // Parse options: shell=, allow_fail=, args=
+                    let options = self.parse_sh_options(true)?;
                     self.expect(TokenKind::RParen)?;
                     
                     StmtKind::Sh(Expr {

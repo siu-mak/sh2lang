@@ -37,7 +37,7 @@ fn parse_fs_predicates_cwd() {
             panic!("Expected Literal(\"sh2_test_scratch_fs_predicates_cwd\")");
         }
         assert_eq!(body.len(), 1);
-        assert!(matches!(body[0], Stmt { node: StmtKind::Sh(ref e), .. } if matches!(e.node, ExprKind::Literal(ref s) if s == "touch f.txt")));
+        assert!(matches!(body[0], Stmt { node: StmtKind::Sh(ref e), .. } if matches!(e.node, ExprKind::Sh { ref cmd, .. } if matches!(cmd.node, ExprKind::Literal(ref s) if s == "touch f.txt"))));
     } else {
         panic!("Expected WithCwd");
     }

@@ -1,0 +1,5 @@
+func main() {
+    sh("exit 42", args=args())
+    print("still alive")
+    print("status:" & status())
+}

@@ -550,7 +550,7 @@ sh("echo " & cmd)         # ✅ concatenation
 > **Warning**: `sh(expr)` is injection-prone if you interpolate untrusted input. Prefer structured `run(...)`, pipelines, and `capture(...)` instead.
 
 `sh(expr)` uses **probe semantics**: it updates `status()` but never triggers fail-fast behavior.
-> **Note**: `sh(...)` runs in a fresh shell context. It does **not** receive script positional parameters; use `argc()`/`arg(n)` in sh2 or `run(...)` for safe argument passing.
+> **Note**: `sh(...)` runs in a fresh shell context. It does **not** receive script positional parameters unless you explicitly forward them using `args=args()`. Otherwise `$@` inside `sh(...)` is empty. Use `argc()`/`arg(n)` in the parent script or `run(...)` for safer alternatives.
 
 ---
 

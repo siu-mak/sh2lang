@@ -37,8 +37,9 @@ fn test_codegen_source_only_has_safe_shell_c() {
         // There are no other valid uses (compiler-internal -c is banned).
         
         let is_probe_helper_emission = line.contains("s.push_str(\"__sh2_sh_probe() {");
+        let is_probe_helper_args_emission = line.contains("s.push_str(\"__sh2_sh_probe_args() {");
         
-        if is_probe_helper_emission {
+        if is_probe_helper_emission || is_probe_helper_args_emission {
             continue;
         }
 

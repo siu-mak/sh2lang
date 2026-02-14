@@ -1,0 +1,4 @@
+func main() {
+    sh("echo \"count:$#\"")
+    sh("echo \"first:${1:-empty}\"")
+}

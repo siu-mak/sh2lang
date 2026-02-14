@@ -235,7 +235,7 @@ pub enum Cmd {
         timestamp: bool,
     },
     Cd(Val),
-    Raw(Val, Option<String>),
+    Raw { cmd: Val, args: Option<Val>, loc: Option<String> },
     RawLine { line: String, loc: Option<String> },
     Call {
         name: String,
@@ -370,7 +370,7 @@ impl Cmd {
             Cmd::WriteFile { .. } => {},
             Cmd::Log { .. } => {},
             Cmd::Cd(_) => {},
-            Cmd::Raw(..) => {},
+            Cmd::Raw { loc, .. } => *loc = None,
             Cmd::RawLine { loc, .. } => *loc = None,
             Cmd::Call { .. } => {},
             Cmd::Wait(_) => {},

@@ -383,41 +383,7 @@ impl<'a> Parser<'a> {
             TokenKind::Sh => {
                 self.expect(TokenKind::LParen)?;
                 let cmd = self.parse_expr()?;
-                let mut options = Vec::new();
-                
-                while self.match_kind(TokenKind::Comma) {
-                    let opt_start = self.current_span();
-                    if let Some(TokenKind::Ident(opt_name)) = self.peek_kind() {
-                        let opt_name = opt_name.clone();
-                        let name_span = self.advance().unwrap().span;
-                        self.expect(TokenKind::Equals)?;
-                        let value = self.parse_expr()?;
-                        
-                        match opt_name.as_str() {
-                            "shell" => {
-                                options.push(CallOption {
-                                    name: opt_name,
-                                    value,
-                                    span: name_span,
-                                });
-                            }
-                            "allow_fail" => {
-                                return self.error(
-                                    "allow_fail is only valid on statement-form sh(...); use capture(sh(...), allow_fail=true) for expression capture",
-                                    opt_start,
-                                );
-                            }
-                            _ => {
-                                return self.error(
-                                    &format!("unknown sh() option '{}'; supported: shell", opt_name),
-                                    opt_start,
-                                );
-                            }
-                        }
-                    } else {
-                        return self.error("expected option name", self.current_span());
-                    }
-                }
+                let options = self.parse_sh_options(false)?;
                 
                 self.expect(TokenKind::RParen)?;
                 Ok(Expr {
@@ -664,10 +630,17 @@ impl<'a> Parser<'a> {
                     span: full_span,
                 })
             }
-            TokenKind::Args => Ok(Expr {
-                node: ExprKind::Args,
-                span,
-            }),
+            TokenKind::Args => {
+                let mut full_span = span;
+                if self.match_kind(TokenKind::LParen) {
+                    self.expect(TokenKind::RParen)?;
+                    full_span = full_span.merge(self.previous_span());
+                }
+                Ok(Expr {
+                    node: ExprKind::Args,
+                    span: full_span,
+                })
+            },
             TokenKind::Capture => self.parse_command_substitution(span, true),
             TokenKind::Exists => {
                 self.expect(TokenKind::LParen)?;
@@ -1030,9 +1003,10 @@ impl<'a> Parser<'a> {
                           // correctly injects -c (Ticket 10).
                           self.expect(TokenKind::LParen)?;
                           let cmd = self.parse_expr()?;
+                          let options = self.parse_sh_options(false)?;
                           self.expect(TokenKind::RParen)?;
                           args.push(Expr {
-                              node: ExprKind::Sh { cmd: Box::new(cmd), options: vec![] },
+                              node: ExprKind::Sh { cmd: Box::new(cmd), options },
                               span: s_span,
                           });
                      } else {
@@ -1584,6 +1558,89 @@ impl<'a> Parser<'a> {
             sm: Some(self.sm.clone()),
             file: Some(self.file.to_string()),
         }
+    }
+    pub(crate) fn parse_sh_options(&mut self, allow_allow_fail: bool) -> Result<Vec<CallOption>, Diagnostic> {
+        let mut options = Vec::new();
+        let mut seen_shell = false;
+        let mut seen_args = false;
+        let mut seen_allow_fail = false;
+
+        while self.match_kind(TokenKind::Comma) {
+            let opt_start = self.current_span();
+            let (opt_name, name_span) = if let Some(TokenKind::Ident(opt_name)) = self.peek_kind() {
+                let name = opt_name.clone();
+                let span = self.advance().unwrap().span;
+                (name, span)
+            } else if self.peek_kind() == Some(&TokenKind::Args) {
+                // `args` is lexed as a keyword (TokenKind::Args), not Ident.
+                // Accept it as a valid option name in named-option position.
+                let span = self.advance().unwrap().span;
+                ("args".to_string(), span)
+            } else {
+                return Err(self.make_error("expected option name", self.current_span()));
+            };
+
+            self.expect(TokenKind::Equals)?;
+            let value = self.parse_expr()?;
+
+            match opt_name.as_str() {
+                    "shell" => {
+                        if seen_shell {
+                             return Err(self.make_error("shell specified more than once", opt_start));
+                        }
+                        seen_shell = true;
+                        options.push(CallOption {
+                            name: opt_name,
+                            value,
+                            span: name_span,
+                        });
+                    }
+                    "args" => {
+                        if seen_args {
+                             return Err(self.make_error("args specified more than once", opt_start));
+                        }
+                        seen_args = true;
+                         options.push(CallOption {
+                            name: opt_name,
+                            value,
+                            span: name_span,
+                        });
+                    }
+                    "allow_fail" => {
+                        if !allow_allow_fail {
+                            return Err(self.make_error(
+                                "allow_fail is only valid on statement-form sh(...); use capture(sh(...), allow_fail=true) for expression capture",
+                                opt_start,
+                            ));
+                        }
+                        if seen_allow_fail {
+                             return Err(self.make_error("allow_fail specified more than once", opt_start));
+                        }
+                        seen_allow_fail = true;
+
+                        if let ExprKind::Bool(_) = value.node {
+                            // OK
+                        } else {
+                             return Err(self.make_error("allow_fail must be a boolean", value.span));
+                        }
+                        options.push(CallOption {
+                            name: opt_name,
+                            value,
+                            span: name_span,
+                        });
+                    }
+                    _ => {
+                         let msg = if allow_allow_fail {
+                            format!("unknown sh() option '{}'; supported: shell, args, allow_fail", opt_name)
+                        } else {
+                             format!("unknown sh() option '{}'; supported: shell, args", opt_name)
+                        };
+                        return Err(self.make_error(&msg, opt_start));
+                    }
+                }
+            
+        }
+        Ok(options)
     }
 }
 

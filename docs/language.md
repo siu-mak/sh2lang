@@ -489,17 +489,23 @@ Executes a shell snippet by passing it to the target shell in a child process.
 - **Inherits environment**: Exported environment variables are inherited.
 - **No persistence**: Local state changes (`cd`, `local var`) do not affect the parent script.
 
-**Gotcha: Positionals are empty**
-Because `sh(...)` starts a new shell without forwarding arguments, `$@` is empty inside it.
+**Options:**
+- `shell="bash"`: Specify the shell to use (e.g. `sh("...", shell="bash")`). Default is `sh` (or `bash` if target is bash).
+- `args=args()`: Explicitly forward the parent script's positional parameters to the child shell.
+- `allow_fail=true`: Suppress "Error in ..." messages if the command fails (but status is still captured in `status()`).
+
+**Gotcha: Positionals are empty by default**
+Because `sh(...)` starts a fresh shell, `$@` is empty inside it unless you use `args=args()`.
 
 ```sh2
 # If script is run as: ./myscript.sh arg1 arg2
-
-# sh2 sees them:
 print(argc())          # Output: 2
 
-# sh(...) sees nothing:
+# Default: sh(...) sees nothing
 sh(r""" echo "Inside: $@" """)  # Output: Inside:
+
+# With forwarding:
+sh(r""" echo "Forwarded: $@" """, args=args())  # Output: Forwarded: arg1 arg2
 ```
 
 **Probe semantics (non-fail-fast):**

@@ -61,6 +61,7 @@ pub struct PreludeUsage {
     pub starts_with: bool,
     pub arg_dynamic: bool,
     pub sh_probe: bool,
+    pub sh_probe_args: bool,
     pub confirm: bool,
     pub glob: bool,
 }
@@ -289,9 +290,19 @@ fn visit_cmd(cmd: &Cmd, usage: &mut PreludeUsage, include_diagnostics: bool) {
                  visit_val(v, usage);
              }
         }
-        Cmd::Raw(val, _) => {
-             usage.sh_probe = true;
+        Cmd::Raw { cmd: val, args, loc } => {
+             if let Some(_) = args {
+                 usage.sh_probe_args = true;
+             } else {
+                 usage.sh_probe = true;
+             }
+             if include_diagnostics && loc.is_some() {
+                 usage.loc = true;
+             }
              visit_val(val, usage);
+             if let Some(a) = args {
+                 visit_val(a, usage);
+             }
         }
         Cmd::RawLine { .. } => {}
         Cmd::Call { args, name } => {
@@ -2262,23 +2273,75 @@ fn emit_cmd(
                 out.push_str(&format!("{}__sh2_check \"$__sh2_status\" \"${{__sh2_loc:-}}\" \"exit\"\n", pad));
             }
         }
-        Cmd::Raw(val, loc) => {
+        Cmd::Raw { cmd: val, args, loc } => {
              // sh(expr) -> execute expression as a shell command in a subshell (bash -c or sh -c)
              // This is a probe, so it sets __sh2_status but does not fail-fast.
              
              if let Some(l) = loc {
                  out.push_str(&format!("{}__sh2_loc=\"{}\"\n", pad, l));
              }
-             match val {
-                 Val::Literal(s) => {
-                     let cmd_escaped = sh_single_quote(s);
-                     out.push_str(&format!("{}__sh2_sh_probe {}\n", pad, cmd_escaped));
+             
+             match args {
+                 None => {
+                     // Existing behavior: __sh2_sh_probe (no args forwarding)
+                     match val {
+                         Val::Literal(s) => {
+                             let cmd_escaped = sh_single_quote(s);
+                             out.push_str(&format!("{}__sh2_sh_probe {}\n", pad, cmd_escaped));
+                         }
+                         Val::Command(words) => {
+                             out.push_str(&format!("{}__sh2_cmd=\"\"\n", pad));
+                             for (i, w) in words.iter().enumerate() {
+                                 if i > 0 { out.push_str(&format!("{}__sh2_cmd+=' '\n", pad)); }
+                                 let ws = emit_word(w, target)?;
+                                 let wq = sh_single_quote(&ws);
+                                 out.push_str(&format!("{}__sh2_cmd+={}\n", pad, wq));
+                             }
+                             out.push_str(&format!("{}__sh2_sh_probe \"$__sh2_cmd\"\n", pad));
+                         }
+                         _ => {
+                             out.push_str(&format!("{}__sh2_cmd=", pad));
+                             out.push_str(&emit_val(val, target)?);
+                             out.push('\n');
+                             out.push_str(&format!("{}__sh2_sh_probe \"$__sh2_cmd\"\n", pad));
+                         }
+                     }
                  }
-                 _ => {
-                     out.push_str(&format!("{}__sh2_cmd=", pad));
-                     out.push_str(&emit_val(val, target)?);
-                     out.push('\n');
-                     out.push_str(&format!("{}__sh2_sh_probe \"$__sh2_cmd\"\n", pad));
+                 Some(args_val) => {
+                     // explicit args forwarding: __sh2_sh_probe_args
+                     // Usage: __sh2_sh_probe_args "cmd" "$@"
+                     
+                     // First, evaluate command string
+                     // If literal, we can emit directly. If computed, assign to variable.
+                     // But we also need the args. emit_val(args_val) gives "$@" or similar.
+                     
+                     let args_str = match args_val {
+                         Val::Args => "\"$@\"".to_string(),
+                         _ => emit_val(args_val, target)?,
+                     };
+                     
+                     match val {
+                         Val::Command(words) => {
+                             out.push_str(&format!("{}__sh2_cmd=\"\"\n", pad));
+                             for (i, w) in words.iter().enumerate() {
+                                 if i > 0 { out.push_str(&format!("{}__sh2_cmd+=' '\n", pad)); }
+                                 let ws = emit_word(w, target)?;
+                                 let wq = sh_single_quote(&ws);
+                                 out.push_str(&format!("{}__sh2_cmd+={}\n", pad, wq));
+                             }
+                             out.push_str(&format!("{}__sh2_sh_probe_args \"$__sh2_cmd\" {}\n", pad, args_str));
+                         }
+                         Val::Literal(s) => {
+                              let cmd_escaped = sh_single_quote(s);
+                              out.push_str(&format!("{}__sh2_sh_probe_args {} {}\n", pad, cmd_escaped, args_str));
+                         }
+                         _ => {
+                              out.push_str(&format!("{}__sh2_cmd=", pad));
+                              out.push_str(&emit_val(val, target)?);
+                              out.push('\n');
+                              out.push_str(&format!("{}__sh2_sh_probe_args \"$__sh2_cmd\" {}\n", pad, args_str));
+                         }
+                     }
                  }
              }
         }
@@ -3151,6 +3214,17 @@ fn emit_prelude(target: TargetShell, usage: &PreludeUsage) -> String {
             }
             TargetShell::Posix => {
                 s.push_str("__sh2_sh_probe() { cmd=\"$1\"; if sh -c \"$cmd\"; then __sh2_status=0; else __sh2_status=$?; fi; return 0; }\n");
+            }
+        }
+    }
+
+    if usage.sh_probe_args {
+        match target {
+            TargetShell::Bash => {
+                s.push_str("__sh2_sh_probe_args() { local cmd=\"$1\"; shift; if bash -c \"$cmd\" bash \"$@\"; then __sh2_status=0; else __sh2_status=$?; fi; return 0; }\n");
+            }
+            TargetShell::Posix => {
+                s.push_str("__sh2_sh_probe_args() { cmd=\"$1\"; shift; if sh -c \"$cmd\" sh \"$@\"; then __sh2_status=0; else __sh2_status=$?; fi; return 0; }\n");
             }
         }
     }

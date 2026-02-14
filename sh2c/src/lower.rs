@@ -715,8 +715,61 @@ fn lower_stmt<'a>(
             Ok(ctx)
         }
         ast::StmtKind::Sh(expr) => {
-            let raw_val = lower_expr(expr, out, &mut ctx, sm, file)?;
-            out.push(ir::Cmd::Raw(raw_val, loc));
+            if let ast::ExprKind::Sh { cmd, options } = &expr.node {
+                // Extract options: shell=, args=, allow_fail= (no-op).
+                let mut shell_expr: Option<&ast::Expr> = None;
+                let mut args_expr: Option<&ast::CallOption> = None;
+
+                for opt in options {
+                    match opt.name.as_str() {
+                        "shell" => shell_expr = Some(&opt.value),
+                        "args" => args_expr = Some(opt),
+                        "allow_fail" => {} // no-op: probe never fails-fast
+                        _ => {} // parser already rejects unknown options
+                    }
+                }
+
+                // Lower args= if present; must resolve to Val::Args.
+                let args_val = if let Some(args_opt) = args_expr {
+                    let val = lower_expr(args_opt.value.clone(), out, &mut ctx, sm, file)?;
+                    if !matches!(val, ir::Val::Args) {
+                        return Err(CompileError::new(sm.format_diagnostic(
+                            file,
+                            opts.diag_base_dir.as_deref(),
+                            "args= must be args() or argv()",
+                            args_opt.span,
+                        )));
+                    }
+                    Some(val)
+                } else {
+                    None
+                };
+
+                // Determine cmd value based on shell selection.
+                // Default shell ("sh" or unset): lower cmd directly as a string value.
+                // The probe helper already invokes `bash -c` / `sh -c` at runtime.
+                // Custom shell: wrap as Val::Command([shell, "-c", cmd]).
+                let is_custom_shell = shell_expr.is_some_and(|e| {
+                    !matches!(&e.node, ast::ExprKind::Literal(s) if s == "sh")
+                });
+
+                let cmd_val = if is_custom_shell {
+                    let shell_val = lower_expr(shell_expr.unwrap().clone(), out, &mut ctx, sm, file)?;
+                    let cmd_val = lower_expr(*cmd.clone(), out, &mut ctx, sm, file)?;
+                    ir::Val::Command(vec![shell_val, ir::Val::Literal("-c".to_string()), cmd_val])
+                } else {
+                    lower_expr(*cmd.clone(), out, &mut ctx, sm, file)?
+                };
+
+                out.push(ir::Cmd::Raw { cmd: cmd_val, args: args_val, loc });
+            } else {
+                return Err(CompileError::new(sm.format_diagnostic(
+                    file,
+                    opts.diag_base_dir.as_deref(),
+                    "internal: StmtKind::Sh expected ExprKind::Sh",
+                    expr.span,
+                )));
+            }
             Ok(ctx)
         }
         ast::StmtKind::ShBlock(lines) => {
@@ -2062,6 +2115,7 @@ fn lower_expr<'a>(e: ast::Expr, out: &mut Vec<ir::Cmd>, ctx: &mut LoweringContex
                 span: Span::new(0, 0),
             };
             let mut seen_shell = false;
+            let mut args_val = None;
             
             for opt in options {
                 if opt.name == "shell" {
@@ -2075,23 +2129,47 @@ fn lower_expr<'a>(e: ast::Expr, out: &mut Vec<ir::Cmd>, ctx: &mut LoweringContex
                     }
                     seen_shell = true;
                     shell_expr = opt.value;
+                } else if opt.name == "args" {
+                    // Handle args
+                     let val = lower_expr(opt.value, out, ctx, sm, file)?;
+                     if matches!(val, ir::Val::Args) {
+                         args_val = Some(val);
+                     } else {
+                          return Err(CompileError::new(sm.format_diagnostic(
+                              file,
+                              opts.diag_base_dir.as_deref(),
+                              "args= must be actual arguments (args() or argv())",
+                              opt.span,
+                          )));
+                     }
                 } else {
                     // This shouldn't happen if parser is correct, but handle gracefully
                     return Err(CompileError::new(sm.format_diagnostic(
                         file,
                         opts.diag_base_dir.as_deref(),
-                        &format!("unknown sh() option '{}' in expression context; only 'shell' is supported", opt.name),
+                        &format!("unknown sh() option '{}' in expression context; only 'shell' and 'args' are supported", opt.name),
                         opt.span,
                     )));
                 }
             }
             
-            // Build argv: [shell, "-c", cmd]
+            // Build argv: [shell, "-c", cmd] + optional [target_name, args]
             let shell_val = lower_expr(shell_expr, out, ctx, sm, file)?;
             let dash_c_val = ir::Val::Literal("-c".to_string());
             let cmd_val = lower_expr(*cmd, out, ctx, sm, file)?;
             
-            Ok(ir::Val::Command(vec![shell_val, dash_c_val, cmd_val]))
+            let mut cmd_vec = vec![shell_val, dash_c_val, cmd_val];
+            
+            if let Some(args) = args_val {
+                 let target_literal = match ctx.opts.target {
+                     crate::codegen::TargetShell::Bash => "bash",
+                     crate::codegen::TargetShell::Posix => "sh",
+                 };
+                 cmd_vec.push(ir::Val::Literal(target_literal.to_string()));
+                 cmd_vec.push(args);
+            }
+            
+            Ok(ir::Val::Command(cmd_vec))
         }
     }
 }

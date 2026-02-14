@@ -17,4 +17,5 @@
 - **`sh(...)` expression contexts**: `sh(...)` inside `capture(...)` and other expression contexts now correctly executes via `sh -c`. Previously, the command string was passed as a filename argument to `sh` rather than as code to execute.
 
 ## Docs
+- **`sh()` Argument Forwarding**: Added `args=args()` (or `args=argv()`) option to `sh(...)` to explicitly forward parent script positional parameters to the child shell process. By default, `sh(...)` starts with empty arguments to prevent accidental leakage.
 - Clarified `sh(...)` isolation: does not inherit `$@` / `$1`; documented using `argc()` / `arg(n)` or `run(...)` instead.
