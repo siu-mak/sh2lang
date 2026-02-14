@@ -12,5 +12,8 @@
 ## Diagnostics
 - **Unknown function detection**: Calling an undefined function in expression context now produces a compile error with hints to use `run(...)` for external commands or define the function.
 
+## Fixes
+- **`sh(...)` expression contexts**: `sh(...)` inside `capture(...)` and other expression contexts now correctly executes via `sh -c`. Previously, the command string was passed as a filename argument to `sh` rather than as code to execute.
+
 ## Docs
 - Clarified `sh(...)` isolation: does not inherit `$@` / `$1`; documented using `argc()` / `arg(n)` or `run(...)` instead.

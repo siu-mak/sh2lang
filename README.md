@@ -535,7 +535,7 @@ try {
 
 ### `sh("...")` raw shell escape hatch
 
-`sh(expr)` executes raw shell code. It accepts **any string expression** (literal, variable, or concatenation):
+`sh(expr)` executes raw shell code via `sh -c`. It accepts **any string expression** (literal, variable, or concatenation):
 
 ```sh2
 sh("echo hello")          # ✅ literal

@@ -1023,26 +1023,21 @@ impl<'a> Parser<'a> {
 
                 } else if self.match_kind(TokenKind::Sh) {
                      let s_span = self.previous_span();
-                     args.push(Expr { node: ExprKind::Literal("sh".to_string()), span: s_span });
                      
-                     // Check for sh(...) shorthand
+                     // Check for sh("cmd") shorthand vs bare `sh` command word
                      if self.peek_kind() == Some(&TokenKind::LParen) {
+                          // sh("cmd") shorthand: emit ExprKind::Sh so lowering
+                          // correctly injects -c (Ticket 10).
                           self.expect(TokenKind::LParen)?;
-                          if !self.match_kind(TokenKind::RParen) {
-                              loop {
-                                   // Named args in shorthand
-                                   if let Some(TokenKind::Ident(_)) = self.peek_kind() {
-                                       if self.tokens.get(self.pos + 1).map(|t| &t.kind) == Some(&TokenKind::Equals) {
-                                            return self.error("Named arguments are only supported for builtins: run, sudo, sh, capture, confirm", self.current_span());
-                                       }
-                                   }
-                                   args.push(self.parse_expr()?);
-                                   if !self.match_kind(TokenKind::Comma) {
-                                       break;
-                                   }
-                              }
-                              self.expect(TokenKind::RParen)?;
-                          }
+                          let cmd = self.parse_expr()?;
+                          self.expect(TokenKind::RParen)?;
+                          args.push(Expr {
+                              node: ExprKind::Sh { cmd: Box::new(cmd), options: vec![] },
+                              span: s_span,
+                          });
+                     } else {
+                          // Bare `sh` as a command word (no parens = file runner)
+                          args.push(Expr { node: ExprKind::Literal("sh".to_string()), span: s_span });
                      }
                 } else if let Some(TokenKind::Ident(s)) = self.peek_kind() {
                      if s == "sudo" {

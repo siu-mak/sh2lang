@@ -1,0 +1,4 @@
+func main() {
+    # Create temp dir and files hermetically, then list them with glob
+    sh("t=$(mktemp -d); cd \"$t\"; touch a.txt b.txt; echo *.txt; rm -rf \"$t\"")
+}

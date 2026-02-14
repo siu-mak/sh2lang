@@ -1339,6 +1339,18 @@ fn lower_expr<'a>(e: ast::Expr, out: &mut Vec<ir::Cmd>, ctx: &mut LoweringContex
         ast::ExprKind::Bool(b) => Ok(ir::Val::Bool(b)),
         ast::ExprKind::Number(n) => Ok(ir::Val::Number(n)),
         ast::ExprKind::Command(args) => {
+            // Ticket 10: sh("cmd") shorthand in command substitution.
+            // The parser emits ExprKind::Sh as a single arg for sh("cmd") shorthand
+            // (with LParen). Delegate directly to the existing Sh lowering which
+            // correctly produces [sh, -c, cmd].
+            //
+            // Bare `sh file` (no parens) produces [Literal("sh"), Literal("file")]
+            // and is NOT affected — it lowers as a normal command.
+            if args.len() == 1 {
+                if matches!(&args[0].node, ast::ExprKind::Sh { .. }) {
+                    return lower_expr(args.into_iter().next().unwrap(), out, ctx, sm, file);
+                }
+            }
             let lowered_args = args
                 .into_iter()
                 .map(|a| lower_expr(a, out, ctx, sm, file))

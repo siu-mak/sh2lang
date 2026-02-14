@@ -1,0 +1,4 @@
+func main() {
+    let x = capture(sh("echo hi"))
+    print(x)
+}

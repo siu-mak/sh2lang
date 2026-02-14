@@ -1,0 +1,4 @@
+func main() {
+    let c = "echo hi_var"
+    sh(c)
+}
