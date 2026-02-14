@@ -6,6 +6,14 @@ title: "Tutorials"
 
 Welcome to the sh2 learning path! These hands-on guides will take you from writing your first script to building robust, verifiable CLI tools.
 
+---
+
+**Source Code & Repository**
+
+👉 https://github.com/siu-mak/sh2lang
+
+---
+
 ## Recommended Learning Path
 
 1.  **[Getting Started](01-getting-started.md)**

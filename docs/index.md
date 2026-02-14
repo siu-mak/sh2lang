@@ -6,6 +6,14 @@ title: "Documentation Home"
 
 Welcome to the sh2lang documentation.
 
+---
+
+**Source Code & Repository**
+
+👉 https://github.com/siu-mak/sh2lang
+
+---
+
 ## Start Here 🚀
 
 *   **[Tutorials](tutorials/index.md)**

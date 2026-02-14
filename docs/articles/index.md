@@ -6,6 +6,14 @@ title: "Articles"
 
 Deep dives into the design, features, and philosophy of sh2.
 
+---
+
+**Source Code & Repository**
+
+👉 https://github.com/siu-mak/sh2lang
+
+---
+
 ## Introduction
 
 Why sh2 exists and how it compares to other tools.
