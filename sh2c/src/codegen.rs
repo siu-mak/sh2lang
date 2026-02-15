@@ -1927,7 +1927,11 @@ fn emit_cmd(
         Cmd::For { var, iterable, body } => {
             // Policy A: Loop variable effectively declared here.
             // Initialize if unset, preserve if set. Use local since we are in function.
-            out.push_str(&format!("{}local {}=\"${{{}:-}}\"\n", pad, var, var));
+            if target == TargetShell::Bash {
+                out.push_str(&format!("{}local {}=\"${{{}:-}}\"\n", pad, var, var));
+            } else {
+                out.push_str(&format!("{}{}=\"${{{}:-}}\"\n", pad, var, var));
+            }
 
             match iterable {
                 crate::ir::ForIterable::List(items) => {
