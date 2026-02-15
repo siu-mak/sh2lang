@@ -3541,19 +3541,18 @@ __sh2_glob() {
     if usage.arg_dynamic {
         match target {
             TargetShell::Bash => {
-                s.push_str("__sh2_arg_by_index() { local __sh2_idx=\"$1\"; shift; ");
-                s.push_str("case \"$__sh2_idx\" in (''|*[!0-9]*) printf ''; return 0;; esac; ");
-                s.push_str("[ \"$__sh2_idx\" -ge 1 ] 2>/dev/null || { printf ''; return 0; }; ");
-                s.push_str("[ \"$__sh2_idx\" -le \"$#\" ] 2>/dev/null || { printf ''; return 0; }; ");
-                s.push_str("eval \"printf '%s' \\\"\\${$__sh2_idx}\\\"\"; ");
+                s.push_str("__sh2_arg_by_index() { local idx=\"$1\"; shift; ");
+                s.push_str("if [[ ! \"$idx\" =~ ^[0-9]+$ ]] || (( idx < 1 )); then printf 'Error: arg(): index must be an integer >= 1\\n' >&2; kill -s TERM $$; exit 1; fi; ");
+                s.push_str("if (( idx > $# )); then printf 'Error: arg(): index %s out of range (argc=%s)\\n' \"$idx\" \"$#\" >&2; kill -s TERM $$; exit 1; fi; ");
+                s.push_str("printf '%s' \"${!idx}\"; ");
                 s.push_str("}\n");
             }
             TargetShell::Posix => {
-                s.push_str("__sh2_arg_by_index() { __sh2_idx=\"$1\"; shift; ");
-                s.push_str("case \"$__sh2_idx\" in (''|*[!0-9]*) printf ''; return 0;; esac; ");
-                s.push_str("[ \"$__sh2_idx\" -ge 1 ] 2>/dev/null || { printf ''; return 0; }; ");
-                s.push_str("[ \"$__sh2_idx\" -le \"$#\" ] 2>/dev/null || { printf ''; return 0; }; ");
-                s.push_str("eval \"printf '%s' \\\"\\${$__sh2_idx}\\\"\"; ");
+                s.push_str("__sh2_arg_by_index() { idx=\"$1\"; shift; ");
+                s.push_str("case \"$idx\" in (''|*[!0-9]*) printf 'Error: arg(): index must be an integer >= 1\\n' >&2; kill -TERM $$; exit 1;; esac; ");
+                s.push_str("if [ \"$idx\" -lt 1 ]; then printf 'Error: arg(): index must be an integer >= 1\\n' >&2; kill -TERM $$; exit 1; fi; ");
+                s.push_str("if [ \"$idx\" -gt \"$#\" ]; then printf 'Error: arg(): index %s out of range (argc=%s)\\n' \"$idx\" \"$#\" >&2; kill -TERM $$; exit 1; fi; ");
+                s.push_str("eval \"printf '%s' \\\"\\${$idx}\\\"\"; ");
                 s.push_str("}\n");
             }
         }

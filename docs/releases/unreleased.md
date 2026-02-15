@@ -20,6 +20,8 @@
 - **`sh()` Argument Forwarding**: Added `args=args()` (or `args=argv()`) option to `sh(...)` to explicitly forward parent script positional parameters to the child shell process. By default, `sh(...)` starts with empty arguments to prevent accidental leakage.
 - Clarified `sh(...)` isolation: does not inherit `$@` / `$1`; documented using `argc()` / `arg(n)` or `run(...)` instead.
 
+
 ## Breaking Changes
+- **Hardened `arg(i)`**: `arg(i)` now enforces strict runtime validation for variable indices. It aborts the script with a fatal error if the index is non-numeric, `< 1`, or `> argc()`. Previously, invalid or out-of-bounds indices might have returned empty strings or behaved unpredictably depending on the target shell. This change ensures safety against injection and logic errors.
 - **Strict Variable Semantics**: Variables must now be declared with `let` before use or assignment. `let` declarations allow shadowing only in disjoint branches (e.g., `if true { let x=1 } else { let x=2 }`), preventing accidental re-declaration errors. Diagnostic improvements now provide hints for `let` vs `set` usage.
 - **Binder Refinements**: Fixed an issue where disjoint branch declarations were incorrectly flagged as redeclarations. `each_line` loop variables now correctly preserve their value if the loop does not run (0-iterations) and the variable was previously set.

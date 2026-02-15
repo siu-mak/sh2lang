@@ -10,7 +10,7 @@ fn test_sh_probe_status() {
     // Bash
     let bash_out = compile_path_to_shell(&path, TargetShell::Bash);
     let (stdout, _, status) = run_shell_script(&bash_out, "bash", &[], &[], None, None);
-    assert_eq!(status, 0, "Bash execution failed");
+    assert_eq!(status, Some(0), "Bash execution failed");
     
     // Expect: 1, 2, 0, 0 (and "ok" from echo) -> Order depends on buffering, but output should contain these.
     // print(status) puts output on stdout.
@@ -27,7 +27,7 @@ fn test_sh_probe_status() {
     // Posix
     let posix_out = compile_path_to_shell(&path, TargetShell::Posix);
     let (stdout, _, status) = run_shell_script(&posix_out, "sh", &[], &[], None, None);
-    assert_eq!(status, 0, "Posix execution failed");
+    assert_eq!(status, Some(0), "Posix execution failed");
     
     let expected_output_snippets = vec!["1", "2", "0", "ok"];
     for s in expected_output_snippets {
@@ -50,13 +50,13 @@ fn test_sh_probe_no_fail_fast() {
     // Bash
     let bs_out = compile_to_shell(code, TargetShell::Bash);
     let (stdout, _, status) = run_shell_script(&bs_out, "bash", &[], &[], None, None);
-    assert_eq!(status, 0);
+    assert_eq!(status, Some(0));
     assert!(stdout.contains("alive"));
     
     // Posix
     let ps_out = compile_to_shell(code, TargetShell::Posix);
     let (stdout, _, status) = run_shell_script(&ps_out, "sh", &[], &[], None, None);
-    assert_eq!(status, 0);
+    assert_eq!(status, Some(0));
     assert!(stdout.contains("alive"));
 }
 
@@ -76,14 +76,14 @@ fn test_sh_probe_errexit_safe() {
     let bs_out = compile_to_shell(code, TargetShell::Bash);
     // Explicitly run with -e to prove safety
     let (stdout, _, status) = run_shell_script_with_flags(&bs_out, "bash", &["-e"], &[], &[], None, None);
-    assert_eq!(status, 0, "Script aborted early under set -e (Bash)");
+    assert_eq!(status, Some(0), "Script aborted early under set -e (Bash)");
     assert!(stdout.contains("after"), "Execution did not reach 'after' (Bash)");
     assert!(stdout.contains("1"), "Status code 1 missing from output (Bash)");
     
     // Posix
     let ps_out = compile_to_shell(code, TargetShell::Posix);
     let (stdout, _, status) = run_shell_script_with_flags(&ps_out, "sh", &["-e"], &[], &[], None, None);
-    assert_eq!(status, 0, "Script aborted early under set -e (Posix)");
+    assert_eq!(status, Some(0), "Script aborted early under set -e (Posix)");
     assert!(stdout.contains("after"), "Execution did not reach 'after' (Posix)");
     assert!(stdout.contains("1"), "Status code 1 missing from output (Posix)");
 }

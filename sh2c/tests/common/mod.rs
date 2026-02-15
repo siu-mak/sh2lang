@@ -356,7 +356,7 @@ pub fn assert_codegen_panics_target(
     }
 }
 
-pub fn run_bash_script(bash: &str, env: &[(&str, &str)], args: &[&str]) -> (String, String, i32) {
+pub fn run_bash_script(bash: &str, env: &[(&str, &str)], args: &[&str]) -> (String, String, Option<i32>) {
     run_shell_script(bash, "bash", env, args, None, None)
 }
 
@@ -383,7 +383,7 @@ pub fn run_shell_script(
     args: &[&str],
     input: Option<&str>,
     fs_setup: Option<&Path>,
-) -> (String, String, i32) {
+) -> (String, String, Option<i32>) {
     let pid = std::process::id();
     let nanos = SystemTime::now()
         .duration_since(UNIX_EPOCH)
@@ -450,7 +450,7 @@ pub fn run_shell_script(
     let stdout = String::from_utf8_lossy(&output.stdout).replace("\r\n", "\n");
     let stderr = String::from_utf8_lossy(&output.stderr).replace("\r\n", "\n");
 
-    (stdout, stderr, output.status.code().unwrap_or(0))
+    (stdout, stderr, output.status.code())
 }
 
 pub fn assert_exec_matches_fixture(fixture_name: &str) {
@@ -474,7 +474,7 @@ pub fn compile_and_run_err(fixture_name: &str, target: TargetShell) -> (String, 
     // We expect failure, so we run and return output
     let (stdout, stderr, status) = run_shell_script(&shell_script, shell_bin, &[], &[], None, None);
     
-    if status == 0 {
+    if status == Some(0) {
         panic!("Expected script to fail (non-zero exit), but it succeeded with status component 0. Stdout: {}\nStderr: {}", stdout, stderr);
     }
     
@@ -496,9 +496,9 @@ pub fn run_test_in_targets(name: &str, src: &str, expected_stdout: &str) {
         // We use run_shell_script which handles temp dir creation
         let (stdout, stderr, status) = run_shell_script(&shell_script, shell_bin, &[], &[], None, None);
 
-        if status != 0 {
+        if status != Some(0) {
             panic!(
-                "Execution failed for {} ({:?})\nStatus: {}\nStdout: {}\nStderr: {}\nScript:\n{}",
+                "Execution failed for {} ({:?})\nStatus: {:?}\nStdout: {}\nStderr: {}\nScript:\n{}",
                 name, target, status, stdout, stderr, shell_script
             );
         }
@@ -519,9 +519,9 @@ pub fn run_test_bash_only(name: &str, src: &str, expected_stdout: &str) {
     let shell_script = compile_to_shell(src, target);
     let (stdout, stderr, status) = run_shell_script(&shell_script, shell_bin, &[], &[], None, None);
 
-    if status != 0 {
+    if status != Some(0) {
         panic!(
-            "Execution failed for {} (Bash)\nStatus: {}\nStdout: {}\nStderr: {}\nScript:\n{}",
+            "Execution failed for {} (Bash)\nStatus: {:?}\nStdout: {}\nStderr: {}\nScript:\n{}",
             name, status, stdout, stderr, shell_script
         );
     }
@@ -709,7 +709,7 @@ pub fn assert_exec_matches_fixture_target(
             .trim()
             .parse()
             .expect("Invalid status fixture content");
-        assert_eq!(status, expected_status, "Exit code mismatch for {}", fixture_name);
+        assert_eq!(status, Some(expected_status), "Exit code mismatch for {}", fixture_name);
     }
 }
 
@@ -723,7 +723,7 @@ pub fn run_shell_script_with_flags(
     args: &[&str],
     input: Option<&str>,
     fs_setup: Option<&Path>,
-) -> (String, String, i32) {
+) -> (String, String, Option<i32>) {
     let pid = std::process::id();
     let nanos = SystemTime::now()
         .duration_since(UNIX_EPOCH)
@@ -786,7 +786,7 @@ pub fn run_shell_script_with_flags(
     let stdout = String::from_utf8_lossy(&output.stdout).replace("\r\n", "\n");
     let stderr = String::from_utf8_lossy(&output.stderr).replace("\r\n", "\n");
 
-    (stdout, stderr, output.status.code().unwrap_or(0))
+    (stdout, stderr, output.status.code())
 }
 
 /// Like assert_exec_matches_fixture_target but invokes shell with extra flags
@@ -972,7 +972,7 @@ pub fn assert_exec_matches_fixture_target_with_flags(
             .parse()
             .expect("Invalid status fixture content");
         assert_eq!(
-            status, expected_status,
+            status, Some(expected_status),
             "Exit code mismatch for {}",
             fixture_name
         );

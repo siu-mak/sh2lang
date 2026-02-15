@@ -14,7 +14,7 @@ fn test_sh_block_direct_pipeline() {
     assert!(!bash_out.contains("bash -c"), "Generated script contained 'bash -c' but should use direct pipeline");
     
     let (stdout, _, status) = run_shell_script(&bash_out, "bash", &[], &[], None, None);
-    assert_eq!(status, 0, "Bash execution failed");
+    assert_eq!(status, Some(0), "Bash execution failed");
     assert_eq!(stdout.trim(), "after");
 
     // Posix
@@ -24,7 +24,7 @@ fn test_sh_block_direct_pipeline() {
      assert!(!posix_out.contains("sh -c"), "Generated script contained 'sh -c' but should use direct pipeline");
 
     let (stdout, _, status) = run_shell_script(&posix_out, "sh", &[], &[], None, None);
-    assert_eq!(status, 0, "Posix execution failed");
+    assert_eq!(status, Some(0), "Posix execution failed");
     assert_eq!(stdout.trim(), "after");
 }
 
@@ -38,7 +38,7 @@ fn test_sh_block_fail_fast() {
     let (stdout, _, status) = run_shell_script(&bash_out, "bash", &[], &[], None, None);
     
     // Should fail fast (exit code != 0)
-    assert_ne!(status, 0, "Bash should have failed fast");
+    assert_ne!(status, Some(0), "Bash should have failed fast");
     assert!(!stdout.contains("should_not_print"));
 
     // Posix
@@ -46,6 +46,6 @@ fn test_sh_block_fail_fast() {
     let (stdout, _, status) = run_shell_script(&posix_out, "sh", &[], &[], None, None);
     
     // Should fail fast
-    assert_ne!(status, 0, "Posix should have failed fast");
+    assert_ne!(status, Some(0), "Posix should have failed fast");
     assert!(!stdout.contains("should_not_print"));
 }

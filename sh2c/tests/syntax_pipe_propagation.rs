@@ -74,7 +74,7 @@ fn exec_pipeblocks_fail_middle() {
         );
 
         assert_eq!(stdout.trim(), expected_stdout, "Stdout mismatch for {:?} target", target);
-        assert_eq!(status, expected_status, "Status mismatch for {:?} target", target);
+        assert_eq!(status, Some(expected_status), "Status mismatch for {:?} target", target);
     }
 }
 

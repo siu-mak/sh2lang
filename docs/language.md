@@ -62,6 +62,36 @@ func main() {
 }
 ```
 
+### 1.3 Script Arguments
+
+Top-level script arguments (the ones passed to the script itself) are accessed via `arg(n)` and `argc()`.
+
+- **`argc()`**: Returns the number of arguments passed to the script.
+- **`arg(n)`**: Returns the *n*-th argument (1-based index).
+
+```sh2
+func main() {
+    print($"Script received {argc()} arguments")
+    if argc() > 0 {
+        print("First arg: " & arg(1))
+    }
+}
+```
+
+**Strict Validation**:
+`arg(n)` enforces strict bounds and type checking at runtime to prevent injection and logic errors:
+- **Index Type**: The index must be a valid integer. String values that do not look like integers (e.g. `"1a"`) cause a fatal error.
+- **Bounds**: The index must be `>= 1` and `<= argc()`. Accessing an out-of-bounds index (e.g. `arg(0)` or `arg(argc()+1)`) aborts the script with a fatal error.
+- **Safety**: `arg(i)` is safe to use with variable indices logic (e.g. `arg(i)` inside a loop). It uses robust internal helpers to prevent command injection even if the variable `i` is tampered with.
+
+```sh2
+let i = 1
+while i <= argc() {
+    print(arg(i))
+    set i = i + 1
+}
+```
+
 ---
 
 ## 2. Core Syntax Rules

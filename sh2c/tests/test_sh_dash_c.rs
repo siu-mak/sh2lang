@@ -19,7 +19,7 @@ fn test_sh_c_echo() {
     for (target, shell) in &[(TargetShell::Bash, "bash"), (TargetShell::Posix, "sh")] {
         let script = compile_to_shell(&src, *target);
         let (stdout, stderr, code) = run_shell_script(&script, shell, &[], &[], None, None);
-        assert_eq!(code, 0, "target={}: exit code (stderr={})", shell, stderr);
+        assert_eq!(code, Some(0), "target={}: exit code (stderr={})", shell, stderr);
         assert_eq!(stdout.trim(), "hi", "target={}: stdout", shell);
         assert!(!stderr.contains("Error in"), "target={}: unexpected error in stderr: {}", shell, stderr);
     }
@@ -36,7 +36,7 @@ fn test_sh_c_capture() {
     for (target, shell) in &[(TargetShell::Bash, "bash"), (TargetShell::Posix, "sh")] {
         let script = compile_to_shell(&src, *target);
         let (stdout, stderr, code) = run_shell_script(&script, shell, &[], &[], None, None);
-        assert_eq!(code, 0, "target={}: exit code (stderr={})", shell, stderr);
+        assert_eq!(code, Some(0), "target={}: exit code (stderr={})", shell, stderr);
         assert_eq!(stdout.trim(), "hi", "target={}: stdout", shell);
         assert!(!stderr.contains("Error in"), "target={}: unexpected error: {}", shell, stderr);
 
@@ -61,7 +61,7 @@ fn test_sh_c_pipe() {
     for (target, shell) in &[(TargetShell::Bash, "bash"), (TargetShell::Posix, "sh")] {
         let script = compile_to_shell(&src, *target);
         let (stdout, stderr, code) = run_shell_script(&script, shell, &[], &[], None, None);
-        assert_eq!(code, 0, "target={}: exit code (stderr={})", shell, stderr);
+        assert_eq!(code, Some(0), "target={}: exit code (stderr={})", shell, stderr);
         assert!(stdout.contains("2"), "target={}: stdout should contain 2, got: {}", shell, stdout);
         assert!(!stderr.contains("Error in"), "target={}: unexpected error: {}", shell, stderr);
     }
@@ -78,7 +78,7 @@ fn test_sh_c_glob() {
     for (target, shell) in &[(TargetShell::Bash, "bash"), (TargetShell::Posix, "sh")] {
         let script = compile_to_shell(&src, *target);
         let (stdout, stderr, code) = run_shell_script(&script, shell, &[], &[], None, None);
-        assert_eq!(code, 0, "target={}: exit code (stderr={})", shell, stderr);
+        assert_eq!(code, Some(0), "target={}: exit code (stderr={})", shell, stderr);
         assert!(stdout.contains("a.txt"), "target={}: should contain a.txt, got: {}", shell, stdout);
         assert!(stdout.contains("b.txt"), "target={}: should contain b.txt, got: {}", shell, stdout);
         assert!(!stderr.contains("Error in"), "target={}: unexpected error: {}", shell, stderr);
@@ -96,7 +96,7 @@ fn test_sh_c_var() {
     for (target, shell) in &[(TargetShell::Bash, "bash"), (TargetShell::Posix, "sh")] {
         let script = compile_to_shell(&src, *target);
         let (stdout, stderr, code) = run_shell_script(&script, shell, &[], &[], None, None);
-        assert_eq!(code, 0, "target={}: exit code (stderr={})", shell, stderr);
+        assert_eq!(code, Some(0), "target={}: exit code (stderr={})", shell, stderr);
         assert_eq!(stdout.trim(), "hi_var", "target={}: stdout", shell);
         assert!(!stderr.contains("Error in"), "target={}: unexpected error: {}", shell, stderr);
     }
