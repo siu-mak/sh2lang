@@ -1,0 +1,3 @@
+compile error: diag_span_let_redecl.sh2:3:9: variable 'x' already declared in this scope (on this execution path). Did you mean to use `set x = ...`?
+    let x = 2; // Error: redeclaration
+        ^

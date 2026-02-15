@@ -1,0 +1,7 @@
+func main() {
+    case "foo" {
+        "bar" => { let x = 1 }
+        _ => { let x = 2 } // Wildcard makes it exhaustive
+    }
+    print(x) // OK because definitely assigned
+}

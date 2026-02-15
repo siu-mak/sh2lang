@@ -1,7 +1,8 @@
 //! Tests for variable declaration policy: declare-before-use, set requires prior let, no redeclare
 
 mod common;
-use common::{try_compile_to_shell, TargetShell};
+use common::{try_compile_to_shell, compile_to_shell, run_bash_script, TargetShell};
+use std::fs;
 
 #[test]
 fn test_undeclared_in_print_is_error() {
@@ -10,6 +11,18 @@ fn test_undeclared_in_print_is_error() {
     assert!(result.is_err(), "Expected compile error for undefined variable");
     let err = result.unwrap_err();
     assert!(err.contains("undefined variable 'b'"), "Expected 'undefined variable' error, got: {}", err);
+}
+
+fn compile_to_bash_test(fixture_path: &str) -> (String, String) {
+    let root = common::repo_root();
+    let abs_path = root.join("sh2c/tests").join(fixture_path);
+    let src = fs::read_to_string(&abs_path)
+        .expect(&format!("Failed to read fixture: {:?}", abs_path));
+    
+    match try_compile_to_shell(&src, TargetShell::Bash) {
+        Ok(stdout) => (stdout, String::new()),
+        Err(stderr) => (String::new(), stderr),
+    }
 }
 
 #[test]
@@ -28,6 +41,7 @@ fn test_set_before_let_is_error() {
     assert!(result.is_err(), "Expected compile error for undeclared set");
     let err = result.unwrap_err();
     assert!(err.contains("cannot set undeclared variable 'b'"), "Expected 'cannot set undeclared' error, got: {}", err);
+    assert!(err.contains("Did you mean to use `let b = ...`?"), "Expected hint in error output");
 }
 
 #[test]
@@ -37,6 +51,7 @@ fn test_redeclare_let_same_scope_is_error() {
     assert!(result.is_err(), "Expected compile error for redeclaration");
     let err = result.unwrap_err();
     assert!(err.contains("already declared"), "Expected 'already declared' error, got: {}", err);
+    assert!(err.contains("Did you mean to use `set b = ...`?"), "Expected hint in error output");
 }
 
 #[test]
@@ -63,6 +78,42 @@ fn test_set_in_branch_ok() {
 }
 
 #[test]
+fn test_if_else_disjoint_let_ok() {
+    // Policy A: declare in both branches (disjoint) is OK and variable persists
+    let src = r#"func main(){ if true { let x="1" } else { let x="2" }; print(x) }"#;
+    let result = try_compile_to_shell(src, TargetShell::Bash);
+    assert!(result.is_ok(), "Disjoint let in if/else should be valid in Policy A. Error: {:?}", result.err());
+}
+
+#[test]
+fn test_if_else_partial_let_ok() {
+    // Policy A: declare in one branch is OK, but variable is NOT guaranteed
+    let src = r#"func main(){ if true { let x="1" } else { }; let x="2" }"#;
+    let result = try_compile_to_shell(src, TargetShell::Bash);
+    assert!(result.is_ok(), "Partial let should be valid (x not definitely declared). Error: {:?}", result.err());
+}
+
+#[test]
+fn test_redeclare_after_merge_fail() {
+    // x declared in both branches -> definitely declared -> subsequent let is error
+    let src = r#"func main(){ if true { let x="1" } else { let x="2" }; let x="3" }"#;
+    let result = try_compile_to_shell(src, TargetShell::Bash);
+    assert!(result.is_err(), "Expected error for redeclaring guaranteed variable");
+    let err = result.unwrap_err();
+    assert!(err.contains("already declared"), "Expected 'already declared' error");
+}
+
+#[test]
+fn test_maybe_declared_usage_fail() {
+    // x declared in one branch -> possibly declared but not definitely -> usage error
+    let src = r#"func main(){ if true { let x="1" } else { }; print(x) }"#;
+    let result = try_compile_to_shell(src, TargetShell::Bash);
+    assert!(result.is_err(), "Expected error for using maybe-declared variable");
+    let err = result.unwrap_err();
+    assert!(err.contains("undefined variable 'x'"), "Expected 'undefined variable' error");
+}
+
+#[test]
 fn test_for_loop_var_scoped_to_function() {
     // For-loop variable persists after loop (function scope)
     let src = r#"func main(){ for i in [1, 2] { print(i) }; print(i) }"#;
@@ -78,6 +129,18 @@ fn test_for_loop_var_redeclare_is_error() {
     assert!(result.is_err(), "Expected error for redeclaring for-loop var");
     let err = result.unwrap_err();
     assert!(err.contains("already declared"), "Expected 'already declared' error, got: {}", err);
+    assert!(err.contains("Did you mean to use `set i = ...`?"), "Expected hint in error output");
+}
+
+#[test]
+fn test_each_line_var_redeclare_is_error() {
+    // Can't redeclare each_line variable
+    let src = r#"func main(){ let l = "init"; pipe { print("hi"); } | each_line l { } }"#;
+    let result = try_compile_to_shell(src, TargetShell::Bash);
+    assert!(result.is_err(), "Expected error for redeclaring each_line var");
+    let err = result.unwrap_err();
+    assert!(err.contains("already declared"), "Expected 'already declared' error, got: {}", err);
+    assert!(err.contains("Did you mean to use `set l = ...`?"), "Expected hint in error output");
 }
 
 #[test]
@@ -152,4 +215,57 @@ fn test_write_file_bad_arg_priority() {
     let err = result.unwrap_err();
     assert!(err.contains("append must be boolean literal"), "Expected 'boolean literal' error, got: {}", err);
     assert!(!err.contains("undefined variable"), "Should not report undefined variable");
+}
+
+#[test]
+fn test_binder_ok_disjoint_if() {
+    let (stdout, stderr) = compile_to_bash_test("fixtures/binder_ok_disjoint_if.sh2");
+    assert!(stderr.is_empty(), "Expected no error, got: {}", stderr);
+    // x is declared in branches, so it is available after. 
+    // No implicit init needed because `let` initialized it in both paths.
+    // The usage print(x) implies it knows x is declared.
+}
+
+#[test]
+fn test_binder_ok_case_wildcard() {
+    let (stdout, stderr) = compile_to_bash_test("fixtures/binder_ok_case_wildcard.sh2");
+    assert!(stderr.is_empty(), "Expected no error, got: {}", stderr);
+}
+
+#[test]
+fn test_binder_err_case_no_wildcard() {
+    let (_, stderr) = compile_to_bash_test("fixtures/binder_err_case_no_wildcard.sh2");
+    assert!(stderr.contains("undefined variable 'x'"));
+}
+
+#[test]
+fn test_parse_err_top_level_shim() {
+    let (_, stderr) = compile_to_bash_test("fixtures/parse_err_top_level_shim.sh2");
+    assert!(stderr.contains("Top-level statements are not allowed"));
+}
+
+#[test]
+fn test_for_loop_zero_iter_preserves() {
+    // 0 iterations -> i preserves value if declared in partial branch
+    // At runtime, i="preserved" exists.
+    let src = r#"
+        func main() {
+            if true {
+                let i = "preserved"
+            } else {
+            }
+            
+            # Policy A: i is not declared on straight-line, so for loop implicit let is allowed.
+            # But "preserved" value should persist if loop doesn't run.
+            for i in [] { // Empty list
+                print("inside")
+            }
+            
+            print($"after: '{i}'")
+        }
+    "#;
+    
+    let script = compile_to_shell(src, TargetShell::Bash);
+    let (stdout, _, _) = run_bash_script(&script, &[], &[]);
+    assert_eq!(stdout.trim(), "after: 'preserved'");
 }

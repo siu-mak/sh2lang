@@ -1,0 +1,3 @@
+/sh2c/tests/fixtures/parse_err_top_level_shim.sh2:1:1: Top-level statements are not allowed. Move code into func main() { ... }.
+each_line line {
+^--------

@@ -1,0 +1,3 @@
+/sh2c/tests/fixtures/binder_err_case_no_wildcard.sh2:6:11: undefined variable 'x'
+    print(x) // Error: undefined variable 'x'
+          ^

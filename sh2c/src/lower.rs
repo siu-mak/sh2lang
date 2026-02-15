@@ -264,11 +264,11 @@ fn lower_stmt<'a>(
                         .map(|a| lower_expr(a, out, &mut ctx, sm, file))
                         .collect::<Result<Vec<_>, _>>()?;
                     out.push(ir::Cmd::Assign(
-                        name.clone(),
+                        name.node.clone(),
                         ir::Val::TryRun(lowered_args),
                         loc,
                     ));
-                    ctx.insert(&name);
+                    ctx.insert(&name.node);
                     return Ok(ctx);
                 }
             }
@@ -283,19 +283,19 @@ fn lower_stmt<'a>(
             let is_list = matches!(&val_ir, ir::Val::List(_) | ir::Val::Split { .. } | ir::Val::Lines(_));
 
             out.push(ir::Cmd::Assign(
-                name.clone(),
+                name.node.clone(),
                 val_ir,
                 loc,
             ));
-            ctx.remove(&name);
+            ctx.remove(&name.node);
             if is_capture_result {
-                ctx.insert(&name);
+                ctx.insert(&name.node);
             }
             if is_list {
-                ctx.insert_list_var(&name);
+                ctx.insert_list_var(&name.node);
             }
             if is_bool {
-                ctx.insert_bool_var(&name);
+                ctx.insert_bool_var(&name.node);
             }
             Ok(ctx)
         }
@@ -478,7 +478,7 @@ fn lower_stmt<'a>(
             let ctx_body = lower_block(&body, &mut lower_body, ctx.clone(), sm, file, opts)?;
 
             out.push(ir::Cmd::For {
-                var,
+                var: var.node,
                 iterable: ir_iterable,
                 body: lower_body,
             });
@@ -542,13 +542,13 @@ fn lower_stmt<'a>(
                 // We should add `var` to context so `try_run` checks know it exists?
                 // But `ctx` tracks *defined* variables.
                 // Yes, declare it defined.
-                ctx.insert(var);
+                ctx.insert(&var.node);
                 
                 let ctx_after_body = lower_block(body, &mut body_cmds, ctx, sm, file, opts)?;
                 
                 out.push(ir::Cmd::PipeEachLine {
                     producer: Box::new(producer_cmd),
-                    var: var.clone(),
+                    var: var.node.clone(),
                     body: body_cmds,
                 });
                 
@@ -1064,11 +1064,11 @@ fn lower_stmt<'a>(
                     };
                     
                     if is_list {
-                        ctx.insert_list_var(&name);
+                        ctx.insert_list_var(&name.node);
                     }
 
                     out.push(ir::Cmd::Assign(
-                        name.clone(),
+                        name.node.clone(),
                         val,
                         loc,
                     ));
@@ -1101,8 +1101,8 @@ fn lower_stmt<'a>(
             let mut lower_body = Vec::new();
             let ctx_body = lower_block(&body, &mut lower_body, ctx.clone(), sm, file, opts)?;
             out.push(ir::Cmd::ForMap {
-                key_var,
-                val_var,
+                key_var: key_var.node,
+                val_var: val_var.node,
                 map,
                 body: lower_body,
             });

@@ -237,6 +237,10 @@ for x in (1, 2, 3) {
 }
 ```
 
+> **Note**: The loop variable `x` is **implicitly declared** and function-scoped. It persists after the loop.
+> - **Policy A**: The variable must not be already declared on the current execution path. Disjoint declarations are allowed.
+> - **Zero-iteration**: If the list is empty (or range is invalid), the loop body does not run. The variable is initialized to `""` (or preserves its existing value if previously set in a disjoint/partial path).
+
 Or a range of numbers (inclusive):
 
 ```sh2
@@ -290,8 +294,34 @@ let msg = "hello"
 ```
 
 **Scope**: Variables are function-scoped. Variables declared inside blocks (e.g., `if`, `while`) are visible in the rest of the function, provided they are guaranteed to be initialized on all control paths.
+    - **Policy A (Strict Declaration)**: A variable can only be accessed if it is **definitely assigned** on all paths led to the usage point.
+    - **Redeclaration**: Redeclaring a variable (via `let` or loop binder) is an error if it is already declared on the *same* execution path. However, disjoint declarations are allowed.
 
-**Redeclaration**: Declaring a variable that already exists in the current scope is a compile error.
+**Examples**:
+
+1. **Disjoint branches (Constructive Initialization)**:
+   ```sh2
+   if status() == 0 {
+       let x = 1
+   } else {
+       let x = 2
+   }
+   print(x) // OK: x is declared in both branches, so it is definitely assigned.
+   ```
+
+2. **Partial branches (Fresh Declaration)**:
+   ```sh2
+   if check() {
+       let y = 1
+       print(y)
+   } else {
+       # y is not declared here
+   }
+   # y is not accessible here (not definitely assigned).
+   
+   let y = 100 // OK: This is a fresh declaration of 'y'.
+   print(y)    // 100
+   ```
 
 ### `find_files()`
 
@@ -424,9 +454,17 @@ pipe run("echo", "data") | { run("cat") }
 
 ### 6.0 `each_line` pipeline consumer (Bash-only)
 
+> **Constraint**: `each_line` is only supported when targeting Bash. Compilation for POSIX sh will fail with the error: "each_line is only supported in Bash".
+>
 > **Constraint**: `each_line` must be the **last segment** of a pipeline.
 
-> **Note**: The loop variable (e.g. `line`) is only valid within the loop body. It is not considered initialized after the loop unless it was explicitly declared before the loop (e.g. `let line = ...`).
+> **Note**: The loop variable (e.g. `file`) is **function-scoped** and persists after the loop.
+>
+> **Declaration Rule**: The loop variable is implicitly declared. It must NOT be already declared on the current execution path (Policy A). However, if it was declared in a disjoint branch (e.g. inside an `if` block that has ended), redeclaration via `each_line` is allowed.
+> 
+> **Zero-iteration behavior**: If the pipeline produces no output (loop never runs):
+> - If the loop variable was **unset** before the loop, it is initialized to an empty string `""`.
+> - If the variable **already held a value** (e.g. from a partial branch or previous declaration in a disjoint path that is still visible at runtime), that value is **preserved**.
 
 Use `each_line` to iterate over the output of a pipeline line-by-line. This is safer and more robust than `| while read` in Bash because:
 1. It runs in the main shell process (via process substitution), so variables modified inside the loop persist.

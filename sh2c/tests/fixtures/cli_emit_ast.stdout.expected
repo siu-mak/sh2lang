@@ -7,7 +7,13 @@ Program {
             body: [
                 Spanned {
                     node: Let {
-                        name: "x",
+                        name: Spanned {
+                            node: "x",
+                            span: Span {
+                                start: 0,
+                                end: 0,
+                            },
+                        },
                         value: Spanned {
                             node: Number(
                                 1,

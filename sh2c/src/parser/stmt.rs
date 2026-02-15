@@ -63,7 +63,8 @@ impl<'a> Parser<'a> {
             TokenKind::Let => {
                 self.advance();
                 let name = if let Some(TokenKind::Ident(s)) = self.peek_kind() {
-                    s.clone()
+                    let span = self.peek().unwrap().span;
+                    Spanned::new(s.clone(), span)
                 } else {
                     self.error("Expected variable name after let", self.current_span())?
                 };
@@ -232,14 +233,16 @@ impl<'a> Parser<'a> {
                 self.advance();
                 if self.match_kind(TokenKind::LParen) {
                     let key_var = if let Some(TokenKind::Ident(s)) = self.peek_kind() {
-                        s.clone()
+                        let span = self.peek().unwrap().span;
+                        Spanned::new(s.clone(), span)
                     } else {
                         self.error("Expected ident", self.current_span())?
                     };
                     self.advance();
                     self.expect(TokenKind::Comma)?;
                     let val_var = if let Some(TokenKind::Ident(s)) = self.peek_kind() {
-                        s.clone()
+                        let span = self.peek().unwrap().span;
+                        Spanned::new(s.clone(), span)
                     } else {
                         self.error("Expected ident", self.current_span())?
                     };
@@ -263,7 +266,8 @@ impl<'a> Parser<'a> {
                     }
                 } else {
                     let var = if let Some(TokenKind::Ident(s)) = self.peek_kind() {
-                        s.clone()
+                        let span = self.peek().unwrap().span;
+                        Spanned::new(s.clone(), span)
                     } else {
                         self.error("Expected ident", self.current_span())?
                     };
@@ -551,9 +555,10 @@ impl<'a> Parser<'a> {
             TokenKind::Set => {
                 self.advance();
                 let target = if let Some(TokenKind::Ident(name)) = self.peek_kind() {
+                    let span = self.peek().unwrap().span;
                     let name = name.clone();
                     self.advance();
-                    LValue::Var(name)
+                    LValue::Var(Spanned::new(name, span))
                 } else if self.match_kind(TokenKind::Env) {
                     self.expect(TokenKind::Dot)?;
                     let name = if let Some(TokenKind::Ident(s)) = self.peek_kind() {
@@ -590,6 +595,7 @@ impl<'a> Parser<'a> {
             }
             TokenKind::Ident(name) => {
                 let name = name.clone();
+                let name_span = start_span; // Identifier span
                 self.advance();
                 
                 // Special handling for statement-form sh()
@@ -701,7 +707,7 @@ impl<'a> Parser<'a> {
                     self.expect(TokenKind::Equals)?;
                     let value = self.parse_expr()?;
                     StmtKind::Set {
-                        target: LValue::Var(name),
+                        target: LValue::Var(Spanned::new(name, name_span)),
                         value,
                     }
                 }
@@ -792,7 +798,8 @@ impl<'a> Parser<'a> {
         } else if self.match_kind(TokenKind::EachLine) {
             let start = self.previous_span();
             let ident = if let Some(TokenKind::Ident(s)) = self.peek_kind() {
-                s.clone()
+                let span = self.peek().unwrap().span;
+                Spanned::new(s.clone(), span)
             } else {
                 return self.error("Expected identifier after each_line", self.current_span());
             };

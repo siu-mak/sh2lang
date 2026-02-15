@@ -1,0 +1,3 @@
+compile error: diag_span_each_line_redecl.sh2:3:39: variable 'line' already declared in this scope. Did you mean to use `set line = ...`?
+    pipe { print("hi"); } | each_line line { // Error: redeclaration
+                                      ^~~~

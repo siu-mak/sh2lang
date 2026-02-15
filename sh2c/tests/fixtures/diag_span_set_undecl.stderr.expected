@@ -1,0 +1,3 @@
+compile error: diag_span_set_undecl.sh2:2:9: cannot set undeclared variable 'y'. Did you mean to use `let y = ...`?
+    set y = 1; // Error: undeclared
+        ^

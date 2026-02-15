@@ -1,0 +1,5 @@
+func main() {
+    let line = 0;
+    pipe { print("hi"); } | each_line line { // Error: redeclaration
+    }
+}

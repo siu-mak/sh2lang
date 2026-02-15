@@ -2,8 +2,7 @@
 
 mod common;
 use common::{assert_exec_matches_fixture, assert_exec_matches_fixture_target, run_test_in_targets, TargetShell};
-use assert_cmd::Command;
-use predicates::prelude::*;
+
 
 #[test]
 fn bool_var_basic_bash() {

@@ -1925,6 +1925,10 @@ fn emit_cmd(
         }
 
         Cmd::For { var, iterable, body } => {
+            // Policy A: Loop variable effectively declared here.
+            // Initialize if unset, preserve if set. Use local since we are in function.
+            out.push_str(&format!("{}local {}=\"${{{}:-}}\"\n", pad, var, var));
+
             match iterable {
                 crate::ir::ForIterable::List(items) => {
                     // Check if we need POSIX list iteration (file-based)
@@ -2952,12 +2956,20 @@ fn emit_cmd(
             
             let id = ctx.next_id();
             let status_file_var = format!("__sh2_pipe_status_{}", id);
+            let temp_var = format!("__sh2_iter_{}", id);
+
+            // Initialize loop variable if unset (for 0-iteration case)
+            // If already set (from partial branch), preserve value.
+            // Use `local` to ensure function scope (implicit let).
+            out.push_str(&format!("{}local {}=\"${{{}:-}}\"\n", pad, var, var));
             
             // Create temp file for status (no `local` - works at top-level and in functions)
             out.push_str(&format!("{}{}=$(__sh2_tmpfile)\n", pad, status_file_var));
             
-            // Start loop with process substitution
-            out.push_str(&format!("{}while IFS= read -r {} || [[ -n \"${}\" ]]; do\n", pad, var, var));
+            // Start loop with process substitution, reading into temp var
+            out.push_str(&format!("{}while IFS= read -r {} || [[ -n \"${}\" ]]; do\n", pad, temp_var, temp_var));
+            // Assign to user variable
+            out.push_str(&format!("{}  {}=\"${}\"\n", pad, var, temp_var));
             
             for stmt in body {
                 emit_cmd(stmt, out, indent + 2, opts, in_cond_ctx, ctx)?;

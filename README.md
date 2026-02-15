@@ -415,7 +415,14 @@ for f in find_files(dir="src", name="*.rs") {
 
 It uses `find ... -print0` and `mapfile`/`read -d ''` to safely handle all filenames, including those with newlines.
 
-### Variables
+### Strict Variable Semantics
+
+sh2 enforces strict rules to prevent common shell bugs:
+- **Declarations**: Variables must be declared with `let` before use.
+- **Initialization**: Variables must be initialized on all paths leading to usage.
+- **Redeclaration**: Redeclaring a variable on the *same* execution path is an error.
+- **Disjoint Branches**: `if true { let x = 1 } else { let x = 2 }` is allowed (constructive initialization).
+- **Updates**: Use `set` to update existing variables.
 
 ### Logical operators are `&&` / `||`
 

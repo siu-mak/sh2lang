@@ -5,7 +5,7 @@
 //! Also verifies that bare `sh file` (without parens) is NOT rewritten with -c.
 
 mod common;
-use common::{compile_to_shell, run_bash_script, run_shell_script, TargetShell};
+use common::{compile_to_shell, run_shell_script, TargetShell};
 
 // --- Statement form ---
 

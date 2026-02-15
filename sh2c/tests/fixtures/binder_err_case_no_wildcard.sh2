@@ -1,0 +1,7 @@
+func main() {
+    case "foo" {
+        "bar" => { let x = 1 }
+        "baz" => { let x = 2 }
+    }
+    print(x) // Error: undefined variable 'x'
+}

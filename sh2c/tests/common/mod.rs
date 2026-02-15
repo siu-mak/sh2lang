@@ -1049,7 +1049,10 @@ pub fn strip_spans_fn(f: &mut sh2c::ast::Function) {
 pub fn strip_spans_stmt(s: &mut sh2c::ast::Stmt) {
     s.span = sh2c::span::Span::new(0, 0);
     match &mut s.node {
-        sh2c::ast::StmtKind::Let { value, .. } => strip_spans_expr(value),
+        sh2c::ast::StmtKind::Let { name, value, .. } => {
+            name.span = sh2c::span::Span::new(0, 0);
+            strip_spans_expr(value)
+        }
         sh2c::ast::StmtKind::Run(call) => strip_spans_run_call(call),
         sh2c::ast::StmtKind::Exec(args) => for a in args { strip_spans_expr(a); },
         sh2c::ast::StmtKind::Print(e) => strip_spans_expr(e),
@@ -1069,7 +1072,8 @@ pub fn strip_spans_stmt(s: &mut sh2c::ast::Stmt) {
             strip_spans_expr(cond);
             for s in body { strip_spans_stmt(s); }
         }
-        sh2c::ast::StmtKind::For { iterable, body, .. } => {
+        sh2c::ast::StmtKind::For { var, iterable, body, .. } => {
+            var.span = sh2c::span::Span::new(0, 0);
             match iterable {
                 sh2c::ast::ForIterable::List(items) => {
                      for i in items {
@@ -1085,8 +1089,10 @@ pub fn strip_spans_stmt(s: &mut sh2c::ast::Stmt) {
                 strip_spans_stmt(s);
             }
         }
-        sh2c::ast::StmtKind::ForMap { body, .. } => {
-            for s in body { strip_spans_stmt(s); }
+        sh2c::ast::StmtKind::ForMap { key_var, val_var, body, .. } => {
+             key_var.span = sh2c::span::Span::new(0, 0);
+             val_var.span = sh2c::span::Span::new(0, 0);
+             for s in body { strip_spans_stmt(s); }
         }
         sh2c::ast::StmtKind::TryCatch { try_body, catch_body } => {
             for s in try_body { strip_spans_stmt(s); }
@@ -1099,7 +1105,10 @@ pub fn strip_spans_stmt(s: &mut sh2c::ast::Stmt) {
                     sh2c::ast::PipeSegment::Run(call) => strip_spans_run_call(call),
                     sh2c::ast::PipeSegment::Sudo(call) => strip_spans_run_call(call),
                     sh2c::ast::PipeSegment::Block(stmts) => for s in stmts { strip_spans_stmt(s); },
-                    sh2c::ast::PipeSegment::EachLine(_, body) => for s in body { strip_spans_stmt(s); },
+                    sh2c::ast::PipeSegment::EachLine(ident, body) => {
+                        ident.span = sh2c::span::Span::new(0, 0);
+                        for s in body { strip_spans_stmt(s); }
+                    }
                 }
             }
         }
@@ -1154,7 +1163,10 @@ pub fn strip_spans_stmt(s: &mut sh2c::ast::Stmt) {
         }
         sh2c::ast::StmtKind::Spawn { stmt } => strip_spans_stmt(stmt),
         sh2c::ast::StmtKind::Wait(Some(e)) => strip_spans_expr(e),
-        sh2c::ast::StmtKind::Set { value, .. } => strip_spans_expr(value),
+        sh2c::ast::StmtKind::Set { target, value, .. } => {
+             target.strip_spans();
+             strip_spans_expr(value)
+        },
         sh2c::ast::StmtKind::Case { expr, arms } => {
             strip_spans_expr(expr);
             for arm in arms {

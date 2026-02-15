@@ -1,0 +1,5 @@
+func main() {
+    let i = 0;
+    for i in [1] { // Error: redeclaration (loop var shadows)
+    }
+}

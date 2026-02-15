@@ -21,6 +21,30 @@ impl<T> Spanned<T> {
     }
 }
 
+impl<T: std::fmt::Display> std::fmt::Display for Spanned<T> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.node)
+    }
+}
+
+impl PartialEq<str> for Spanned<String> {
+    fn eq(&self, other: &str) -> bool {
+        self.node == other
+    }
+}
+
+impl PartialEq<&str> for Spanned<String> {
+    fn eq(&self, other: &&str) -> bool {
+        self.node == **other
+    }
+}
+
+impl PartialEq<String> for Spanned<String> {
+    fn eq(&self, other: &String) -> bool {
+        &self.node == other
+    }
+}
+
 pub type Expr = Spanned<ExprKind>;
 pub type Stmt = Spanned<StmtKind>;
 
@@ -64,7 +88,7 @@ pub enum CompareOp {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum LValue {
-    Var(String),
+    Var(Spanned<String>),
     Env(String),
 }
 
@@ -178,7 +202,7 @@ pub enum PipeSegment {
     Run(RunCall),
     Sudo(RunCall),
     Block(Vec<Stmt>),
-    EachLine(String, Vec<Stmt>),
+    EachLine(Spanned<String>, Vec<Stmt>),
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -190,7 +214,7 @@ pub enum ForIterable {
 #[derive(Debug, Clone, PartialEq)]
 pub enum StmtKind {
     Let {
-        name: String,
+        name: Spanned<String>,
         value: Expr,
     },
     Run(RunCall),
@@ -202,7 +226,7 @@ pub enum StmtKind {
         elifs: Vec<Elif>,
         else_body: Option<Vec<Stmt>>,
     },
-    Pipe(Vec<Spanned<PipeSegment>>), 
+    Pipe(Vec<Spanned<PipeSegment>>),
     Case {
         expr: Expr,
         arms: Vec<CaseArm>,
@@ -212,13 +236,13 @@ pub enum StmtKind {
         body: Vec<Stmt>,
     },
     For {
-        var: String,
+        var: Spanned<String>,
         iterable: ForIterable,
         body: Vec<Stmt>,
     },
     ForMap {
-        key_var: String,
-        val_var: String,
+        key_var: Spanned<String>,
+        val_var: Spanned<String>,
         map: String,
         body: Vec<Stmt>,
     },
@@ -327,6 +351,13 @@ pub struct Elif {
     pub body: Vec<Stmt>,
 }
 
+impl CallOption {
+    pub fn strip_spans(&mut self) {
+        self.span = Span::new(0, 0);
+        self.value.strip_spans();
+    }
+}
+
 impl Program {
     pub fn strip_spans(&mut self) {
         self.span = Span::new(0, 0);
@@ -359,7 +390,10 @@ impl Stmt {
 impl StmtKind {
     pub fn strip_spans(&mut self) {
         match self {
-            StmtKind::Let { value, .. } => value.strip_spans(),
+            StmtKind::Let { name, value, .. } => {
+                name.span = Span::new(0, 0);
+                value.strip_spans();
+            }
             StmtKind::Run(call) => call.strip_spans(),
             StmtKind::Exec(args) => for a in args { a.strip_spans(); },
             StmtKind::Print(e) => e.strip_spans(),
@@ -379,7 +413,8 @@ impl StmtKind {
                 cond.strip_spans();
                 for s in body { s.strip_spans(); }
             }
-            StmtKind::For { iterable, body, .. } => {
+            StmtKind::For { var, iterable, body, .. } => {
+                var.span = Span::new(0, 0);
                 match iterable {
                     ForIterable::List(items) => {
                          for i in items {
@@ -395,7 +430,9 @@ impl StmtKind {
                     s.strip_spans();
                 }
             }
-            StmtKind::ForMap { body, .. } => {
+            StmtKind::ForMap { key_var, val_var, body, .. } => {
+                key_var.span = Span::new(0, 0);
+                val_var.span = Span::new(0, 0);
                 for s in body { s.strip_spans(); }
             }
             StmtKind::TryCatch { try_body, catch_body } => {
@@ -409,7 +446,10 @@ impl StmtKind {
                         PipeSegment::Run(call) => call.strip_spans(),
                         PipeSegment::Sudo(call) => call.strip_spans(),
                         PipeSegment::Block(stmts) => for s in stmts { s.strip_spans(); },
-                        PipeSegment::EachLine(_, body) => for s in body { s.strip_spans(); },
+                        PipeSegment::EachLine(ident, body) => {
+                            ident.span = Span::new(0, 0);
+                            for s in body { s.strip_spans(); }
+                        }
                     }
                 }
             }
@@ -463,7 +503,10 @@ impl StmtKind {
             }
             StmtKind::Spawn { stmt } => stmt.strip_spans(),
             StmtKind::Wait(Some(e)) => e.strip_spans(),
-            StmtKind::Set { value, .. } => value.strip_spans(),
+            StmtKind::Set { target, value, .. } => {
+                target.strip_spans();
+                value.strip_spans();
+            }
             StmtKind::Case { expr, arms } => {
                 expr.strip_spans();
                 for arm in arms {
@@ -513,25 +556,16 @@ impl ExprKind {
             ExprKind::Input(e) => e.strip_spans(),
             ExprKind::Call { args, options, .. } => {
                 for a in args { a.strip_spans(); }
-                for o in options {
-                    o.span = Span::new(0, 0);
-                    o.value.strip_spans();
-                }
+                for o in options { o.strip_spans(); }
             }
             ExprKind::MapLiteral(entries) => for (_, v) in entries { v.strip_spans(); },
             ExprKind::Capture { expr, options } => {
                 expr.strip_spans();
-                for o in options {
-                    o.span = Span::new(0, 0);
-                    o.value.strip_spans();
-                }
+                for o in options { o.strip_spans(); }
             }
             ExprKind::Sh { cmd, options } => {
                 cmd.strip_spans();
-                for o in options {
-                    o.span = Span::new(0, 0);
-                    o.value.strip_spans();
-                }
+                for o in options { o.strip_spans(); }
             }
             ExprKind::Confirm { prompt, default } => {
                 prompt.strip_spans();
@@ -541,10 +575,7 @@ impl ExprKind {
             }
             ExprKind::Sudo { args, options } => {
                 for a in args { a.strip_spans(); }
-                for o in options {
-                    // o.span = Span::new(0, 0); // Preserve span for diagnostics
-                    o.value.strip_spans();
-                }
+                for o in options { o.strip_spans(); }
             }
             _ => {}
         }
@@ -554,10 +585,7 @@ impl ExprKind {
 impl RunCall {
     pub fn strip_spans(&mut self) {
          for a in &mut self.args { a.strip_spans(); }
-         for o in &mut self.options { 
-             o.span = Span::new(0, 0);
-             o.value.strip_spans();
-         }
+         for o in &mut self.options { o.strip_spans(); }
     }
 }
 
@@ -573,6 +601,15 @@ impl RedirectInputTarget {
     pub fn strip_spans(&mut self) {
         if let RedirectInputTarget::File { path } = self {
             path.strip_spans();
+        }
+    }
+}
+
+impl LValue {
+    pub fn strip_spans(&mut self) {
+        match self {
+            LValue::Var(s) => s.span = Span::new(0, 0),
+            LValue::Env(_) => {}
         }
     }
 }

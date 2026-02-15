@@ -54,3 +54,22 @@ fn diag_span_multiline_expr() {
 fn unknown_function_is_error() {
     assert_diag_output("unknown_function_is_error.sh2");
 }
+#[test]
+fn diag_span_let_redecl() {
+    assert_diag_output("diag_span_let_redecl.sh2");
+}
+
+#[test]
+fn diag_span_set_undecl() {
+    assert_diag_output("diag_span_set_undecl.sh2");
+}
+
+#[test]
+fn diag_span_for_redecl() {
+    assert_diag_output("diag_span_for_redecl.sh2");
+}
+
+#[test]
+fn diag_span_each_line_redecl() {
+    assert_diag_output("diag_span_each_line_redecl.sh2");
+}
