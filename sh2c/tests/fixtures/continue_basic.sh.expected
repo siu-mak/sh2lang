@@ -18,6 +18,7 @@ main() {
   local __sh2_loc=""
   __sh2_loc="tests/fixtures/continue_basic.sh2:2:5"
   xs=('a' 'skip' 'b')
+  local x="${x:-}"
   for x in "${xs[@]}"; do
     if [ "$x" = 'skip' ]; then
       continue

@@ -23,6 +23,7 @@ b'
   __sh2_status=$?
   __sh2_check "$__sh2_status" "${__sh2_loc:-}"
   printf '%s\n' '--- Normal ---'
+  local l="${l:-}"
   __sh2_lines "$normal" __sh2_for_lines_0
   for l in "${__sh2_for_lines_0[@]}"; do
     printf '%s\n' 'N:'"$l"
@@ -34,6 +35,7 @@ b
   __sh2_status=$?
   __sh2_check "$__sh2_status" "${__sh2_loc:-}"
   printf '%s\n' '--- Trailing ---'
+  local l="${l:-}"
   __sh2_lines "$trailing" __sh2_for_lines_0
   for l in "${__sh2_for_lines_0[@]}"; do
     printf '%s\n' 'T:'"$l"
@@ -45,11 +47,13 @@ b'
   __sh2_status=$?
   __sh2_check "$__sh2_status" "${__sh2_loc:-}"
   printf '%s\n' '--- Interior ---'
+  local l="${l:-}"
   __sh2_lines "$interior" __sh2_for_lines_0
   for l in "${__sh2_for_lines_0[@]}"; do
     printf '%s\n' 'I:'"$l"
   done
   printf '%s\n' '--- Empty ---'
+  local l="${l:-}"
   __sh2_lines '' __sh2_for_lines_0
   for l in "${__sh2_for_lines_0[@]}"; do
     printf '%s\n' 'E:'"$l"
@@ -61,6 +65,7 @@ y
 ' )"
   __sh2_status=$?
   __sh2_check "$__sh2_status" "${__sh2_loc:-}"
+  local l="${l:-}"
   __sh2_lines "$cap" __sh2_for_lines_0
   for l in "${__sh2_for_lines_0[@]}"; do
     printf '%s\n' 'C:'"$l"

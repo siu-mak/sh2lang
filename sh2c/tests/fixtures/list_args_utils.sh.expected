@@ -23,6 +23,7 @@ test() {
   printf '%s\n' "$( arr=("$@"); idx=$(( 2 )); printf "%s" "${arr[idx]}" )"
   printf '%s\n' "$( IFS='-'; printf "%s" "$*" )"
   printf '%s\n' "$#"
+  local a="${a:-}"
   for a in "$@"; do
     printf '%s\n' "$a"
   done
@@ -35,6 +36,7 @@ main() {
   printf '%s\n' "${#xs[@]}"
   printf '%s\n' "${xs[1]}"
   printf '%s\n' "$( IFS='-'; printf "%s" "${xs[*]}" )"
+  local item="${item:-}"
   for item in "${xs[@]}"; do
     printf '%s\n' "$item"
   done

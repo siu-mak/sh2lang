@@ -18,6 +18,7 @@ main() {
   local __sh2_loc=""
   __sh2_loc="tests/fixtures/for_list_var.sh2:2:3"
   xs=('a' 'b' 'c')
+  local x="${x:-}"
   for x in "${xs[@]}"; do
     printf '%s\n' "$x"
   done
