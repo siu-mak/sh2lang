@@ -114,13 +114,14 @@ input_target = "file" , "(" , expression , ")"
 subshell_stmt = "subshell" , block ;
 group_stmt = "group" , block ;
 
-pipe_stmt = "pipe" , pipe_segment , "|" , pipe_segment , { "|" , pipe_segment }
-          | run_call , "|" , pipe_segment , { "|" , pipe_segment } ;
 
-pipe_segment = run_call | sudo_call | block | each_line_block ;
+pipe_segment = run_call | sudo_call | block ;
+each_line_block = "each_line" , identifier , block ;
+
+pipe_stmt = "pipe" , pipe_segment , "|" , pipe_segment , { "|" , pipe_segment }
+          | run_call , { "|" , pipe_segment } , "|" , ( pipe_segment | each_line_block ) ;
 run_call = "run" , "(" , [ builtin_arg_list ] , ")" ;
 sudo_call = "sudo" , "(" , [ builtin_arg_list ] , ")" ;
-each_line_block = "each_line" , identifier , block ;
 
 and_then_stmt = statement , "&&" , statement ;
 or_else_stmt = statement , "||" , statement ;
