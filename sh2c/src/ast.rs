@@ -209,6 +209,7 @@ pub enum PipeSegment {
 pub enum ForIterable {
     List(Vec<Expr>),
     Range(Box<Expr>, Box<Expr>),
+    StdinLines,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -425,6 +426,7 @@ impl StmtKind {
                         start.strip_spans();
                         end.strip_spans();
                     }
+                    ForIterable::StdinLines => {}
                 }
                 for s in body {
                     s.strip_spans();

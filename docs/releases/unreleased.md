@@ -7,6 +7,7 @@
 - **Recursive File Finding**: Added `find_files(dir=".", name="*")` builtin (Bash-only) to recursively find files using `find ... -print0`. Handles "weird" filenames (spaces, newlines) safely. Returns a sorted list of paths. Requires Bash 4.3+, GNU find, and GNU sort.
 - **Structured Pipeline Iteration**: Added `| each_line <var> { ... }` pipeline consumer. Executes loop in the main process (preserving variable updates) and correctly propagates upstream exit status. Replaces fragile `| while read` patterns. Bash-only (uses process substitution).
 - **Job Control**: Added `spawn(cmd)`, `wait(pid)`, and `wait_all(pids)` builtins for running concurrent tasks. `spawn` starts a background job (like `&`) and returns a PID. `wait` waits for a PID and returns its exit code. `wait_all` waits for all PIDs in a list and returns the first non-zero exit code (in list order). Supports `allow_fail=true` for non-aborting waits. `spawn` and `wait` portable to both Bash and POSIX; `wait_all` fully supported on Bash, POSIX supports inline list literals only.
+- **Stdin Line Iteration**: Added `stdin_lines()` iterator for `for` loops (e.g. `for line in stdin_lines() { ... }`). Correctly handles whitespace, raw lines, and empty input. Fully supported on both Bash and POSIX targets. Compliant with Policy A variable semantics.
 
 
 ## Diagnostics

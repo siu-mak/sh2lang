@@ -513,9 +513,53 @@ run("false") | each_line l { ... }
 # status() is non-zero here
 ```
 
-> **Note**: `each_line` handles empty lines correctly and avoids the common Bash pitfall where missing final newlines are ignored.
+### 6.1 `stdin_lines()` (standard input iteration)
 
-### 6.1 `run(...)` (expression)
+Iterate over lines from standard input (stdin). This is the sh2 equivalent of `while read -r line; do ... done`.
+
+> **Restriction**: `stdin_lines()` is only valid as the iterable of a `for` loop (e.g. `for lines in stdin_lines()`). It cannot be used in expressions.
+> **Arguments**: It takes no arguments.
+
+**Features**:
+- Safely handles whitespace and raw lines (uses `read -r`).
+- Preserves empty lines.
+- Handles lines without trailing newlines correctly.
+- **Policy A**: The loop variable is initialized to `""` if the input is empty (0 iterations), or preserves its value if already set.
+
+**Examples**:
+
+1. **Simple filter** (grep-like):
+   ```sh2
+   for line in stdin_lines() {
+       if line == "target" {
+           print("Found it!")
+       }
+   }
+   ```
+
+2. **Parsing input**:
+   ```sh2
+   let count = 0
+   for line in stdin_lines() {
+       let parts = split(line, ",")
+       if len(parts) > 0 {
+           print("Column 1: " & parts[0])
+           set count = count + 1
+       }
+   }
+   print($"Processed {count} lines")
+   ```
+
+3. **Redirected input**:
+   ```sh2
+   with redirect { stdin: file("input.txt") } {
+       for line in stdin_lines() {
+           print(line)
+       }
+   }
+   ```
+
+### 6.2 `run(...)` (expression)
 
 `run(...)` executes an external command with safely separated arguments. It is an **expression**, so it can be used:
 

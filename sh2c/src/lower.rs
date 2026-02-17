@@ -472,6 +472,7 @@ fn lower_stmt<'a>(
                     let end_val = lower_expr(*end, out, &mut ctx, sm, file)?;
                     ir::ForIterable::Range(start_val, end_val)
                 }
+                ast::ForIterable::StdinLines => ir::ForIterable::StdinLines,
             };
             
             let mut lower_body = Vec::new();

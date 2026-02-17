@@ -122,6 +122,7 @@ fn format_stmt(stmt: &Stmt, depth: usize) -> String {
                 ForIterable::Range(start, end) => {
                     format!("{}..{}", format_expr(start), format_expr(end))
                 }
+                ForIterable::StdinLines => "stdin_lines()".to_string(),
             };
             format!("for {} in {} {{\n{}\n{}}}", var, items_str, format_block(body, depth + 1, false), indent_str(depth))
         }

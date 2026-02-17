@@ -127,6 +127,13 @@ fn check_function_call(
             span,
         )));
     }
+
+    if name == "stdin_lines" {
+            return Err(CompileError::new(ctx.format_error(
+            "stdin_lines() can only be used as the iterable in a for-loop",
+            span,
+        )));
+    }
     
     if name == "write_file" {
         // write_file(path, content, append?)
@@ -302,6 +309,7 @@ fn check_stmt(stmt: &ast::Stmt, ctx: &mut BinderContext) -> Result<(), CompileEr
                     check_expr(start, ctx)?;
                     check_expr(end, ctx)?;
                 }
+                ast::ForIterable::StdinLines => {}
             }
 
             // For-loop var is treated as implicit let

@@ -360,6 +360,16 @@ pub fn run_bash_script(bash: &str, env: &[(&str, &str)], args: &[&str]) -> (Stri
     run_shell_script(bash, "bash", env, args, None, None)
 }
 
+pub fn run_bash_script_with_stdin(
+    bash: &str,
+    env: &[(&str, &str)],
+    args: &[&str],
+    input: &str,
+) -> (String, String, i32) {
+    let (stdout, stderr, status) = run_shell_script(bash, "bash", env, args, Some(input), None);
+    (stdout, stderr, status.unwrap_or(1))
+}
+
 fn copy_dir_all(src: &Path, dst: &Path) {
     if !dst.exists() {
         fs::create_dir_all(dst).expect("Failed to create dst dir");
@@ -495,6 +505,35 @@ pub fn run_test_in_targets(name: &str, src: &str, expected_stdout: &str) {
         // Execute
         // We use run_shell_script which handles temp dir creation
         let (stdout, stderr, status) = run_shell_script(&shell_script, shell_bin, &[], &[], None, None);
+
+        if status != Some(0) {
+            panic!(
+                "Execution failed for {} ({:?})\nStatus: {:?}\nStdout: {}\nStderr: {}\nScript:\n{}",
+                name, target, status, stdout, stderr, shell_script
+            );
+        }
+
+        assert_eq!(
+            stdout.trim(),
+            expected_stdout.trim(),
+            "Output mismatch for {} ({:?})",
+            name, target
+        );
+    }
+}
+
+pub fn run_test_in_targets_with_stdin(name: &str, src: &str, stdin: &str, expected_stdout: &str) {
+    let targets = [
+        (TargetShell::Bash, "bash"),
+        (TargetShell::Posix, "sh"),
+    ];
+
+    for (target, shell_bin) in targets {
+        // Compile
+        let shell_script = compile_to_shell(src, target);
+
+        // Execute
+        let (stdout, stderr, status) = run_shell_script(&shell_script, shell_bin, &[], &[], Some(stdin), None);
 
         if status != Some(0) {
             panic!(
@@ -1084,6 +1123,7 @@ pub fn strip_spans_stmt(s: &mut sh2c::ast::Stmt) {
                     strip_spans_expr(start);
                     strip_spans_expr(end);
                 }
+                sh2c::ast::ForIterable::StdinLines => {}
             }
             for s in body {
                 strip_spans_stmt(s);

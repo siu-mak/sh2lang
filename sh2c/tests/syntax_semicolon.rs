@@ -7,8 +7,8 @@ fn check_exec(src: &str, expected_contains: &[&str]) {
     let script = common::compile_to_bash(src);
     // Use common::run_bash_script which handles temporary directory creation etc.
     let (stdout, stderr, status) = common::run_bash_script(&script, &[], &[]);
-    if status != 0 {
-        panic!("Script failed with status {}.\nStderr: {}\nScript:\n{}", status, stderr, script);
+    if status != Some(0) {
+        panic!("Script failed with status {:?}.\nStderr: {}\nScript:\n{}", status, stderr, script);
     }
     for expected in expected_contains {
         assert!(stdout.contains(expected), "Output missing '{}'. Got:\n{}", expected, stdout);

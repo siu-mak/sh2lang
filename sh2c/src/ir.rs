@@ -162,6 +162,7 @@ pub enum CompareOp {
 pub enum ForIterable {
     List(Vec<Val>),
     Range(Val, Val),
+    StdinLines,
 }
 
 #[derive(Debug)]

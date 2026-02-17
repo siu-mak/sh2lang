@@ -159,6 +159,7 @@ fn visit_cmd(cmd: &Cmd, usage: &mut PreludeUsage, include_diagnostics: bool) {
                     visit_val(start, usage);
                     visit_val(end, usage);
                 }
+                crate::ir::ForIterable::StdinLines => {}
             }
             for c in body {
                 visit_cmd(c, usage, include_diagnostics);
@@ -2081,6 +2082,22 @@ fn emit_cmd(
                     // Use seq for ranges
                     out.push_str(&format!("for {} in $(seq {} {}); do\n", var, emit_val(start, target)?, emit_val(end, target)?));
                     
+                    for c in body {
+                        emit_cmd(c, out, indent + 2, opts, in_cond_ctx, ctx)?;
+                    }
+                    out.push_str(&pad);
+                    out.push_str("done\n");
+                }
+                crate::ir::ForIterable::StdinLines => {
+                    // Use a temp variable for reading to preserve 'var' if no input is read
+                    // (read clears var on EOF). Policy A init is emitted above (shared with List/Range).
+                    let tmp_var = format!("__sh2_read_tmp_{}", var);
+                    let pad_inner = " ".repeat(indent + 2);
+                    out.push_str(&pad);
+                    out.push_str(&format!("while IFS= read -r {} || [ -n \"${}\" ]; do\n", tmp_var, tmp_var));
+                    // Assign temp to actual loop var at inner indentation
+                    out.push_str(&format!("{}{}=\"${}\"\n", pad_inner, var, tmp_var));
+
                     for c in body {
                         emit_cmd(c, out, indent + 2, opts, in_cond_ctx, ctx)?;
                     }

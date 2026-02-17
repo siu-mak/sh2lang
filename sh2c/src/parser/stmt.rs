@@ -302,7 +302,25 @@ impl<'a> Parser<'a> {
                             let end = self.parse_expr()?;
                             ForIterable::Range(Box::new(start), Box::new(end))
                         } else {
-                            ForIterable::List(vec![start])
+                            // Check if this is a direct call to stdin_lines()
+                            let is_stdin_lines = if let ExprKind::Call { name, args, .. } = &start.node {
+                                if name == "stdin_lines" {
+                                    if !args.is_empty() {
+                                        return self.error("stdin_lines() takes no arguments", start.span);
+                                    }
+                                    true
+                                } else {
+                                    false
+                                }
+                            } else {
+                                false
+                            };
+
+                            if is_stdin_lines {
+                                ForIterable::StdinLines
+                            } else {
+                                ForIterable::List(vec![start])
+                            }
                         }
                     };
 
