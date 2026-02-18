@@ -163,6 +163,12 @@ pub enum ForIterable {
     List(Vec<Val>),
     Range(Val, Val),
     StdinLines,
+    Find0 {
+        dir: Box<Val>,
+        name: Option<Box<Val>>,
+        type_filter: Option<Box<Val>>,
+        maxdepth: Option<Box<Val>>,
+    },
 }
 
 #[derive(Debug)]

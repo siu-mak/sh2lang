@@ -415,6 +415,16 @@ for f in find_files(dir="src", name="*.rs") {
 
 It uses `find ... -print0` and `mapfile`/`read -d ''` to safely handle all filenames, including those with newlines.
 
+### Streaming File Discovery (`find0`)
+
+For large directory trees, use `find0(...)` to stream results one-by-one instead of loading them all into memory. It is Bash-only, NUL-safe, quoting-safe (no shell splitting), and deterministically sorted. Root directory is excluded.
+
+```sh2
+for f in find0(dir="src", name="*.rs") {
+  print("Found: " & f)
+}
+```
+
 ### Strict Variable Semantics
 
 sh2 enforces strict rules to prevent common shell bugs:

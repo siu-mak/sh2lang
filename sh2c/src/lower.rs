@@ -473,6 +473,65 @@ fn lower_stmt<'a>(
                     ir::ForIterable::Range(start_val, end_val)
                 }
                 ast::ForIterable::StdinLines => ir::ForIterable::StdinLines,
+                ast::ForIterable::Find0(spec) => {
+                    let dir_val = match spec.dir {
+                        Some(d) => lower_expr(d, out, &mut ctx, sm, file)?,
+                        None => ir::Val::Literal(".".to_string()),
+                    };
+                    let name_val = match spec.name {
+                        Some(n) => Some(Box::new(lower_expr(n, out, &mut ctx, sm, file)?)),
+                        None => None,
+                    };
+                    let type_val = match spec.type_filter {
+                        Some(t) => {
+                            // Validate type is literal "f" or "d"
+                            match &t.node {
+                                ast::ExprKind::Literal(s) if s == "f" || s == "d" => {},
+                                _ => {
+                                    return Err(CompileError::new(sm.format_diagnostic(
+                                        file,
+                                        opts.diag_base_dir.as_deref(),
+                                        "find0() type must be literal \"f\" (files) or \"d\" (directories)",
+                                        t.span,
+                                    )));
+                                }
+                            }
+                            Some(Box::new(lower_expr(t, out, &mut ctx, sm, file)?))
+                        }
+                        None => None,
+                    };
+                    let maxdepth_val = match spec.maxdepth {
+                        Some(m) => {
+                            match &m.node {
+                                // Strict validation: maxdepth must be a non-negative integer literal.
+                                // Note: `ast::ExprKind::Number` contains a `u32`, so it is strictly non-negative.
+                                // Negative values (like `-1`) are parsed as unary expressions (not `Number` literals)
+                                // and are correctly rejected here by the catch-all arm.
+                                ast::ExprKind::Number(_) => {
+                                    // Valid: literal non-negative integer.
+                                }
+                                _ => {
+                                    // Any expression (variable, calculation, negative value) is rejected.
+                                    // We use the span of the value expression `m` to point exactly at the invalid argument.
+                                    return Err(CompileError::new(sm.format_diagnostic(
+                                        file,
+                                        opts.diag_base_dir.as_deref(),
+                                        "find0() maxdepth must be a non-negative integer literal",
+                                        m.span,
+                                    )));
+                                }
+                            }
+                            Some(Box::new(lower_expr(m, out, &mut ctx, sm, file)?))
+                        }
+                        None => None,
+                    };
+                    ir::ForIterable::Find0 {
+                        dir: Box::new(dir_val),
+                        name: name_val,
+                        type_filter: type_val,
+                        maxdepth: maxdepth_val,
+                    }
+                }
             };
             
             let mut lower_body = Vec::new();

@@ -1124,6 +1124,12 @@ pub fn strip_spans_stmt(s: &mut sh2c::ast::Stmt) {
                     strip_spans_expr(end);
                 }
                 sh2c::ast::ForIterable::StdinLines => {}
+                sh2c::ast::ForIterable::Find0(spec) => {
+                    if let Some(ref mut d) = spec.dir { strip_spans_expr(d); }
+                    if let Some(ref mut n) = spec.name { strip_spans_expr(n); }
+                    if let Some(ref mut t) = spec.type_filter { strip_spans_expr(t); }
+                    if let Some(ref mut m) = spec.maxdepth { strip_spans_expr(m); }
+                }
             }
             for s in body {
                 strip_spans_stmt(s);

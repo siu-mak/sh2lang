@@ -316,8 +316,66 @@ impl<'a> Parser<'a> {
                                 false
                             };
 
+                            // Check if this is a direct call to find0()
+                            let find0_spec = if !is_stdin_lines {
+                                if let ExprKind::Call { name, args, options } = &start.node {
+                                    if name == "find0" {
+                                        if !args.is_empty() {
+                                            return self.error("find0() does not accept positional arguments. Use named arguments: find0(dir=\".\", name=\"*.txt\")", start.span);
+                                        }
+                                        let mut dir = None;
+                                        let mut name_opt = None;
+                                        let mut type_filter = None;
+                                        let mut maxdepth = None;
+                                        for opt in options {
+                                            match opt.name.as_str() {
+                                                "dir" => {
+                                                    if dir.is_some() {
+                                                        return self.error("Duplicate argument 'dir'", opt.value.span);
+                                                    }
+                                                    dir = Some(opt.value.clone());
+                                                }
+                                                "name" => {
+                                                    if name_opt.is_some() {
+                                                        return self.error("Duplicate argument 'name'", opt.value.span);
+                                                    }
+                                                    name_opt = Some(opt.value.clone());
+                                                }
+                                                "type" => {
+                                                    if type_filter.is_some() {
+                                                        return self.error("Duplicate argument 'type'", opt.value.span);
+                                                    }
+                                                    type_filter = Some(opt.value.clone());
+                                                }
+                                                "maxdepth" => {
+                                                    if maxdepth.is_some() {
+                                                        return self.error("Duplicate argument 'maxdepth'", opt.value.span);
+                                                    }
+                                                    maxdepth = Some(opt.value.clone());
+                                                }
+                                                other => {
+                                                    return self.error(
+                                                        &format!("Unknown argument '{}'. Supported: dir, name, type, maxdepth", other),
+                                                        opt.value.span,
+                                                    );
+                                                }
+                                            }
+                                        }
+                                        Some(crate::ast::Find0Spec { dir, name: name_opt, type_filter, maxdepth })
+                                    } else {
+                                        None
+                                    }
+                                } else {
+                                    None
+                                }
+                            } else {
+                                None
+                            };
+
                             if is_stdin_lines {
                                 ForIterable::StdinLines
+                            } else if let Some(spec) = find0_spec {
+                                ForIterable::Find0(spec)
                             } else {
                                 ForIterable::List(vec![start])
                             }

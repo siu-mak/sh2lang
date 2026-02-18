@@ -160,6 +160,12 @@ fn visit_cmd(cmd: &Cmd, usage: &mut PreludeUsage, include_diagnostics: bool) {
                     visit_val(end, usage);
                 }
                 crate::ir::ForIterable::StdinLines => {}
+                crate::ir::ForIterable::Find0 { dir, name, type_filter, maxdepth } => {
+                    visit_val(dir, usage);
+                    if let Some(n) = name { visit_val(n, usage); }
+                    if let Some(t) = type_filter { visit_val(t, usage); }
+                    if let Some(m) = maxdepth { visit_val(m, usage); }
+                }
             }
             for c in body {
                 visit_cmd(c, usage, include_diagnostics);
@@ -2103,6 +2109,57 @@ fn emit_cmd(
                     }
                     out.push_str(&pad);
                     out.push_str("done\n");
+                }
+                crate::ir::ForIterable::Find0 { dir, name, type_filter, maxdepth } => {
+                    if target == TargetShell::Posix {
+                        return Err(CompileError::unsupported(
+                            "find0() requires Bash target (uses read -d '' and process substitution)",
+                            target,
+                        ));
+                    }
+                    // Build the find command as an array to ensure quoting safety.
+                    // We use `--` to prevent `dir` from being interpreted as an option if it starts with `-`.
+                    // HOWEVER: `find` treats any argument starting with `-` as a predicate, even after `--`.
+                    // So we must ensure relative paths starting with `-` are prefixed with `./`.
+                    let argv_var = format!("__sh2_find0_argv_{}", var);
+                    out.push_str(&pad);
+                    out.push_str(&format!("local -a {}\n", argv_var));
+                    out.push_str(&pad);
+                    // Runtime check: if dir starts with -, prepend ./
+                    // This is safe because absolute paths start with /
+                    out.push_str(&format!("local __sh2_find0_dir_{}={}\n", var, emit_val(dir, target)?));
+                    out.push_str(&pad);
+                    out.push_str(&format!("if [[ \"$__sh2_find0_dir_{}\" == -* ]]; then __sh2_find0_dir_{}=\"./$__sh2_find0_dir_{}\"; fi\n", var, var, var));
+                    out.push_str(&pad);
+                    out.push_str(&format!("{}=(find -- \"$__sh2_find0_dir_{}\" -mindepth 1)\n", argv_var, var));
+                    
+                    if let Some(md) = maxdepth {
+                        out.push_str(&pad);
+                        out.push_str(&format!("{}+=(-maxdepth {})\n", argv_var, emit_val(md, target)?));
+                    }
+                    if let Some(n) = name {
+                        out.push_str(&pad);
+                        out.push_str(&format!("{}+=(-name {})\n", argv_var, emit_val(n, target)?));
+                    }
+                    if let Some(tf) = type_filter {
+                        out.push_str(&pad);
+                        out.push_str(&format!("{}+=(-type {})\n", argv_var, emit_val(tf, target)?));
+                    }
+                    out.push_str(&pad);
+                    out.push_str(&format!("{}+=(-print0)\n", argv_var));
+
+                    let tmp_var = format!("__sh2_find0_{}", var);
+                    out.push_str(&pad);
+                    out.push_str(&format!("while IFS= read -r -d '' {}; do\n", tmp_var));
+                    let pad_inner = " ".repeat(indent + 2);
+                    out.push_str(&format!("{}{}=\"${}\"\n", pad_inner, var, tmp_var));
+
+                    for c in body {
+                        emit_cmd(c, out, indent + 2, opts, in_cond_ctx, ctx)?;
+                    }
+                    out.push_str(&pad);
+                    // Execute the find command via the array, preventing shell splitting/globbing of arguments.
+                    out.push_str(&format!("done < <(\"${{{}[@]}}\" 2>/dev/null | LC_ALL=C sort -z)\n", argv_var));
                 }
             }
         }

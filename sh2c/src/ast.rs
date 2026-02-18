@@ -206,10 +206,19 @@ pub enum PipeSegment {
 }
 
 #[derive(Debug, Clone, PartialEq)]
+pub struct Find0Spec {
+    pub dir: Option<Expr>,
+    pub name: Option<Expr>,
+    pub type_filter: Option<Expr>,
+    pub maxdepth: Option<Expr>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
 pub enum ForIterable {
     List(Vec<Expr>),
     Range(Box<Expr>, Box<Expr>),
     StdinLines,
+    Find0(Find0Spec),
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -427,6 +436,12 @@ impl StmtKind {
                         end.strip_spans();
                     }
                     ForIterable::StdinLines => {}
+                    ForIterable::Find0(spec) => {
+                        if let Some(ref mut d) = spec.dir { d.strip_spans(); }
+                        if let Some(ref mut n) = spec.name { n.strip_spans(); }
+                        if let Some(ref mut t) = spec.type_filter { t.strip_spans(); }
+                        if let Some(ref mut m) = spec.maxdepth { m.strip_spans(); }
+                    }
                 }
                 for s in body {
                     s.strip_spans();

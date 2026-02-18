@@ -498,10 +498,10 @@ impl<'a> Parser<'a> {
 
                                 if is_named {
                                     // Named argument - only allowed for specific builtins
-                                    let allowed_builtins = ["run", "sudo", "sh", "capture", "confirm", "find_files", "wait", "wait_all"];
+                                    let allowed_builtins = ["run", "sudo", "sh", "capture", "confirm", "find_files", "find0", "wait", "wait_all"];
                                     if !allowed_builtins.contains(&s.as_str()) {
                                         return self.error(
-                                            "Named arguments are only supported for builtins: run, sudo, sh, capture, confirm, find_files, wait, wait_all",
+                                            "Named arguments are only supported for builtins: run, sudo, sh, capture, confirm, find_files, find0, wait, wait_all",
                                             self.current_span()
                                         );
                                     }

@@ -72,7 +72,7 @@ else_clause = "else" , block ;
 
 while_stmt = "while" , expression , block ;
 for_stmt = "for" , identifier , "in" , for_iterable , block ;
-for_iterable = expression (* NOTE: semantics checks that stdin_lines() is only valid here *)
+for_iterable = expression (* NOTE: semantics checks that stdin_lines() and find0() are only valid here *)
              | expression , ".." , expression
              | "(" , expression , ".." , expression , ")"
              | "(" , [ expression , { "," , expression } ] , ")" ;

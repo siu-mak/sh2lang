@@ -559,6 +559,16 @@ Iterate over lines from standard input (stdin). This is the sh2 equivalent of `w
    }
    ```
 
+### 6.1.1 `find0()` (streaming file discovery, Bash-only)
+
+Iterate over files discovered by `find`, streaming results via NUL-delimited read. Safe for filenames with spaces and special characters. See [§10.9](#109-builtin-filesystem-helpers) for full documentation.
+
+```sh2
+for f in find0(dir="src", name="*.rs", type="f") {
+    print(f)
+}
+```
+
 ### 6.2 `run(...)` (expression)
 
 `run(...)` executes an external command with safely separated arguments. It is an **expression**, so it can be used:
@@ -1280,6 +1290,46 @@ for f in find_files(dir="src", name="*.rs") {
 
 # Find all files in current dir (recursive)
 let all_files = find_files()
+```
+
+#### `find0(dir=".", name=?, type=?, maxdepth=?)` — streaming file discovery (Bash-only)
+
+Iterates over files found by `find` using NUL-delimited streaming. Unlike `find_files()`, which returns a Bash array, `find0()` is used as a `for`-loop iterable and streams results one-by-one — suitable for large directory trees.
+
+- **Parameters** (all named, all optional):
+  - `dir`: Root directory to search. Defaults to `"."`. The root directory itself is excluded from results.
+  - `name`: Glob pattern for filenames (maps to `find -name`).
+  - `type`: File type filter — must be literal `"f"` (files) or `"d"` (directories). Compile-time validated.
+  - `maxdepth`: Maximum search depth — must be a non-negative integer literal. Compile-time validated.
+- **Features**:
+  - **Quoting-Safe**: Arguments are passed as separate argv elements with `--` separator; no shell splitting or globbing.
+  - **Path Format**: Returned paths include the `dir` prefix (e.g. `find0(dir="src")` yields `src/foo.rs`).
+  - **NUL-Safe**: Uses `find -print0 | sort -z | while read -d ''` to handle filenames with spaces, newlines, and special characters.
+  - **Deterministic**: Results are sorted lexicographically via `LC_ALL=C sort -z`.
+  - **Error suppression**: `find` permission errors are suppressed (`2>/dev/null`).
+  - **Zero-iteration safe**: If no files match, the loop body simply doesn't execute.
+- **Restrictions**:
+  - `find0()` is only valid as a `for`-loop iterable. It cannot be used in expressions.
+  - Positional arguments are not accepted.
+  - Requires **Bash** target. Compilation for POSIX sh fails with a compile error.
+  - Requires `find` and `sort` with NUL-delimiter support (GNU coreutils / BSD).
+
+**Examples**:
+```sh2
+# Find all .rs files in src/
+for f in find0(dir="src", name="*.rs", type="f") {
+    print(f)
+}
+
+# Find directories only, max 2 levels deep
+for d in find0(dir=".", type="d", maxdepth=2) {
+    print(d)
+}
+
+# Minimal: find everything under current dir
+for entry in find0() {
+    print(entry)
+}
 ```
 
 #### `glob(pattern)` → list (Bash-only)

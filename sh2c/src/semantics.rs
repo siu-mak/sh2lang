@@ -128,9 +128,9 @@ fn check_function_call(
         )));
     }
 
-    if name == "stdin_lines" {
+    if name == "stdin_lines" || name == "find0" {
             return Err(CompileError::new(ctx.format_error(
-            "stdin_lines() can only be used as the iterable in a for-loop",
+            &format!("{}() can only be used as the iterable in a for-loop", name),
             span,
         )));
     }
@@ -310,6 +310,12 @@ fn check_stmt(stmt: &ast::Stmt, ctx: &mut BinderContext) -> Result<(), CompileEr
                     check_expr(end, ctx)?;
                 }
                 ast::ForIterable::StdinLines => {}
+                ast::ForIterable::Find0(spec) => {
+                    if let Some(ref d) = spec.dir { check_expr(d, ctx)?; }
+                    if let Some(ref n) = spec.name { check_expr(n, ctx)?; }
+                    if let Some(ref t) = spec.type_filter { check_expr(t, ctx)?; }
+                    if let Some(ref m) = spec.maxdepth { check_expr(m, ctx)?; }
+                }
             }
 
             // For-loop var is treated as implicit let

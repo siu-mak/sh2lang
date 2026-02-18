@@ -123,6 +123,26 @@ fn format_stmt(stmt: &Stmt, depth: usize) -> String {
                     format!("{}..{}", format_expr(start), format_expr(end))
                 }
                 ForIterable::StdinLines => "stdin_lines()".to_string(),
+                ForIterable::Find0(spec) => {
+                    let mut parts = Vec::new();
+                    if let Some(ref d) = spec.dir {
+                        parts.push(format!("dir={}", format_expr(d)));
+                    }
+                    if let Some(ref n) = spec.name {
+                        parts.push(format!("name={}", format_expr(n)));
+                    }
+                    if let Some(ref t) = spec.type_filter {
+                        parts.push(format!("type={}", format_expr(t)));
+                    }
+                    if let Some(ref m) = spec.maxdepth {
+                        parts.push(format!("maxdepth={}", format_expr(m)));
+                    }
+                    if parts.is_empty() {
+                        "find0()".to_string()
+                    } else {
+                        format!("find0({})", parts.join(", "))
+                    }
+                }
             };
             format!("for {} in {} {{\n{}\n{}}}", var, items_str, format_block(body, depth + 1, false), indent_str(depth))
         }
