@@ -40,6 +40,9 @@ jobs:
           source: ./docs
           destination: ./out/site
 
+      - name: Fix out/ permissions (Jekyll container writes as root)
+        run: sudo chown -R "$(id -u):$(id -g)" ./out
+
       # ── C) Determine mode ───────────────────────────────────────
       - name: Determine APT mode
         id: mode
