@@ -24,6 +24,9 @@
 - **Structured primitives over `sh("...")`**: Docs now prefer `glob()`, `find0()`, `spawn()`, `stdin_lines()`, and structured pipelines over `sh("...")` where available. Remaining `sh(...)` usages are justified with `# sh(...) because:` comments. CI enforcement test added.
 
 
+## Infrastructure
+- **Unified GitHub Pages deployment**: The APT repository URL has moved from `https://siu-mak.github.io/sh2lang/` to `https://siu-mak.github.io/sh2lang/apt/`. Update your APT source line and GPG key URL accordingly. Ubuntu 24.04 (noble) is now supported alongside 22.04 (jammy).
+
 ## Breaking Changes
 - **Hardened `arg(i)`**: `arg(i)` now enforces strict runtime validation for variable indices. It aborts the script with a fatal error if the index is non-numeric, `< 1`, or `> argc()`. Previously, invalid or out-of-bounds indices might have returned empty strings or behaved unpredictably depending on the target shell. This change ensures safety against injection and logic errors.
 - **Strict Variable Semantics**: Variables must now be declared with `let` before use or assignment. `let` declarations allow shadowing only in disjoint branches (e.g., `if true { let x=1 } else { let x=2 }`), preventing accidental re-declaration errors. Diagnostic improvements now provide hints for `let` vs `set` usage.

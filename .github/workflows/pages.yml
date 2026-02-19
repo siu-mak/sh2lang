@@ -1,0 +1,229 @@
+name: GitHub Pages (Docs + APT)
+
+on:
+  push:
+    branches: [main]
+    tags:
+      - "v*.*.*"
+  workflow_dispatch:
+    inputs:
+      publish_apt:
+        description: "Rebuild and publish APT repo (otherwise restore from apt-store)"
+        type: boolean
+        default: false
+
+permissions:
+  contents: write    # push apt-store branch
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+
+    steps:
+      # ── A) Checkout ──────────────────────────────────────────────
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # ── B) Build Jekyll docs ─────────────────────────────────────
+      - name: Build docs
+        uses: actions/jekyll-build-pages@v1
+        with:
+          source: ./docs
+          destination: ./out/site
+
+      # ── C) Determine mode ───────────────────────────────────────
+      - name: Determine APT mode
+        id: mode
+        run: |
+          # Resolve mode explicitly: tag push or dispatch with publish_apt=true
+          # Note: inputs.publish_apt is empty string on push events, not "true"
+          PUBLISH="false"
+          REASON="push to main (default)"
+
+          if [[ "${{ github.ref_type }}" == "tag" ]]; then
+            if [[ "${{ github.ref_name }}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+              PUBLISH="true"
+              REASON="tag ${{ github.ref_name }}"
+            else
+              REASON="non-release tag ${{ github.ref_name }}"
+            fi
+          elif [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            if [[ "${{ inputs.publish_apt }}" == "true" ]]; then
+              PUBLISH="true"
+              REASON="workflow_dispatch publish_apt=true"
+            else
+              REASON="workflow_dispatch publish_apt=false"
+            fi
+          fi
+
+          if [[ "$PUBLISH" == "true" ]]; then
+            echo "::notice::MODE=PUBLISH_APT (reason: $REASON)"
+          else
+            echo "::notice::MODE=RESTORE_APT (reason: $REASON)"
+          fi
+
+          echo "publish=$PUBLISH" >> "$GITHUB_OUTPUT"
+
+      # ── D1) RESTORE_APT: fetch from apt-store branch ────────────
+      - name: Restore APT from apt-store
+        if: steps.mode.outputs.publish == 'false'
+        run: |
+          set -euo pipefail
+          if git fetch --depth=1 origin apt-store 2>/dev/null; then
+            echo "::notice::Restoring /apt/ from apt-store branch"
+            tmp_dir=$(mktemp -d)
+            git worktree add "$tmp_dir" FETCH_HEAD --detach
+            mkdir -p ./out/site/apt
+            rsync -a --delete --exclude='.git' "$tmp_dir/" ./out/site/apt/
+            git worktree remove "$tmp_dir" --force
+          else
+            echo "::warning::apt-store branch not found. /apt/ will be missing until a publish run creates it."
+          fi
+
+      # ── D2) PUBLISH_APT: build .deb, reprepro, push apt-store ──
+      - name: Install APT tooling
+        if: steps.mode.outputs.publish == 'true'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y reprepro gnupg dpkg dpkg-dev xz-utils
+
+      - name: Install Rust toolchain
+        if: steps.mode.outputs.publish == 'true'
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install cargo-deb
+        if: steps.mode.outputs.publish == 'true'
+        run: cargo install cargo-deb
+
+      - name: Import GPG key
+        if: steps.mode.outputs.publish == 'true'
+        id: gpg
+        env:
+          APT_GPG_PRIVATE_KEY: ${{ secrets.APT_GPG_PRIVATE_KEY }}
+        run: |
+          set -euo pipefail
+          mkdir -p ~/.gnupg
+          chmod 700 ~/.gnupg
+          echo "$APT_GPG_PRIVATE_KEY" | gpg --batch --import
+
+          # Extract the fingerprint of the imported signing key
+          FPR=$(gpg --list-secret-keys --with-colons 2>/dev/null \
+                | awk -F: '/^fpr:/{print $10; exit}')
+          if [[ -z "$FPR" ]]; then
+            echo "::error::No secret key fingerprint found after import"
+            exit 1
+          fi
+          echo "::notice::GPG signing key fingerprint: $FPR"
+          echo "fpr=$FPR" >> "$GITHUB_OUTPUT"
+
+      - name: Build .deb package
+        if: steps.mode.outputs.publish == 'true'
+        run: |
+          set -euo pipefail
+          cargo build -p sh2c --release
+          cargo build -p sh2do --release
+          cargo deb -p sh2lang
+          ls -la target/debian
+
+      - name: Build APT repo
+        if: steps.mode.outputs.publish == 'true'
+        run: |
+          set -euo pipefail
+
+          test -f apt-repo/conf/distributions
+          test -f apt-repo/conf/options
+
+          mkdir -p out/apt-repo
+          cp -r apt-repo/* out/apt-repo/
+
+          # ── Derive codenames from distributions config ──
+          mapfile -t codenames < <(grep '^Codename:' apt-repo/conf/distributions | awk '{print $2}')
+          if [[ ${#codenames[@]} -eq 0 ]]; then
+            echo "::error::No Codename entries found in apt-repo/conf/distributions"
+            exit 1
+          fi
+          echo "::notice::Codenames from distributions config: ${codenames[*]}"
+
+          # ── Find .deb files ──
+          shopt -s nullglob
+          debs=(target/debian/*.deb)
+          if [[ ${#debs[@]} -eq 0 ]]; then
+            echo "::error::No .deb files found in target/debian/"
+            exit 1
+          fi
+
+          # ── Include .deb for each codename ──
+          for codename in "${codenames[@]}"; do
+            for deb in "${debs[@]}"; do
+              echo "Including $deb for $codename"
+              reprepro -b out/apt-repo includedeb "$codename" "$deb"
+            done
+          done
+
+          # ── Copy repo tree to site output ──
+          mkdir -p ./out/site/apt
+          cp -r out/apt-repo/* ./out/site/apt/
+
+          # ── Export public key from the imported signing key ──
+          gpg --armor --export "${{ steps.gpg.outputs.fpr }}" > ./out/site/apt/sh2lang.asc
+          echo "::notice::Exported public key to /apt/sh2lang.asc (fingerprint: ${{ steps.gpg.outputs.fpr }})"
+
+          echo "APT repo files:"
+          find ./out/site/apt -maxdepth 4 -type f | sed 's|^\./out/site/apt/||' | head -n 200
+
+      - name: Update apt-store branch
+        if: steps.mode.outputs.publish == 'true'
+        run: |
+          set -euo pipefail
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          # ── Fetch or create apt-store branch ──
+          APT_DIR=$(mktemp -d)
+          if git fetch --depth=1 origin apt-store 2>/dev/null; then
+            git worktree add "$APT_DIR" FETCH_HEAD --detach
+            git -C "$APT_DIR" checkout -B apt-store
+          else
+            echo "::notice::apt-store branch does not exist yet; creating orphan branch"
+            git worktree add --detach "$APT_DIR"
+            git -C "$APT_DIR" checkout --orphan apt-store
+          fi
+
+          # ── Clear old contents and copy fresh APT tree ──
+          # Remove everything except .git
+          find "$APT_DIR" -mindepth 1 -maxdepth 1 ! -name '.git' -exec rm -rf {} +
+
+          cp -r ./out/site/apt/* "$APT_DIR/"
+
+          # ── Commit and force-push ──
+          git -C "$APT_DIR" add -A
+          COMMIT_MSG="Update apt-store from ${GITHUB_REF_NAME} (${GITHUB_SHA:0:8})"
+          # --allow-empty handles the (unlikely) case of identical content
+          git -C "$APT_DIR" commit --allow-empty -m "$COMMIT_MSG"
+          git -C "$APT_DIR" push --force origin apt-store
+
+          git worktree remove "$APT_DIR" --force
+          echo "::notice::apt-store branch updated: $COMMIT_MSG"
+
+      # ── E) Upload and deploy ─────────────────────────────────────
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./out/site
+
+      - name: Deploy to GitHub Pages
+        id: deploy
+        uses: actions/deploy-pages@v4

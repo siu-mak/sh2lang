@@ -108,22 +108,17 @@ You still end up with a regular **bash/POSIX sh script** as output, but you writ
 
 ---
 
-## Installation (APT – Ubuntu 22.04 / jammy)
+## Installation (APT – Ubuntu 22.04+ / jammy / noble)
 
-> [!NOTE]
-> **Maintenance**: The APT repository is currently being migrated and is temporarily unavailable.
-> Please build from source using the instructions below.
-
-<!--
-For **Ubuntu 22.04 (jammy)**, the recommended way to install sh2lang is via the official APT repository.
+For **Ubuntu 22.04 (jammy)** or **24.04 (noble)**, the recommended way to install sh2lang is via the official APT repository.
 
 ```bash
 # Import the sh2lang APT signing key
-curl -fsSL https://siu-mak.github.io/sh2lang/sh2lang.asc \
+curl -fsSL https://siu-mak.github.io/sh2lang/apt/sh2lang.asc \
   | sudo tee /usr/share/keyrings/sh2lang-archive-keyring.asc >/dev/null
 
-# Add the APT repository
-echo "deb [signed-by=/usr/share/keyrings/sh2lang-archive-keyring.asc] https://siu-mak.github.io/sh2lang/ jammy main" \
+# Add the APT repository (replace 'jammy' with 'noble' for Ubuntu 24.04)
+echo "deb [signed-by=/usr/share/keyrings/sh2lang-archive-keyring.asc] https://siu-mak.github.io/sh2lang/apt jammy main" \
   | sudo tee /etc/apt/sources.list.d/sh2lang.list
 
 # Install
@@ -137,7 +132,6 @@ Verify the installation:
 sh2c --version
 sh2do --help
 ```
--->
 
 ## Alternative: build from source
 
