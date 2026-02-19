@@ -228,7 +228,7 @@ echo "Status: $?"
 
 **sh2:**
 ```sh2
-let result = capture(sh("cmd1 | cmd2 | cmd3"), allow_fail=true)
+let result = capture(sh("cmd1 | cmd2 | cmd3"), allow_fail=true)  # sh(...) because: multi-command pipeline
 if status() != 0 {
     print_err("Pipeline failed with " & status())
 } else {

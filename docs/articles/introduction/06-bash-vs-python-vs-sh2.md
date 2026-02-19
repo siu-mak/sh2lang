@@ -183,13 +183,17 @@ What happens in the block stays in the block.
 
 ### Escape hatch
 
-When you genuinely need shell syntax—complex pipelines, process substitution, globs—there's `sh("...")`:
+When you genuinely need shell syntax—process substitution, complex multi-tool pipelines—there's `sh("...")`. But for many common patterns, structured primitives are available:
 
 ```sh2
-let count = capture(sh("find . -name '*.log' | wc -l"))
+# Counting files: structured pipeline (no sh() needed)
+let count = capture(
+    run("find", ".", "-name", "*.log", "-print")
+    | run("wc", "-l")
+)
 ```
 
-You're opting back into shell-land. The trade-off is explicit.
+You opt into shell-land only when no structured primitive exists. The trade-off is explicit.
 
 ---
 
@@ -301,12 +305,11 @@ with urllib.request.urlopen("https://api.example.com") as r:
 
 **sh2:**
 ```sh2
-# sh(...) because: curl | jq pipeline
-let json = capture(sh("curl -s https://api.example.com"))
-let version = capture(sh("echo " & json & " | jq -r '.version'"))
+let json = capture(run("curl", "-s", "https://api.example.com"))
+let version = capture(run("echo", json) | run("jq", "-r", ".version"))
 ```
 
-**Verdict:** Bash + jq is concise for quick work. Python is better when you need to do more with the data. sh2 works but uses the escape hatch.
+**Verdict:** Bash + jq is concise for quick work. Python is better when you need to do more with the data. sh2 uses structured pipelines—no shell escape needed.
 
 ---
 
@@ -328,11 +331,11 @@ for path, c in Counter(paths).most_common(10):
 
 **sh2:**
 ```sh2
-# sh(...) because: complex pipeline
+# sh(...) because: complex multi-tool pipeline with awk field extraction
 sh("cat access.log | grep 'GET' | awk '{print $7}' | sort | uniq -c | sort -rn | head -10")
 ```
 
-**Verdict:** Bash pipelines are unbeatable here. Python is fine but less elegant. sh2 defers to `sh("...")`.
+**Verdict:** Bash pipelines are unbeatable here. Python is fine but less elegant. sh2 defers to `sh("...")` for dense `awk`/`sed` chains.
 
 ---
 

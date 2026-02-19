@@ -553,6 +553,7 @@ try {
 }
 ```
 
+<!-- sh2-docs:allow-sh-examples:start -->
 ### `sh("...")` raw shell escape hatch
 
 `sh(expr)` executes raw shell code via `sh -c`. It accepts **any string expression** (literal, variable, or concatenation):
@@ -568,6 +569,8 @@ sh("echo " & cmd)         # ✅ concatenation
 
 `sh(expr)` uses **probe semantics**: it updates `status()` but never triggers fail-fast behavior.
 > **Note**: `sh(...)` runs in a fresh shell context. It does **not** receive script positional parameters unless you explicitly forward them using `args=args()`. Otherwise `$@` inside `sh(...)` is empty. Use `argc()`/`arg(n)` in the parent script or `run(...)` for safer alternatives.
+
+<!-- sh2-docs:allow-sh-examples:end -->
 
 ---
 

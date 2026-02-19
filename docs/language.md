@@ -598,6 +598,7 @@ Replaces the current process. Execution does not continue after `exec`.
 exec("bash")
 ```
 
+<!-- sh2-docs:allow-sh-examples:start -->
 ### 6.3 `sh(expr)` (raw shell execution)
 
 > [!WARNING]
@@ -684,16 +685,23 @@ sh("cd /tmp")
 # pwd() still returns original directory
 # cd inside sh() does not affect parent script
 ```
+<!-- sh2-docs:allow-sh-examples:end -->
 
-#### Safe alternatives
+#### Prefer structured primitives
 
-For most use cases, prefer these safer options:
+For most use cases, prefer these safer options over `sh("...")`:
+
 - **`run(...)`**: Argument-safe command execution with proper quoting
-- **Native pipelines**: Use `|` operator for structured pipeline composition
-- **String helpers**: `lines(...)`, `split(...)`, `trim()`, `replace()` for text processing
-- **Upcoming helpers**: Additional safe utilities for common shell patterns
+- **Native pipelines**: `run(...) | run(...)` — structured pipeline composition
+- **`glob(pattern)`**: Non-recursive glob expansion in cwd (Bash-only). Replaces `sh("ls *.txt")`.
+- **`find0(dir=, name=, type=, maxdepth=)`**: NUL-safe, quoting-safe streaming file discovery (Bash-only). Replaces `sh("find ... -print0 | ...")`.
+- **`find_files(dir=, name=)`**: In-memory file discovery with `mapfile` (Bash-only).
+- **`stdin_lines()`**: Iterate lines from stdin (portable). Replaces `sh("... | while read line")`.
+- **`| each_line var { ... }`**: Pipeline consumer for line-by-line processing (Bash-only).
+- **`spawn(run(...))` / `wait(pid)`**: Background job control. Replaces `sh("cmd &")`.
+- **String helpers**: `lines(...)`, `split(...)`, `trim()`, `replace()` for text processing.
 
-Use `sh()` only when you need raw shell syntax that cannot be expressed through safe APIs.
+Use `sh()` only when you need raw shell syntax that cannot be expressed through safe APIs (e.g., process substitution `<(...)`, complex multi-tool pipelines, brace expansion).
 
 ### 6.4 `capture(...)` (capture stdout)
 

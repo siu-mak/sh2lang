@@ -237,6 +237,7 @@ print(msg)
 If you genuinely need shell expansion, use `sh("...")`:
 
 ```sh2
+# sh(...) because: intentionally demonstrating shell variable expansion
 sh("echo $HOME")
 // Prints the actual value of HOME (shell expansion inside sh)
 ```

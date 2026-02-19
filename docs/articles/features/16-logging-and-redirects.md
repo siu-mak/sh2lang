@@ -283,6 +283,7 @@ Sometimes you genuinely need process substitution or complex FD plumbing:
 
 **sh2:**
 ```sh2
+# sh(...) because: complex pipeline with tee + jq and stderr merge
 sh("curl -s https://example.com 2>&1 | tee -a curl.log | jq '.'")
 ```
 
@@ -322,6 +323,7 @@ with redirect { stdout: file("stdout.log"), stderr: file("stderr.log") } {
 
 ```sh2
 // sh2 doesn't have built-in timestamps, but you can wrap:
+# sh(...) because: timestamped logging with date command substitution in while-read loop
 sh("your-command 2>&1 | while read line; do echo \"$(date): $line\"; done | tee -a timed.log")
 ```
 

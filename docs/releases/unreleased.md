@@ -21,6 +21,7 @@
 ## Docs
 - **`sh()` Argument Forwarding**: Added `args=args()` (or `args=argv()`) option to `sh(...)` to explicitly forward parent script positional parameters to the child shell process. By default, `sh(...)` starts with empty arguments to prevent accidental leakage.
 - Clarified `sh(...)` isolation: does not inherit `$@` / `$1`; documented using `argc()` / `arg(n)` or `run(...)` instead.
+- **Structured primitives over `sh("...")`**: Docs now prefer `glob()`, `find0()`, `spawn()`, `stdin_lines()`, and structured pipelines over `sh("...")` where available. Remaining `sh(...)` usages are justified with `# sh(...) because:` comments. CI enforcement test added.
 
 
 ## Breaking Changes

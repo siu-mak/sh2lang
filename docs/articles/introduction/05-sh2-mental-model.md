@@ -238,25 +238,30 @@ run("rm", "*.bak", allow_fail=true)                # ✅ "*.bak" is literal; pas
 
 Sometimes you genuinely need shell features: pipes, process substitution, globs.
 
-### Example 13: When you need real shell parsing
+### Example 13: Structured alternatives vs escape hatch
 
 ```sh2
-# sh(...) because: glob expansion *.log
-let summary = capture(sh("ls *.log | wc -l"), allow_fail=true)
+# Preferred: use glob() for simple patterns
+for f in glob("*.log") {
+    print(f)
+}
+
+# If you need a count via pipeline:
+let count = capture(
+    run("find", ".", "-name", "*.log", "-print")
+    | run("wc", "-l"),
+    allow_fail=true
+)
 if status() == 0 {
-    print($"Found {trim(summary)} log files")
+    print($"Found {trim(count)} log files")
 }
 ```
 
-Inside `sh(...)`, you're back in shell-land. Globs expand. Variables expand if you write `$FOO`. The trade-off is you lose sh2's safety guarantees for that snippet.
+Inside `sh(...)`, you're back in shell-land. Globs expand. Variables expand if you write `$FOO`. Use `sh()` only when no structured primitive exists.
 
-Use `sh()` when:
-- You need glob expansion (`*.log`)
-- You need shell pipelines that sh2 doesn't yet express
-- You're porting Bash incrementally
-
-Avoid `sh()` when:
-- You're handling user input (injection risk)
+Use structured primitives when:
+- You need glob expansion (`*.log`) → `glob()`
+- You need file discovery → `find0()`
 - You can express it with `run()` and structured pipes
 
 ---

@@ -143,8 +143,9 @@ func install_nginx() {
     print("Installing nginx...")
     
     with cwd("/tmp") {
-        # sh(...) because: glob expansion not yet supported in cleanup
-        sh("rm -rf nginx-*.tar.gz")
+        for f in glob("nginx-*.tar.gz") {
+            run("rm", "-rf", "--", f)
+        }
     }
     # cwd returns to original after block
     
@@ -152,12 +153,8 @@ func install_nginx() {
     sudo("apt-get", "install", "-y", "nginx", n=true)
     
     # Copy config files
-    # sh(...) because: glob expansion for file list
-    let files = capture(sh("find /opt/configs -maxdepth 1 -name '*.conf'"), allow_fail=true)
-    if status() == 0 {
-        for cfg_line in lines(files) {
-            sudo("cp", cfg_line, "/etc/nginx/conf.d/", n=true)
-        }
+    for cfg in find0(dir="/opt/configs", name="*.conf", maxdepth=1) {
+        sudo("cp", "--", cfg, "/etc/nginx/conf.d/", n=true)
     }
     
     sudo("systemctl", "restart", "nginx", n=true)
@@ -199,7 +196,9 @@ func main() {
 
 ```sh2
 with cwd("/tmp") {
-    sh("rm -rf nginx-*.tar.gz")
+    for f in glob("nginx-*.tar.gz") {
+        run("rm", "-rf", "--", f)
+    }
 }
 // cwd is back to original
 ```
@@ -241,18 +240,17 @@ if confirm("Proceed with installation?", default=false) {
 - `default=false` means CI/automation skips it safely.
 - Override with `SH2_YES=1` for automated runs.
 
-### 5. Explicit failure handling
+### 5. Structured file discovery
 
 ```sh2
-let files = capture(sh("ls /opt/configs/*.conf 2>/dev/null"), allow_fail=true)
-if status() == 0 {
-    ...
+for cfg in find0(dir="/opt/configs", name="*.conf", maxdepth=1) {
+    sudo("cp", "--", cfg, "/etc/nginx/conf.d/", n=true)
 }
 ```
 
-- `allow_fail=true` prevents script abort.
-- `status()` is checked explicitly.
-- No silent failures.
+- `find0()` streams files safely (NUL-delimited, quoting-safe).
+- No shell glob expansion or word splitting.
+- If no files match, the loop simply doesn't execute.
 
 ---
 
@@ -271,9 +269,9 @@ if status() == 0 {
 
 ---
 
-## Honest limitations: where we still drop to Bash
+## Honest limitations: where `sh("...")` is still appropriate
 
-sh2 doesn't cover everything. Here's where you still need `sh("...")`:
+Most shell patterns now have structured alternatives. The remaining cases where `sh("...")` is the right tool:
 
 ### Complex pipelines
 
@@ -293,25 +291,27 @@ sh("diff <(sort file1) <(sort file2)")
 
 No sh2 equivalent. Use the escape hatch.
 
-### Background jobs
+### Background jobs ✅ (now supported)
 
 ```sh2
-# sh(...) because: job control (&)
-sh("long_task &")
+let pid = spawn(run("long_task"))
+# ... do other work ...
+wait(pid)
 ```
 
-sh2 doesn't have job control. Use `sh("...")`.
+`spawn(run(...))` starts a background job and returns its PID. `wait(pid)` blocks until it completes and returns the exit code.
 
-### NUL-safe filename iteration
+### NUL-safe filename iteration ✅ (now supported)
 
 ```sh2
-# sh(...) because: NUL-safe iteration not yet supported
-sh("find . -print0 | xargs -0 rm")
+for f in find0(type="f") {
+    run("rm", "-f", "--", f)
+}
 ```
 
-For filenames with newlines, you need `\0` handling. sh2's `lines(...)` splits on newlines.
+`find0()` streams filenames via NUL-delimited `find -print0`, safely handling spaces, newlines, and special characters.
 
-**The trade-off:** Inside `sh("...")`, you get full Bash power but lose sh2's safety guarantees. Use sparingly, and document why.
+**When you do use `sh("...")`, add a comment explaining why** — it signals to reviewers that you've considered the alternatives.
 
 ---
 

@@ -226,15 +226,16 @@ print($"Sum: {1 + 2}")
 
 ### 10. Escape hatch: `sh("...")`
 
-When you genuinely need shell parsing:
+When you genuinely need shell parsing and no structured primitive exists:
 
 **sh2:**
 ```sh2
+# sh(...) because: complex pipeline with awk field extraction
 sh("ls *.log | wc -l")
 # Globs expand. Pipes work. You're in shell-land.
 ```
 
-**Why it matters:** The escape hatch is explicit. Reviewers see `sh(...)` and know: "shell rules apply here."
+> **Prefer structured alternatives** where available: `glob("*.log")` for simple patterns, `find0()` for file discovery, `run(...) | run(...)` for pipelines.
 
 > **Warning:** Inside `sh(...)`, you lose sh2's safety guarantees. Avoid with user input.
 
@@ -296,7 +297,7 @@ if status() != 0 {
 | Bash behavior | Typical footgun | sh2 behavior | How to do it intentionally |
 |---------------|-----------------|--------------|---------------------------|
 | Word splitting (`$var` splits on spaces) | `rm $file` deletes wrong files | No splitting | Just use the variable: `run("rm", file)` |
-| Globbing (`*` matches files) | `echo *` lists directory | No globbing | Use `sh("echo *")` if you need globbing |
+| Globbing (`*` matches files) | `echo *` lists directory | No globbing | Use `glob("*")` for safe globbing |
 | Parameter expansion (`$FOO`) | Unset variables become empty | Literal `$FOO` | Use `& env.FOO` or `$"{env.FOO}"` |
 | Brace expansion (`${...}`) | Conflicts with format strings | Literal `${...}` | Just write it: `"${Package}"` |
 | Tilde expansion (`~`) | Works sometimes, not others | Literal `~` | Use `env.HOME & "/path"` |
