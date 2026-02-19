@@ -1,0 +1,20 @@
+Origin: sh2lang
+Label: sh2lang
+Suite: stable
+Codename: jammy
+Date: Thu, 19 Feb 2026 10:51:17 UTC
+Architectures: amd64
+Components: main
+Description: sh2lang APT repository
+MD5Sum:
+ c49916bda2eab0edec3f6f58269ec3a6 514 main/binary-amd64/Packages
+ d18211ed35087ab5c7b0646a202c0138 379 main/binary-amd64/Packages.gz
+ c1b69ef1e08c178b2f29acc695b092fd 119 main/binary-amd64/Release
+SHA1:
+ 08d21d175629a7b4a7aced3578a14864c9d4a49b 514 main/binary-amd64/Packages
+ 17e0498eaddcf5d665a533eefff74161c8516417 379 main/binary-amd64/Packages.gz
+ 0d9cd40c0ce1becce4608c772012063d74f3a143 119 main/binary-amd64/Release
+SHA256:
+ 7bd2282d821eb2fa8460e17d48fc767d9a1b93676bedca34dd9dc7a0051be926 514 main/binary-amd64/Packages
+ 9469f403a86a0ba7943978b65550cabbd56400ecdff8d05df58038c9943a4388 379 main/binary-amd64/Packages.gz
+ 19fda127f717b244548884f62620fc3aa09d293935a60bff7ede664482318b7a 119 main/binary-amd64/Release

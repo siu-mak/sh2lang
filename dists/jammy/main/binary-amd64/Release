@@ -1,0 +1,6 @@
+Archive: stable
+Component: main
+Origin: sh2lang
+Label: sh2lang
+Architecture: amd64
+Description: sh2lang APT repository

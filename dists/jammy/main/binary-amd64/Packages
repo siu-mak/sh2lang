@@ -1,0 +1,16 @@
+Package: sh2lang
+Version: 0.1.2-dev-1
+Architecture: amd64
+Homepage: https://github.com/siu-mak/sh2lang
+Maintainer: Siu Mak <me@siu-mak.com>
+Installed-Size: 2715
+Depends: libc6 (>= 2.34), libc6 (>= 2.39)
+Priority: optional
+Section: utils
+Filename: pool/main/s/sh2lang/sh2lang_0.1.2-dev-1_amd64.deb
+Size: 514444
+SHA256: bab9c0d8788957a098156057c0fba0f8c0c33bc44f416c34c5d597d1f89724c7
+SHA1: 1722eb0205bfd935506cc1883124145d06ddb2a8
+MD5sum: 25b9d3d70acc2a71e9591be328dabbe8
+Description: sh2lang tools (sh2c + sh2do)
+

@@ -1,0 +1,17 @@
+Origin: sh2lang
+Label: sh2lang
+Suite: stable
+Codename: jammy
+Architectures: amd64
+Components: main
+Description: sh2lang APT repository
+SignWith: default
+
+Origin: sh2lang
+Label: sh2lang
+Suite: stable
+Codename: noble
+Architectures: amd64
+Components: main
+Description: sh2lang APT repository (noble)
+SignWith: default
