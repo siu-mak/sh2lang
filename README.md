@@ -110,6 +110,11 @@ You still end up with a regular **bash/POSIX sh script** as output, but you writ
 
 ## Installation (APT – Ubuntu 22.04 / jammy)
 
+> [!NOTE]
+> **Maintenance**: The APT repository is currently being migrated and is temporarily unavailable.
+> Please build from source using the instructions below.
+
+<!--
 For **Ubuntu 22.04 (jammy)**, the recommended way to install sh2lang is via the official APT repository.
 
 ```bash
@@ -132,6 +137,7 @@ Verify the installation:
 sh2c --version
 sh2do --help
 ```
+-->
 
 ## Alternative: build from source
 
