@@ -2,15 +2,13 @@
 title: "Documentation Home"
 ---
 
-# Documentation Home
-
 Welcome to the sh2lang documentation.
 
 ---
 
 **Source Code & Repository**
 
-👉 https://github.com/siu-mak/sh2lang
+👉 **[https://github.com/siu-mak/sh2lang](https://github.com/siu-mak/sh2lang)**
 
 ---
 

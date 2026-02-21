@@ -10,7 +10,7 @@ Deep dives into the design, features, and philosophy of sh2.
 
 **Source Code & Repository**
 
-👉 https://github.com/siu-mak/sh2lang
+👉 **[https://github.com/siu-mak/sh2lang](https://github.com/siu-mak/sh2lang)**
 
 ---
 

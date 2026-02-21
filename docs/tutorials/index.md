@@ -10,7 +10,7 @@ Welcome to the sh2 learning path! These hands-on guides will take you from writi
 
 **Source Code & Repository**
 
-👉 https://github.com/siu-mak/sh2lang
+👉 **[https://github.com/siu-mak/sh2lang](https://github.com/siu-mak/sh2lang)**
 
 ---
 

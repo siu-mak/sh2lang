@@ -219,7 +219,7 @@ fn test_write_file_bad_arg_priority() {
 
 #[test]
 fn test_binder_ok_disjoint_if() {
-    let (stdout, stderr) = compile_to_bash_test("fixtures/binder_ok_disjoint_if.sh2");
+    let (_stdout, stderr) = compile_to_bash_test("fixtures/binder_ok_disjoint_if.sh2");
     assert!(stderr.is_empty(), "Expected no error, got: {}", stderr);
     // x is declared in branches, so it is available after. 
     // No implicit init needed because `let` initialized it in both paths.
@@ -228,7 +228,7 @@ fn test_binder_ok_disjoint_if() {
 
 #[test]
 fn test_binder_ok_case_wildcard() {
-    let (stdout, stderr) = compile_to_bash_test("fixtures/binder_ok_case_wildcard.sh2");
+    let (_stdout, stderr) = compile_to_bash_test("fixtures/binder_ok_case_wildcard.sh2");
     assert!(stderr.is_empty(), "Expected no error, got: {}", stderr);
 }
 
