@@ -1,6 +1,6 @@
 [package]
 name = "sh2lang"
-version = "0.1.2"
+version = "0.2.0-dev"
 edition = "2021"
 description = "sh2lang tools (sh2c + sh2do)"
 license = "Apache"
