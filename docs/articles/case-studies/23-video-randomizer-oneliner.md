@@ -280,7 +280,7 @@ let path = trim(capture(
 ))
 ```
 
-> **Note:** The `lines()` iterator splits on newlines. If your filenames contain newlines (rare but possible), this script will break. Robust NUL-safe iteration requires features sh2 doesn't have yet.
+> **Note:** The `lines()` iterator splits on newlines. If your filenames contain newlines (rare but possible), this script will break. For robust NUL-safe iteration over files, use the `find0()` iterator (added in v0.1.2) instead of `lines()`.
 
 ---
 

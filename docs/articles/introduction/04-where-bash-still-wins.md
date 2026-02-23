@@ -129,22 +129,7 @@ It doesn't. **Stay in Bash** for this. If you absolutely must do it in sh2, use 
 sh2do 'sh("diff <(sort current.txt) <(sort expected.txt)")'
 ```
 
-### Bash Example 4: Job control
 
-```bash
-(sleep 10 && echo "done") &
-pid=$!
-wait $pid
-```
-
-**Why Bash wins:**
-- `&`, `wait`, `bg`, `fg` are first-class primitives.
-- sh2 (currently) has no concept of background jobs or async execution.
-
-**How sh2 fits in:**
-If you need concurrency, use **Bash** or a dedicated tool like `parallel` or `xargs -P`. sh2 is for synchronous, ordered execution logic.
-
----
 
 ## 3. Ad-hoc interactive glue
 

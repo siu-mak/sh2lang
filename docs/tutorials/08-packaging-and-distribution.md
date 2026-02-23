@@ -309,7 +309,7 @@ cargo install --git https://github.com/siu-mak/sh2lang sh2do
 Clone at a tag:
 
 ```bash
-git clone --branch v0.1.1 https://github.com/siu-mak/sh2lang.git
+git clone --branch v0.1.2 https://github.com/siu-mak/sh2lang.git
 ```
 
 Or in CI:
@@ -318,13 +318,14 @@ Or in CI:
 - uses: actions/checkout@v4
   with:
     repository: siu-mak/sh2lang
-    ref: v0.1.1
+    ref: v0.1.2
 ```
 
 ### Know which features exist
 
 Check the release notes for your version:
 
+- [v0.1.2 Release Notes](../releases/v0.1.2.md) — Range loops, job control, iterators
 - [v0.1.1 Release Notes](../releases/v0.1.1.md) — `sudo(...)`, `confirm(...)`, semicolons
 - [v0.1.0 Release Notes](../releases/v0.1.0.md) — Initial release
 
@@ -340,7 +341,7 @@ When distributing tools, include:
 ```markdown
 # deploy.sh
 
-Generated from `deploy.sh2` using sh2c v0.1.1.
+Generated from `deploy.sh2` using sh2c v0.1.2.
 
 Documentation: https://siu-mak.github.io/sh2lang/
 ```
@@ -384,7 +385,7 @@ ls -la tools/*.sh
 ```markdown
 ## Building
 
-Requires [sh2c](https://github.com/siu-mak/sh2lang) v0.1.1+.
+Requires [sh2c](https://github.com/siu-mak/sh2lang) v0.1.2+.
 
 ```bash
 # Build sh2c first
@@ -469,7 +470,7 @@ You now know how to package and distribute sh2 tools.
 
 ### Reference
 - [Language Reference](../language.md) — Full syntax
-- [v0.1.1 Release Notes](../releases/v0.1.1.md) — Latest features
+- [v0.1.2 Release Notes](../releases/v0.1.2.md) — Latest features
 
 ---
 
