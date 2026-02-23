@@ -230,7 +230,15 @@ for line in lines(content) {
 - `read_file(...)` is explicit about what you're doing.
 - `lines(...)` handles trailing newlines correctly (doesn't produce a final empty element).
 
-**Limitation:** This loads the entire file into memory. For very large files, Bash's streaming `while read` is more memory-efficient. sh2 doesn't currently have streaming line iteration.
+**Streaming iteration:** For very large files where loading everything into memory is inefficient, pipe the file in and use `stdin_lines()` to stream line-by-line:
+
+```bash
+sh2do '
+for line in stdin_lines() {
+    print("Line: " & line)
+}
+' < file.txt
+```
 
 ---
 
@@ -275,9 +283,9 @@ sh2 is still young. Here are things it **cannot** do:
 
 | Gap | Reality |
 |-----|---------|
-| **Streaming line iteration** | `lines(...)` loads the whole string. No `while read` equivalent. |
+| **Streaming line iteration** | `stdin_lines()` provides a streaming `while read` equivalent. |
 | **Process substitution** | No `<(...)` or `>(...)` syntax. Use `sh(...)` as an escape hatch. |
-| **Background jobs / &** | No `run(...) &` or job control. |
+| **Background jobs / &** | Structured job control exists via `spawn()` and `wait()`, but not terse `&`. |
 | **Here-strings** | No `<<<` syntax. Use `sh(...)` or temp files. |
 | **Arithmetic in conditions** | Comparisons work, but `$(( ))` arithmetic expansion isn't built-in. |
 | **Complex xargs patterns** | No batching multiple arguments. You can loop, but lose parallelism. |

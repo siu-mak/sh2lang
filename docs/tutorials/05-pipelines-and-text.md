@@ -404,7 +404,7 @@ pid=$!
 wait $pid
 ```
 
-Background jobs and `wait` aren't part of sh2's structured model.
+Bash uses the terse `&` operator for quick background jobs. sh2 prefers explicit, structured job control via `spawn(run(...))` and `wait(pid)`.
 
 ### The honest truth
 

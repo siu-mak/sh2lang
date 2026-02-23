@@ -380,11 +380,11 @@ func main() {
 }
 ```
 
-> **Note:** These functions are designed for small config/log files. For streaming large files, sh2 currently doesn't have a streaming iterator.
+> **Note:** These functions read the entire file into memory (or return a string). For streaming large files line-by-line, pipe the file into a sh2 script and use the `stdin_lines()` iterator.
 
 ---
 
-## 9. New in v0.1.1
+## 9. Recent Features
 
 ### `confirm(...)` — Interactive prompts
 
@@ -443,7 +443,7 @@ func main() {
 
 ### Learn more
 
-See the [v0.1.1 Release Notes](../releases/v0.1.1.md) for full details.
+See the [v0.1.2 Release Notes](../releases/v0.1.2.md) for full details.
 
 ---
 
@@ -594,7 +594,8 @@ You now know the basics! Here's where to go next:
 - [The Dollar Expansion Bug](../articles/case-studies/22-dollar-expansion-bug.md)
 
 ### Release notes
-- [v0.1.1 Release Notes](../releases/v0.1.1.md) — sudo, confirm, semicolons
+- [v0.1.2 Release Notes](../releases/v0.1.2.md) — Job control, iterators, `which`
+- [v0.1.1 Release Notes](../releases/v0.1.1.md) — `sudo`, `confirm`, semicolons
 - [v0.1.0 Release Notes](../releases/v0.1.0.md) — Initial release
 
 ---
