@@ -228,7 +228,7 @@ if confirm($"Restart nginx on {len(hosts)} hosts?", default=false) {
 | **Text Munging** | `|` pipelines are concise and powerful | `sh(...)` wrapper adds error checking | **Bash** |
 | **Simple Loops** | `for i in {1..5}` is typed in seconds | Structured loops are more readable long-term | **Bash** (interactive) / **sh2** (script) |
 | **JSON/API** | `curl \| jq` is standard | `capture()` + `status()` validates response | **Mix** (wrap jq in sh2) |
-| **Parallelism** | `xargs -P` / `&` job control | (Not supported natively) | **Bash** |
+| **Parallelism** | `xargs -P` / `&` job control | `spawn()`/`wait()` for structured concurrency | **Mix** |
 | **Remote Commands** | `ssh` interacts well with shell | `run("ssh", ...)` quotes args safely | **sh2** (if args are dynamic) |
 | **Dangerous Ops** | (It isn't; `rm -rf` is risky) | `confirm(...)` + `run` safety | **sh2** (Always) |
 

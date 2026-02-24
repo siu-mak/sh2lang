@@ -492,6 +492,7 @@ You now know how to run sh2 safely in CI/CD pipelines.
 - [Logging and Redirects](../articles/features/16-logging-and-redirects.md) — Fan-out logging
 
 ### Release notes
+- [v0.1.2 Release Notes](../releases/v0.1.2.md) — Job control, iterators, `which`
 - [v0.1.1 Release Notes](../releases/v0.1.1.md) — `sudo`, `confirm`, semicolons
 
 ---
