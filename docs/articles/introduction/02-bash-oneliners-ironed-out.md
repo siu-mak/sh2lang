@@ -301,7 +301,7 @@ For these cases, **use Bash directly** or use `sh(...)` to embed raw shell code.
 
 - Quick, interactive throwaway commands.
 - Complex text pipelines where `|` is the primary structure.
-- When you need features sh2 doesn't have (process substitution, job control).
+- When you need features sh2 doesn't have (process substitution).
 - Sub-20-character commands where quoting is trivial.
 
 ### When to use sh2do
@@ -348,5 +348,6 @@ The GitHub repo is here:
 
 ## Versions
 
+- [v0.1.2](https://github.com/siu-mak/sh2lang/blob/main/docs/releases/v0.1.2.md) — Adds for-loop ranges, job control (`spawn`/`wait`), iterators, `which()`.
 - [v0.1.1](https://github.com/siu-mak/sh2lang/blob/main/docs/releases/v0.1.1.md) — Adds `sudo(...)`, `confirm(...)`, semicolon separators.
 - [v0.1.0](https://github.com/siu-mak/sh2lang/blob/main/docs/releases/v0.1.0.md) — First public release of sh2.

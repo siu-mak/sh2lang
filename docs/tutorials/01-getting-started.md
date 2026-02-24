@@ -454,7 +454,7 @@ See the [v0.1.2 Release Notes](../releases/v0.1.2.md) for full details.
 | Script needs code review | Quick interactive exploration |
 | Script runs in CI/CD | Dense text pipelines (`grep \| awk \| sort`) |
 | Script uses `sudo`, `rm`, `systemctl` | Process substitution (`<(...)`) |
-| Script will be shared/maintained | Job control (`&`, `fg`, `bg`) |
+| Script will be shared/maintained | Interactive job control (`fg`, `bg`) |
 | You want fail-fast error handling | One-off throwaway commands |
 
 **The escape hatch:** When you genuinely need shell syntax, use `sh("...")`. But add a comment explaining why.

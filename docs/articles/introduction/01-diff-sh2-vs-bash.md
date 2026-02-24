@@ -269,5 +269,6 @@ The GitHub repo is here:
 
 ## Versions
 
+- [v0.1.2](https://github.com/siu-mak/sh2lang/blob/main/docs/releases/v0.1.2.md) — Adds for-loop ranges, job control (`spawn`/`wait`), iterators, `which()`.
 - [v0.1.1](https://github.com/siu-mak/sh2lang/blob/main/docs/releases/v0.1.1.md) — Adds `sudo(...)`, `confirm(...)`, semicolon separators.
 - [v0.1.0](https://github.com/siu-mak/sh2lang/blob/main/docs/releases/v0.1.0.md) — First public release of the sh2 structured shell language.

@@ -421,7 +421,7 @@ sh2 is great for **structured glue**—scripts that run commands, check status, 
 | Needs error handling per stage | sh2 |
 | Will be reviewed by others | sh2 |
 | Mixes commands with `sudo`, `confirm`, logging | sh2 |
-| Uses process substitution or job control | Bash |
+| Uses process substitution or interactive job control (`fg`/`bg`) | Bash |
 | Has 2–4 stages with standard tools | Either works |
 
 ### Quick decision flow

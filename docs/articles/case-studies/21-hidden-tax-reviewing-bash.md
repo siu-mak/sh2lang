@@ -325,7 +325,7 @@ for f in find0(type="f") {
 | ✅ Scripts that touch production | Safety matters |
 | ⚠️ Quick one-off scripts | Bash is fine |
 | ⚠️ awk/sed-heavy text processing | Bash pipelines are more natural |
-| ❌ Interactive scripts with job control | sh2 doesn't support `&`, `fg`, `bg` |
+| ⚠️ Interactive job control (`fg`, `bg`) | sh2 has structured `spawn()`/`wait()`, but no interactive `fg`/`bg` |
 
 ---
 

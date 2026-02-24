@@ -545,6 +545,7 @@ You now know how to build production-quality sh2 tools. Here's where to go next:
 ### Reference docs
 - [Language Reference](../language.md) — Full syntax and semantics
 - [sh2do Documentation](../sh2do.md) — Snippet runner details
+- [v0.1.2 Release Notes](../releases/v0.1.2.md) — Job control, iterators, `which`
 - [v0.1.1 Release Notes](../releases/v0.1.1.md) — What's new
 
 ### Feature deep-dives
