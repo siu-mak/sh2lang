@@ -8,7 +8,11 @@ pub fn format_program(program: &Program) -> String {
         if i > 0 {
             out.push('\n');
         }
-        out.push_str(&format!("import \"{}\"", imp));
+        if let Some(alias) = &imp.alias {
+            out.push_str(&format!("import \"{}\" as {}", imp.path, alias));
+        } else {
+            out.push_str(&format!("import \"{}\"", imp.path));
+        }
     }
     if !program.imports.is_empty() {
         out.push('\n');

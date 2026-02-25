@@ -1,0 +1,3 @@
+func helper1() {
+    print("lib1")
+}

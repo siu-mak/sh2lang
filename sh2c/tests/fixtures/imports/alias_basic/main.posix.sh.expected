@@ -1,0 +1,14 @@
+#!/bin/sh
+__sh2_check() { __sh2_s="$1"; __sh2_l="$2"; __sh2_m="$3"; if [ "$__sh2_s" -ne 0 ]; then if [ "$__sh2_m" = "return" ]; then return "$__sh2_s"; fi; if [ -n "$__sh2_l" ]; then printf 'Error in %s\n' "$__sh2_l" >&2; fi; exit "$__sh2_s"; fi; }
+helper() {
+  printf '%s\n' 'hello from lib'
+}
+
+main() {
+  printf '%s\n' 'hello from main'
+  __sh2_loc="tests/fixtures/imports/alias_basic/main.sh2:5:5"
+  'helper'; __sh2_status=$?
+  __sh2_check "$__sh2_status" "${__sh2_loc:-}" "exit"
+}
+__sh2_status=0
+main "$@"

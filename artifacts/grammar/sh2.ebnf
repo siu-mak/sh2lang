@@ -4,7 +4,7 @@
 program = { import_stmt } , { function_def } ;
 
 (* Imports *)
-import_stmt = "import" , string_literal ;
+import_stmt = "import" , string_literal , [ "as" , identifier ] ;
 
 (* Function definitions *)
 function_def = "func" , identifier , "(" , [ param_list ] , ")" , block ;

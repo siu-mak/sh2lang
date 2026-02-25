@@ -1,0 +1,6 @@
+import "lib.sh2" as fs
+import "lib2.sh2" as fs
+
+func main() {
+    print("should not reach here")
+}

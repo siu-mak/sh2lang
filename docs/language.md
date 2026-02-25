@@ -16,7 +16,7 @@
 
 A program consists of:
 
-- zero or more `import "path"` statements (must come first), and
+- zero or more `import "path" [as alias]` statements (must come first), and
 - one or more `func ... { ... }` function definitions.
 
 **Top-level executable statements are not allowed.** The compiler emits a shell entrypoint that invokes `main()`.
@@ -25,8 +25,11 @@ A program consists of:
 
 ```sh2
 import "lib/utils.sh2"
+import "lib/fs.sh2" as fs
 ```
 
+Imports are resolved relative to the current file. The `.sh2` extension is optional but recommended.
+If you use `import "path" as alias`, the alias is parsed and stored, but **not yet used for qualified calls**. Qualified lookup (`alias.func(...)`) will be available in a future release.
 - Imports must appear before any function definitions.
 - Imports are resolved recursively.
 - Import cycles are detected and reported.

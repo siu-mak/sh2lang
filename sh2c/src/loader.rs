@@ -110,8 +110,8 @@ fn load_program_with_imports_impl(loader: &mut Loader, entry_path: &Path) -> Res
     let program = parser::parse(&tokens, sm_ref, &file_str)?;
 
     let base_dir = canonical_path.parent().unwrap_or(Path::new("."));
-    for import_str in program.imports {
-        let mut import_path = base_dir.join(&import_str);
+    for import in program.imports {
+        let mut import_path = base_dir.join(&import.path);
         if import_path.extension().is_none() {
             import_path.set_extension("sh2");
         }

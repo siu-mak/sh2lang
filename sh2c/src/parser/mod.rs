@@ -12,7 +12,7 @@ pub fn parse(tokens: &[Token], sm: &SourceMap, file: &str) -> ParsResult<Program
     let mut parser = Parser::new(tokens, sm, file);
     let mut imports = Vec::new();
     let mut functions = Vec::new();
-
+    let mut seen_aliases: HashMap<String, crate::span::Span> = HashMap::new();
 
     let start_span = parser.current_span();
 
@@ -23,14 +23,51 @@ pub fn parse(tokens: &[Token], sm: &SourceMap, file: &str) -> ParsResult<Program
         }
 
         if parser.match_kind(TokenKind::Import) {
-            if let Some(TokenKind::String(path)) = parser.peek_kind() {
-                imports.push(path.clone());
-                parser.advance();
-            } else {
-                parser.error(
-                    "Expected string literal after import",
-                    parser.current_span(),
-                )?;
+            let import_start = parser.previous_span();
+            match parser.peek_kind() {
+                Some(TokenKind::String(path)) => {
+                    let path = path.clone();
+                    parser.advance();
+
+                    let alias = if parser.match_kind(TokenKind::As) {
+                        match parser.peek_kind() {
+                            Some(TokenKind::Ident(a)) => {
+                                let a = a.clone();
+                                parser.advance();
+                                Some(a)
+                            }
+                            _ => {
+                                return parser.error(
+                                    "Expected identifier after 'as'",
+                                    parser.current_span(),
+                                );
+                            }
+                        }
+                    } else {
+                        None
+                    };
+
+                    // Check for duplicate alias in same file
+                    if let Some(ref a) = alias {
+                        let alias_span = parser.previous_span();
+                        if seen_aliases.contains_key(a) {
+                            return parser.error(
+                                &format!("Duplicate import alias '{}'", a),
+                                alias_span,
+                            );
+                        }
+                        seen_aliases.insert(a.clone(), alias_span);
+                    }
+
+                    let span = import_start.merge(parser.previous_span());
+                    imports.push(Import { path, alias, span });
+                }
+                _ => {
+                    return parser.error(
+                        "Expected string literal after import",
+                        parser.current_span(),
+                    );
+                }
             }
         } else if parser.match_kind(TokenKind::Func) {
             let start = parser.previous_span(); // 'func' span

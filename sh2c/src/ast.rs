@@ -48,9 +48,16 @@ impl PartialEq<String> for Spanned<String> {
 pub type Expr = Spanned<ExprKind>;
 pub type Stmt = Spanned<StmtKind>;
 
+#[derive(Debug, Clone, PartialEq)]
+pub struct Import {
+    pub path: String,
+    pub alias: Option<String>,
+    pub span: Span,
+}
+
 #[derive(Debug, PartialEq)]
 pub struct Program {
-    pub imports: Vec<String>,
+    pub imports: Vec<Import>,
     pub functions: Vec<Function>,
 
     pub span: Span,
@@ -372,9 +379,12 @@ impl Program {
     pub fn strip_spans(&mut self) {
         self.span = Span::new(0, 0);
         self.source_maps.clear();
-        self.entry_file.clear(); // Clear for deterministic snapshot
-        for f in &mut self.functions {
-            f.strip_spans();
+        self.entry_file.clear();
+        for imp in &mut self.imports {
+            imp.span = Span::new(0, 0);
+        }
+        for func in &mut self.functions {
+            func.strip_spans();
         }
 
     }

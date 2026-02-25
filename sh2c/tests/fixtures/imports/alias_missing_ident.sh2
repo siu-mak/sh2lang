@@ -1,0 +1,5 @@
+import "lib.sh2" as
+
+func main() {
+    print("missing ident")
+}

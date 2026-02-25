@@ -7,7 +7,7 @@ This document defines the canonical list of keywords, literals, and operators th
 ## Keywords (Control Flow / Declaration)
 
 ```
-func let set if elif else for while break continue return
+func let set if elif else for while break continue return as
 with try catch spawn wait case import exec run sh confirm
 ```
 

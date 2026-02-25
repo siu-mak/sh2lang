@@ -13,6 +13,36 @@ fn exec_import_basic() {
 }
 
 #[test]
+fn compile_import_alias_basic() {
+    assert_codegen_matches_snapshot("imports/alias_basic/main");
+    assert_codegen_matches_snapshot_target("imports/alias_basic/main", TargetShell::Posix);
+}
+
+#[test]
+fn compile_import_alias_missing_ident() {
+    assert_codegen_panics(
+        "imports/alias_missing_ident",
+        "Expected identifier after 'as'",
+    );
+}
+
+#[test]
+fn compile_import_alias_non_ident() {
+    assert_codegen_panics(
+        "imports/alias_non_ident",
+        "Expected identifier after 'as'",
+    );
+}
+
+#[test]
+fn compile_import_alias_duplicate() {
+    assert_codegen_panics(
+        "imports/alias_duplicate/main",
+        "Duplicate import alias",
+    );
+}
+
+#[test]
 fn compile_import_chain() {
     assert_codegen_matches_snapshot("imports/chain/main");
     assert_codegen_matches_snapshot_target("imports/chain/main", TargetShell::Posix);

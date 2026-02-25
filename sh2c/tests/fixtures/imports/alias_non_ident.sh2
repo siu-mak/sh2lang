@@ -1,0 +1,5 @@
+import "lib.sh2" as 123
+
+func main() {
+    print("invalid ident")
+}
