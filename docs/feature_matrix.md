@@ -9,6 +9,7 @@ This document maps implemented features to their proving test files, ensuring do
 | Feature | Description | Test File(s) |
 |---------|-------------|--------------|
 | Program structure | imports + func only | `syntax_toplevel.rs`, `syntax_import.rs` |
+| Namespaced calls | `alias.func(...)` | `syntax_namespaced_call.rs` |
 | Named parameters | `func foo(a, b)` | `syntax_functions.rs`, `syntax_proc_params.rs` |
 | Statement separation | semicolons or newlines | `syntax_toplevel.rs`, `syntax_semicolon.rs` |
 | Comments | `# ...` | `syntax_toplevel.rs` |

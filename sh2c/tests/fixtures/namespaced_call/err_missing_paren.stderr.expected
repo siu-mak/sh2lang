@@ -1,0 +1,3 @@
+err_missing_paren.sh2:5:11: Expected '(' after 'mylib.greet' — qualified names can only be used as function calls
+    mylib.greet
+          ^~~~~

@@ -89,6 +89,72 @@ impl<'a> Parser<'a> {
     }
 // ...
 
+    /// Parse a qualified call after the caller has consumed `ns_ident` and the `.` token.
+    /// Always succeeds with (func_name, func_span, args, full_span) or returns Err.
+    /// At entry, self.pos points to the token AFTER the dot.
+    pub fn parse_qualified_call_or_err(
+        &mut self, ns: &str, ns_span: Span,
+    ) -> ParsResult<(String, Span, Vec<crate::ast::Expr>, Span)> {
+        // Current token is what follows the dot.
+        // Check for double-dot: fs..x  (current token would be Dot or DotDot)
+        if matches!(self.peek_kind(), Some(TokenKind::Dot) | Some(TokenKind::DotDot)) {
+            return self.error("Expected identifier after '.'", self.current_span());
+        }
+
+        // Must be an identifier
+        let func_name = match self.peek_kind() {
+            Some(TokenKind::Ident(f)) => { let f = f.clone(); self.advance(); f }
+            _ => return self.error(
+                &format!("Expected identifier after '{}.', e.g. {}.func()", ns, ns),
+                self.current_span(),
+            ),
+        };
+        // Capture func_span right after consuming the ident — used for targeted error spans
+        let func_span = self.previous_span();
+
+        // Must be followed by '('
+        if self.peek_kind() != Some(&TokenKind::LParen) {
+            return self.error(
+                &format!(
+                    "Expected '(' after '{}.{}' — qualified names can only be used as function calls",
+                    ns, func_name
+                ),
+                func_span, // point at the func ident, not the next token
+            );
+        }
+        self.expect(TokenKind::LParen)?;
+
+        // Parse positional args (reject named args)
+        let mut args = Vec::new();
+        if !self.match_kind(TokenKind::RParen) {
+            loop {
+                if let Some(TokenKind::Ident(_)) = self.peek_kind() {
+                    if self.tokens.get(self.pos + 1).map(|t| &t.kind) == Some(&TokenKind::Equals) {
+                        return self.error(
+                            "Named arguments are not supported for qualified calls",
+                            self.current_span(),
+                        );
+                    }
+                }
+                args.push(self.parse_expr()?);
+                if !self.match_kind(TokenKind::Comma) { break; }
+            }
+            self.expect(TokenKind::RParen)?;
+        }
+
+        let full_span = ns_span.merge(self.previous_span());
+
+        // Reject chained dots: a.b().c or a.b()..x
+        if matches!(self.peek_kind(), Some(TokenKind::Dot) | Some(TokenKind::DotDot)) {
+            return self.error(
+                "chained qualified calls are not supported (a.b.c())",
+                self.current_span(),
+            );
+        }
+
+        Ok((func_name, func_span, args, full_span))
+    }
+
     pub fn match_kind(&mut self, kind: TokenKind) -> bool {
         if let Some(t) = self.peek() {
             if t.kind == kind {

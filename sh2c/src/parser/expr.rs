@@ -404,6 +404,24 @@ impl<'a> Parser<'a> {
             }
             TokenKind::Ident(s) => {
                 let s = s.clone();
+
+                let is_qualified = self.peek_kind() == Some(&TokenKind::Dot) 
+                    && matches!(self.tokens.get(self.pos + 1).map(|t| &t.kind), Some(TokenKind::Ident(_)))
+                    && matches!(self.tokens.get(self.pos + 2).map(|t| &t.kind), Some(TokenKind::LParen));
+                if is_qualified {
+                    self.advance(); // consume Dot
+                    let (func_name, func_span, args, full_span) =
+                        self.parse_qualified_call_or_err(&s, span)?;
+                    return Ok(Expr {
+                        node: ExprKind::QualifiedCall {
+                            ns: s, ns_span: span,
+                            name: func_name, name_span: func_span,
+                            args,
+                        },
+                        span: full_span,
+                    });
+                }
+
                 let is_call = self.peek_kind() == Some(&TokenKind::LParen);
                 if is_call {
                     if s == "sudo" {
@@ -1096,6 +1114,24 @@ impl<'a> Parser<'a> {
                         let name = s.clone();
                         let span = self.advance().unwrap().span;
                         
+                        let is_qualified = self.peek_kind() == Some(&TokenKind::Dot) 
+                            && matches!(self.tokens.get(self.pos + 1).map(|t| &t.kind), Some(TokenKind::Ident(_)))
+                            && matches!(self.tokens.get(self.pos + 2).map(|t| &t.kind), Some(TokenKind::LParen));
+                        if is_qualified {
+                            self.advance(); // consume Dot
+                            let (func_name, func_span, ns_args, full_span) = self.parse_qualified_call_or_err(&name, span)?;
+
+                            args.push(Expr {
+                                node: ExprKind::QualifiedCommandWord {
+                                    ns: name, ns_span: span,
+                                    name: func_name, name_span: func_span,
+                                },
+                                span: full_span,
+                            });
+                            args.extend(ns_args);
+                            continue;
+                        }
+
                         args.push(Expr {
                             node: ExprKind::Literal(name),
                             span,

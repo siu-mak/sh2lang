@@ -211,6 +211,11 @@ fn format_stmt(stmt: &Stmt, depth: usize) -> String {
             let parts: Vec<String> = args.iter().map(format_expr).collect();
              format!("{}({})", name, parts.join(", "))
         }
+        StmtKind::QualifiedCall { .. } => {
+            // Loader rewrite pass invariant: all QualifiedCall nodes are rewritten to
+            // StmtKind::Call before formatting is reached.
+            unreachable!("QualifiedCall should be resolved before formatting")
+        }
         StmtKind::AndThen { left, right } => {
              format_chain(left, right, "&&", depth)
         }
@@ -403,6 +408,16 @@ fn format_expr_prec(kind: &ExprKind, min_prec: u8) -> String {
                  parts.push(format!("{}={}", opt.name, format_expr(&opt.value)));
              }
              format!("{}({})", name, parts.join(", "))
+        }
+        ExprKind::QualifiedCall { .. } => {
+            // Loader rewrite pass invariant: all QualifiedCall nodes are rewritten to
+            // ExprKind::Call before formatting is reached.
+            unreachable!("QualifiedCall should be resolved before formatting")
+        }
+        ExprKind::QualifiedCommandWord { .. } => {
+            // Loader rewrite pass invariant: all QualifiedCommandWord nodes are rewritten to
+            // ExprKind::Literal(mangled_name) before formatting is reached.
+            unreachable!("QualifiedCommandWord should be resolved before formatting")
         }
         ExprKind::Run(call) => format_run_call(call),
         ExprKind::Command(args) => {

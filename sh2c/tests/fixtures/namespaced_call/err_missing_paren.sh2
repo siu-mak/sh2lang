@@ -1,0 +1,6 @@
+import "lib.sh2" as mylib
+
+func main() {
+    # Qualified name without () should be rejected
+    mylib.greet
+}

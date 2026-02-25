@@ -1,0 +1,15 @@
+import "lib_nested.sh2" as nested
+
+func greet() {
+    print("Hello from lib")
+    nested.nested_helper()
+}
+
+func sum(a, b) {
+    print(a + b)
+}
+
+# This function might clash if not mangled properly
+func helper() {
+    print("Lib helper")
+}

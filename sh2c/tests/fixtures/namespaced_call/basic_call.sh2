@@ -1,0 +1,9 @@
+import "lib.sh2" as mylib
+
+func main() {
+    print("Main start")
+    mylib.greet()
+    let out = capture(mylib.sum(5, 3))
+    print("Sum: " & out)
+    print("Main end")
+}

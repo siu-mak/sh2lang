@@ -1168,7 +1168,9 @@ fn lower_stmt<'a>(
             });
             Ok(ctx.intersection(&ctx_body))
         }
-
+        ast::StmtKind::QualifiedCall { .. } => {
+            unreachable!("QualifiedCall should be resolved by loader before lowering")
+        }
     }
 }
 
@@ -1296,6 +1298,8 @@ fn lower_expr<'a>(e: ast::Expr, out: &mut Vec<ir::Cmd>, ctx: &mut LoweringContex
                 Ok(ir::Val::Var(s))
             }
         }
+        ast::ExprKind::QualifiedCall { .. } => unreachable!("QualifiedCall should be resolved by loader before lowering"),
+        ast::ExprKind::QualifiedCommandWord { .. } => unreachable!("QualifiedCommandWord should be resolved by loader before lowering"),
         ast::ExprKind::Concat(l, r) => Ok(ir::Val::Concat(
             Box::new(lower_expr(*l, out, ctx, sm, file)?),
             Box::new(lower_expr(*r, out, ctx, sm, file)?),

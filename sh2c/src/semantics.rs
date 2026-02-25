@@ -547,6 +547,12 @@ fn check_stmt(stmt: &ast::Stmt, ctx: &mut BinderContext) -> Result<(), CompileEr
             check_function_call(name, args, stmt.span, ctx)?;
         }
 
+        StmtKind::QualifiedCall { args, .. } => {
+            for a in args {
+                check_expr(a, ctx)?;
+            }
+        }
+
         StmtKind::Pipe(segments) => {
             for seg in segments {
                 match &seg.node {
@@ -669,6 +675,11 @@ fn check_expr(expr: &ast::Expr, ctx: &mut BinderContext) -> Result<(), CompileEr
         ExprKind::Call { name, args, options: _ } => {
             check_function_call(name, args, expr.span, ctx)?;
         }
+        ExprKind::QualifiedCall { args, .. } => {
+            for a in args {
+                check_expr(a, ctx)?;
+            }
+        }
         ExprKind::Run(run_call) => {
              for arg in &run_call.args {
                 check_expr(arg, ctx)?;
@@ -706,7 +717,7 @@ fn check_expr(expr: &ast::Expr, ctx: &mut BinderContext) -> Result<(), CompileEr
         ExprKind::Command(_) | ExprKind::CommandPipe(_) | ExprKind::Args
         | ExprKind::Status | ExprKind::Pid | ExprKind::Uid | ExprKind::Ppid
         | ExprKind::Pwd | ExprKind::SelfPid | ExprKind::Argv0 | ExprKind::Argc
-        | ExprKind::EnvDot(_) => {}
+        | ExprKind::EnvDot(_) | ExprKind::QualifiedCommandWord { .. } => {}
     }
     Ok(())
 }

@@ -165,6 +165,26 @@ pub enum ExprKind {
         args: Vec<Expr>,
         options: Vec<CallOption>,
     },
+    QualifiedCall {
+        ns: String,
+        ns_span: Span,
+        name: String,
+        name_span: Span,
+        args: Vec<Expr>,
+    },
+    /// Namespaced function reference used as the head word of a command inside
+    /// capture(...)/$(...)  command substitutions. Unlike QualifiedCall (a full
+    /// call expression), this appears within ExprKind::Command args and is
+    /// rewritten by the loader into Literal with a mangled function name.
+    /// The surrounding ExprKind::Command holds the flattened positional args.
+    /// Loader rewrite pass invariant: all QualifiedCommandWord nodes are
+    /// rewritten before formatting/lowering.
+    QualifiedCommandWord {
+        ns: String,
+        ns_span: Span,
+        name: String,
+        name_span: Span,
+    },
     Run(RunCall),
     MapLiteral(Vec<(String, Expr)>),
     MapIndex {
@@ -295,6 +315,13 @@ pub enum StmtKind {
     ShBlock(Vec<String>),
     Call {
         name: String,
+        args: Vec<Expr>,
+    },
+    QualifiedCall {
+        ns: String,
+        ns_span: Span,
+        name: String,
+        name_span: Span,
         args: Vec<Expr>,
     },
     Subshell {
@@ -486,6 +513,11 @@ impl StmtKind {
             StmtKind::Export { value: Some(v), .. } => v.strip_spans(),
             StmtKind::Source { path } => path.strip_spans(),
             StmtKind::Call { args, .. } => for a in args { a.strip_spans(); },
+            StmtKind::QualifiedCall { ns_span, name_span, args, .. } => {
+                *ns_span = Span::new(0, 0);
+                *name_span = Span::new(0, 0);
+                for a in args { a.strip_spans(); }
+            }
             StmtKind::AndThen { left, right } => {
                 for s in left { s.strip_spans(); }
                 for s in right { s.strip_spans(); }
@@ -584,6 +616,15 @@ impl ExprKind {
             ExprKind::Call { args, options, .. } => {
                 for a in args { a.strip_spans(); }
                 for o in options { o.strip_spans(); }
+            }
+            ExprKind::QualifiedCall { ns_span, name_span, args, .. } => {
+                *ns_span = Span::new(0, 0);
+                *name_span = Span::new(0, 0);
+                for a in args { a.strip_spans(); }
+            }
+            ExprKind::QualifiedCommandWord { ns_span, name_span, .. } => {
+                *ns_span = Span::new(0, 0);
+                *name_span = Span::new(0, 0);
             }
             ExprKind::MapLiteral(entries) => for (_, v) in entries { v.strip_spans(); },
             ExprKind::Capture { expr, options } => {

@@ -1,0 +1,76 @@
+#!/usr/bin/env bash
+__sh2_check() { local s="$1"; local loc="$2"; local mode="$3"; if (( s != 0 )); then if [[ "$mode" == "return" ]]; then return "$s"; else if [[ -n "$loc" ]]; then printf 'Error in %s\n' "$loc" >&2; fi; exit "$s"; fi; fi; }
+__sh2_err_handler() {
+  local s=$?
+  local loc="${__sh2_loc:-}"
+  if [[ "${BASH_COMMAND}" == *"(exit "* ]]; then return $s; fi
+  if (( ${__sh2_suppress_err_depth:-0} > 0 )); then return "$s"; fi
+  if [[ -z "$loc" ]]; then return $s; fi
+  if [[ "$loc" == "${__sh2_last_err_loc:-}" && "$s" == "${__sh2_last_err_status:-}" ]]; then return $s; fi
+  __sh2_last_err_loc="$loc"
+  __sh2_last_err_status="$s"
+  printf "Error in %s\n" "$loc" >&2
+  return $s
+}
+set -o errtrace
+trap '__sh2_err_handler' ERR
+nested_helper() {
+  local __sh2_loc=""
+  printf '%s\n' 'Hello from nested lib'
+}
+
+greet() {
+  local __sh2_loc=""
+  printf '%s\n' 'Hello from lib'
+  __sh2_loc="tests/fixtures/namespaced_call/lib.sh2:5:5"
+  '__imp_nested__nested_helper'; __sh2_status=$?
+  __sh2_check "$__sh2_status" "${__sh2_loc:-}" "exit"
+}
+
+sum() {
+  local __sh2_loc=""
+  local a="${1}"
+  local b="${2}"
+  printf '%s\n' "$(( ( a + b ) ))"
+}
+
+helper() {
+  local __sh2_loc=""
+  printf '%s\n' 'Lib helper'
+}
+
+__imp_nested__nested_helper() {
+  local __sh2_loc=""
+  printf '%s\n' 'Hello from nested lib'
+}
+
+main() {
+  local __sh2_loc=""
+  printf '%s\n' 'Main start'
+  __sh2_loc="tests/fixtures/namespaced_call/basic_call.sh2:5:5"
+  '__imp_mylib__greet'; __sh2_status=$?
+  __sh2_check "$__sh2_status" "${__sh2_loc:-}" "exit"
+  __sh2_loc="tests/fixtures/namespaced_call/basic_call.sh2:6:5"
+  out="$( '__imp_mylib__sum' "5" "3" )"
+  __sh2_status=$?
+  __sh2_check "$__sh2_status" "${__sh2_loc:-}"
+  printf '%s\n' 'Sum: '"$out"
+  printf '%s\n' 'Main end'
+}
+
+__imp_mylib__greet() {
+  local __sh2_loc=""
+  printf '%s\n' 'Hello from lib'
+  __sh2_loc="tests/fixtures/namespaced_call/lib.sh2:5:5"
+  '__imp_nested__nested_helper'; __sh2_status=$?
+  __sh2_check "$__sh2_status" "${__sh2_loc:-}" "exit"
+}
+
+__imp_mylib__sum() {
+  local __sh2_loc=""
+  local a="${1}"
+  local b="${2}"
+  printf '%s\n' "$(( ( a + b ) ))"
+}
+__sh2_status=0
+main "$@"

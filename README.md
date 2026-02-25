@@ -284,6 +284,17 @@ sh2do 'print("Start"); run("date"); print("End")'
 - **No top-level statements.** Only `import ...` and `func ... { ... }` at file scope.
 - Entry point is **`main()`**; sh2c emits a wrapper that calls it.
 
+Imports support aliasing for namespaced function calls:
+
+```sh2
+import "helpers.sh2" as h
+
+func main() {
+  h.greet("world")
+  let sum = h.add(1, 2)
+}
+```
+
 ### Functions have named parameters
 
 sh2 supports named parameters in function signatures:

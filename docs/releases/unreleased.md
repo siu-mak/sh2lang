@@ -1,7 +1,7 @@
 # Unreleased
 
 ## Highlights
-- **Import aliases**: `import "path" as alias` syntax accepted. Alias is parsed and stored; qualified calls (`alias.func()`) are not yet supported.
+- **Import aliases**: `import "path" as alias` with qualified calls: `alias.func()`. Mangled wrappers emitted lazily (only when referenced).
 
 ### Features
 

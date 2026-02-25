@@ -754,6 +754,15 @@ impl<'a> Parser<'a> {
                         args: run_args,
                         options: run_options,
                     })
+                } else if self.peek_kind() == Some(&TokenKind::Dot) {
+                    self.advance(); // consume Dot
+                    let (func_name, func_span, args, _) =
+                        self.parse_qualified_call_or_err(&name, name_span)?;
+                    StmtKind::QualifiedCall {
+                        ns: name, ns_span: name_span,
+                        name: func_name, name_span: func_span,
+                        args,
+                    }
                 } else if self.peek_kind() == Some(&TokenKind::LParen) {
                     // Generic Call: name(args, ...)
                     self.expect(TokenKind::LParen)?;

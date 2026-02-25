@@ -1,0 +1,54 @@
+#!/bin/sh
+__sh2_check() { __sh2_s="$1"; __sh2_l="$2"; __sh2_m="$3"; if [ "$__sh2_s" -ne 0 ]; then if [ "$__sh2_m" = "return" ]; then return "$__sh2_s"; fi; if [ -n "$__sh2_l" ]; then printf 'Error in %s\n' "$__sh2_l" >&2; fi; exit "$__sh2_s"; fi; }
+nested_helper() {
+  printf '%s\n' 'Hello from nested lib'
+}
+
+greet() {
+  printf '%s\n' 'Hello from lib'
+  __sh2_loc="tests/fixtures/namespaced_call/lib.sh2:5:5"
+  '__imp_nested__nested_helper'; __sh2_status=$?
+  __sh2_check "$__sh2_status" "${__sh2_loc:-}" "exit"
+}
+
+sum() {
+  a="${1}"
+  b="${2}"
+  printf '%s\n' "$(( ( a + b ) ))"
+}
+
+helper() {
+  printf '%s\n' 'Lib helper'
+}
+
+__imp_nested__nested_helper() {
+  printf '%s\n' 'Hello from nested lib'
+}
+
+main() {
+  printf '%s\n' 'Main start'
+  __sh2_loc="tests/fixtures/namespaced_call/basic_call.sh2:5:5"
+  '__imp_mylib__greet'; __sh2_status=$?
+  __sh2_check "$__sh2_status" "${__sh2_loc:-}" "exit"
+  __sh2_loc="tests/fixtures/namespaced_call/basic_call.sh2:6:5"
+  out="$( '__imp_mylib__sum' "5" "3" )"
+  __sh2_status=$?
+  __sh2_check "$__sh2_status" "${__sh2_loc:-}"
+  printf '%s\n' 'Sum: '"$out"
+  printf '%s\n' 'Main end'
+}
+
+__imp_mylib__greet() {
+  printf '%s\n' 'Hello from lib'
+  __sh2_loc="tests/fixtures/namespaced_call/lib.sh2:5:5"
+  '__imp_nested__nested_helper'; __sh2_status=$?
+  __sh2_check "$__sh2_status" "${__sh2_loc:-}" "exit"
+}
+
+__imp_mylib__sum() {
+  a="${1}"
+  b="${2}"
+  printf '%s\n' "$(( ( a + b ) ))"
+}
+__sh2_status=0
+main "$@"

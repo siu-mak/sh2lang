@@ -1,0 +1,3 @@
+err_unknown_func.sh2:4:11: unknown function 'mylib.does_not_exist'
+    mylib.does_not_exist()
+          ^~~~~~~~~~~~~~

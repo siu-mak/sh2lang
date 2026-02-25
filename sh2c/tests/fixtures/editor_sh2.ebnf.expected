@@ -38,6 +38,7 @@ statement = let_stmt
           | continue_stmt
           | set_stmt
           | call_stmt
+          | qualified_call
           | export_stmt
           | unset_stmt
           | source_stmt
@@ -54,6 +55,7 @@ exec_stmt = "exec" , "(" , [ arg_list ] , ")" ;
 print_stmt = "print" , "(" , expression , ")" ;
 print_err_stmt = "print_err" , "(" , expression , ")" ;
 call_stmt = identifier , "(" , [ pos_arg_list ] , ")" ;
+qualified_call = identifier , "." , identifier , "(" , [ pos_arg_list ] , ")" ;
 set_stmt = "set" , lvalue , "=" , expression ;
 export_stmt = "export" , "(" , string_literal , [ "," , expression ] , ")" ;
 unset_stmt = "unset" , "(" , string_literal , ")" ;
@@ -141,6 +143,7 @@ primary_expr = literal
              | identifier
              | "(" , expression , ")"
              | call_expr
+             | qualified_call
              | capture_expr
              | list_expr
              | map_expr

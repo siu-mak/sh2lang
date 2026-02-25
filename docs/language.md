@@ -29,11 +29,40 @@ import "lib/fs.sh2" as fs
 ```
 
 Imports are resolved relative to the current file. The `.sh2` extension is optional but recommended.
-If you use `import "path" as alias`, the alias is parsed and stored, but **not yet used for qualified calls**. Qualified lookup (`alias.func(...)`) will be available in a future release.
+If you use `import "path" as alias`, you can call functions from that module using a **qualified call**.
+
 - Imports must appear before any function definitions.
 - Imports are resolved recursively.
 - Import cycles are detected and reported.
-- All imported functions share a single namespace; duplicate function names are an error.
+- All imported functions share a single namespace; duplicate function names are an error (unless disambiguated by an alias).
+
+### 1.2 Qualified Calls (Namespaced Functions)
+
+When you import a file using an `as alias`, you can call its functions using the `alias.func(...)` syntax.
+
+```sh2
+import "lib/fs.sh2" as fs
+
+func main() {
+  # Statement form
+  fs.mkdir("/tmp/foo")
+  
+  # Expression form (in an assignment)
+  let home = fs.get_home()
+  
+  # In a capture/command substitution
+  let files = capture(fs.list_dir("/tmp/foo"))
+}
+```
+
+**Lazy Wrapper Emission**
+sh2c emits mangled wrapper functions (e.g. `__imp_fs__mkdir`) for your qualified calls. This emission is **lazy**: wrappers are only generated for functions you actually reference. Importing a large library as an alias costs zero overhead if you don't use it.
+
+**Restrictions on Qualified Calls:**
+- **Only function calls are allowed.** You cannot access properties or fields (i.e. `fs.value` is an error).
+- **No chaining.** You cannot chain namespaces (e.g. `a.b.c()`). You must import the target directly.
+- **No bare references.** You cannot pass a function as a value (e.g. `let f = alias.func`).
+- **No named arguments.** Qualified calls do not support named arguments (such as `allow_fail=true`), since user-defined functions only accept positional arguments.
 
 ### 1.2 Functions and Parameters
 

@@ -73,3 +73,18 @@ fn diag_span_for_redecl() {
 fn diag_span_each_line_redecl() {
     assert_diag_output("diag_span_each_line_redecl.sh2");
 }
+
+#[test]
+fn diag_span_namespaced_call_err_unknown_alias() {
+    assert_diag_output("namespaced_call/err_unknown_alias.sh2");
+}
+
+#[test]
+fn diag_span_namespaced_call_err_unknown_func() {
+    assert_diag_output("namespaced_call/err_unknown_func.sh2");
+}
+
+#[test]
+fn diag_span_namespaced_call_err_missing_paren() {
+    assert_diag_output("namespaced_call/err_missing_paren.sh2");
+}

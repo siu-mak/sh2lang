@@ -13,6 +13,9 @@
             "include": "#builtins"
         },
         {
+            "include": "#functions"
+        },
+        {
             "include": "#literals"
         },
         {
@@ -50,6 +53,21 @@
                 {
                     "name": "support.function.builtin.sh2",
                     "match": "\\b(run|exec|print|print_err|capture|try_run|sudo|status|pid|ppid|uid|pwd|self_pid|argv0|argv|argc|arg|args|exists|is_dir|is_file|is_symlink|is_exec|is_readable|is_writable|is_non_empty|len|count|join|split|lines|trim|replace|matches|contains|contains_line|starts_with|json_kv|load_envfile|save_envfile|parse_args|home|path_join|input|confirm|export|unset|source|sh|wait|cd|heredoc|file|stdout|stderr|stdin|to_stdout|to_stderr|inherit_stdout|inherit_stderr|read_file|write_file|append_file|glob|bool_str|which|stdin_lines|find0|find_files)\\b"
+                }
+            ]
+        },
+        "functions": {
+            "patterns": [
+                {
+                    "match": "\\b([a-zA-Z_][a-zA-Z0-9_]*)\\.([a-zA-Z_][a-zA-Z0-9_]*)(?=\\()",
+                    "captures": {
+                        "1": {
+                            "name": "entity.name.namespace.sh2"
+                        },
+                        "2": {
+                            "name": "entity.name.function.sh2"
+                        }
+                    }
                 }
             ]
         },
