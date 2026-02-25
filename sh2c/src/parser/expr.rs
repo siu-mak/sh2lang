@@ -417,6 +417,7 @@ impl<'a> Parser<'a> {
                             ns: s, ns_span: span,
                             name: func_name, name_span: func_span,
                             args,
+                            resolved_path: None, resolved_mangled: None,
                         },
                         span: full_span,
                     });
@@ -1125,6 +1126,7 @@ impl<'a> Parser<'a> {
                                 node: ExprKind::QualifiedCommandWord {
                                     ns: name, ns_span: span,
                                     name: func_name, name_span: func_span,
+                                    resolved_path: None, resolved_mangled: None,
                                 },
                                 span: full_span,
                             });

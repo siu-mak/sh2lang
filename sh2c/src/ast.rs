@@ -171,6 +171,8 @@ pub enum ExprKind {
         name: String,
         name_span: Span,
         args: Vec<Expr>,
+        resolved_path: Option<std::path::PathBuf>,
+        resolved_mangled: Option<String>,
     },
     /// Namespaced function reference used as the head word of a command inside
     /// capture(...)/$(...)  command substitutions. Unlike QualifiedCall (a full
@@ -184,6 +186,8 @@ pub enum ExprKind {
         ns_span: Span,
         name: String,
         name_span: Span,
+        resolved_path: Option<std::path::PathBuf>,
+        resolved_mangled: Option<String>,
     },
     Run(RunCall),
     MapLiteral(Vec<(String, Expr)>),
@@ -323,6 +327,8 @@ pub enum StmtKind {
         name: String,
         name_span: Span,
         args: Vec<Expr>,
+        resolved_path: Option<std::path::PathBuf>,
+        resolved_mangled: Option<String>,
     },
     Subshell {
         body: Vec<Stmt>,
@@ -513,9 +519,11 @@ impl StmtKind {
             StmtKind::Export { value: Some(v), .. } => v.strip_spans(),
             StmtKind::Source { path } => path.strip_spans(),
             StmtKind::Call { args, .. } => for a in args { a.strip_spans(); },
-            StmtKind::QualifiedCall { ns_span, name_span, args, .. } => {
+            StmtKind::QualifiedCall { ns_span, name_span, args, resolved_path, resolved_mangled, .. } => {
                 *ns_span = Span::new(0, 0);
                 *name_span = Span::new(0, 0);
+                *resolved_path = None;
+                *resolved_mangled = None;
                 for a in args { a.strip_spans(); }
             }
             StmtKind::AndThen { left, right } => {
@@ -617,14 +625,18 @@ impl ExprKind {
                 for a in args { a.strip_spans(); }
                 for o in options { o.strip_spans(); }
             }
-            ExprKind::QualifiedCall { ns_span, name_span, args, .. } => {
+            ExprKind::QualifiedCall { ns_span, name_span, args, resolved_path, resolved_mangled, .. } => {
                 *ns_span = Span::new(0, 0);
                 *name_span = Span::new(0, 0);
+                *resolved_path = None;
+                *resolved_mangled = None;
                 for a in args { a.strip_spans(); }
             }
-            ExprKind::QualifiedCommandWord { ns_span, name_span, .. } => {
+            ExprKind::QualifiedCommandWord { ns_span, name_span, resolved_path, resolved_mangled, .. } => {
                 *ns_span = Span::new(0, 0);
                 *name_span = Span::new(0, 0);
+                *resolved_path = None;
+                *resolved_mangled = None;
             }
             ExprKind::MapLiteral(entries) => for (_, v) in entries { v.strip_spans(); },
             ExprKind::Capture { expr, options } => {

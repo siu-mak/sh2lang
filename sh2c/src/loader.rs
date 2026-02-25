@@ -107,6 +107,8 @@ fn load_program_with_imports_impl(loader: &mut Loader, entry_path: &Path) -> Res
 
     let file_str = canonical_path.to_string_lossy().to_string();
     let sm = SourceMap::new(src);
+    // Invariant: source_maps is keyed by canonical-path string (file_str).
+    // ImportIndex.sm retrieval below must use the same key.
     loader.source_maps.insert(file_str.clone(), sm.clone());
 
     let tokens = lexer::lex(&sm, &file_str)?;
@@ -146,13 +148,24 @@ fn load_program_with_imports_impl(loader: &mut Loader, entry_path: &Path) -> Res
     let func_names: HashSet<String> = program.functions.iter().map(|f| f.name.clone()).collect();
     loader.file_functions.insert(canonical_path.clone(), func_names);
 
-    // 3. Rewrite QualifiedCall -> Call using mangled names; collect (alias, func, path) tuples needed
+    // 3. Resolve Pass: Validate qualified calls and fill resolved_path/resolved_mangled
+    // Invariant: file_str is the canonical-path string used as source_maps key above.
+    let index = crate::resolver::ImportIndex {
+        alias_map: &alias_map,
+        file_functions: &loader.file_functions,
+        file: &file_str,
+        sm: loader.source_maps.get(&file_str),
+    };
+    crate::resolver::resolve_qualified_calls(&mut program, &index)?;
+
+    #[cfg(debug_assertions)]
+    crate::resolver::debug_assert_program_resolved(&program);
+
+    // 4. Rewrite Pass: Mechanically replace QualifiedCall with Call, and QualifiedCommandWord with Literal
     let mut all_needed: Vec<(String, String, PathBuf)> = Vec::new();
+    let mut needed_set: HashSet<(String, String, PathBuf)> = HashSet::new();
     for func in &mut program.functions {
-        let needed = rewrite_qualified_calls(func, &alias_map, &loader.file_functions, &file_str, &loader.source_maps)?;
-        for entry in needed {
-            if !all_needed.contains(&entry) { all_needed.push(entry); }
-        }
+        rewrite_qualified_calls(func, &mut all_needed, &mut needed_set);
     }
 
     // Populate file_defined_funcs AFTER rewrite so cloned functions have no QualifiedCall nodes.
@@ -206,10 +219,10 @@ fn load_program_with_imports_impl(loader: &mut Loader, entry_path: &Path) -> Res
         }
     }
 
-    // 4. D1 Lazy: Register only the mangled functions that were actually referenced
+    // 5. D1 Lazy: Register only the mangled functions that were actually referenced
     //    Uses file_defined_funcs for precise per-file lookup (avoids global name uniqueness assumption)
     for (alias, func_name, target_path) in all_needed {
-        let mangled = mangle(&alias, &func_name);
+        let mangled = crate::names::mangle(&alias, &func_name);
         if !loader.functions.contains_key(&mangled) {
             if let Some(func_map) = loader.file_defined_funcs.get(&target_path) {
                 if let Some(original_func) = func_map.get(&func_name) {
@@ -268,308 +281,234 @@ pub fn load(entry_path: &Path) -> Result<Program, Diagnostic> {
     })
 }
 
-fn mangle(alias: &str, func: &str) -> String {
-    debug_assert!(alias.chars().all(|c| c.is_ascii_alphanumeric() || c == '_'));
-    debug_assert!(func.chars().all(|c| c.is_ascii_alphanumeric() || c == '_'));
-    format!("__imp_{}__{}", alias, func)
-}
 
 fn rewrite_qualified_calls(
     func: &mut Function,
-    alias_map: &HashMap<String, PathBuf>,
-    file_functions: &HashMap<PathBuf, HashSet<String>>,
-    file: &str,
-    loader_source_maps: &HashMap<String, SourceMap>,
-) -> Result<Vec<(String, String, PathBuf)>, Diagnostic> {
-    let mut needed: Vec<(String, String, PathBuf)> = Vec::new();
+    needed: &mut Vec<(String, String, PathBuf)>,
+    needed_set: &mut HashSet<(String, String, PathBuf)>,
+) {
     for stmt in &mut func.body {
-        rewrite_stmt(stmt, alias_map, file_functions, file, loader_source_maps, &mut needed)?;
+        rewrite_stmt(stmt, needed, needed_set);
     }
-    Ok(needed)
 }
 
 fn rewrite_stmt(
     stmt: &mut crate::ast::Stmt,
-    alias_map: &HashMap<String, PathBuf>,
-    file_functions: &HashMap<PathBuf, HashSet<String>>,
-    file: &str,
-    loader_source_maps: &HashMap<String, SourceMap>,
     needed: &mut Vec<(String, String, PathBuf)>,
-) -> Result<(), Diagnostic> {
+    needed_set: &mut HashSet<(String, String, PathBuf)>,
+) {
     use crate::ast::StmtKind;
     
     match &mut stmt.node {
         StmtKind::QualifiedCall { .. } => {
-            // Extract the node to avoid borrow conflicts when reassigning stmt.node
-            let old = std::mem::replace(&mut stmt.node, StmtKind::Break); // temp placeholder
-            if let StmtKind::QualifiedCall { ns, ns_span, name, name_span, args } = old {
-                let target_path = match alias_map.get(&ns) {
-                    Some(p) => p.clone(),
-                    None => {
-                        return Err(Diagnostic {
-                            msg: format!("unknown import alias '{}'", ns),
-                            span: ns_span,
-                            sm: loader_source_maps.get(file).cloned(),
-                            file: Some(file.to_string()),
-                        });
-                    }
-                };
-                let funcs = file_functions.get(&target_path).unwrap();
-                if !funcs.contains(&name) {
-                    return Err(Diagnostic {
-                        msg: format!("unknown function '{}.{}'", ns, name),
-                        span: name_span,
-                        sm: loader_source_maps.get(file).cloned(),
-                        file: Some(file.to_string()),
-                    });
-                }
-                // Push to needed for lazy registration
-                let entry = (ns.clone(), name.clone(), target_path.clone());
-                if !needed.contains(&entry) { needed.push(entry); }
-                let mangled = mangle(&ns, &name);
+            let old = std::mem::replace(&mut stmt.node, StmtKind::Break);
+            if let StmtKind::QualifiedCall { ns, name, args, resolved_path, resolved_mangled, .. } = old {
+                let path = resolved_path.expect("resolver must run before rewrite");
+                let mangled = resolved_mangled.expect("resolver must run before rewrite");
+                
+                let entry = (ns, name, path);
+                if needed_set.insert(entry.clone()) { needed.push(entry); }
+                
                 stmt.node = StmtKind::Call { name: mangled, args };
             } else { unreachable!() }
         }
 
-        
         StmtKind::Let { value, .. } | StmtKind::Set { value, .. } => {
-            rewrite_expr(value, alias_map, file_functions, file, loader_source_maps, needed)?;
+            rewrite_expr(value, needed, needed_set);
         }
         StmtKind::Run(call) => {
-            for a in &mut call.args { rewrite_expr(a, alias_map, file_functions, file, loader_source_maps, needed)?; }
-            for o in &mut call.options { rewrite_expr(&mut o.value, alias_map, file_functions, file, loader_source_maps, needed)?; }
+            for a in call.args.iter_mut() { rewrite_expr(a, needed, needed_set); }
+            for o in call.options.iter_mut() { rewrite_expr(&mut o.value, needed, needed_set); }
         }
         StmtKind::Print(e) | StmtKind::PrintErr(e) | StmtKind::Exit(Some(e)) | StmtKind::Return(Some(e)) | StmtKind::Wait(Some(e)) | StmtKind::Sh(e) | StmtKind::Cd { path: e } | StmtKind::Export { value: Some(e), .. } | StmtKind::Source { path: e } => {
-            rewrite_expr(e, alias_map, file_functions, file, loader_source_maps, needed)?;
+            rewrite_expr(e, needed, needed_set);
         }
         StmtKind::If { cond, then_body, elifs, else_body } => {
-            rewrite_expr(cond, alias_map, file_functions, file, loader_source_maps, needed)?;
-            for s in then_body { rewrite_stmt(s, alias_map, file_functions, file, loader_source_maps, needed)?; }
-            for e in elifs {
-                rewrite_expr(&mut e.cond, alias_map, file_functions, file, loader_source_maps, needed)?;
-                for s in &mut e.body { rewrite_stmt(s, alias_map, file_functions, file, loader_source_maps, needed)?; }
+            rewrite_expr(cond, needed, needed_set);
+            for s in then_body.iter_mut() { rewrite_stmt(s, needed, needed_set); }
+            for elif in elifs.iter_mut() {
+                rewrite_expr(&mut elif.cond, needed, needed_set);
+                for s in elif.body.iter_mut() { rewrite_stmt(s, needed, needed_set); }
             }
             if let Some(body) = else_body {
-                for s in body { rewrite_stmt(s, alias_map, file_functions, file, loader_source_maps, needed)?; }
+                for s in body.iter_mut() { rewrite_stmt(s, needed, needed_set); }
             }
         }
         StmtKind::While { cond, body } => {
-            rewrite_expr(cond, alias_map, file_functions, file, loader_source_maps, needed)?;
-            for s in body { rewrite_stmt(s, alias_map, file_functions, file, loader_source_maps, needed)?; }
+            rewrite_expr(cond, needed, needed_set);
+            for s in body.iter_mut() { rewrite_stmt(s, needed, needed_set); }
         }
         StmtKind::For { iterable, body, .. } => {
             match iterable {
                 crate::ast::ForIterable::List(items) => {
-                    for i in items { rewrite_expr(i, alias_map, file_functions, file, loader_source_maps, needed)?; }
+                    for i in items.iter_mut() { rewrite_expr(i, needed, needed_set); }
                 }
                 crate::ast::ForIterable::Range(start, end) => {
-                    rewrite_expr(start, alias_map, file_functions, file, loader_source_maps, needed)?;
-                    rewrite_expr(end, alias_map, file_functions, file, loader_source_maps, needed)?;
+                    rewrite_expr(start.as_mut(), needed, needed_set);
+                    rewrite_expr(end.as_mut(), needed, needed_set);
                 }
                 crate::ast::ForIterable::Find0(spec) => {
-                    if let Some(e) = &mut spec.dir { rewrite_expr(e, alias_map, file_functions, file, loader_source_maps, needed)?; }
-                    if let Some(e) = &mut spec.name { rewrite_expr(e, alias_map, file_functions, file, loader_source_maps, needed)?; }
-                    if let Some(e) = &mut spec.type_filter { rewrite_expr(e, alias_map, file_functions, file, loader_source_maps, needed)?; }
-                    if let Some(e) = &mut spec.maxdepth { rewrite_expr(e, alias_map, file_functions, file, loader_source_maps, needed)?; }
+                    if let Some(e) = &mut spec.dir { rewrite_expr(e, needed, needed_set); }
+                    if let Some(e) = &mut spec.name { rewrite_expr(e, needed, needed_set); }
+                    if let Some(e) = &mut spec.type_filter { rewrite_expr(e, needed, needed_set); }
+                    if let Some(e) = &mut spec.maxdepth { rewrite_expr(e, needed, needed_set); }
                 }
                 _ => {}
             }
-            for s in body { rewrite_stmt(s, alias_map, file_functions, file, loader_source_maps, needed)?; }
+            for s in body.iter_mut() { rewrite_stmt(s, needed, needed_set); }
         }
         StmtKind::ForMap { body, .. } => {
-            for s in body { rewrite_stmt(s, alias_map, file_functions, file, loader_source_maps, needed)?; }
+            for s in body.iter_mut() { rewrite_stmt(s, needed, needed_set); }
         }
         StmtKind::TryCatch { try_body, catch_body } => {
-            for s in try_body { rewrite_stmt(s, alias_map, file_functions, file, loader_source_maps, needed)?; }
-            for s in catch_body { rewrite_stmt(s, alias_map, file_functions, file, loader_source_maps, needed)?; }
+            for s in try_body.iter_mut() { rewrite_stmt(s, needed, needed_set); }
+            for s in catch_body.iter_mut() { rewrite_stmt(s, needed, needed_set); }
         }
         StmtKind::Pipe(segments) => {
-            for seg in segments {
+            for seg in segments.iter_mut() {
                 match &mut seg.node {
                     crate::ast::PipeSegment::Run(call) | crate::ast::PipeSegment::Sudo(call) => {
-                        for a in &mut call.args { rewrite_expr(a, alias_map, file_functions, file, loader_source_maps, needed)?; }
-                        for o in &mut call.options { rewrite_expr(&mut o.value, alias_map, file_functions, file, loader_source_maps, needed)?; }
+                        for a in call.args.iter_mut() { rewrite_expr(a, needed, needed_set); }
+                        for o in call.options.iter_mut() { rewrite_expr(&mut o.value, needed, needed_set); }
                     }
                     crate::ast::PipeSegment::Block(body) | crate::ast::PipeSegment::EachLine(_, body) => {
-                        for s in body { rewrite_stmt(s, alias_map, file_functions, file, loader_source_maps, needed)?; }
+                        for s in body.iter_mut() { rewrite_stmt(s, needed, needed_set); }
                     }
                 }
             }
         }
         StmtKind::Exec(args) => {
-            for a in args { rewrite_expr(a, alias_map, file_functions, file, loader_source_maps, needed)?; }
+            for a in args.iter_mut() { rewrite_expr(a, needed, needed_set); }
         }
         StmtKind::WithEnv { bindings, body } => {
-            for (_, v) in bindings { rewrite_expr(v, alias_map, file_functions, file, loader_source_maps, needed)?; }
-            for s in body { rewrite_stmt(s, alias_map, file_functions, file, loader_source_maps, needed)?; }
+            for (_, v) in bindings.iter_mut() { rewrite_expr(v, needed, needed_set); }
+            for s in body.iter_mut() { rewrite_stmt(s, needed, needed_set); }
         }
         StmtKind::WithCwd { path, body } => {
-            rewrite_expr(path, alias_map, file_functions, file, loader_source_maps, needed)?;
-            for s in body { rewrite_stmt(s, alias_map, file_functions, file, loader_source_maps, needed)?; }
+            rewrite_expr(path, needed, needed_set);
+            for s in body.iter_mut() { rewrite_stmt(s, needed, needed_set); }
         }
         StmtKind::WithLog { path, body, .. } => {
-            rewrite_expr(path, alias_map, file_functions, file, loader_source_maps, needed)?;
-            for s in body { rewrite_stmt(s, alias_map, file_functions, file, loader_source_maps, needed)?; }
+            rewrite_expr(path, needed, needed_set);
+            for s in body.iter_mut() { rewrite_stmt(s, needed, needed_set); }
         }
         StmtKind::WithRedirect { stdout, stderr, stdin, body } => {
             if let Some(targets) = stdout {
-                for t in targets {
+                for t in targets.iter_mut() {
                     if let crate::ast::RedirectOutputTarget::File { path, .. } = &mut t.node {
-                        rewrite_expr(path, alias_map, file_functions, file, loader_source_maps, needed)?;
+                        rewrite_expr(path, needed, needed_set);
                     }
                 }
             }
             if let Some(targets) = stderr {
-                for t in targets {
+                for t in targets.iter_mut() {
                     if let crate::ast::RedirectOutputTarget::File { path, .. } = &mut t.node {
-                        rewrite_expr(path, alias_map, file_functions, file, loader_source_maps, needed)?;
+                        rewrite_expr(path, needed, needed_set);
                     }
                 }
             }
-            if let Some(crate::ast::RedirectInputTarget::File { path }) = stdin {
-                rewrite_expr(path, alias_map, file_functions, file, loader_source_maps, needed)?;
+            if let Some(tgt) = stdin {
+                if let crate::ast::RedirectInputTarget::File { path } = tgt {
+                    rewrite_expr(path, needed, needed_set);
+                }
             }
-            for s in body { rewrite_stmt(s, alias_map, file_functions, file, loader_source_maps, needed)?; }
+            for s in body.iter_mut() { rewrite_stmt(s, needed, needed_set); }
         }
         StmtKind::Case { expr, arms } => {
-            rewrite_expr(expr, alias_map, file_functions, file, loader_source_maps, needed)?;
-            for arm in arms {
-                for s in &mut arm.body { rewrite_stmt(s, alias_map, file_functions, file, loader_source_maps, needed)?; }
+            rewrite_expr(expr, needed, needed_set);
+            for arm in arms.iter_mut() {
+                for s in arm.body.iter_mut() { rewrite_stmt(s, needed, needed_set); }
             }
         }
         StmtKind::Call { args, .. } => {
-            for a in args { rewrite_expr(a, alias_map, file_functions, file, loader_source_maps, needed)?; }
+            for a in args.iter_mut() { rewrite_expr(a, needed, needed_set); }
         }
         StmtKind::AndThen { left, right } | StmtKind::OrElse { left, right } => {
-            for s in left { rewrite_stmt(s, alias_map, file_functions, file, loader_source_maps, needed)?; }
-            for s in right { rewrite_stmt(s, alias_map, file_functions, file, loader_source_maps, needed)?; }
+            for s in left.iter_mut() { rewrite_stmt(s, needed, needed_set); }
+            for s in right.iter_mut() { rewrite_stmt(s, needed, needed_set); }
         }
         StmtKind::Subshell { body } | StmtKind::Group { body } => {
-            for s in body { rewrite_stmt(s, alias_map, file_functions, file, loader_source_maps, needed)?; }
+            for s in body.iter_mut() { rewrite_stmt(s, needed, needed_set); }
         }
         StmtKind::Spawn { stmt: inner } => {
-            rewrite_stmt(inner, alias_map, file_functions, file, loader_source_maps, needed)?;
+            rewrite_stmt(inner, needed, needed_set);
         }
         _ => {}
     }
-    
-    Ok(())
 }
 
 fn rewrite_expr(
     expr: &mut crate::ast::Expr,
-    alias_map: &HashMap<String, PathBuf>,
-    file_functions: &HashMap<PathBuf, HashSet<String>>,
-    file: &str,
-    loader_source_maps: &HashMap<String, SourceMap>,
     needed: &mut Vec<(String, String, PathBuf)>,
-) -> Result<(), Diagnostic> {
+    needed_set: &mut HashSet<(String, String, PathBuf)>,
+) {
     use crate::ast::ExprKind;
     
     match &mut expr.node {
         ExprKind::QualifiedCall { .. } => {
-            // Extract the node to avoid borrow conflicts when reassigning expr.node
-            let old = std::mem::replace(&mut expr.node, ExprKind::Bool(false)); // temp placeholder
-            if let ExprKind::QualifiedCall { ns, ns_span, name, name_span, args } = old {
-                let target_path = match alias_map.get(&ns) {
-                    Some(p) => p.clone(),
-                    None => {
-                        return Err(Diagnostic {
-                            msg: format!("unknown import alias '{}'", ns),
-                            span: ns_span,
-                            sm: loader_source_maps.get(file).cloned(),
-                            file: Some(file.to_string()),
-                        });
-                    }
-                };
-                let funcs = file_functions.get(&target_path).unwrap();
-                if !funcs.contains(&name) {
-                    return Err(Diagnostic {
-                        msg: format!("unknown function '{}.{}'", ns, name),
-                        span: name_span,
-                        sm: loader_source_maps.get(file).cloned(),
-                        file: Some(file.to_string()),
-                    });
-                }
-                // Push to needed for lazy registration
-                let entry = (ns.clone(), name.clone(), target_path.clone());
-                if !needed.contains(&entry) { needed.push(entry); }
-                let mangled = mangle(&ns, &name);
+            let old = std::mem::replace(&mut expr.node, ExprKind::Bool(false));
+            if let ExprKind::QualifiedCall { ns, name, args, resolved_path, resolved_mangled, .. } = old {
+                let path = resolved_path.expect("resolver must run before rewrite");
+                let mangled = resolved_mangled.expect("resolver must run before rewrite");
+                
+                let entry = (ns, name, path);
+                if needed_set.insert(entry.clone()) { needed.push(entry); }
+                
                 expr.node = ExprKind::Call { name: mangled, args, options: vec![] };
             } else { unreachable!() }
         }
         ExprKind::QualifiedCommandWord { .. } => {
-            // Extract the node to avoid borrow conflicts when reassigning expr.node
-            let old = std::mem::replace(&mut expr.node, ExprKind::Bool(false)); // temp placeholder
-            if let ExprKind::QualifiedCommandWord { ns, ns_span, name, name_span } = old {
-                let target_path = match alias_map.get(&ns) {
-                    Some(p) => p.clone(),
-                    None => {
-                        return Err(Diagnostic {
-                            msg: format!("unknown import alias '{}'", ns),
-                            span: ns_span,
-                            sm: loader_source_maps.get(file).cloned(),
-                            file: Some(file.to_string()),
-                        });
-                    }
-                };
-                let funcs = file_functions.get(&target_path).unwrap();
-                if !funcs.contains(&name) {
-                    return Err(Diagnostic {
-                        msg: format!("unknown function '{}.{}'", ns, name),
-                        span: name_span,
-                        sm: loader_source_maps.get(file).cloned(),
-                        file: Some(file.to_string()),
-                    });
-                }
-                // Push to needed for lazy registration
-                let entry = (ns.clone(), name.clone(), target_path.clone());
-                if !needed.contains(&entry) { needed.push(entry); }
-                let mangled = mangle(&ns, &name);
+            let old = std::mem::replace(&mut expr.node, ExprKind::Bool(false));
+            if let ExprKind::QualifiedCommandWord { ns, name, resolved_path, resolved_mangled, .. } = old {
+                let path = resolved_path.expect("resolver must run before rewrite");
+                let mangled = resolved_mangled.expect("resolver must run before rewrite");
+                
+                let entry = (ns, name, path);
+                if needed_set.insert(entry.clone()) { needed.push(entry); }
+                
                 expr.node = ExprKind::Literal(mangled);
             } else { unreachable!() }
         }
         
-        ExprKind::Command(args) | ExprKind::List(args) => {
-            for a in args { rewrite_expr(a, alias_map, file_functions, file, loader_source_maps, needed)?; }
+        ExprKind::Command(args) => {
+            for a in args.iter_mut() { rewrite_expr(a, needed, needed_set); }
         }
-        ExprKind::CommandPipe(segs) => {
-            for seg in segs {
-                for a in seg { rewrite_expr(a, alias_map, file_functions, file, loader_source_maps, needed)?; }
+        ExprKind::CommandPipe(pipeline) => {
+            for block in pipeline.iter_mut() {
+                for a in block.iter_mut() { rewrite_expr(a, needed, needed_set); }
             }
         }
         ExprKind::Concat(l, r) | ExprKind::And(l, r) | ExprKind::Or(l, r) | ExprKind::Join { list: l, sep: r } | ExprKind::Index { list: l, index: r } => {
-            rewrite_expr(l, alias_map, file_functions, file, loader_source_maps, needed)?;
-            rewrite_expr(r, alias_map, file_functions, file, loader_source_maps, needed)?;
+            rewrite_expr(l, needed, needed_set);
+            rewrite_expr(r, needed, needed_set);
         }
         ExprKind::Arith { left, right, .. } | ExprKind::Compare { left, right, .. } => {
-            rewrite_expr(left, alias_map, file_functions, file, loader_source_maps, needed)?;
-            rewrite_expr(right, alias_map, file_functions, file, loader_source_maps, needed)?;
+            rewrite_expr(left, needed, needed_set);
+            rewrite_expr(right, needed, needed_set);
         }
         ExprKind::Not(e) | ExprKind::Exists(e) | ExprKind::IsDir(e) | ExprKind::IsFile(e) | ExprKind::IsSymlink(e) | ExprKind::IsExec(e) | ExprKind::IsReadable(e) | ExprKind::IsWritable(e) | ExprKind::IsNonEmpty(e) | ExprKind::BoolStr(e) | ExprKind::Len(e) | ExprKind::Count(e) | ExprKind::Arg(e) | ExprKind::Env(e) | ExprKind::Input(e) | ExprKind::Field { base: e, .. } => {
-            rewrite_expr(e, alias_map, file_functions, file, loader_source_maps, needed)?;
+            rewrite_expr(e, needed, needed_set);
         }
         ExprKind::MapLiteral(entries) => {
-            for (_, v) in entries { rewrite_expr(v, alias_map, file_functions, file, loader_source_maps, needed)?; }
+            for (_, v) in entries.iter_mut() { rewrite_expr(v, needed, needed_set); }
         }
         ExprKind::Call { args, options, .. } | ExprKind::Sudo { args, options } => {
-            for a in args { rewrite_expr(a, alias_map, file_functions, file, loader_source_maps, needed)?; }
-            for o in options { rewrite_expr(&mut o.value, alias_map, file_functions, file, loader_source_maps, needed)?; }
+            for a in args.iter_mut() { rewrite_expr(a, needed, needed_set); }
+            for o in options.iter_mut() { rewrite_expr(&mut o.value, needed, needed_set); }
         }
         ExprKind::Run(call) => {
-            for a in &mut call.args { rewrite_expr(a, alias_map, file_functions, file, loader_source_maps, needed)?; }
-            for o in &mut call.options { rewrite_expr(&mut o.value, alias_map, file_functions, file, loader_source_maps, needed)?; }
+            for a in call.args.iter_mut() { rewrite_expr(a, needed, needed_set); }
+            for o in call.options.iter_mut() { rewrite_expr(&mut o.value, needed, needed_set); }
         }
         ExprKind::Capture { expr: inner, options } | ExprKind::Sh { cmd: inner, options } => {
-            rewrite_expr(inner, alias_map, file_functions, file, loader_source_maps, needed)?;
-            for o in options { rewrite_expr(&mut o.value, alias_map, file_functions, file, loader_source_maps, needed)?; }
+            rewrite_expr(inner, needed, needed_set);
+            for o in options.iter_mut() { rewrite_expr(&mut o.value, needed, needed_set); }
         }
         ExprKind::Confirm { prompt, default } => {
-            rewrite_expr(prompt, alias_map, file_functions, file, loader_source_maps, needed)?;
-            if let Some(d) = default { rewrite_expr(d, alias_map, file_functions, file, loader_source_maps, needed)?; }
+            rewrite_expr(prompt, needed, needed_set);
+            if let Some(d) = default { rewrite_expr(d, needed, needed_set); }
         }
         _ => {}
     }
-    
-    Ok(())
 }
+

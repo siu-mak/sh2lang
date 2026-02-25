@@ -762,6 +762,7 @@ impl<'a> Parser<'a> {
                         ns: name, ns_span: name_span,
                         name: func_name, name_span: func_span,
                         args,
+                        resolved_path: None, resolved_mangled: None,
                     }
                 } else if self.peek_kind() == Some(&TokenKind::LParen) {
                     // Generic Call: name(args, ...)

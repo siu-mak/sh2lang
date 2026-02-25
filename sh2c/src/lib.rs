@@ -8,6 +8,8 @@ pub mod loader;
 pub mod lower;
 pub mod ir;
 pub mod parser;
+pub(crate) mod names;
+pub(crate) mod resolver;
 pub mod span;
 pub mod target;
 pub mod sudo;
