@@ -10,6 +10,7 @@ pub mod ir;
 pub mod parser;
 pub(crate) mod names;
 pub(crate) mod resolver;
+pub(crate) mod suggest;
 pub mod span;
 pub mod target;
 pub mod sudo;

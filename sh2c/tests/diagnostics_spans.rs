@@ -88,3 +88,13 @@ fn diag_span_namespaced_call_err_unknown_func() {
 fn diag_span_namespaced_call_err_missing_paren() {
     assert_diag_output("namespaced_call/err_missing_paren.sh2");
 }
+
+#[test]
+fn diag_span_namespaced_call_suggest_alias() {
+    assert_diag_output("namespaced_call/err_suggest_alias.sh2");
+}
+
+#[test]
+fn diag_span_namespaced_call_suggest_func() {
+    assert_diag_output("namespaced_call/err_suggest_func.sh2");
+}

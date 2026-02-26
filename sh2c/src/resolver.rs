@@ -13,20 +13,34 @@ pub struct ImportIndex<'a> {
 }
 
 fn diag_unknown_alias(ns: &str, ns_span: Span, index: &ImportIndex) -> Diagnostic {
+    let mut candidates: Vec<&str> = index.alias_map.keys().map(|s| s.as_str()).collect();
+    candidates.sort();
+    let help = crate::suggest::suggest(ns, &candidates)
+        .map(|s| format!("did you mean '{}'?", s));
     Diagnostic {
         msg: format!("unknown import alias '{}'", ns),
         span: ns_span,
         sm: index.sm.cloned(),
         file: Some(index.file.to_string()),
+        help,
     }
 }
 
-fn diag_unknown_func(ns: &str, name: &str, name_span: Span, index: &ImportIndex) -> Diagnostic {
+fn diag_unknown_func(ns: &str, name: &str, name_span: Span, index: &ImportIndex, target_path: Option<&std::path::Path>) -> Diagnostic {
+    let help = target_path
+        .and_then(|p| index.file_functions.get(p))
+        .and_then(|funcs| {
+            let mut candidates: Vec<&str> = funcs.iter().map(|s| s.as_str()).collect();
+            candidates.sort();
+            crate::suggest::suggest(name, &candidates)
+        })
+        .map(|s| format!("did you mean '{}.{}'?", ns, s));
     Diagnostic {
         msg: format!("unknown function '{}.{}'", ns, name),
         span: name_span,
         sm: index.sm.cloned(),
         file: Some(index.file.to_string()),
+        help,
     }
 }
 
@@ -53,10 +67,10 @@ fn resolve_in_stmt(stmt: &mut Stmt, index: &ImportIndex) -> Result<(), Diagnosti
             };
             let funcs = match index.file_functions.get(&target_path) {
                 Some(f) => f,
-                None => return Err(diag_unknown_func(ns, name, *name_span, index)),
+                None => return Err(diag_unknown_func(ns, name, *name_span, index, None)),
             };
             if !funcs.contains(name) {
-                return Err(diag_unknown_func(ns, name, *name_span, index));
+                return Err(diag_unknown_func(ns, name, *name_span, index, Some(&target_path)));
             }
             *resolved_path = Some(target_path);
             *resolved_mangled = Some(names::mangle(ns, name));
@@ -228,10 +242,10 @@ fn resolve_in_expr(expr: &mut Expr, index: &ImportIndex) -> Result<(), Diagnosti
             };
             let funcs = match index.file_functions.get(&target_path) {
                 Some(f) => f,
-                None => return Err(diag_unknown_func(ns, name, *name_span, index)),
+                None => return Err(diag_unknown_func(ns, name, *name_span, index, None)),
             };
             if !funcs.contains(name) {
-                return Err(diag_unknown_func(ns, name, *name_span, index));
+                return Err(diag_unknown_func(ns, name, *name_span, index, Some(&target_path)));
             }
             *resolved_path = Some(target_path);
             *resolved_mangled = Some(names::mangle(ns, name));
@@ -247,10 +261,10 @@ fn resolve_in_expr(expr: &mut Expr, index: &ImportIndex) -> Result<(), Diagnosti
             };
             let funcs = match index.file_functions.get(&target_path) {
                 Some(f) => f,
-                None => return Err(diag_unknown_func(ns, name, *name_span, index)),
+                None => return Err(diag_unknown_func(ns, name, *name_span, index, None)),
             };
             if !funcs.contains(name) {
-                return Err(diag_unknown_func(ns, name, *name_span, index));
+                return Err(diag_unknown_func(ns, name, *name_span, index, Some(&target_path)));
             }
             *resolved_path = Some(target_path);
             *resolved_mangled = Some(names::mangle(ns, name));

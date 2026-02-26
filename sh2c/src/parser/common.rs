@@ -46,6 +46,7 @@ impl<'a> Parser<'a> {
             span,
             sm: Some(self.sm.clone()),
             file: Some(self.file.to_string()),
+            help: None,
         })
     }
 

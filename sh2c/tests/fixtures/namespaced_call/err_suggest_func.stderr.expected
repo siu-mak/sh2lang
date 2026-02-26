@@ -1,0 +1,4 @@
+err_suggest_func.sh2:4:8: unknown function 'fs.gret'
+    fs.gret()
+       ^~~~
+help: did you mean 'fs.greet'?

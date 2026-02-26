@@ -58,6 +58,7 @@ fn load_program_with_imports_impl(loader: &mut Loader, entry_path: &Path) -> Res
                 span: crate::span::Span::new(0, 0),
                 sm: None,
                 file: Some(entry_path.to_string_lossy().to_string()),
+                help: None,
             });
         }
     };
@@ -87,6 +88,7 @@ fn load_program_with_imports_impl(loader: &mut Loader, entry_path: &Path) -> Res
             span: crate::span::Span::new(0, 0),
             sm: None,
             file: Some(canonical_path.to_string_lossy().to_string()),
+            help: None,
         });
     }
 
@@ -101,6 +103,7 @@ fn load_program_with_imports_impl(loader: &mut Loader, entry_path: &Path) -> Res
                 span: crate::span::Span::new(0, 0),
                 sm: None,
                 file: Some(canonical_path.to_string_lossy().to_string()),
+                help: None,
             });
         }
     };
@@ -133,6 +136,7 @@ fn load_program_with_imports_impl(loader: &mut Loader, entry_path: &Path) -> Res
                     span: import.span,
                     sm: loader.source_maps.get(&file_str).cloned(),
                     file: Some(file_str.clone()),
+                    help: None,
                 });
             }
         };
@@ -189,6 +193,7 @@ fn load_program_with_imports_impl(loader: &mut Loader, entry_path: &Path) -> Res
                 span: func.span, // We have func.span here!
                 sm: loader.source_maps.get(&func.file).cloned(),
                 file: Some(func.file.clone()),
+                help: None,
             });
         }
 
@@ -207,6 +212,7 @@ fn load_program_with_imports_impl(loader: &mut Loader, entry_path: &Path) -> Res
                     span: func.span,
                     sm: loader.source_maps.get(&func.file).cloned(),
                     file: Some(func.file.clone()),
+                    help: None,
                 });
             }
         }
@@ -267,6 +273,7 @@ pub fn load(entry_path: &Path) -> Result<Program, Diagnostic> {
             span: crate::span::Span::new(0, 0),
             sm: None,
             file: Some(entry_path.to_string_lossy().to_string()),
+            help: None,
         })?
         .to_string_lossy()
         .to_string();

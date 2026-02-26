@@ -1,0 +1,4 @@
+err_suggest_alias.sh2:4:5: unknown import alias 'f'
+    f.greet()
+    ^
+help: did you mean 'fs'?

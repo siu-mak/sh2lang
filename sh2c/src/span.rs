@@ -25,14 +25,19 @@ pub struct Diagnostic {
     pub span: Span,
     pub sm: Option<SourceMap>,
     pub file: Option<String>,
+    pub help: Option<String>,
 }
 
 impl Diagnostic {
     pub fn format(&self, base: Option<&std::path::Path>) -> String {
-        if let (Some(sm), Some(file)) = (&self.sm, &self.file) {
+        let main = if let (Some(sm), Some(file)) = (&self.sm, &self.file) {
             sm.format_diagnostic(file, base, &self.msg, self.span)
         } else {
             format!("error: {}", self.msg)
+        };
+        match &self.help {
+            Some(help) => format!("{}\nhelp: {}", main, help),
+            None => main,
         }
     }
 }
