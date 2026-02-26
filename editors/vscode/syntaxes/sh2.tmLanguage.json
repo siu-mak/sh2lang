@@ -44,7 +44,7 @@
             "patterns": [
                 {
                     "name": "keyword.control.sh2",
-                    "match": "\\b(func|let|if|elif|else|while|for|in|each_line|try|catch|with|env|cwd|log|redirect|subshell|group|spawn|pipe|return|exit|break|continue|case|import|set)\\b"
+                    "match": "\\b(func|let|if|elif|else|while|for|in|each_line|try|catch|with|env|cwd|log|redirect|subshell|group|spawn|pipe|return|exit|break|continue|case|import|as|set)\\b"
                 }
             ]
         },

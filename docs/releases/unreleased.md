@@ -8,6 +8,9 @@
 ### Diagnostics
 - **Suggestions**: "did you mean …?" hints for unknown import aliases and unknown qualified function names
 
+### Editors
+- **VS Code**: `as` keyword highlighting in import statements
+
 ### Fixes
 
 ### Breaking changes

@@ -1,0 +1,26 @@
+# Highlighting sample for A1-5 verification
+# - import ... as ... (keyword highlighting)
+# - namespaced calls (namespace.function highlighting)
+# - range operator (..) should not break
+
+import "lib.sh2" as fs
+
+func main() {
+    # Namespaced calls: fs = namespace, ls = function
+    fs.ls("/etc")
+
+    # Near-miss alias (still highlights syntactically)
+    f.greet()
+
+    # Near-miss function (still highlights syntactically)
+    fs.gret()
+
+    # Range operator — must remain highlighted as operator, not dot
+    for i in 1..10 {
+        print(i)
+    }
+
+    # Regular string and comment highlighting
+    let msg = "hello world"
+    print(msg)  # inline comment
+}

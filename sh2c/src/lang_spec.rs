@@ -26,6 +26,7 @@ pub const KEYWORDS: &[&str] = &[
     "continue",
     "case",
     "import",
+    "as",
     "set",
 ];
 
