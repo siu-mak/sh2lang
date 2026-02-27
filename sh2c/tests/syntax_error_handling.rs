@@ -64,3 +64,9 @@ fn exec_try_catch_nounset_bash() {
 fn exec_try_catch_nounset_posix() {
     common::assert_exec_matches_fixture_target("try_catch_nounset", common::TargetShell::Posix);
 }
+
+#[test]
+#[should_panic(expected = "no runtime expectation files")]
+fn exec_fixture_missing_payload_fails() {
+    common::assert_exec_matches_fixture_target("exec_harness/no_payload", common::TargetShell::Bash);
+}

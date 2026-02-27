@@ -2,9 +2,10 @@ func main() {
     run("mkdir", "-p", "test_basic")
     run("touch", "test_basic/a.txt", "test_basic/b.txt", "test_basic/c.log")
     
-    # Test basic find with dir argument
+    # Test basic find with dir argument.
+    # We print 'f' directly instead of '{f}', as explicit braces in a string mean literal braces in sh2lang.
     for f in find_files(dir="test_basic", name="*.txt") {
-        print("{f}")
+        print(f)
     }
 
     run("rm", "-rf", "test_basic")

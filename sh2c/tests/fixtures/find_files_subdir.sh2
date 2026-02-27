@@ -3,8 +3,9 @@ func main() {
     run("touch", "test_subdir/x.rs", "test_subdir/nested/y.rs")
     
     let files = find_files(dir="test_subdir", name="*.rs")
+    # We print 'f' directly instead of '{f}', as explicit braces in a string mean literal braces in sh2lang.
     for f in files {
-        print("{f}")
+        print(f)
     }
 
     run("rm", "-rf", "test_subdir")

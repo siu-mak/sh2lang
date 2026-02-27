@@ -1,8 +1,16 @@
 
 func main() {
-    write_file("append.txt", "A")
-    append_file("append.txt", "B")
-    if read_file("append.txt") != "AB" {
+    let tmp_raw = capture(run("mktemp", "-d"), allow_fail=true)
+    let tmp = trim(tmp_raw)
+    if status() != 0 || tmp == "" {
         exit(1)
     }
+    let tmp_file = path_join(tmp, "append.txt")
+    write_file(tmp_file, "A")
+    append_file(tmp_file, "B")
+    if read_file(tmp_file) != "AB" {
+        run("rm", "-rf", tmp)
+        exit(1)
+    }
+    run("rm", "-rf", tmp)
 }

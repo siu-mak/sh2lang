@@ -624,7 +624,11 @@ pub fn assert_exec_matches_fixture_target(
     }
 
     if !stdout_path.exists() && !stderr_path.exists() && !status_path.exists() {
-        return;
+        panic!(
+            "no runtime expectation files for exec fixture '{}'; refusing to skip execution.\n\
+             Expected one or more of:\n  {}.stdout\n  {}.stderr\n  {}.status",
+            fixture_name, fixture_name, fixture_name, fixture_name
+        );
     }
 
     let shell_script = compile_path_to_shell(&sh2_path, target);
@@ -743,11 +747,20 @@ pub fn assert_exec_matches_fixture_target(
     }
 
     if status_path.exists() {
-        let expected_status: i32 = fs::read_to_string(&status_path)
-            .expect("Failed to read status fixture")
-            .trim()
-            .parse()
-            .expect("Invalid status fixture content");
+        let content = fs::read_to_string(&status_path).expect("Failed to read status fixture");
+        let trimmed = content.trim();
+        if trimmed.is_empty() {
+            panic!(
+                "Empty status fixture for '{}' at '{}'; .status must contain an integer exit code",
+                fixture_name, status_path.display()
+            );
+        }
+        let expected_status: i32 = trimmed.parse().unwrap_or_else(|_| {
+            panic!(
+                "Invalid status fixture for '{}' at '{}': content='{}' (must be integer)",
+                fixture_name, status_path.display(), trimmed
+            )
+        });
         assert_eq!(status, Some(expected_status), "Exit code mismatch for {}", fixture_name);
     }
 }

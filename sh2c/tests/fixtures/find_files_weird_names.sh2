@@ -4,8 +4,8 @@ func main() {
     run("touch", "test_weird/quote'file.txt")
     
     for f in find_files(dir="test_weird") {
-        # Printing filenames safely
-        print("Found: {f}")
+        # We concatenate strings directly using '&' because '{f}' is literal braces in sh2lang.
+        print("Found: " & f)
     }
 
     run("rm", "-rf", "test_weird")

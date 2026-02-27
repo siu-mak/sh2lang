@@ -1,6 +1,7 @@
 func main() {
     # Create temp dir for test
-    let tmp = trim(capture(run("mktemp", "-d"), allow_fail=true))
+    let raw_tmp = capture(run("mktemp", "-d"), allow_fail=true)
+    let tmp = trim(raw_tmp)
     if status() != 0 {
         print_err("Failed to create tmp dir")
         exit(1)
@@ -19,25 +20,43 @@ func main() {
     cd(tmp)
     export("PATH", "/nope::/also-nope")
     let p1 = which("mycmd")
-    let s1 = status()
-    let ok1 = (p1 != "") and (s1 == 0)
-    print("mid_empty=" & bool_str(ok1))
+    if p1 != "" {
+        if status() == 0 {
+            print("mid_empty=true")
+        } else {
+            print("mid_empty=false")
+        }
+    } else {
+        print("mid_empty=false")
+    }
     
     # Test 2: Leading empty segment
     # PATH=":/usr/bin" means . comes first
     export("PATH", ":/usr/bin")
     let p2 = which("mycmd")
-    let s2 = status()
-    let ok2 = (p2 != "") and (s2 == 0)
-    print("lead_empty=" & bool_str(ok2))
+    if p2 != "" {
+        if status() == 0 {
+            print("lead_empty=true")
+        } else {
+            print("lead_empty=false")
+        }
+    } else {
+        print("lead_empty=false")
+    }
     
     # Test 3: Trailing empty segment
     # PATH="/nope:" means /nope, then .
     export("PATH", "/nope:")
     let p3 = which("mycmd")
-    let s3 = status()
-    let ok3 = (p3 != "") and (s3 == 0)
-    print("trail_empty=" & bool_str(ok3))
+    if p3 != "" {
+        if status() == 0 {
+            print("trail_empty=true")
+        } else {
+            print("trail_empty=false")
+        }
+    } else {
+        print("trail_empty=false")
+    }
     
     # Restore PATH and cleanup
     export("PATH", orig_path)
