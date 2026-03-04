@@ -12,6 +12,9 @@ use tempfile::TempDir;
 mod strip_spans;
 pub use strip_spans::*;
 
+mod compile;
+pub use compile::*;
+
 fn crate_root() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).to_path_buf()
 }
@@ -142,87 +145,6 @@ mod tests {
         let expected = "\"path\": \"<SH2C_ROOT>/bin\"";
         assert_eq!(normalize_repo_paths(input, root), expected);
     }
-}
-
-// Replaces existing compile_to_shell which took string.
-// Note: verify if any tests strictly rely on string-only compilation without files.
-// Most tests in common/mod.rs read from fixtures.
-use sh2c::loader;
-
-pub fn try_compile_to_shell(src: &str, target: TargetShell) -> Result<String, String> {
-    let sm = sh2c::span::SourceMap::new(src.to_string());
-    let tokens = lexer::lex(&sm, src).map_err(|d| d.format(None))?;
-    let mut program = parser::parse(&tokens, &sm, "inline_test").map_err(|d| d.format(None))?;
-    program.source_maps.insert("inline_test".to_string(), sm);
-    
-    // Semantic analysis: check variable declarations
-    sh2c::semantics::check_semantics(&program, &sh2c::semantics::SemanticOptions::default())
-        .map_err(|e| e.message)?;
-    
-    let opts = sh2c::lower::LowerOptions {
-        include_diagnostics: true,
-        diag_base_dir: Some(std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))),
-        target,
-    };
-
-    // Use formatted diagnostics for better error messages
-    let ir = lower::lower_with_options(program, &opts).map_err(|e| e.message)?; 
-    
-    codegen::emit_with_options(&ir, codegen::CodegenOptions { target, include_diagnostics: true }).map_err(|e| e.message)
-}
-
-pub fn compile_path_to_shell(path: &Path, target: TargetShell) -> String {
-    try_compile_path_to_shell(path, target).unwrap_or_else(|e| panic!("{}", e))
-}
-
-pub fn try_compile_path_to_shell(path: &Path, target: TargetShell) -> Result<String, String> {
-    let program = loader::load_program_with_imports(path)
-        .map_err(|d| d.format(path.parent()))?;
-        
-    let opts = sh2c::lower::LowerOptions {
-        include_diagnostics: true,
-        diag_base_dir: Some(std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))),
-        target,
-    };
-    
-    let ir = lower::lower_with_options(program, &opts).map_err(|e| e.message)?;
-    codegen::emit_with_options(&ir, codegen::CodegenOptions { target, include_diagnostics: true }).map_err(|e| e.message)
-}
-
-pub fn compile_to_bash(src: &str) -> String {
-    // Legacy support for string-based tests if any exist (e.g. unit tests not from fixtures)
-    // But they won't support imports.
-    compile_to_shell(src, TargetShell::Bash)
-}
-pub fn compile_to_shell(src: &str, target: TargetShell) -> String {
-    let sm = sh2c::span::SourceMap::new(src.to_string());
-    let tokens = lexer::lex(&sm, src); // lex doesn't return Result in signature? 
-    // Wait, I updated lexer::lex to return Result in lexer.rs Step 1905? 
-    // Step 1905 updated Lexer::error, but NOT lex function signature explicitly in replacement.
-    // Step 1859 updated loader.rs to use `?` on lexer::lex. Implying it returns Result.
-    // If lexer::lex was NOT updated to return Result, loader.rs would fail.
-    // But loader.rs compiled. So lexer::lex MUST returning Result (or I am confused).
-    // Let's check lexer.rs source View 1896 line 44: `pub fn lex... -> Result`.
-    // Yes, it returns Result.
-    // So tokens line 32 needs unwrap.
-    let tokens = tokens.unwrap_or_else(|d| panic!("{}", d.format(None))); 
-
-    let mut program = parser::parse(&tokens, &sm, "inline_test")
-        .unwrap_or_else(|d| panic!("{}", d.format(None)));
-    program.source_maps.insert("inline_test".to_string(), sm);
-    
-    // Semantic analysis: check variable declarations
-    sh2c::semantics::check_semantics(&program, &sh2c::semantics::SemanticOptions::default())
-        .expect("Semantic analysis failed");
-    
-    // Note: lower calls generally require accurate file info but here we use "inline_test"
-    let opts = sh2c::lower::LowerOptions {
-        include_diagnostics: true,
-        diag_base_dir: Some(std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))),
-        target,
-    };
-    let ir = lower::lower_with_options(program, &opts).expect("Lowering failed");
-    codegen::emit_with_options(&ir, codegen::CodegenOptions { target, include_diagnostics: true }).expect("Codegen failed")
 }
 
 pub fn parse_fixture(fixture_name: &str) -> ast::Program {
