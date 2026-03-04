@@ -7,8 +7,8 @@ use std::fs;
 
 #[test]
 fn test_codegen_source_only_has_safe_shell_c() {
-    let codegen_source = fs::read_to_string("src/codegen.rs")
-        .expect("Failed to read src/codegen.rs");
+    let codegen_source = fs::read_to_string("src/codegen/mod.rs")
+        .expect("Failed to read src/codegen/mod.rs");
     
     // Find all occurrences of bash -c or sh -c in the source
     let lines: Vec<(usize, &str)> = codegen_source
@@ -45,7 +45,7 @@ fn test_codegen_source_only_has_safe_shell_c() {
 
         // Failed strict allowlist
         panic!(
-            "Found banned bash -c / sh -c usage in src/codegen.rs at line {}.\n\
+            "Found banned bash -c / sh -c usage in src/codegen/mod.rs at line {}.\n\
              Line: {}\n\
              \n\
              Ticket S2/S5 Restriction:\n\
@@ -63,8 +63,8 @@ fn test_codegen_source_only_has_safe_shell_c() {
 /// Verify the sh(expr) block uses the expected pattern
 #[test]
 fn test_sh_expr_block_uses_expected_pattern() {
-    let codegen_source = fs::read_to_string("src/codegen.rs")
-        .expect("Failed to read src/codegen.rs");
+    let codegen_source = fs::read_to_string("src/codegen/mod.rs")
+        .expect("Failed to read src/codegen/mod.rs");
     
     // The sh(expr) implementation should:
     // 1. Store command in __sh2_cmd variable
@@ -72,7 +72,7 @@ fn test_sh_expr_block_uses_expected_pattern() {
     
     assert!(
         codegen_source.contains("Cmd::Raw"),
-        "Could not find Cmd::Raw in src/codegen.rs"
+        "Could not find Cmd::Raw in src/codegen/mod.rs"
     );
     
     assert!(
