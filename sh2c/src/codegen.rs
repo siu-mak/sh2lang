@@ -573,6 +573,38 @@ pub fn emit_with_options_checked(funcs: &[Function], opts: CodegenOptions) -> Re
     Ok(out)
 }
 
+// RF-02b: Status emission helpers for mechanically safe patterns.
+// Note: Some occurrences of `__sh2_status=$?` are embedded in inline shell strings 
+// (e.g., `"; __sh2_status=$?\n"`) or use custom `"exit"` variants. 
+// Those are intentionally left manual to preserve byte-for-byte identical output without over-engineering.
+
+fn emit_status_capture(pad: &str, out: &mut String) {
+    out.push_str(pad);
+    out.push_str("__sh2_status=$?\n");
+}
+
+fn emit_status_check(pad: &str, out: &mut String) {
+    emit_status_capture(pad, out);
+    out.push_str(pad);
+    out.push_str("__sh2_check \"$__sh2_status\" \"${__sh2_loc:-}\"\n");
+}
+
+fn emit_status_check_ctx(pad: &str, out: &mut String, in_cond_ctx: bool) {
+    emit_status_capture(pad, out);
+    out.push_str(pad);
+    if in_cond_ctx {
+        out.push_str("__sh2_check \"$__sh2_status\" \"${__sh2_loc:-}\" \"return\"\n");
+    } else {
+        out.push_str("__sh2_check \"$__sh2_status\" \"${__sh2_loc:-}\"\n");
+    }
+}
+
+// Used when capture and check are separated (e.g., by a `$!` capture in Spawn)
+fn emit_status_check_only(pad: &str, out: &mut String) {
+    out.push_str(pad);
+    out.push_str("__sh2_check \"$__sh2_status\" \"${__sh2_loc:-}\"\n");
+}
+
 use std::collections::HashSet;
 
 #[derive(Default)]
@@ -1197,9 +1229,7 @@ fn emit_cmd(
                 }
                 out.push_str(&pad);
                 out.push_str(&format!("__sh2_lines {} {}\n", emit_val(inner, target)?, name));
-                out.push_str(&format!("{}__sh2_status=$?\n", pad));
-
-                out.push_str(&format!("{}__sh2_check \"$__sh2_status\" \"${{__sh2_loc:-}}\"\n", pad));
+                emit_status_check(&pad, out);
                 return Ok(());
             }
             if let Val::Glob(inner) = val {
@@ -1208,8 +1238,7 @@ fn emit_cmd(
                 }
                 out.push_str(&pad);
                 out.push_str(&format!("__sh2_glob {} {}\n", name, emit_val(inner, target)?));
-                out.push_str(&format!("{}__sh2_status=$?\n", pad));
-                out.push_str(&format!("{}__sh2_check \"$__sh2_status\" \"${{__sh2_loc:-}}\"\n", pad));
+                emit_status_check(&pad, out);
                 ctx.known_lists.insert(name.to_string());
                 return Ok(());
             }
@@ -1218,9 +1247,7 @@ fn emit_cmd(
                     TargetShell::Bash => {
                          out.push_str(&pad);
                          out.push_str(&format!("__sh2_split {} {} {}\n", name, emit_val(s, target)?, emit_val(delim, target)?));
-                         out.push_str(&format!("{}__sh2_status=$?\n", pad));
-
-                         out.push_str(&format!("{}__sh2_check \"$__sh2_status\" \"${{__sh2_loc:-}}\"\n", pad));
+                         emit_status_check(&pad, out);
                          return Ok(());
                     }
                     TargetShell::Posix => {
@@ -1228,9 +1255,7 @@ fn emit_cmd(
                          out.push_str(&format!("{}=\"$(__sh2_tmpfile)\"\n", name));
                          out.push_str(&pad);
                          out.push_str(&format!("__sh2_split {} {} > \"${}\"\n", emit_val(s, target)?, emit_val(delim, target)?, name));
-                         out.push_str(&format!("{}__sh2_status=$?\n", pad));
-
-                         out.push_str(&format!("{}__sh2_check \"$__sh2_status\" \"${{__sh2_loc:-}}\"\n", pad));
+                         emit_status_check(&pad, out);
                          ctx.known_lists.insert(name.to_string());
                          return Ok(());
                     }
@@ -1242,8 +1267,7 @@ fn emit_cmd(
                 }
                 out.push_str(&pad);
                 out.push_str(&format!("__sh2_find_files {} {} {}\n", name, emit_val(dir, target)?, emit_val(pattern, target)?));
-                out.push_str(&format!("{}__sh2_status=$?\n", pad));
-                out.push_str(&format!("{}__sh2_check \"$__sh2_status\" \"${{__sh2_loc:-}}\"\n", pad));
+                emit_status_check(&pad, out);
                 return Ok(());
             }
             if let Val::Spawn { args, loc } = val {
@@ -1259,10 +1283,10 @@ fn emit_cmd(
                     .join(" ");
                 out.push_str(&pad);
                 out.push_str(&format!("{} &\n", shell_cmd));
-                out.push_str(&format!("{}__sh2_status=$?\n", pad));
+                emit_status_capture(&pad, out);
                 out.push_str(&format!("{}{}=$!\n", pad, name));
                 // Check if spawn itself failed (rare, e.g., command not found is async)
-                out.push_str(&format!("{}__sh2_check \"$__sh2_status\" \"${{__sh2_loc:-}}\"\n", pad));
+                emit_status_check_only(&pad, out);
                 return Ok(());
             }
             if let Val::Wait { pid, allow_fail, loc } = val {
@@ -1275,15 +1299,15 @@ fn emit_cmd(
                 if *allow_fail && target == TargetShell::Bash {
                      out.push_str("__sh2_suppress_err_depth=$((${__sh2_suppress_err_depth:-0}+1))\n");
                      out.push_str(&format!("{}wait {}\n", pad, emit_word(pid, target)?));
-                     out.push_str(&format!("{}__sh2_status=$?\n", pad));
+                     emit_status_capture(&pad, out);
                      out.push_str(&format!("{}__sh2_suppress_err_depth=$((${{__sh2_suppress_err_depth:-0}}-1))\n", pad));
                 } else {
                      out.push_str(&format!("wait {}\n", emit_word(pid, target)?));
-                     out.push_str(&format!("{}__sh2_status=$?\n", pad));
+                     emit_status_capture(&pad, out);
                 }
 
                 if !allow_fail {
-                    out.push_str(&format!("{}__sh2_check \"$__sh2_status\" \"${{__sh2_loc:-}}\"\n", pad));
+                    emit_status_check_only(&pad, out);
                 }
                 // Assign exit code to variable
                 out.push_str(&format!("{}{}=$__sh2_status\n", pad, name));
@@ -1419,9 +1443,7 @@ fn emit_cmd(
                     out.push_str(&sh_single_quote(key));
                 }
                 out.push_str(" )\n");
-                out.push_str(&format!("{}__sh2_status=$?\n", pad));
-
-                out.push_str(&format!("{}__sh2_check \"$__sh2_status\" \"${{__sh2_loc:-}}\"\n", pad));
+                emit_status_check(&pad, out);
                 return Ok(());
             }
 
@@ -1556,13 +1578,7 @@ fn emit_cmd(
             } else if let Val::Args = val {
                 out.push_str(name);
                 out.push_str("=(\"$@\")\n");
-                out.push_str(&format!("{}__sh2_status=$?\n", pad));
-
-                if in_cond_ctx {
-                    out.push_str(&format!("{}__sh2_check \"$__sh2_status\" \"${{__sh2_loc:-}}\" \"return\"\n", pad));
-                } else {
-                    out.push_str(&format!("{}__sh2_check \"$__sh2_status\" \"${{__sh2_loc:-}}\"\n", pad));
-                }
+                emit_status_check_ctx(&pad, out, in_cond_ctx);
             } else if matches!(val, Val::Which(_)) {
                 // which() is allow-fail by design: not-found is normal control flow
                 // Capture status but do NOT call __sh2_check
@@ -1578,7 +1594,7 @@ fn emit_cmd(
                     out.push('=');
                     out.push_str(&emit_val(val, target)?);
                     out.push('\n');
-                    out.push_str(&format!("{}__sh2_status=$?\n", pad));
+                    emit_status_capture(&pad, out);
                 }
                 // No __sh2_check: which() returning 1 (not found) is intentional
             } else {
@@ -1586,13 +1602,7 @@ fn emit_cmd(
                 out.push('=');
                 out.push_str(&emit_val(val, target)?);
                 out.push('\n');
-                out.push_str(&format!("{}__sh2_status=$?\n", pad));
-
-                if in_cond_ctx {
-                    out.push_str(&format!("{}__sh2_check \"$__sh2_status\" \"${{__sh2_loc:-}}\" \"return\"\n", pad));
-                } else {
-                    out.push_str(&format!("{}__sh2_check \"$__sh2_status\" \"${{__sh2_loc:-}}\"\n", pad));
-                }
+                emit_status_check_ctx(&pad, out, in_cond_ctx);
             }
         }
         Cmd::Exec {
@@ -1864,9 +1874,7 @@ fn emit_cmd(
                 out.push_str(&emit_word(cmd, target)?);
             }
             out.push('\n');
-            out.push_str(&format!("{}__sh2_status=$?\n", pad));
-
-            out.push_str(&format!("{}__sh2_check \"$__sh2_status\" \"${{__sh2_loc:-}}\"\n", pad));
+            emit_status_check(&pad, out);
         }
         Cmd::Log {
             level,
@@ -2199,13 +2207,7 @@ fn emit_cmd(
                 emit_val(path, target)?
             ));
             out.push('\n');
-            out.push_str(&format!("{}__sh2_status=$?\n", pad));
-
-            if in_cond_ctx {
-                out.push_str(&format!("{}__sh2_check \"$__sh2_status\" \"${{__sh2_loc:-}}\" \"return\"\n", pad));
-            } else {
-                out.push_str(&format!("{}__sh2_check \"$__sh2_status\" \"${{__sh2_loc:-}}\"\n", pad));
-            }
+            emit_status_check_ctx(&pad, out, in_cond_ctx);
         }
         Cmd::WithEnv { bindings, body } => {
             // Check for single Exec optimization
