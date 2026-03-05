@@ -3,7 +3,8 @@ use crate::ir;
 use crate::span::SourceMap;
 use crate::error::CompileError;
 use crate::sudo::SudoSpec;
-use super::{LoweringContext, LowerOptions, lower_expr};
+use super::{LoweringContext, LowerOptions};
+use super::expr::lower_expr;
 
 pub(super) fn lower_run_call_args<'a>(
     run_call: &ast::RunCall,
