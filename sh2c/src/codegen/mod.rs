@@ -111,31 +111,33 @@ pub fn emit_with_options_checked(funcs: &[Function], opts: CodegenOptions) -> Re
 // (e.g., `"; __sh2_status=$?\n"`) or use custom `"exit"` variants. 
 // Those are intentionally left manual to preserve byte-for-byte identical output without over-engineering.
 
-fn emit_status_capture(pad: &str, out: &mut String) {
+fn emit_line(pad: &str, out: &mut String, content: &str) {
     out.push_str(pad);
-    out.push_str("__sh2_status=$?\n");
+    out.push_str(content);
+    out.push('\n');
+}
+
+fn emit_status_capture(pad: &str, out: &mut String) {
+    emit_line(pad, out, "__sh2_status=$?");
 }
 
 pub(super) fn emit_status_check(pad: &str, out: &mut String) {
     emit_status_capture(pad, out);
-    out.push_str(pad);
-    out.push_str("__sh2_check \"$__sh2_status\" \"${__sh2_loc:-}\"\n");
+    emit_line(pad, out, "__sh2_check \"$__sh2_status\" \"${__sh2_loc:-}\"");
 }
 
 pub(super) fn emit_status_check_ctx(pad: &str, out: &mut String, in_cond_ctx: bool) {
     emit_status_capture(pad, out);
-    out.push_str(pad);
     if in_cond_ctx {
-        out.push_str("__sh2_check \"$__sh2_status\" \"${__sh2_loc:-}\" \"return\"\n");
+        emit_line(pad, out, "__sh2_check \"$__sh2_status\" \"${__sh2_loc:-}\" \"return\"");
     } else {
-        out.push_str("__sh2_check \"$__sh2_status\" \"${__sh2_loc:-}\"\n");
+        emit_line(pad, out, "__sh2_check \"$__sh2_status\" \"${__sh2_loc:-}\"");
     }
 }
 
 // Used when capture and check are separated (e.g., by a `$!` capture in Spawn)
 pub(super) fn emit_status_check_only(pad: &str, out: &mut String) {
-    out.push_str(pad);
-    out.push_str("__sh2_check \"$__sh2_status\" \"${__sh2_loc:-}\"\n");
+    emit_line(pad, out, "__sh2_check \"$__sh2_status\" \"${__sh2_loc:-}\"");
 }
 
 use std::collections::HashSet;
