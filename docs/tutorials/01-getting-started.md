@@ -441,10 +441,6 @@ func main() {
 }
 ```
 
-### Learn more
-
-See the [v0.1.2 Release Notes](../releases/v0.1.2.md) for full details.
-
 ---
 
 ## 10. When to Use sh2 vs Bash
@@ -594,7 +590,7 @@ You now know the basics! Here's where to go next:
 - [The Dollar Expansion Bug](../articles/case-studies/22-dollar-expansion-bug.md)
 
 ### Release notes
-- [v0.1.2 Release Notes](../releases/v0.1.2.md) — Job control, iterators, `which`
+- [v0.2.0 Release Notes](../releases/v0.2.0.md) — Import aliases, test improvements
 - [v0.1.1 Release Notes](../releases/v0.1.1.md) — `sudo`, `confirm`, semicolons
 - [v0.1.0 Release Notes](../releases/v0.1.0.md) — Initial release
 
