@@ -2,19 +2,19 @@ Origin: sh2lang
 Label: sh2lang
 Suite: stable
 Codename: jammy
-Date: Sat, 21 Feb 2026 01:06:40 UTC
+Date: Fri, 20 Mar 2026 02:13:48 UTC
 Architectures: amd64
 Components: main
 Description: sh2lang APT repository
 MD5Sum:
- 50869ace62dd193f06e821ffe37e5be1 506 main/binary-amd64/Packages
- c02148c665064b3a3eee17aadc438332 371 main/binary-amd64/Packages.gz
+ 0a49c30af58bf054d4bef69c2ef43bcb 506 main/binary-amd64/Packages
+ 8230347d47197a113296a5c4368edd50 372 main/binary-amd64/Packages.gz
  c1b69ef1e08c178b2f29acc695b092fd 119 main/binary-amd64/Release
 SHA1:
- 69dafb65e3c8cd6790a470ea0cfcaea0b9af28f5 506 main/binary-amd64/Packages
- 42744a26fa5456a0a72a0670a2af2bb3b82aaf4e 371 main/binary-amd64/Packages.gz
+ 3a798d9949e26048f63842c47ae3d77f1221af85 506 main/binary-amd64/Packages
+ 6dcdbd995c7e11b5966b532874fee6be380ee9dc 372 main/binary-amd64/Packages.gz
  0d9cd40c0ce1becce4608c772012063d74f3a143 119 main/binary-amd64/Release
 SHA256:
- f1e344a56f51eb6d35d67d891153806a06f50e950a9a8b8ae036f9720add51fd 506 main/binary-amd64/Packages
- cb79adcc02bc92a334843732c2e954514d2512967c3aa399b1a3cb450ba747d5 371 main/binary-amd64/Packages.gz
+ df747fddb17e6a325df7f5db0222bb35bd6c6555197b697714152af373235f9d 506 main/binary-amd64/Packages
+ f577d0cd372d0f99676c6ccc03df13463fa154842092b7b821608e3e03190834 372 main/binary-amd64/Packages.gz
  19fda127f717b244548884f62620fc3aa09d293935a60bff7ede664482318b7a 119 main/binary-amd64/Release
