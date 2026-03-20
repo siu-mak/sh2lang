@@ -5,7 +5,7 @@ Origin: sh2lang
 Label: sh2lang
 Suite: stable
 Codename: jammy
-Date: Fri, 20 Mar 2026 03:21:31 UTC
+Date: Fri, 20 Mar 2026 03:28:10 UTC
 Architectures: amd64
 Components: main
 Description: sh2lang APT repository
@@ -23,17 +23,17 @@ SHA256:
  19fda127f717b244548884f62620fc3aa09d293935a60bff7ede664482318b7a 119 main/binary-amd64/Release
 -----BEGIN PGP SIGNATURE-----
 
-iQIzBAEBCgAdFiEEc4Zs6hiFZM6oBafTsEmqXh/YRVsFAmm8vTsACgkQsEmqXh/Y
-RVulXQ//ZJwJVkq9MlxMJkFSh1t23X+cSLPAswCeZldNaVidsrMj5fi4HR+xqMCx
-sfMq7XXhkys9oF1f9zBrv2Z3PNNevWDeRcAwbNrq2foCJNOr5LOp4E5NceicUNFd
-rN+CCNk12nQFVkV6oxDyju4EH/gsYhyPsD+KhPdxxHRnuVmwx/gQgHk6aFMpU6Kk
-8xUS9bNkoUGTPCIVNVldkE9zRx4sNEjhDjYEcLcyTOUfLoGW8YewzLzRFobBhkWv
-UmSMGjfLrYaQEwZt7wnIVMIYtWPNNOLFqaXXBwFvSYg19KBqYn6lgEElQmN5/J5+
-q9kTh/F5DO5gbz60JaI/Uo83HBKqNdZsDEcZPhJ4EKZjucMY4zJ0dUX20gZByXO1
-b94DNL5z0W3QBsa9dGJ67dfW2kwiucTogdpxdeYXTKEZGaCcWbe2VDoHrb5QnbD5
-rNIIglGsJ4Nz0czUlLaxg+h2KVnWC7XHEKSsK5N1PEig/JX9ez5hIFHIZyYMkBge
-MeK/HM1+yiH/LmriqPxD/gn3p6b2n1WxUQxdYkLlQpKwa+k5n02Xf9IAqoKMYFzC
-yiGTzPU1HGhvs7jcKEHuIo90W4e4GuHsnJ6SToQcUTblz9WGS9bo0lL9LRCDDC6c
-SsiVzTNBuIJ6cpk+Gkrm4lXHwDDhgK1dhF/10EnrTnT+xSrObBk=
-=7KmL
+iQIzBAEBCgAdFiEEc4Zs6hiFZM6oBafTsEmqXh/YRVsFAmm8vsoACgkQsEmqXh/Y
+RVtwSQ/+JTZw2x0r3gfp1nLFYA1i4Xmi1vXQcHLuPjjrMLzwHWrexBxxUzOYvjYo
+mb7ZUjdnnnWhS7KQMuAkk33YgE4tLGeNSkXZF+MuY9TzGkptxdLWQkWIyRAII68j
+sWpsaW9CADqzD31WeZ6shzffk5gSFEIc5MCPRbZLhKgxIYEoMTHajx3mm4ZcbJu6
+Lxz9JPZOsyTZXdmiNBtMojqUjszOrlFNfrHQ8rAqzVUC6f1qoebkrH/lmaqLvf50
+WyeVZdla5PAudDxsSrjjDQB8iv3O8Tg6BiJELoMwBLdLTmgjfCv4yqY+J1mo3pj2
+raLrsndQFURyo6boERxxCGn9+pcS0iTdx0AWlLB8fswbMaHPX4LMDL8bj9G6eT+z
+rZbgLxF3hJNJG6Pn7oW+fGOmBw8riCCR8xcjgpMdwvwuaO4/V2ZMhMK4tBNEs35n
+zH2blQs76d7aSrjvtLOLlcJ4j8ajFSCTATrP1E3mk4pdny1QSs5GcbxNVhvrM+Vh
+xASpcY/9LlHGxuIbcklDsaak0Q0z0fu05AyTwDAmMmAEku3VbR7f/Kv3UmbI/wCV
+4+n9BYfnakcHxc5ElKi1vh5qeX4+G29IMxpG07O2Ue87w+26vZFP3RnSltfC8dgD
+lE5/BM6WNDO5YHbs6ztDu52LXoWTdb4Iuallzskg4ppk1nqGuGs=
+=CfIC
 -----END PGP SIGNATURE-----
