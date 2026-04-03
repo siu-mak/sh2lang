@@ -13,8 +13,8 @@ maintainer = "Siu Mak <me@siu-mak.com>"
 section = "utils"
 priority = "optional"
 assets = [
-  ["target/release/sh2c",  "usr/bin/", "755"],
-  ["target/release/sh2do", "usr/bin/", "755"],
+  ["../target/release/sh2c",  "usr/bin/", "755"],
+  ["../target/release/sh2do", "usr/bin/", "755"],
   ["../README.md",            "usr/share/doc/sh2lang/README", "644"],
   ["../LICENSE*",             "usr/share/doc/sh2lang/", "644"],
 ]

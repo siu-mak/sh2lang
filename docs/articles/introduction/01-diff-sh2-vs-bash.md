@@ -267,8 +267,3 @@ The GitHub repo is here:
 - [`docs/sh2do.md`](https://github.com/siu-mak/sh2lang/blob/main/docs/sh2do.md) — sh2do CLI documentation
 - `tests/` — fixtures and integration tests (acts as an executable spec)
 
-## Versions
-
-- [v0.2.0](https://github.com/siu-mak/sh2lang/blob/main/docs/releases/v0.2.0.md) — Adds import aliases.
-- [v0.1.1](https://github.com/siu-mak/sh2lang/blob/main/docs/releases/v0.1.1.md) — Adds `sudo(...)`, `confirm(...)`, semicolon separators.
-- [v0.1.0](https://github.com/siu-mak/sh2lang/blob/main/docs/releases/v0.1.0.md) — First public release of the sh2 structured shell language.
